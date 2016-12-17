@@ -4,15 +4,21 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(eval = TRUE, 
+                      echo = TRUE, 
+                      cache = TRUE,
+                      include = TRUE,
+                      collapse = FALSE,
+                      dependson = NULL,
+                      engine = "R", # Chunks will always have R code, unless noted
+                      error = TRUE,
+                      fig.path="Figures/cached/",  # Set the figure options
+                      fig.align = "center", 
+                      fig.width = 7,
+                      fig.height = 7)
 ```
 
-## R Markdown
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
+# Load Libraries
 ```{r load-libraries, echo = FALSE, message = FALSE, include = FALSE}
 library(ggplot2)
 library(devtools)
@@ -29,8 +35,8 @@ library(iNEXT) # iNEXT package for alpha diversity measurements
 source("Muskegon_functions.R")
 ```
 
-## Load Data
-```{r load-data-files, cache = TRUE}
+## Load Mothur OTU Data 
+```{r load-data-files}
 #  Load in the taxonomy and shared data
 otu_tax <- "mothur/stability.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.an.unique_list.0.03.cons.taxonomy"
 otu_shared <- "mothur/stability.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.an.unique_list.shared"
@@ -50,8 +56,8 @@ df$names <- samp_names
 
 
 
-# Metadata
-```{r}
+# Load in Metadata
+```{r metadata-load}
 # Create metadata info
 meta_df <- make_muskegon_metadata(df)
 
@@ -70,7 +76,7 @@ complete_meta_df$norep_filter_name <- paste(substr(complete_meta_df$names,1,4),s
 
 
 ## Oligotyping Analysis
-```{r order_oligotyping files}
+```{r load-oligotyping}
 ##  Read in the Oligotyping Count file 
 oligo_count <- read.table("oligotyping/MATRIX-COUNT.txt", header = TRUE, row.names = 1) # Read in the oligotyping file making the first row and columns the column and row names
 colnames(oligo_count) <- gsub("X", "", colnames(oligo_count)) # Remove the X that R automatically puts in front of the node numbers in the column names
@@ -151,7 +157,7 @@ sample_data(oligo_merged) <- df1
 
 
 # Subset Muskegon Samples
-```{r}
+```{r subset-muskegon}
 # Subset Mukegon Lake samples out of the OTU phyloseq object
 otu_merged_musk <- subset_samples(physeq = otu_merged, project == "Muskegon_Lake")
 
@@ -163,7 +169,7 @@ oligo_merged_musk <- subset_samples(physeq = oligo_merged, project == "Muskegon_
 
 
 # Sample Sequencing Read Counts
-```{r}
+```{r seq-read-count}
 # Check the sequencing depth of each sample 
 sums_otu <- data.frame(rowSums(otu_table(otu_merged_musk)))
 colnames(sums_otu) <- "Sample_TotalSeqs"
@@ -217,9 +223,8 @@ ggplot(data.frame(sum = sample_sums(oligo_merged_musk)), aes(x = sum)) +
 
 
 
-# PHENOFLOW
-
-```{r}
+# OLIGOTYPING PHENOFLOW
+```{r oligotyping-phenoflow}
 # OTU analysis
 # Create a new file called "otu_merged_musk_Physeq.RData" that has the phyloseq object
 #save(list=c("otu_merged_musk"), file=paste0("Phenoflow/otu_merged_musk_Physeq.RData")) # Will be run on Flux
@@ -374,11 +379,8 @@ oligotyping_phenoflow <- plot_grid(oligo_pheno_D0, oligo_pheno_D0chao, oligo_phe
 
 
 
-
-
-
 ## Remove samples with too few reads
-```{r}
+```{r rarefy-and-scale}
 ##  OTU: SUBSAMPLE AT 6600
 # OLIGOTYPING: SUBSAMPLE AT 4300
 
@@ -401,7 +403,7 @@ scaled_oligo_merged_pruned <- oligo_merged_pruned %>%
 
 
 # Alpha Diversity:  Analysis ran on December 16th, 2016
-```{r}
+```{r calculate-alphadiv}
 # Initialize matrices to store richness and evenness estimates
  # nsamp <- nsamples(oligo_merged_pruned)
  # min_lib <- min(sample_sums(oligo_merged_pruned)) - 1
@@ -483,8 +485,8 @@ scaled_oligo_merged_pruned <- oligo_merged_pruned %>%
 ```
 
 
-# OTU Analysis 
-```{r otu_alpha_div}
+# Vegan: OTU Analysis 
+```{r vegan-otu-alphadiv}
 # Load values
 nsamp <- nsamples(otu_merged_pruned)
 min_lib <- min(sample_sums(otu_merged_pruned)) - 1
@@ -715,11 +717,8 @@ otu_vegan <- plot_grid(otu_rich_vegan, otu_simpseven_vegan, otu_shannon_vegan, o
 ```
 
 
-
-
-
-# Oligotyping
-```{r otu_alpha_div}
+# Vegan: Oligotyping Analysis 
+```{r vegan-oligotyping-alphadiv}
 # Load values
 nsamp <- nsamples(oligo_merged_pruned)
 min_lib <- min(sample_sums(oligo_merged_pruned)) - 1
@@ -950,21 +949,6 @@ oligotyping_vegan <- plot_grid(oligo_rich_vegan, oligo_simpseven_vegan,  oligo_s
 #ggsave("Figures/vegan_oligo_alpha_vs_prod.png", oligotyping_vegan, dpi = 600, units = "in", width = 10, height = 8)
 
 ```
-
-
-
-```{r all-together}
-plot_grid(otu_rich, oligo_rich, 
-          labels = c("A", "B"), 
-          align = "h", nrow = 1, ncol = 2)
-
-plot_grid(otu_simpseven, oligo_simpseven, 
-          labels = c("A", "B"), 
-          align = "h", nrow = 1, ncol = 2)
-
-```
-
-
 
 
 

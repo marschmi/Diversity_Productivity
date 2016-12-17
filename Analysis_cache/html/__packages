@@ -1,0 +1,15 @@
+base
+ggplot2
+devtools
+phyloseq
+permute
+lattice
+vegan
+dplyr
+DT
+cowplot
+wesanderson
+viridis
+data.table
+stringr
+iNEXT
