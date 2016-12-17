@@ -1,0 +1,977 @@
+---
+title: "November 2016 Mothur & Oligotyping Analysis of Muskegon 2014-2015"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r load-libraries, echo = FALSE, message = FALSE, include = FALSE}
+library(ggplot2)
+library(devtools)
+library(phyloseq)
+library(vegan)
+library(dplyr)
+library(DT)
+library(cowplot)
+library(wesanderson) # for pretty colors
+library(viridis)
+library(data.table)
+library(stringr)
+library(iNEXT) # iNEXT package for alpha diversity measurements 
+source("Muskegon_functions.R")
+```
+
+## Load Data
+```{r load-data-files, cache = TRUE}
+#  Load in the taxonomy and shared data
+otu_tax <- "mothur/stability.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.an.unique_list.0.03.cons.taxonomy"
+otu_shared <- "mothur/stability.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.an.unique_list.shared"
+otu_data <- import_mothur(mothur_shared_file = otu_shared, mothur_constaxonomy_file = otu_tax)
+
+# Fix the taxonomy names
+colnames(tax_table(otu_data)) <- c("Kingdom","Phylum","Class","Order","Family","Genus","Species")
+
+# Sample Names
+samp_names <- colnames(otu_table(otu_data))
+
+# Create metadata info
+df <- data.frame(matrix(NA, ncol = 1, nrow = length(samp_names)))
+colnames(df) <- c("names")
+df$names <- samp_names
+```
+
+
+
+# Metadata
+```{r}
+# Create metadata info
+meta_df <- make_muskegon_metadata(df)
+
+# Create a norep_water_name column
+meta_df$norep_water_name <- paste(substr(meta_df$names,1,4),substr(meta_df$names,7,9), sep = "")
+
+# Load in the extra metadata for the Muskegon Lake Project
+musk_data <- read.csv("metadata/processed_muskegon_metadata.csv", header = TRUE) # Load in the extra metada
+musk_data_subset <- select(musk_data, -c(lakesite, limnion, month, year, project, season))
+complete_meta_df <- left_join(meta_df, musk_data_subset, by = "norep_water_name")
+row.names(complete_meta_df) <- complete_meta_df$names
+
+complete_meta_df$water_name <- paste(substr(complete_meta_df$names,1,5),substr(complete_meta_df$names,7,9), sep = "")
+complete_meta_df$norep_filter_name <- paste(substr(complete_meta_df$names,1,4),substr(complete_meta_df$names,6,9), sep = "")
+```
+
+
+## Oligotyping Analysis
+```{r order_oligotyping files}
+##  Read in the Oligotyping Count file 
+oligo_count <- read.table("oligotyping/MATRIX-COUNT.txt", header = TRUE, row.names = 1) # Read in the oligotyping file making the first row and columns the column and row names
+colnames(oligo_count) <- gsub("X", "", colnames(oligo_count)) # Remove the X that R automatically puts in front of the node numbers in the column names
+oligo_count <- oligo_count[ , order(names(oligo_count))] # Order the node numbers to match with taxonomy. 
+
+##  Read in the Oligotyping Taxonomy File
+raw_oligo_tax <- read.table("oligotyping/oligo.taxonomy") # Read in the oligotyping file making the first row and columns the column and row names
+cols <- data.frame(str_split_fixed(raw_oligo_tax[,1], "size_", 2)) # Requires stringr package!
+colnames(cols) <- c("Oligotype", "Size")
+#cols$Size <- as.numeric(cols$Size)
+cols$Oligotype <- gsub("\\|.*","",cols$Oligotype)
+oligo_tax <- cbind(cols, raw_oligo_tax$V2)
+colnames(oligo_tax)[3] <- "Taxonomy"
+oligo_tax <- arrange(oligo_tax, Oligotype) # Order the node numbers to match with oligotype count table 
+oligo_tax$Size = NULL
+row.names(oligo_tax) <- oligo_tax$Oligotype
+oligo_tax$Oligotype = NULL
+
+
+# Separate the taxonomy
+tax <- data.frame(str_split_fixed(oligo_tax$Taxonomy, ";", 7)) # Requires stringr package!
+tax <- apply(tax, 2, function(y) gsub("\\s*\\([^\\)]+\\)","",as.character(y))) # remove parentheses with everything inside it
+colnames(tax) <- c("Kingdom","Phylum","Class","Order","Family","Genus", "Species")
+tax <- data.frame(tax)
+tax$Species <- gsub(";","",tax$Species) # Remove the final ; in the species column
+row.names(tax) <- row.names(oligo_tax) 
+
+
+### Create a phyloseq object
+oligoCOUNT <- otu_table(oligo_count, taxa_are_rows = FALSE)
+oligoTAX <- tax_table(as.matrix(tax))
+oligo_data <- phyloseq(oligoCOUNT, oligoTAX)
+```
+
+
+
+## Add metadata to the phyloseq objects to Merge samples
+```{r merge_samples}
+# Add the metadata to our phyloseq object! 
+##  Add metadata to OTUs
+sample_data(otu_data) <- complete_meta_df
+otu_data <- prune_taxa(taxa_sums(otu_data) > 0, otu_data)
+
+##  Add metadata to Oligotypes
+sample_data(oligo_data) <- complete_meta_df
+oligo_data <- prune_taxa(taxa_sums(oligo_data) > 0, oligo_data)
+
+# Merged metadata
+merged_complete_meta_df<- 
+  select(complete_meta_df, -c(names, replicate, nuc_acid_type, water_name)) %>% 
+  distinct() %>%
+  arrange(norep_filter_name)
+
+
+## Add Production data from GVSU AWRI provided by the lab of Bopi Biddanda
+bopi_data <- read.csv("metadata/production_data.csv") %>%
+  dplyr::rename(norep_filter_name = names)  %>% # rename "names" column to "norep_filter_name"
+  select(-c(X, limnion, fraction, month, year, season))
+
+## Merge two metadata files together!
+df1 <- full_join(merged_complete_meta_df, bopi_data) %>%
+  select(-c(Depth, month)) 
+
+# provide row.names to match sample
+row.names(df1) <- df1$norep_filter_name
+
+# merge samples for OTUs
+otu_merged <- merge_samples(otu_data, group = "norep_filter_name", fun = "sum")
+sample_names(otu_merged) == row.names(merged_complete_meta_df) # Sanity check
+
+# merge samples for Oligotypes
+oligo_merged <- merge_samples(oligo_data, group = "norep_filter_name", fun = "sum")
+
+# Add nice sample information
+sample_data(otu_merged) <- df1
+sample_data(oligo_merged) <- df1
+```
+
+
+# Subset Muskegon Samples
+```{r}
+# Subset Mukegon Lake samples out of the OTU phyloseq object
+otu_merged_musk <- subset_samples(physeq = otu_merged, project == "Muskegon_Lake")
+
+# Subset Mukegon Lake samples out of the Oligotype phyloseq object
+oligo_merged_musk <- subset_samples(physeq = oligo_merged, project == "Muskegon_Lake")
+
+```
+
+
+
+# Sample Sequencing Read Counts
+```{r}
+# Check the sequencing depth of each sample 
+sums_otu <- data.frame(rowSums(otu_table(otu_merged_musk)))
+colnames(sums_otu) <- "Sample_TotalSeqs"
+sums_otu$sample <- row.names(sums_otu)
+sums_otu <- arrange(sums_otu, Sample_TotalSeqs) %>%
+  filter(Sample_TotalSeqs < 10000)
+
+##  OTU: SUBSAMPLE AT 6600
+
+####  Create a plot of the number of sequences per sample
+ggplot(sums_otu, aes(x=reorder(sample, Sample_TotalSeqs), y = Sample_TotalSeqs)) + 
+  ylab("Number of Sequences per Sample") +
+  geom_bar(stat = "identity", colour="black",fill="cornflowerblue")  + xlab("Sample Name") + 
+  ggtitle("OTU: Samples less than 10,000 reads") + 
+  theme(axis.text.x = element_text(colour = "black", size=16, angle=45, hjust = 1, vjust = 1))
+
+
+
+
+# Check the sequencing depth of each sample 
+sums_oligo <- data.frame(rowSums(otu_table(oligo_merged_musk)))
+colnames(sums_oligo) <- "Sample_TotalSeqs"
+sums_oligo$sample <- row.names(sums_oligo)
+sums_oligo <- arrange(sums_oligo, Sample_TotalSeqs) %>%
+  filter(Sample_TotalSeqs < 5000)
+
+sums_oligo$names <- sums_oligo$sample
+o <- make_metadata_norep(sums_oligo)
+o1 <- filter(o, fraction == "WholePart" & limnion == "Top") 
+
+# OLIGOTYPING: SUBSAMPLE AT 4300
+
+####  Create a plot of the number of sequences per sample
+ggplot(sums_oligo, aes(x=reorder(sample, Sample_TotalSeqs), y = Sample_TotalSeqs)) + 
+  ylab("Number of Sequences per Sample") +
+  geom_bar(stat = "identity", colour="black",fill="cornflowerblue")  + xlab("Sample Name") + 
+  ggtitle("Oligotyping") + 
+  theme(axis.text.x = element_text(colour = "black", size=16, angle=45, hjust = 1, vjust = 1))
+
+
+
+# Histogram of sample read counts for the read counts of each sample
+ggplot(data.frame(sum = sample_sums(oligo_merged_musk)), aes(x = sum)) + 
+  geom_histogram(color = "black", fill = "purple", binwidth = 1000) +
+  ggtitle("Distribution of sample sequencing depth") + 
+  xlab("Read counts") + 
+  scale_x_continuous(expand = c(0,0)) + scale_y_continuous(expand = c(0,0)) + 
+  theme(axis.title.y = element_blank())
+
+```
+
+
+
+# PHENOFLOW
+
+```{r}
+# OTU analysis
+# Create a new file called "otu_merged_musk_Physeq.RData" that has the phyloseq object
+#save(list=c("otu_merged_musk"), file=paste0("Phenoflow/otu_merged_musk_Physeq.RData")) # Will be run on Flux
+
+#Phenoflow::Diversity_16S(otu_merged_musk, R=3)
+
+# Oligotyping
+#oligo_phenoflow <- Diversity_16S(oligo_merged_musk, R=100, brea = FALSE)
+#write.table(dat, "PhenoFlow/oligo.phenoflow", sep = "\t")
+
+# Do not overwrite the important dataframe!
+oligo_phenoflow_alpha <- read.table("PhenoFlow/oligo.phenoflow", sep = "\t", header = TRUE)
+# Add the rownames so that it can be combined with the metadata
+oligo_phenoflow_alpha <- data.frame(oligo_phenoflow_alpha, norep_filter_name = rownames(oligo_phenoflow_alpha))
+# Create the metadata information 
+meta_dat <- data.frame(sample_data(oligo_merged_musk))
+# Merge phenoflow data and 
+oligo_phenoflow_alpha <- merge(oligo_phenoflow_alpha, meta_dat, by = "norep_filter_name") %>%
+  select(-sd.D0.bre, -D0.bre)
+
+
+
+### PREPARE DATA FRAMES FOR PHENOFLOW ALPHA DIVERSITY ANALYSIS
+free_oligo_alpha <- filter(oligo_phenoflow_alpha, fraction == "Free" & norep_filter_name != "MOTHJ715" & year == "2015")
+part_oligo_alpha <- filter(oligo_phenoflow_alpha, fraction == "WholePart" & norep_filter_name != "MOTHJ715" & year == "2015")
+
+
+# Can fractional production be predicted by phenoflow D0 observed richness? 
+# FREE LIVING
+free_oligo_D0_stats <- lm(frac_bacprod ~ D0, data = free_oligo_alpha)
+free_oligo_D0_stats
+summary(free_oligo_D0_stats)
+
+# PARTICLE
+part_oligo_D0_stats <- lm(frac_bacprod ~ D0, data = part_oligo_alpha)
+part_oligo_D0_stats
+summary(part_oligo_D0_stats)
+
+# Plot D0 Observed Richness
+oligo_pheno_D0 <- ggplot(oligo_phenoflow_alpha, aes(x=D0, y=frac_bacprod, color = fraction)) + 
+  geom_point(size = 3.5) + geom_errorbarh(aes(xmin = D0 - sd.D0, xmax = D0 + sd.D0), width = 0.2) + 
+  ggtitle("Oligotyping: Phenoflow") +
+  scale_color_manual(values = c("firebrick3","cornflowerblue"), limits = c("WholePart", "Free")) +
+  scale_x_continuous(limits = c(200,400)) + 
+  scale_y_continuous(limits = c(0,70),expand = c(0,0)) + 
+  ylab("Production (μgC/L/hr)") + xlab("Observed Richness (D0)") +
+  #geom_smooth(data=subset(oligo_phenoflow_alpha, fraction == "Free"), method='lm') + 
+  geom_smooth(data=subset(oligo_phenoflow_alpha, fraction == "WholePart"), method='lm') + 
+  theme(legend.position=c(0.15,0.9), legend.title=element_blank()) +
+  annotate("text", x = 370, y=25, color = "cornflowerblue", fontface = "bold",
+           label = paste("R2 =", round(summary(free_oligo_D0_stats)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(free_oligo_D0_stats)$coefficients[,4][2]), digits = 4))) + 
+  annotate("text", x = 370, y=5, color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(part_oligo_D0_stats)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(part_oligo_D0_stats)$coefficients[,4][2]), digits = 4)))
+
+# Can fractional production be predicted by phenoflow chao1? 
+# FREE LIVING
+free_oligo_D0chao_stats <- lm(frac_bacprod ~ D0.chao, data = free_oligo_alpha)
+free_oligo_D0chao_stats
+summary(free_oligo_D0chao_stats)
+
+# PARTICLE
+part_oligo_D0chao_stats <- lm(frac_bacprod ~ D0.chao, data = part_oligo_alpha)
+part_oligo_D0chao_stats
+summary(part_oligo_D0chao_stats)
+ 
+# Plot  chao1
+oligo_pheno_D0chao <- ggplot(oligo_phenoflow_alpha, aes(x=D0.chao, y=frac_bacprod, color = fraction)) + 
+  geom_point(size = 3.5) + geom_errorbarh(aes(xmin = D0.chao - sd.D0.chao, xmax = D0.chao + sd.D0.chao), width = 0.2) + 
+  ggtitle("Oligotyping: Phenoflow") +
+  scale_color_manual(values = c("firebrick3","cornflowerblue"), limits = c("WholePart", "Free")) +
+  scale_x_continuous(limits = c(200,400)) + 
+  scale_y_continuous(limits = c(0,70),expand = c(0,0)) + 
+  ylab("Production (μgC/L/hr)") + xlab("Chao1 (D0)") +
+  #geom_smooth(data=subset(oligo_phenoflow_alpha, fraction == "Free"), method='lm') + 
+  #geom_smooth(data=subset(oligo_phenoflow_alpha, fraction == "WholePart"), method='lm') + 
+  theme(legend.position=c(0.15,0.9), legend.title=element_blank()) +
+  annotate("text", x = 220, y=25, color = "cornflowerblue", fontface = "bold",
+           label = paste("R2 =", round(summary(free_oligo_D0chao_stats)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(free_oligo_D0chao_stats)$coefficients[,4][2]), digits = 4))) + 
+  annotate("text", x = 220, y=5, color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(part_oligo_D0chao_stats)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(part_oligo_D0chao_stats)$coefficients[,4][2]), digits = 4)))
+
+# Can fractional production be predicted by phenoflow D1 SHANNON ENTROPY? 
+# FREE LIVING
+free_oligo_D1_stats <- lm(frac_bacprod ~ D1, data = free_oligo_alpha)
+free_oligo_D1_stats
+summary(free_oligo_D1_stats)
+
+# PARTICLE
+part_oligo_D1_stats <- lm(frac_bacprod ~ D1, data = part_oligo_alpha)
+part_oligo_D1_stats
+summary(part_oligo_D1_stats)
+
+# Plot D1 SHANNON ENTROPY
+oligo_pheno_D1 <- ggplot(oligo_phenoflow_alpha, aes(x=D1, y=frac_bacprod, color = fraction)) + 
+  geom_point(size = 3.5) + geom_errorbarh(aes(xmin = D1 - sd.D1, xmax = D1 + sd.D1), width = 0.2) + 
+  ggtitle("Oligotyping: Phenoflow") +
+  scale_color_manual(values = c("firebrick3","cornflowerblue"), limits = c("WholePart", "Free")) +
+  scale_x_continuous(limits = c(0,150), expand = c(0,0)) + 
+  scale_y_continuous(limits = c(0,70),expand = c(0,0)) + 
+  ylab("Production (μgC/L/hr)") + xlab("Shannon Entropy (D1)") +
+  geom_smooth(data=subset(oligo_phenoflow_alpha, fraction == "Free"), method='lm') + 
+  geom_smooth(data=subset(oligo_phenoflow_alpha, fraction == "WholePart"), method='lm') + 
+  theme(legend.position=c(0.15,0.9), legend.title=element_blank()) +
+  annotate("text", x = 110, y=45, color = "cornflowerblue", fontface = "bold",
+           label = paste("R2 =", round(summary(free_oligo_D1_stats)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(free_oligo_D1_stats)$coefficients[,4][2]), digits = 4))) + 
+  annotate("text", x = 120, y=5, color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(part_oligo_D1_stats)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(part_oligo_D1_stats)$coefficients[,4][2]), digits = 4)))
+
+
+# Can fractional production be predicted by phenoflow D2 INVERSE SIMPSON? 
+# FREE LIVING
+free_oligo_D2_stats <- lm(frac_bacprod ~ D2, data = free_oligo_alpha)
+free_oligo_D2_stats
+summary(free_oligo_D2_stats)
+
+# PARTICLE
+part_oligo_D2_stats <- lm(frac_bacprod ~ D2, data = part_oligo_alpha)
+part_oligo_D2_stats
+summary(part_oligo_D2_stats)
+
+# Plot D2 INVERSE SIMPSON
+oligo_pheno_D2 <- ggplot(oligo_phenoflow_alpha, aes(x=D2, y=frac_bacprod, color = fraction)) + 
+  geom_point(size = 3.5) + geom_errorbarh(aes(xmin = D2 - sd.D2, xmax = D2 + sd.D2), width = 0.2) + 
+  ggtitle("Oligotyping: Phenoflow") +
+  scale_color_manual(values = c("firebrick3","cornflowerblue"), limits = c("WholePart", "Free")) +
+  scale_x_continuous(limits = c(0,80), expand = c(0,0)) + 
+  scale_y_continuous(limits = c(0,70),expand = c(0,0)) + 
+  ylab("Production (μgC/L/hr)") + xlab("Inverse Simpson (D2)") +
+  geom_smooth(data=subset(oligo_phenoflow_alpha, fraction == "Free"), method='lm') + 
+  geom_smooth(data=subset(oligo_phenoflow_alpha, fraction == "WholePart"), method='lm') + 
+  theme(legend.position=c(0.15,0.9), legend.title=element_blank()) +
+  annotate("text", x = 65, y=45, color = "cornflowerblue", fontface = "bold",
+           label = paste("R2 =", round(summary(free_oligo_D2_stats)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(free_oligo_D2_stats)$coefficients[,4][2]), digits = 4))) + 
+  annotate("text", x = 50, y=5, color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(part_oligo_D2_stats)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(part_oligo_D2_stats)$coefficients[,4][2]), digits = 4)))
+
+oligotyping_phenoflow <- plot_grid(oligo_pheno_D0, oligo_pheno_D0chao, oligo_pheno_D1, oligo_pheno_D2,
+          labels = c("A", "B", "C", "D"), 
+          align = "h", nrow = 2, ncol = 2)
+
+#ggsave("Figures/Phenoflow_oligotyping.png", oligotyping_phenoflow, dpi = 600, units = "in", width = 10, height = 8)
+```
+
+
+
+
+
+
+
+## Remove samples with too few reads
+```{r}
+##  OTU: SUBSAMPLE AT 6600
+# OLIGOTYPING: SUBSAMPLE AT 4300
+
+# Prune samples out that have too few reads
+otu_merged_pruned <- prune_samples(sample_sums(otu_merged) > 6600, otu_merged)
+otu_merged_pruned <- prune_taxa(taxa_sums(otu_merged_pruned) > 0, otu_merged_pruned)
+min(sample_sums(otu_merged_pruned))
+
+# Prune samples out that have too few reads
+oligo_merged_pruned <- prune_samples(sample_sums(oligo_merged) > 4300, oligo_merged)
+oligo_merged_pruned <- prune_taxa(taxa_sums(oligo_merged_pruned) > 0, oligo_merged_pruned)
+min(sample_sums(oligo_merged_pruned))
+
+# Scale the samples
+scaled_otu_merged_pruned <- otu_merged_pruned %>%
+  scale_reads(round = "round") 
+scaled_oligo_merged_pruned <- oligo_merged_pruned %>%
+  scale_reads(round = "round") 
+```
+
+
+# Alpha Diversity:  Analysis ran on December 16th, 2016
+```{r}
+# Initialize matrices to store richness and evenness estimates
+ # nsamp <- nsamples(oligo_merged_pruned)
+ # min_lib <- min(sample_sums(oligo_merged_pruned)) - 1
+ # 
+ # oligo_richness <- matrix(nrow = nsamp, ncol = 100)
+ # row.names(oligo_richness) <- sample_names(oligo_merged_pruned)
+ # 
+ # oligo_evenness <- matrix(nrow = nsamp, ncol = 100)
+ # row.names(oligo_evenness) <- sample_names(oligo_merged_pruned)
+ # 
+ # oligo_shannon <- matrix(nrow = nsamp, ncol = 100)
+ # row.names(oligo_shannon) <- sample_names(oligo_merged_pruned)
+ # 
+ # # It is always important to set a seed when you subsample so your result is replicable
+ # set.seed(777)
+ # 
+ # for (i in 1:100) {
+ #  # Subsample
+ #  r <- rarefy_even_depth(oligo_merged_pruned, sample.size = min_lib, verbose = FALSE, replace = TRUE)
+ # 
+ #  # Calculate richness
+ #  rich <- as.numeric(as.matrix(estimate_richness(r, measures = "Observed")))
+ #  oligo_richness[ ,i] <- rich
+ # 
+ #  # Calculate evenness
+ #  even <- as.numeric(as.matrix(estimate_richness(r, measures = "InvSimpson")))
+ #  oligo_evenness[ ,i] <- even
+ # 
+ #  # Calculate Shannon Entropy
+ #  shannon <- as.numeric(as.matrix(estimate_richness(r, measures = "Shannon")))
+ #  oligo_shannon[ ,i] <- shannon
+ # 
+ # }
+
+ # write.table(oligo_evenness, "metadata/oligo_evenness100_rarefy4331", row.names = TRUE)
+ # write.table(oligo_richness, "metadata/oligo_richness100_rarefy4331", row.names = TRUE)
+ # write.table(oligo_shannon, "metadata/oligo_shannon100_rarefy4331", row.names = TRUE)
+ # 
+ # 
+#  
+# # Initialize matrices to store richness and evenness estimates
+ # nsamp <- nsamples(otu_merged_pruned)
+ # min_lib <- min(sample_sums(otu_merged_pruned)) - 1
+ # 
+ # otu_richness <- matrix(nrow = nsamp, ncol = 100)
+ # row.names(otu_richness) <- sample_names(otu_merged_pruned)
+ # 
+ # otu_evenness <- matrix(nrow = nsamp, ncol = 100)
+ # row.names(otu_evenness) <- sample_names(otu_merged_pruned)
+ # 
+ # otu_shannon <- matrix(nrow = nsamp, ncol = 100)
+ # row.names(otu_shannon) <- sample_names(otu_merged_pruned)
+ # 
+ # # It is always important to set a seed when you subsample so your result is replicable
+ # set.seed(777)
+ # 
+ # for (i in 1:100) {
+ #  # Subsample
+ #  r <- rarefy_even_depth(otu_merged_pruned, sample.size = min_lib, verbose = FALSE, replace = TRUE)
+ # 
+ #  # Calculate richness
+ #  rich <- as.numeric(as.matrix(estimate_richness(r, measures = "Observed")))
+ #  otu_richness[ ,i] <- rich
+ # 
+ #  # Calculate evenness
+ #  even <- as.numeric(as.matrix(estimate_richness(r, measures = "InvSimpson")))
+ #  otu_evenness[ ,i] <- even
+ # 
+ #  # Calculate evenness
+ #  shannon <- as.numeric(as.matrix(estimate_richness(r, measures = "Shannon")))
+ #  otu_shannon[ ,i] <- shannon
+ # 
+ # }
+
+#  write.table(otu_evenness, "metadata/otu_evenness100_rarefy6664", row.names = TRUE)
+#  write.table(otu_richness, "metadata/otu_richness100_rarefy6664", row.names = TRUE)
+#  write.table(otu_shannon, "metadata/otu_shannon100_rarefy6664", row.names = TRUE)
+ 
+```
+
+
+# OTU Analysis 
+```{r otu_alpha_div}
+# Load values
+nsamp <- nsamples(otu_merged_pruned)
+min_lib <- min(sample_sums(otu_merged_pruned)) - 1
+
+# Read in the files 
+otu_richness <- read.table("metadata/otu_richness100_rarefy6664",  header = TRUE)
+otu_evenness <- read.table("metadata/otu_evenness100_rarefy6664", header = TRUE)
+otu_shannon <- read.table("metadata/otu_shannon100_rarefy6664", header = TRUE)
+
+# Create a new dataframe to hold the means and standard deviations of richness estimates
+norep_filter_name <- row.names(otu_richness)
+mean <- apply(otu_richness, 1, mean)
+sd <- apply(otu_richness, 1, sd)
+measure <- rep("Richness", nsamp)
+otu_rich_stats <- data.frame(norep_filter_name, mean, sd, measure)
+
+# Create a new dataframe to hold the means and standard deviations of evenness estimates
+norep_filter_name <- row.names(otu_evenness)
+mean <- apply(otu_evenness, 1, mean)
+sd <- apply(otu_evenness, 1, sd)
+measure <- rep("Inverse_Simpson", nsamp)
+otu_even_stats <- data.frame(norep_filter_name, mean, sd, measure)
+
+# Create a new dataframe to hold the means and standard deviations of shannon entropy estimates
+norep_filter_name <- row.names(otu_shannon)
+mean <- apply(otu_shannon, 1, mean)
+sd <- apply(otu_shannon, 1, sd)
+measure <- rep("Shannon_Entropy", nsamp)
+otu_shan_stats <- data.frame(norep_filter_name, mean, sd, measure)
+
+# Create a new dataframe to hold the means and standard deviations of simpsons evenness estimates
+norep_filter_name <- row.names(otu_evenness)
+mean <- apply(otu_evenness, 1, mean)
+sd <- apply(otu_evenness, 1, sd)
+measure <- rep("Inverse_Simpson", nsamp)
+otu_simpseven_stats <- data.frame(norep_filter_name, mean, sd, measure)
+
+# Calculate Simpson's Evenness into new df called "simps_evenness"
+otu_simps_evenness <- inner_join(otu_rich_stats, otu_even_stats, by = "norep_filter_name") %>%
+  mutate(mean = mean.y/mean.x,
+         sd = sd(mean),
+         measure = "Simpsons_Evenness") %>%
+  select(norep_filter_name, mean, sd, measure)
+
+# Combine alpha diversity into one dataframe 
+otu_alpha <- rbind(otu_rich_stats, otu_even_stats, otu_simps_evenness, otu_shan_stats)
+s <- data.frame(sample_data(otu_merged_pruned))
+otu_alphadiv <- merge(otu_alpha, s, by = "norep_filter_name") %>%
+  filter(project == "Muskegon_Lake")
+
+ggplot(filter(otu_alphadiv, measure == "Richness"), aes(x = norep_filter_name, y = mean, color = lakesite)) +
+  geom_point() + facet_grid(project~fraction, scales = "free") + 
+  xlab("Sample Name") + ylab("Richness") +
+  theme(axis.text.x = element_text(angle = 30))  #Set the x-axis labels)
+
+ggplot(filter(otu_alphadiv, measure == "Inverse_Simpson"), aes(x = norep_filter_name, y = mean, color = lakesite)) +
+  geom_point() + facet_grid(project~fraction, scales = "free") + 
+  xlab("Sample Name") + ylab("Inverse Simpson") +
+  theme(axis.text.x = element_text(angle = 30))  #Set the x-axis labels)
+
+ggplot(filter(otu_alphadiv, measure == "Shannon_Entropy"), aes(x = norep_filter_name, y = mean, color = lakesite)) +
+  geom_point() + facet_grid(project~fraction, scales = "free") + 
+  xlab("Sample Name") + ylab("Shannon Entropy") +
+  theme(axis.text.x = element_text(angle = 30))  #Set the x-axis labels)
+
+
+###############################
+ML_otu_rich_stats <- filter(otu_alphadiv, measure == "Richness" & project == "Muskegon_Lake" & fraction %in% c("WholePart", "Free") & year == "2015")
+
+# Can fractional production be predicted by richness? 
+free_ML_otu_rich_stats <- filter(ML_otu_rich_stats, fraction == "Free")
+freeprod_ML_otu_rich <- lm(frac_bacprod ~ mean, data = free_ML_otu_rich_stats)
+freeprod_ML_otu_rich
+summary(freeprod_ML_otu_rich)
+
+part_ML_abs_rich_stats <- filter(ML_otu_rich_stats, fraction == "WholePart")
+partprod_MLotu_rich <- lm(frac_bacprod ~ mean, data = part_ML_abs_rich_stats)
+partprod_MLotu_rich
+summary(partprod_MLotu_rich)
+
+# Plot 
+otu_rich_vegan <- ggplot(ML_otu_rich_stats, aes(x=mean, y=frac_bacprod, color = fraction)) + 
+  geom_point(size = 3.5) + geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd), width = 0.2) + 
+  ggtitle("OTU: Vegan") +
+  scale_color_manual(values = c("firebrick3","cornflowerblue"), limits = c("WholePart", "Free")) +
+  scale_x_continuous(expand = c(0,0), limits = c(0,1250)) + 
+  scale_y_continuous(limits = c(0,70),expand = c(0,0)) + 
+  ylab("Production (μgC/L/hr)") + xlab("Observed Richness (D0)") +
+  #geom_smooth(data=subset(ML_otu_rich_stats, fraction == "Free"), method='lm') + 
+  geom_smooth(data=subset(ML_otu_rich_stats, fraction == "WholePart"), method='lm') + 
+  theme(legend.position=c(0.15,0.9),        
+        legend.title=element_blank()) +
+  annotate("text", x = 800, y=35, color = "cornflowerblue", fontface = "bold",
+           label = paste("R2 =", round(summary(freeprod_ML_otu_rich)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(freeprod_ML_otu_rich)$coefficients[,4][2]), digits = 4))) + 
+  annotate("text", x = 900, y=5, color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(partprod_MLotu_rich)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(partprod_MLotu_rich)$coefficients[,4][2]), digits = 4)));otu_rich_vegan
+
+
+
+######################################################### SHANNON ENTROPY
+#  Subset a dataframe with the key information
+ML_otu_shannon_stats <- filter(otu_alphadiv, 
+                                   measure == "Shannon_Entropy" & 
+                                     project == "Muskegon_Lake" & 
+                                     fraction %in% c("WholePart", "Free") & 
+                                     year == "2015")
+
+# Can fractional production be predicted by simpsevenness? 
+free_ML_otu_shannon_stats <- filter(ML_otu_shannon_stats, fraction == "Free")
+freeprod_ML_otu_shannon <- lm(frac_bacprod ~ mean, data = free_ML_otu_shannon_stats)
+freeprod_ML_otu_shannon
+summary(freeprod_ML_otu_shannon)
+
+part_ML_abs_shannon_stats <- filter(ML_otu_shannon_stats, fraction == "WholePart")
+partprod_MLotu_shannon <- lm(frac_bacprod ~ mean, data = part_ML_abs_shannon_stats)
+partprod_MLotu_shannon
+summary(partprod_MLotu_shannon)
+
+# Plot 
+otu_shannon_vegan <- ggplot(ML_otu_shannon_stats, aes(x=mean, y=frac_bacprod, color = fraction)) + 
+  geom_point(size = 3.5) + geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd), width = 0.2) + 
+  ggtitle("OTU: Vegan") +
+  scale_color_manual(values = c("firebrick3","cornflowerblue"), limits = c("WholePart", "Free")) +
+  scale_x_continuous(expand = c(0,0), limits=c(3, 6)) + 
+  scale_y_continuous(limits = c(0,70),expand = c(0,0)) + 
+  ylab("Production (μgC/L/hr)") + xlab("Shannon Entropy (D1)") +
+  #geom_smooth(data=subset(ML_otu_shannon_stats, fraction == "Free"), method='lm') + 
+  geom_smooth(data=subset(ML_otu_shannon_stats, fraction == "WholePart"), method='lm') + 
+  theme(legend.position=c(0.15,0.9),        
+        legend.title=element_blank()) +
+  annotate("text", x = 3.5, y=35, color = "cornflowerblue", fontface = "bold",
+           label = paste("R2 =", round(summary(freeprod_ML_otu_shannon)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(freeprod_ML_otu_shannon)$coefficients[,4][2]), digits = 4))) + 
+  annotate("text", x = 5.35, y=5, color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(partprod_MLotu_shannon)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(partprod_MLotu_shannon)$coefficients[,4][2]), digits = 4))); otu_shannon_vegan
+
+
+
+
+
+######################################################### INVERSE SIMPSON
+#  Subset a dataframe with the key information
+ML_otu_invsimps_stats <- filter(otu_alphadiv, 
+                                   measure == "Inverse_Simpson" & 
+                                     project == "Muskegon_Lake" & 
+                                     fraction %in% c("WholePart", "Free") & 
+                                     year == "2015")
+
+# Can fractional production be predicted by invsimpsness? 
+free_ML_otu_invsimps_stats <- filter(ML_otu_invsimps_stats, fraction == "Free")
+freeprod_ML_otu_invsimps <- lm(frac_bacprod ~ mean, data = free_ML_otu_invsimps_stats)
+freeprod_ML_otu_invsimps
+summary(freeprod_ML_otu_invsimps)
+
+part_ML_abs_invsimps_stats <- filter(ML_otu_invsimps_stats, fraction == "WholePart")
+partprod_MLotu_invsimps <- lm(frac_bacprod ~ mean, data = part_ML_abs_invsimps_stats)
+partprod_MLotu_invsimps
+summary(partprod_MLotu_invsimps)
+
+# Plot Simpson's Evenness
+otu_invsimps_vegan <- ggplot(ML_otu_invsimps_stats, aes(x=mean, y=frac_bacprod, color = fraction)) + 
+  geom_point(size = 3.5) + geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd), width = 0.2) + 
+  ggtitle("OTU: Vegan") +
+  scale_color_manual(values = c("firebrick3","cornflowerblue"), limits = c("WholePart", "Free")) +
+  scale_x_continuous(limits = c(0,100), expand = c(0,0)) + 
+  scale_y_continuous(limits = c(0,70),expand = c(0,0)) + 
+  ylab("Production (μgC/L/hr)") + xlab("Inverse Simpson (D2)") +
+  #geom_smooth(data=subset(ML_otu_invsimps_stats, fraction == "Free"), method='lm') + 
+  geom_smooth(data=subset(ML_otu_invsimps_stats, fraction == "WholePart"), method='lm') + 
+  theme(legend.position=c(0.85,0.9),        
+        legend.title=element_blank()) +
+  annotate("text", x = 58, y=35, color = "cornflowerblue", fontface = "bold",
+           label = paste("R2 =", round(summary(freeprod_ML_otu_invsimps)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(freeprod_ML_otu_invsimps)$coefficients[,4][2]), digits = 4))) + 
+  annotate("text", x = 63, y=5, color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(partprod_MLotu_invsimps)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(partprod_MLotu_invsimps)$coefficients[,4][2]), digits = 4))); otu_invsimps_vegan
+
+
+
+
+######################################################### SIMPSON'S EVENNESS
+#  Subset a dataframe with the key information
+ML_otu_simpseven_stats <- filter(otu_alphadiv, 
+                                   measure == "Simpsons_Evenness" & 
+                                     project == "Muskegon_Lake" & 
+                                     fraction %in% c("WholePart", "Free") & 
+                                     year == "2015")
+
+# Can fractional production be predicted by simpsevenness? 
+free_ML_otu_simpseven_stats <- filter(ML_otu_simpseven_stats, fraction == "Free")
+freeprod_ML_otu_simpseven <- lm(frac_bacprod ~ mean, data = free_ML_otu_simpseven_stats)
+freeprod_ML_otu_simpseven
+summary(freeprod_ML_otu_simpseven)
+
+part_ML_abs_simpseven_stats <- filter(ML_otu_simpseven_stats, fraction == "WholePart")
+partprod_MLotu_simpseven <- lm(frac_bacprod ~ mean, data = part_ML_abs_simpseven_stats)
+partprod_MLotu_simpseven
+summary(partprod_MLotu_simpseven)
+
+# Plot 
+otu_simpseven_vegan <- ggplot(ML_otu_simpseven_stats, aes(x=mean, y=frac_bacprod, color = fraction)) + 
+  geom_point(size = 3.5) +
+  ggtitle("OTU: Vegan") +
+  scale_color_manual(values = c("firebrick3","cornflowerblue"), limits = c("WholePart", "Free")) +
+  scale_x_continuous(expand = c(0,0), limits=c(0, 0.09)) + 
+  scale_y_continuous(limits = c(0,70),expand = c(0,0)) + 
+  ylab("Production (μgC/L/hr)") + xlab("Simpson's Evenness") +
+  #geom_smooth(data=subset(ML_otu_simpseven_stats, fraction == "Free"), method='lm') + 
+  geom_smooth(data=subset(ML_otu_simpseven_stats, fraction == "WholePart"), method='lm') + 
+  theme(legend.position=c(0.15,0.9),        
+        legend.title=element_blank()) +
+  annotate("text", x = 0.03, y=35, color = "cornflowerblue", fontface = "bold",
+           label = paste("R2 =", round(summary(freeprod_ML_otu_simpseven)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(freeprod_ML_otu_simpseven)$coefficients[,4][2]), digits = 4))) + 
+  annotate("text", x = 0.015, y=7, color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(partprod_MLotu_simpseven)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(partprod_MLotu_simpseven)$coefficients[,4][2]), digits = 4))); otu_simpseven_vegan
+
+otu_vegan <- plot_grid(otu_rich_vegan, otu_simpseven_vegan, otu_shannon_vegan, otu_invsimps_vegan,
+          labels = c("A", "B", "C", "D"), 
+          align = "h", nrow = 2, ncol = 2)
+
+#ggsave("Figures/vegan_otu_alpha_vs_prod.png", otu_vegan, dpi = 600, units = "in", width = 10, height = 8)
+```
+
+
+
+
+
+# Oligotyping
+```{r otu_alpha_div}
+# Load values
+nsamp <- nsamples(oligo_merged_pruned)
+min_lib <- min(sample_sums(oligo_merged_pruned)) - 1
+
+# Read in the files 
+oligo_richness <- read.table("metadata/oligo_richness100_rarefy4331",  header = TRUE)
+oligo_evenness <- read.table("metadata/oligo_evenness100_rarefy4331", header = TRUE)
+oligo_shannon <- read.table("metadata/oligo_shannon100_rarefy4331", header = TRUE)
+
+
+# Create a new dataframe to hold the means and standard deviations of richness estimates
+norep_filter_name <- row.names(oligo_richness)
+mean <- apply(oligo_richness, 1, mean)
+sd <- apply(oligo_richness, 1, sd)
+measure <- rep("Richness", nsamp)
+oligo_rich_stats <- data.frame(norep_filter_name, mean, sd, measure)
+
+# Create a new dataframe to hold the means and standard deviations of evenness estimates
+norep_filter_name <- row.names(oligo_evenness)
+mean <- apply(oligo_evenness, 1, mean)
+sd <- apply(oligo_evenness, 1, sd)
+measure <- rep("Inverse_Simpson", nsamp)
+oligo_even_stats <- data.frame(norep_filter_name, mean, sd, measure)
+
+# Create a new dataframe to hold the means and standard deviations of Shannon Entropy
+norep_filter_name <- row.names(oligo_shannon)
+mean <- apply(oligo_shannon, 1, mean)
+sd <- apply(oligo_shannon, 1, sd)
+measure <- rep("Shannon_Entropy", nsamp)
+oligo_shannon_stats <- data.frame(norep_filter_name, mean, sd, measure)
+
+# Calculate Simpson's Evenness into new df called "simps_evenness"
+oligo_simps_evenness <- inner_join(oligo_rich_stats, oligo_even_stats, by = "norep_filter_name") %>%
+  mutate(mean = mean.y/mean.x,
+         sd = sd(mean),
+         measure = "Simpsons_Evenness") %>%
+  select(norep_filter_name, mean, sd, measure)
+
+# Combine alpha diversity into one dataframe 
+oligo_alpha <- rbind(oligo_rich_stats, oligo_even_stats, oligo_simps_evenness, oligo_shannon_stats)
+s <- data.frame(sample_data(oligo_merged_pruned))
+oligo_alphadiv <- merge(oligo_alpha, s, by = "norep_filter_name") %>%
+  filter(project == "Muskegon_Lake")
+
+
+ggplot(filter(oligo_alphadiv, measure == "Richness"), aes(x = norep_filter_name, y = mean, color = lakesite)) +
+  geom_point() + facet_grid(project~fraction, scales = "free") + 
+  xlab("Sample Name") + ylab("Richness") +
+  theme(axis.text.x = element_text(angle = 30))  #Set the x-axis labels)
+
+ggplot(filter(oligo_alphadiv, measure == "Inverse_Simpson"), aes(x = norep_filter_name, y = mean, color = lakesite)) +
+  geom_point() + facet_grid(project~fraction, scales = "free") + 
+  xlab("Sample Name") + ylab("Inverse Simpson") +
+  theme(axis.text.x = element_text(angle = 30))  #Set the x-axis labels)
+
+ggplot(filter(oligo_alphadiv, measure == "Shannon_Entropy"), aes(x = norep_filter_name, y = mean, color = lakesite)) +
+  geom_point() + facet_grid(project~fraction, scales = "free") + 
+  xlab("Sample Name") + ylab("Shannon Entropy") +
+  theme(axis.text.x = element_text(angle = 30))  #Set the x-axis labels)
+
+
+######################################################### RICHNESS
+#  Subset a dataframe with the key information
+ML_oligo_rich_stats <- filter(oligo_alphadiv, 
+                              measure == "Richness" & 
+                                project == "Muskegon_Lake" & 
+                                fraction %in% c("WholePart", "Free") & 
+                                year == "2015")
+
+
+# Can fractional production be predicted by richness? 
+free_ML_oligo_rich_stats <- filter(ML_oligo_rich_stats, fraction == "Free")
+freeprod_ML_oligo_rich <- lm(frac_bacprod ~ mean, data = free_ML_oligo_rich_stats)
+freeprod_ML_oligo_rich
+summary(freeprod_ML_oligo_rich)
+
+part_ML_abs_rich_stats <- filter(ML_oligo_rich_stats, fraction == "WholePart")
+partprod_MLoligo_rich <- lm(frac_bacprod ~ mean, data = part_ML_abs_rich_stats)
+partprod_MLoligo_rich
+summary(partprod_MLoligo_rich)
+
+# Plot 
+oligo_rich_vegan <- ggplot(ML_oligo_rich_stats, aes(x=mean, y=frac_bacprod, color = fraction)) + 
+  geom_point(size = 3.5) + geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd), width = 0.2) + 
+  ggtitle("Oligotyping: Vegan") +
+  scale_color_manual(values = c("firebrick3","cornflowerblue"), limits = c("WholePart", "Free")) +
+  #scale_x_continuous(expand = c(0,0)) + 
+  scale_y_continuous(limits = c(0,70),expand = c(0,0)) + 
+  ylab("Production (μgC/L/hr)") + xlab("Observed Richness (D0)") +
+  #geom_smooth(data=subset(ML_oligo_rich_stats, fraction == "Free"), method='lm') + 
+  geom_smooth(data=subset(ML_oligo_rich_stats, fraction == "WholePart"), method='lm') + 
+  theme(legend.position=c(0.15,0.9),        
+        legend.title=element_blank()) +
+  annotate("text", x = 210, y=45, color = "cornflowerblue", fontface = "bold",
+           label = paste("R2 =", round(summary(freeprod_ML_oligo_rich)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(freeprod_ML_oligo_rich)$coefficients[,4][2]), digits = 4))) + 
+  annotate("text", x = 260, y=25, color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(partprod_MLoligo_rich)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(partprod_MLoligo_rich)$coefficients[,4][2]), digits = 4))); oligo_rich_vegan
+
+
+
+######################################################### SHANNON ENTROPY
+#  Subset a dataframe with the key information
+ML_oligo_shannon_stats <- filter(oligo_alphadiv, 
+                              measure == "Shannon_Entropy" & 
+                                project == "Muskegon_Lake" & 
+                                fraction %in% c("WholePart", "Free") & 
+                                year == "2015")
+
+
+# Can fractional production be predicted by richness? 
+free_ML_oligo_shannon_stats <- filter(ML_oligo_shannon_stats, fraction == "Free")
+freeprod_ML_oligo_shannon <- lm(frac_bacprod ~ mean, data = free_ML_oligo_shannon_stats)
+freeprod_ML_oligo_shannon
+summary(freeprod_ML_oligo_shannon)
+
+part_ML_abs_shannon_stats <- filter(ML_oligo_shannon_stats, fraction == "WholePart")
+partprod_MLoligo_shannon <- lm(frac_bacprod ~ mean, data = part_ML_abs_shannon_stats)
+partprod_MLoligo_shannon
+summary(partprod_MLoligo_shannon)
+
+# Plot 
+oligo_shannon_vegan <- ggplot(ML_oligo_shannon_stats, aes(x=mean, y=frac_bacprod, color = fraction)) + 
+  geom_point(size = 3.5) + geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd), width = 0.2) + 
+  ggtitle("Oligotyping: Vegan") +
+  scale_color_manual(values = c("firebrick3","cornflowerblue"), limits = c("WholePart", "Free")) +
+  #scale_x_continuous(expand = c(0,0)) + 
+  scale_y_continuous(limits = c(0,70),expand = c(0,0)) + 
+  ylab("Production (μgC/L/hr)") + xlab("Shannon Entropy (D1)") +
+  #geom_smooth(data=subset(ML_oligo_shannon_stats, fraction == "Free"), method='lm') + 
+  geom_smooth(data=subset(ML_oligo_shannon_stats, fraction == "WholePart"), method='lm') + 
+  theme(legend.position=c(0.15,0.9),        
+        legend.title=element_blank()) +
+  annotate("text", x = 3.9, y=35, color = "cornflowerblue", fontface = "bold",
+           label = paste("R2 =", round(summary(freeprod_ML_oligo_shannon)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(freeprod_ML_oligo_shannon)$coefficients[,4][2]), digits = 4))) + 
+  annotate("text", x = 4.7, y=5, color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(partprod_MLoligo_shannon)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(partprod_MLoligo_shannon)$coefficients[,4][2]), digits = 4))); oligo_shannon_vegan
+
+
+
+
+######################################################### INVERSE SIMPSON
+#  Subset a dataframe with the key information
+ML_oligo_invsimps_stats <- filter(oligo_alphadiv, 
+                                   measure == "Inverse_Simpson" & 
+                                     project == "Muskegon_Lake" & 
+                                     fraction %in% c("WholePart", "Free") & 
+                                     year == "2015")
+
+# Can fractional production be predicted by invsimpsness? 
+free_ML_oligo_invsimps_stats <- filter(ML_oligo_invsimps_stats, fraction == "Free")
+freeprod_ML_oligo_invsimps <- lm(frac_bacprod ~ mean, data = free_ML_oligo_invsimps_stats)
+freeprod_ML_oligo_invsimps
+summary(freeprod_ML_oligo_invsimps)
+
+part_ML_abs_invsimps_stats <- filter(ML_oligo_invsimps_stats, fraction == "WholePart")
+partprod_MLoligo_invsimps <- lm(frac_bacprod ~ mean, data = part_ML_abs_invsimps_stats)
+partprod_MLoligo_invsimps
+summary(partprod_MLoligo_invsimps)
+
+# Plot Simpson's Evenness
+oligo_invsimps_vegan <- ggplot(ML_oligo_invsimps_stats, aes(x=mean, y=frac_bacprod, color = fraction)) + 
+  geom_point(size = 3.5) + geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd), width = 0.2) + 
+  ggtitle("Oligotyping: Vegan") +
+  scale_color_manual(values = c("firebrick3","cornflowerblue"), limits = c("WholePart", "Free")) +
+  #scale_x_continuous(expand = c(0,0)) + 
+  scale_y_continuous(limits = c(0,70),expand = c(0,0)) + 
+  ylab("Production (μgC/L/hr)") + xlab("Inverse Simpson Index") +
+  geom_smooth(data=subset(ML_oligo_invsimps_stats, fraction == "Free"), method='lm') + 
+  geom_smooth(data=subset(ML_oligo_invsimps_stats, fraction == "WholePart"), method='lm') + 
+  theme(legend.position=c(0.15,0.9),        
+        legend.title=element_blank()) +
+  annotate("text", x = 58, y=35, color = "cornflowerblue", fontface = "bold",
+           label = paste("R2 =", round(summary(freeprod_ML_oligo_invsimps)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(freeprod_ML_oligo_invsimps)$coefficients[,4][2]), digits = 4))) + 
+  annotate("text", x = 63, y=5, color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(partprod_MLoligo_invsimps)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(partprod_MLoligo_invsimps)$coefficients[,4][2]), digits = 4))); oligo_invsimps_vegan
+
+
+
+
+######################################################### SIMPSON'S EVENNESS
+#  Subset a dataframe with the key information
+ML_oligo_simpseven_stats <- filter(oligo_alphadiv, 
+                                   measure == "Simpsons_Evenness" & 
+                                     project == "Muskegon_Lake" & 
+                                     fraction %in% c("WholePart", "Free") & 
+                                     year == "2015")
+
+# Can fractional production be predicted by simpsevenness? 
+free_ML_oligo_simpseven_stats <- filter(ML_oligo_simpseven_stats, fraction == "Free")
+freeprod_ML_oligo_simpseven <- lm(frac_bacprod ~ mean, data = free_ML_oligo_simpseven_stats)
+freeprod_ML_oligo_simpseven
+summary(freeprod_ML_oligo_simpseven)
+
+part_ML_abs_simpseven_stats <- filter(ML_oligo_simpseven_stats, fraction == "WholePart")
+partprod_MLoligo_simpseven <- lm(frac_bacprod ~ mean, data = part_ML_abs_simpseven_stats)
+partprod_MLoligo_simpseven
+summary(partprod_MLoligo_simpseven)
+
+# Plot Simpson's Evenness
+oligo_simpseven_vegan <- ggplot(ML_oligo_simpseven_stats, aes(x=mean, y=frac_bacprod, color = fraction)) + 
+  geom_point(size = 3.5) + 
+  ggtitle("Oligotyping: Vegan") +
+  scale_color_manual(values = c("firebrick3","cornflowerblue"), limits = c("WholePart", "Free")) +
+  #scale_x_continuous(expand = c(0,0)) + 
+  scale_y_continuous(limits = c(0,70),expand = c(0,0)) + 
+  ylab("Production (μgC/L/hr)") + xlab("Simpson's Evenness") +
+  #geom_smooth(data=subset(ML_oligo_simpseven_stats, fraction == "Free"), method='lm') + 
+  geom_smooth(data=subset(ML_oligo_simpseven_stats, fraction == "WholePart"), method='lm') + 
+  theme(legend.position=c(0.15,0.9),        
+        legend.title=element_blank()) +
+  annotate("text", x = 0.105, y=25, color = "cornflowerblue", fontface = "bold",
+           label = paste("R2 =", round(summary(freeprod_ML_oligo_simpseven)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(freeprod_ML_oligo_simpseven)$coefficients[,4][2]), digits = 4))) + 
+  annotate("text", x = 0.20, y=5, color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(partprod_MLoligo_simpseven)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(partprod_MLoligo_simpseven)$coefficients[,4][2]), digits = 4))); oligo_simpseven_vegan
+
+oligotyping_vegan <- plot_grid(oligo_rich_vegan, oligo_simpseven_vegan,  oligo_shannon_vegan, oligo_invsimps_vegan,
+          labels = c("A", "B", "C", "D"), 
+          align = "h", nrow = 2, ncol = 2)
+
+#ggsave("Figures/vegan_oligo_alpha_vs_prod.png", oligotyping_vegan, dpi = 600, units = "in", width = 10, height = 8)
+
+```
+
+
+
+```{r all-together}
+plot_grid(otu_rich, oligo_rich, 
+          labels = c("A", "B"), 
+          align = "h", nrow = 1, ncol = 2)
+
+plot_grid(otu_simpseven, oligo_simpseven, 
+          labels = c("A", "B"), 
+          align = "h", nrow = 1, ncol = 2)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+

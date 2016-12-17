@@ -1,0 +1,26 @@
+####  PBS preamble
+#PBS -N Mothur.batch
+#PBS -M marschmi@umich.edu
+#PBS -m abe
+
+#PBS -l nodes=1:ppn=40,mem=1000gb,walltime=80:00:00
+#PBS -V
+
+#PBS -A vdenef_fluxm
+#PBS -l qos=flux
+#PBS -q fluxm
+####  End PBS preamble
+
+#  Show list of CPUs you ran on, if you're running under PBS
+if [ -n "$PBS_NODEFILE" ]; then cat $PBS_NODEFILE; fi
+
+#  Change to the directory you submitted from
+if [ -n "$PBS_O_WORKDIR" ]; then cd $PBS_O_WORKDIR; fi
+pwd
+
+## Choose taxonomy of interest for oligotyping (if none leave it at Bacteria)
+## Example: Bacteria;Firmicutes;
+## sed -i "s/Bacteria/Bacteria;Proteobacteria;Betaproteobacteria;Burkholderiales;betI;betI_A/g" mothur.batch.taxass
+
+# Run Mothur
+mothur mothur.batch.taxass

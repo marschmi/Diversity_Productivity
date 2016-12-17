@@ -1,0 +1,62 @@
+Linux version
+
+Using ReadLine
+
+Using default file location /sw/src/med/mothur/mothur-1.38.1/
+
+Running 64Bit Version
+
+mothur v.1.38.0
+Last updated: 7/20/2016
+
+by
+Patrick D. Schloss
+
+Department of Microbiology & Immunology
+University of Michigan
+pschloss@umich.edu
+http://www.mothur.org
+
+When using, please cite:
+Schloss, P.D., et al., Introducing mothur: Open-source, platform-independent, community-supported software for describing and comparing microbial communities. Appl Environ Microbiol, 2009. 75(23):7537-41.
+
+Distributed under the GNU General Public License
+
+Type 'help()' for information on the commands that are available
+
+Type 'quit()' to exit program
+Script Mode
+
+
+mothur > classify.seqs(seed=777, fasta=oligo.above.97.fasta, template=/nfs/vdenef-lab/Shared/Ruben/databases_taxass/FreshTrain18Aug2016.fasta, taxonomy=/nfs/vdenef-lab/Shared/Ruben/databases_taxass/FreshTrain18Aug2016.taxonomy, method=wang, probs=T, cutoff=80)
+Setting random seed to 777.
+
+
+Using 1 processors.
+Reading template taxonomy...     DONE.
+Reading template probabilities...     DONE.
+It took 1 seconds get probabilities. 
+Classifying sequences from oligo.above.97.fasta ...
+
+It took 0 secs to classify 216 sequences.
+
+
+It took 0 secs to create the summary file for 216 sequences.
+
+
+Output File Names: 
+oligo.above.97.FreshTrain18Aug2016.wang.taxonomy
+oligo.above.97.FreshTrain18Aug2016.wang.tax.summary
+
+[WARNING]: your sequence names contained ':'.  I changed them to '_' to avoid problems in your downstream analysis.
+
+mothur > quit()
+
+
+<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<^>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<^>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<^>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+Detected 1 [WARNING] messages, please review.
+<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<^>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<^>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<^>>>>>>>>>>>>>>>>>>>>>>>>>>>>>

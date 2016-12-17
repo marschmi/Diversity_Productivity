@@ -1,0 +1,42 @@
+Linux version
+
+Using ReadLine
+
+Using default file location /sw/src/med/mothur/mothur-1.38.1/
+
+Running 64Bit Version
+
+mothur v.1.38.0
+Last updated: 7/20/2016
+
+by
+Patrick D. Schloss
+
+Department of Microbiology & Immunology
+University of Michigan
+pschloss@umich.edu
+http://www.mothur.org
+
+When using, please cite:
+Schloss, P.D., et al., Introducing mothur: Open-source, platform-independent, community-supported software for describing and comparing microbial communities. Appl Environ Microbiol, 2009. 75(23):7537-41.
+
+Distributed under the GNU General Public License
+
+Type 'help()' for information on the commands that are available
+
+Type 'quit()' to exit program
+Script Mode
+
+
+mothur > classify.seqs(seed=777, fasta=oligo.below.97.fasta, template=/nfs/vdenef-lab/Shared/Ruben/databases_taxass/silva.nr_v123.align, taxonomy=/nfs/vdenef-lab/Shared/Ruben/databases_taxass/silva.nr_v123.tax, method=wang, probs=T, cutoff=80)
+Setting random seed to 777.
+
+
+Using 1 processors.
+Reading template taxonomy...     DONE.
+Reading template probabilities...     
+quitting command...
+DONE.
+It took 24 seconds get probabilities. 
+
+mothur > quit()
