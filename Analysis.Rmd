@@ -24,6 +24,7 @@ library(ggplot2)
 library(devtools)
 library(phyloseq)
 library(vegan)
+library(tidyr)
 library(dplyr)
 library(DT)
 library(cowplot)
@@ -44,6 +45,24 @@ otu_data <- import_mothur(mothur_shared_file = otu_shared, mothur_constaxonomy_f
 
 # Fix the taxonomy names
 colnames(tax_table(otu_data)) <- c("Kingdom","Phylum","Class","Order","Family","Genus","Species")
+
+################################################
+########## ADD THE PROTEOBACTERIA TO THE PHYLA
+phy <- data.frame(tax_table(otu_data))
+Phylum <- as.character(phy$Phylum)
+Class <- as.character(phy$Class)
+
+for  (i in 1:length(Phylum)){ 
+  if (Phylum[i] == "Proteobacteria"){
+    Phylum[i] <- Class[i]
+  } 
+}
+
+phy$Phylum <- Phylum
+t <- tax_table(as.matrix(phy))
+
+tax_table(otu_data) <- t
+################################################
 
 # Sample Names
 samp_names <- colnames(otu_table(otu_data))
@@ -484,8 +503,8 @@ scaled_oligo_merged_pruned <- oligo_merged_pruned %>%
  
 ```
 
-
-# Vegan: OTU Analysis 
+# Vegan Alpha Diversity Analysis
+## OTU Analysis 
 ```{r vegan-otu-alphadiv}
 # Load values
 nsamp <- nsamples(otu_merged_pruned)
@@ -716,8 +735,7 @@ otu_vegan <- plot_grid(otu_rich_vegan, otu_simpseven_vegan, otu_shannon_vegan, o
 #ggsave("Figures/vegan_otu_alpha_vs_prod.png", otu_vegan, dpi = 600, units = "in", width = 10, height = 8)
 ```
 
-
-# Vegan: Oligotyping Analysis 
+## Oligotyping Analysis 
 ```{r vegan-oligotyping-alphadiv}
 # Load values
 nsamp <- nsamples(oligo_merged_pruned)
@@ -951,10 +969,313 @@ oligotyping_vegan <- plot_grid(oligo_rich_vegan, oligo_simpseven_vegan,  oligo_s
 ```
 
 
+# Phylum Level Analysis
+```{r}
+musk_scaled_otu_merged_pruned <- subset_samples(scaled_otu_merged_pruned, project == "Muskegon_Lake" & 
+                                           year == "2015" &
+                                           limnion == "Top" &
+                                           fraction %in% c("WholePart", "Free"))
+
+# Fix month levels in sample_data
+sample_data(musk_scaled_otu_merged_pruned)$fraction <- factor(
+  sample_data(musk_scaled_otu_merged_pruned)$fraction, 
+  levels = c("WholePart", "Free")
+)
+
+sample_data(musk_scaled_otu_merged_pruned)$lakesite <- factor(
+  sample_data(musk_scaled_otu_merged_pruned)$lakesite, 
+  levels = c("MOT", "MDP", "MBR", "MIN")
+)
+
+
+
+musk_scaled_otu_merged_pruned_phylum <- musk_scaled_otu_merged_pruned %>%
+  tax_glom(taxrank = "Phylum") %>%                     # agglomerate at phylum level
+  transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
+  psmelt() %>%                                         # Melt to long format
+  filter(Abundance > 0.02) %>%                         # Filter out low abundance taxa
+  arrange(Phylum)                                      # Sort data frame alphabetically by phylum
+
+
+# Set colors for plotting
+phylum_colors <- c(
+  "#CBD588", "#5F7FC7", "orange","#DA5724", "#508578", "plum1",
+   "firebrick4", "white", "#D14285","seagreen3", "gold", 
+  "#8569D5", "firebrick1", "peachpuff"
+)
+
+
+# Plot 
+ggplot(musk_scaled_otu_merged_pruned_phylum, aes(x = season, y = Abundance, fill = Phylum)) + 
+  facet_grid(fraction~lakesite) +
+  geom_bar(stat = "identity", color = "black") +
+  scale_fill_manual(values = phylum_colors) +
+  guides(fill = guide_legend(reverse = FALSE, keywidth = 1, keyheight = 1)) +
+  ylab("Relative Abundance (Phyla > 2%) \n") +
+  ggtitle("Phylum Composition of 2015 Muskegon Lake \n Bacterial Communities by Sampling Site") +
+  theme(strip.background = element_rect(fill = "white"),
+        axis.text.x = element_text(colour = "black", angle=45, hjust = 1, vjust = 1))
+```
+
+
+# Phylum production analysis
+```{r}
+# My own subsetting function, similar to phyloseq::subset_taxa, except taxa can 
+# be passed as arguments within functions without weird environment errors
+#
+# Args:
+#   physeq: a phyloseq object
+#   taxrank: taxonomic rank to filter on
+#   taxa: a vector of taxa groups to filter on
+#
+# Returns: 
+#   a phyloseq object subsetted to the x taxa in taxrank
+my_subset_taxa <- function(physeq, taxrank, taxa) {
+  physeq_tax_sub <- tax_table(physeq)[tax_table(physeq)[ , taxrank] %in% taxa, ]
+  tax_table(physeq) <- physeq_tax_sub
+  return(physeq)
+}
 
 
 
 
+
+# Initialize parameters
+trials <- 100
+min_lib <- min(sample_sums(musk_scaled_otu_merged_pruned)) # Depth we are rarefying to
+
+# Groups to estimate alpha diversity for 
+mytaxa <- c("Acidobacteria", "Actinobacteria", "Alphaproteobacteria", "Armatimonadetes",
+            "Bacteroidetes", "Betaproteobacteria", "Chlorobi", "Chloroflexi",
+            "Cyanobacteria","Deltaproteobacteria", "Gammaproteobacteria", 
+            "Planctomycetes","Verrucomicrobia")
+names(mytaxa) <- mytaxa
+
+# Taxonomic ranks of mytaxa
+mytaxa_taxrank <- c("Phylum", "Phylum", "Phylum", "Phylum", "Phylum", "Phylum", 
+                      "Phylum", "Phylum", "Phylum", "Phylum", "Phylum", "Phylum", "Phylum")
+names(mytaxa_taxrank) <- mytaxa
+
+# Data frame to hold alpha diversity estimates over trials
+alphadiv_df <- data.frame(matrix(nrow = nsamples(musk_scaled_otu_merged_pruned), ncol = trials))
+
+# Initialize empty df's for richness and evenness of all taxa in mytaxa
+richness <- lapply(mytaxa, function(x) {return(alphadiv_df)} )
+shannon <- lapply(mytaxa, function(x) {return(alphadiv_df)} )
+invsimps <- lapply(mytaxa, function(x) {return(alphadiv_df)} )
+simpseven <- lapply(mytaxa, function(x) {return(alphadiv_df)} )
+
+alphadiv_list <- list(richness = richness, shannon = shannon, invsimps = invsimps, simpseven = simpseven)
+
+
+# Set the seed for reproducibility
+set.seed(3)
+
+# Run trials to subsample and estimate diversity
+for (i in 1:100) {
+  
+  # Subsample
+  rarefied_physeq <- rarefy_even_depth(musk_scaled_otu_merged_pruned, sample.size = min_lib, verbose = FALSE, replace = TRUE)
+  
+  # Generate alpha-diversity estimates for each taxonomic group
+  for (t in mytaxa) {
+
+    # Subset the taxa
+    physeq_sub <- my_subset_taxa(physeq = rarefied_physeq, 
+                                 taxrank = mytaxa_taxrank[t], 
+                                 taxa = t)
+    
+    # Calculate observed richness for that group and store value in a df column
+    richness <- estimate_richness(physeq_sub, measures = "Observed")[ ,1]
+    alphadiv_list$richness[[t]][ ,i] <- richness
+    
+    # Calculate observed shannon for that group and store value in a df column
+    shannon <- estimate_richness(physeq_sub, measures = "Shannon")[ ,1]
+    alphadiv_list$shannon[[t]][ ,i] <- shannon
+    
+    # Calculate observed invsimps for that group and store value in a df column
+    invsimps <- estimate_richness(physeq_sub, measures = "InvSimpson")[ ,1]
+    alphadiv_list$invsimps[[t]][ ,i] <- invsimps
+     
+    # Calculate Simpson's Evenness for that group and store value in a df column
+    alphadiv_list$simpseven[[t]][ ,i] <- (estimate_richness(physeq_sub, measures = "InvSimpson")[ ,1]/richness)
+
+  }
+}
+
+# Calculate the means of richness and inverse simpson from the 100 trials
+alphadiv_est <- lapply(alphadiv_list, function(div_measure) {
+    lapply(div_measure, function(taxa_group) {
+        alpha_mean <- rowMeans(taxa_group)
+        return(alpha_mean)
+    })  
+})
+
+# Convert alphadiv_est richness and simpson's E lists into wide data frames
+l <- lapply(alphadiv_est, function(x) {
+  # convert from list to data.frame
+  est_df <- plyr::ldply(.data = x, .fun = data.frame)
+  names(est_df) <- c("Taxa", "Diversity")
+  
+  # Add in SampleID column and spread to wide format
+  r <- est_df %>%
+    mutate(norep_filter_name = rep(sample_names(musk_scaled_otu_merged_pruned), length(mytaxa)))
+  return(r)
+})
+
+# Merge sample metadata with these estimates
+merge_dat <- data.frame(sample_data(musk_scaled_otu_merged_pruned)) %>%
+  select(norep_filter_name, Chl_Lab_ugperL, TP_ugperL, pH, frac_bacprod, NH3_mgperL, NO3_mgperL,
+         lakesite, fraction, season) #%>%
+  #mutate(logChla = log(Chla)) %>%
+  #mutate(logPhyco = log(Phycocyanin + 0.1)) %>%
+  #mutate(logTP = log(TP)) %>%
+  #mutate(logTurb = log(Turbidity))
+
+# Create a df with a "Diversity" column that includes richness and inv. simpson,
+# and log-chl a values from erie sample_data
+alpha_comb1 <- l$richness %>% 
+  left_join(y = l$shannon, by = c("Taxa", "norep_filter_name")) %>%   # Join the richness and inv_simp df's
+  rename(Richness = Diversity.x, Shannon = Diversity.y) 
+
+alpha_comb2 <- l$invsimps %>%   
+  left_join(y = l$simpseven, by = c("Taxa", "norep_filter_name")) %>%   # Join the richness and inv_simp df's
+  rename(Inverse_Simpson = Diversity.x, Simpsons_Evenness = Diversity.y) 
+
+alpha_comb_final <- alpha_comb1 %>%
+  left_join(y = alpha_comb2, by = c("Taxa", "norep_filter_name")) %>%
+  left_join(merge_dat, by = "norep_filter_name") %>%                  # Join with merged nutrient data
+  gather(key = "Alphadiv", value = "Estimate", Richness, Shannon, Inverse_Simpson, Simpsons_Evenness)
+```
+
+
+## Phylum Diversity plots
+
+```{r}
+
+
+# ######################################################### RICHNESS
+# #  Subset a dataframe with the key information
+# ML_oligo_rich_stats <- filter(oligo_alphadiv, 
+#                               measure == "Richness" & 
+#                                 project == "Muskegon_Lake" & 
+#                                 fraction %in% c("WholePart", "Free") & 
+#                                 year == "2015")
+# 
+# 
+# # Can fractional production be predicted by richness? 
+# free_ML_oligo_rich_stats <- filter(ML_oligo_rich_stats, fraction == "Free")
+# freeprod_ML_oligo_rich <- lm(frac_bacprod ~ mean, data = free_ML_oligo_rich_stats)
+# freeprod_ML_oligo_rich
+# summary(freeprod_ML_oligo_rich)
+# 
+# part_ML_abs_rich_stats <- filter(ML_oligo_rich_stats, fraction == "WholePart")
+# partprod_MLoligo_rich <- lm(frac_bacprod ~ mean, data = part_ML_abs_rich_stats)
+# partprod_MLoligo_rich
+# summary(partprod_MLoligo_rich)
+
+# Plot 
+ggplot(filter(alpha_comb_final, Taxa == "Cyanobacteria"), 
+       aes(x=Estimate, y=frac_bacprod, color = fraction)) + 
+  geom_point(size = 3.5) + 
+  ggtitle("OTU: Cyanobacteria") +
+  scale_color_manual(values = c("firebrick3","cornflowerblue"), limits = c("WholePart", "Free")) +
+  facet_wrap( ~ Alphadiv, ncol=2, scales="free_x") +
+  #scale_x_continuous(expand = c(0,0)) + 
+  #scale_y_continuous(limits = c(0,70),expand = c(0,0)) + 
+  ylab("Production (μgC/L/hr)") + xlab("Observed Richness (D0)") +
+  #geom_smooth(data=subset(ML_oligo_rich_stats, fraction == "Free"), method='lm') + 
+  #geom_smooth(data=subset(ML_oligo_rich_stats, fraction == "WholePart"), method='lm') + 
+  theme(legend.position="right",        
+        legend.title=element_blank())
+ # annotate("text", x = 210, y=45, color = "cornflowerblue", fontface = "bold",
+#           label = paste("R2 =", round(summary(freeprod_ML_oligo_rich)$adj.r.squared, digits = 4), "\n", 
+#                         "p =", round(unname(summary(freeprod_ML_oligo_rich)$coefficients[,4][2]), digits = 4))) + 
+#  annotate("text", x = 260, y=25, color = "firebrick3", fontface = "bold",
+#           label = paste("R2 =", round(summary(partprod_MLoligo_rich)$adj.r.squared, digits = 4), "\n", 
+#                         "p =", round(unname(summary(partprod_MLoligo_rich)$coefficients[,4][2]), digits = 4))); oligo_rich_vegan
+
+```
+
+
+
+
+
+## Production 
+```{r}
+prod_data <- data.frame(sample_data(musk_scaled_otu_merged_pruned))
+
+
+ggplot(prod_data, aes(x = season, y = tot_bacprod, color = lakesite, group = lakesite, linetype = lakesite)) + 
+  geom_point(size = 3.5) +   geom_line(size = 2) +
+  ylab("Total Bacterial\n Production") +
+  theme(axis.title.x = element_blank(),
+        axis.text.x = element_text(colour = "black", angle=15, hjust = 1, vjust = 1))
+
+
+
+#### Plot many environ variables
+tot_prod_plot <- ggplot(prod_data, aes(x = season, y = tot_bacprod, color = lakesite, group = lakesite)) + 
+  facet_grid(.~lakesite) +
+  geom_point(size = 3.5) + geom_line() +
+  ylab("Total Bacterial\n Production") +
+  theme(strip.background = element_rect(fill = "white"),
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(colour = "black", angle=15, hjust = 1, vjust = 1),
+        legend.position="none")
+
+chla_plot <- ggplot(prod_data, aes(x = season, y = Chl_Lab_ugperL, color = lakesite, group = lakesite)) + 
+  facet_grid(.~lakesite) +
+  geom_point(size = 3.5) + geom_line() +
+  ylab("Chlorophyll a") +
+  theme(strip.background = element_rect(fill = "white"),
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(colour = "black", angle=15, hjust = 1, vjust = 1),
+        legend.position="none")
+
+ph_plot <- ggplot(prod_data, aes(x = season, y = pH, color = lakesite, group = lakesite)) + 
+  facet_grid(.~lakesite) +
+  geom_point(size = 3.5) + geom_line() +
+  ylab("pH") +
+  theme(strip.background = element_rect(fill = "white"),
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(colour = "black", angle=15, hjust = 1, vjust = 1),
+        legend.position="none")
+
+tp_plot <- ggplot(prod_data, aes(x = season, y = TP_ugperL, color = lakesite, group = lakesite)) + 
+  facet_grid(.~lakesite) +
+  geom_point(size = 3.5) + geom_line() +
+  ylab("TP_ugperL") +
+  theme(strip.background = element_rect(fill = "white"),
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(colour = "black", angle=15, hjust = 1, vjust = 1),
+        legend.position="none")
+
+no3_plot <- ggplot(prod_data, aes(x = season, y = NO3_mgperL, color = lakesite, group = lakesite)) + 
+  facet_grid(.~lakesite) +
+  geom_point(size = 3.5) + geom_line() +
+  ylab("NO3_mgperL") +
+  theme(strip.background = element_rect(fill = "white"),
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(colour = "black", angle=15, hjust = 1, vjust = 1),
+        legend.position="none")
+
+
+nh3_plot <- ggplot(prod_data, aes(x = season, y = NH3_mgperL, color = lakesite, group = lakesite)) + 
+  facet_grid(.~lakesite) +
+  geom_point(size = 3.5) + geom_line() +
+  ylab("NH3_mgperL") +
+  theme(strip.background = element_rect(fill = "white"),
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(colour = "black", angle=15, hjust = 1, vjust = 1),
+        legend.position="none")
+
+environ_seasons <- plot_grid(tot_prod_plot, chla_plot, ph_plot, tp_plot, no3_plot, nh3_plot,
+          labels = c("A", "B", "C", "D", "E", "F"), 
+          align = "h", nrow = 6, ncol = 1)
+
+environ_seasons
+```
 
 
 
