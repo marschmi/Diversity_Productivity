@@ -32,6 +32,7 @@ library(wesanderson) # for pretty colors
 library(viridis)
 library(data.table)
 library(stringr)
+library(ape)
 library(iNEXT) # iNEXT package for alpha diversity measurements 
 source("Muskegon_functions.R")
 ```
@@ -41,7 +42,7 @@ source("Muskegon_functions.R")
 #  Load in the taxonomy and shared data
 otu_tax <- "mothur/stability.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.an.unique_list.0.03.cons.taxonomy"
 otu_shared <- "mothur/stability.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.an.unique_list.shared"
-otu_data <- import_mothur(mothur_shared_file = otu_shared, mothur_constaxonomy_file = otu_tax)
+otu_dat <- import_mothur(mothur_shared_file = otu_shared, mothur_constaxonomy_file = otu_tax)
 
 # Fix the taxonomy names
 colnames(tax_table(otu_data)) <- c("Kingdom","Phylum","Class","Order","Family","Genus","Species")
@@ -94,7 +95,7 @@ complete_meta_df$norep_filter_name <- paste(substr(complete_meta_df$names,1,4),s
 ```
 
 
-## Oligotyping Analysis
+## Load in Oligotyping Data
 ```{r load-oligotyping}
 ##  Read in the Oligotyping Count file 
 oligo_count <- read.table("oligotyping/MATRIX-COUNT.txt", header = TRUE, row.names = 1) # Read in the oligotyping file making the first row and columns the column and row names
@@ -241,8 +242,162 @@ ggplot(data.frame(sum = sample_sums(oligo_merged_musk)), aes(x = sum)) +
 ```
 
 
+# Phenoflow Alpha diversity analysis
 
-# OLIGOTYPING PHENOFLOW
+## OTU Phenoflow analysis
+```{r otu-phenoflow}
+# OTU analysis
+# Create a new file called "otu_merged_musk_Physeq.RData" that has the phyloseq object
+#save(list=c("otu_merged_musk"), file=paste0("Phenoflow/otu_merged_musk_Physeq.RData")) # Will be run on Flux
+otu_phenoflow_alpha <- get(load("Phenoflow/otu_phenoflow/Phenoflow_diversity.RData"))
+
+# Add the rownames so that it can be combined with the metadata
+otu_phenoflow_alpha <- data.frame(otu_phenoflow_alpha, norep_filter_name = rownames(otu_phenoflow_alpha))
+# Create the metadata information 
+meta_dat <- data.frame(sample_data(otu_merged_musk))
+# Merge phenoflow data and 
+otu_phenoflow_alpha <- merge(otu_phenoflow_alpha, meta_dat, by = "norep_filter_name") %>%
+  select(-sd.D0.bre, -D0.bre)
+
+
+
+### PREPARE DATA FRAMES FOR PHENOFLOW ALPHA DIVERSITY ANALYSIS
+free_otu_alpha <- filter(otu_phenoflow_alpha, fraction == "Free" & norep_filter_name != "MOTHJ715" & year == "2015")
+part_otu_alpha <- filter(otu_phenoflow_alpha, fraction == "WholePart" & norep_filter_name != "MOTHJ715" & year == "2015")
+
+
+# Can fractional production be predicted by phenoflow D0 observed richness? 
+# FREE LIVING
+free_otu_D0_stats <- lm(frac_bacprod ~ D0, data = free_otu_alpha)
+free_otu_D0_stats
+summary(free_otu_D0_stats)
+
+# PARTICLE
+part_otu_D0_stats <- lm(frac_bacprod ~ D0, data = part_otu_alpha)
+part_otu_D0_stats
+summary(part_otu_D0_stats)
+
+# Plot D0 Observed Richness
+otu_pheno_D0 <- ggplot(otu_phenoflow_alpha, aes(x=D0, y=frac_bacprod, color = fraction)) + 
+  geom_point(size = 3.5) + geom_errorbarh(aes(xmin = D0 - sd.D0, xmax = D0 + sd.D0), width = 0.2) + 
+  ggtitle("OTU: Phenoflow") +
+  scale_color_manual(values = c("firebrick3","cornflowerblue"), limits = c("WholePart", "Free")) +
+  scale_x_continuous(limits = c(0,2000)) + 
+  scale_y_continuous(limits = c(0,70),expand = c(0,0)) + 
+  ylab("Production (μgC/L/hr)") + xlab("Observed Richness (D0)") +
+  #geom_smooth(data=subset(otu_phenoflow_alpha, fraction == "Free"), method='lm') + 
+  geom_smooth(data=subset(otu_phenoflow_alpha, fraction == "WholePart"), method='lm') + 
+  theme(legend.position=c(0.15,0.9), legend.title=element_blank()) +
+  annotate("text", x = 1000, y=35, color = "cornflowerblue", fontface = "bold",
+           label = paste("R2 =", round(summary(free_otu_D0_stats)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(free_otu_D0_stats)$coefficients[,4][2]), digits = 4))) + 
+  annotate("text", x = 1600, y=8, color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(part_otu_D0_stats)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(part_otu_D0_stats)$coefficients[,4][2]), digits = 4)))
+
+
+# Can fractional production be predicted by phenoflow chao1? 
+# FREE LIVING
+free_otu_D0chao_stats <- lm(frac_bacprod ~ D0.chao, data = free_otu_alpha)
+free_otu_D0chao_stats
+summary(free_otu_D0chao_stats)
+
+# PARTICLE
+part_otu_D0chao_stats <- lm(frac_bacprod ~ D0.chao, data = part_otu_alpha)
+part_otu_D0chao_stats
+summary(part_otu_D0chao_stats)
+ 
+# Plot  chao1
+otu_pheno_D0chao <- ggplot(otu_phenoflow_alpha, aes(x=D0.chao, y=frac_bacprod, color = fraction)) + 
+  geom_point(size = 3.5) + geom_errorbarh(aes(xmin = D0.chao - sd.D0.chao, xmax = D0.chao + sd.D0.chao), width = 0.2) + 
+  ggtitle("OTU: Phenoflow") +
+  scale_color_manual(values = c("firebrick3","cornflowerblue"), limits = c("WholePart", "Free")) +
+  scale_x_continuous(limits = c(200,4000)) + 
+  scale_y_continuous(limits = c(0,70),expand = c(0,0)) + 
+  ylab("Production (μgC/L/hr)") + xlab("Chao1 (D0)") +
+  #geom_smooth(data=subset(otu_phenoflow_alpha, fraction == "Free"), method='lm') + 
+  geom_smooth(data=subset(otu_phenoflow_alpha, fraction == "WholePart"), method='lm') + 
+  theme(legend.position=c(0.15,0.9), legend.title=element_blank()) +
+  annotate("text", x = 2000, y=35, color = "cornflowerblue", fontface = "bold",
+           label = paste("R2 =", round(summary(free_otu_D0chao_stats)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(free_otu_D0chao_stats)$coefficients[,4][2]), digits = 4))) + 
+  annotate("text", x = 2700, y=8, color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(part_otu_D0chao_stats)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(part_otu_D0chao_stats)$coefficients[,4][2]), digits = 4)))
+
+
+# Can fractional production be predicted by phenoflow D1 SHANNON ENTROPY? 
+# FREE LIVING
+free_otu_D1_stats <- lm(frac_bacprod ~ D1, data = free_otu_alpha)
+free_otu_D1_stats
+summary(free_otu_D1_stats)
+
+# PARTICLE
+part_otu_D1_stats <- lm(frac_bacprod ~ D1, data = part_otu_alpha)
+part_otu_D1_stats
+summary(part_otu_D1_stats)
+
+# Plot D1 SHANNON ENTROPY
+otu_pheno_D1 <- ggplot(otu_phenoflow_alpha, aes(x=D1, y=frac_bacprod, color = fraction)) + 
+  geom_point(size = 3.5) + geom_errorbarh(aes(xmin = D1 - sd.D1, xmax = D1 + sd.D1), width = 0.2) + 
+  ggtitle("OTU: Phenoflow") +
+  scale_color_manual(values = c("firebrick3","cornflowerblue"), limits = c("WholePart", "Free")) +
+  scale_x_continuous(limits = c(0,400), expand = c(0,0)) + 
+  scale_y_continuous(limits = c(0,70),expand = c(0,0)) + 
+  ylab("Production (μgC/L/hr)") + xlab("Shannon Entropy (D1)") +
+  #geom_smooth(data=subset(otu_phenoflow_alpha, fraction == "Free"), method='lm') + 
+  geom_smooth(data=subset(otu_phenoflow_alpha, fraction == "WholePart"), method='lm') + 
+  theme(legend.position=c(0.85,0.9), legend.title=element_blank()) +
+  annotate("text", x = 175, y=35, color = "cornflowerblue", fontface = "bold",
+           label = paste("R2 =", round(summary(free_otu_D1_stats)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(free_otu_D1_stats)$coefficients[,4][2]), digits = 4))) + 
+  annotate("text", x = 275, y=7, color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(part_otu_D1_stats)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(part_otu_D1_stats)$coefficients[,4][2]), digits = 4)))
+
+
+# Can fractional production be predicted by phenoflow D2 INVERSE SIMPSON? 
+# FREE LIVING
+free_otu_D2_stats <- lm(frac_bacprod ~ D2, data = free_otu_alpha)
+free_otu_D2_stats
+summary(free_otu_D2_stats)
+
+# PARTICLE
+part_otu_D2_stats <- lm(frac_bacprod ~ D2, data = part_otu_alpha)
+part_otu_D2_stats
+summary(part_otu_D2_stats)
+
+# Plot D2 INVERSE SIMPSON
+otu_pheno_D2 <- ggplot(otu_phenoflow_alpha, aes(x=D2, y=frac_bacprod, color = fraction)) + 
+  geom_point(size = 3.5) + geom_errorbarh(aes(xmin = D2 - sd.D2, xmax = D2 + sd.D2), width = 0.2) + 
+  ggtitle("OTU: Phenoflow") +
+  scale_color_manual(values = c("firebrick3","cornflowerblue"), limits = c("WholePart", "Free")) +
+  scale_x_continuous(limits = c(0,80), expand = c(0,0)) + 
+  scale_y_continuous(limits = c(0,70),expand = c(0,0)) + 
+  ylab("Production (μgC/L/hr)") + xlab("Inverse Simpson (D2)") +
+  #geom_smooth(data=subset(otu_phenoflow_alpha, fraction == "Free"), method='lm') + 
+  geom_smooth(data=subset(otu_phenoflow_alpha, fraction == "WholePart"), method='lm') + 
+  theme(legend.position=c(0.85,0.9), legend.title=element_blank()) +
+  annotate("text", x = 40, y=45, color = "cornflowerblue", fontface = "bold",
+           label = paste("R2 =", round(summary(free_otu_D2_stats)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(free_otu_D2_stats)$coefficients[,4][2]), digits = 4))) + 
+  annotate("text", x = 50, y=25, color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(part_otu_D2_stats)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(part_otu_D2_stats)$coefficients[,4][2]), digits = 4)))
+
+
+
+otu_phenoflow <- plot_grid(otu_pheno_D0, otu_pheno_D0chao, otu_pheno_D1, otu_pheno_D2,
+          labels = c("A", "B", "C", "D"), 
+          align = "h", nrow = 2, ncol = 2)
+otu_phenoflow
+
+#ggsave("Figures/Phenoflow_otu.png", otu_phenoflow, dpi = 600, units = "in", width = 10, height = 8)
+
+```
+
+
+## OLIGOTYPING Phenoflow Analysis
 ```{r oligotyping-phenoflow}
 # OTU analysis
 # Create a new file called "otu_merged_musk_Physeq.RData" that has the phyloseq object
@@ -391,6 +546,7 @@ oligo_pheno_D2 <- ggplot(oligo_phenoflow_alpha, aes(x=D2, y=frac_bacprod, color 
 oligotyping_phenoflow <- plot_grid(oligo_pheno_D0, oligo_pheno_D0chao, oligo_pheno_D1, oligo_pheno_D2,
           labels = c("A", "B", "C", "D"), 
           align = "h", nrow = 2, ncol = 2)
+oligotyping_phenoflow
 
 #ggsave("Figures/Phenoflow_oligotyping.png", oligotyping_phenoflow, dpi = 600, units = "in", width = 10, height = 8)
 ```
@@ -603,7 +759,7 @@ otu_rich_vegan <- ggplot(ML_otu_rich_stats, aes(x=mean, y=frac_bacprod, color = 
                          "p =", round(unname(summary(freeprod_ML_otu_rich)$coefficients[,4][2]), digits = 4))) + 
   annotate("text", x = 900, y=5, color = "firebrick3", fontface = "bold",
            label = paste("R2 =", round(summary(partprod_MLotu_rich)$adj.r.squared, digits = 4), "\n", 
-                         "p =", round(unname(summary(partprod_MLotu_rich)$coefficients[,4][2]), digits = 4)));otu_rich_vegan
+                         "p =", round(unname(summary(partprod_MLotu_rich)$coefficients[,4][2]), digits = 4)));
 
 
 
@@ -643,7 +799,7 @@ otu_shannon_vegan <- ggplot(ML_otu_shannon_stats, aes(x=mean, y=frac_bacprod, co
                          "p =", round(unname(summary(freeprod_ML_otu_shannon)$coefficients[,4][2]), digits = 4))) + 
   annotate("text", x = 5.35, y=5, color = "firebrick3", fontface = "bold",
            label = paste("R2 =", round(summary(partprod_MLotu_shannon)$adj.r.squared, digits = 4), "\n", 
-                         "p =", round(unname(summary(partprod_MLotu_shannon)$coefficients[,4][2]), digits = 4))); otu_shannon_vegan
+                         "p =", round(unname(summary(partprod_MLotu_shannon)$coefficients[,4][2]), digits = 4))); 
 
 
 
@@ -685,7 +841,7 @@ otu_invsimps_vegan <- ggplot(ML_otu_invsimps_stats, aes(x=mean, y=frac_bacprod, 
                          "p =", round(unname(summary(freeprod_ML_otu_invsimps)$coefficients[,4][2]), digits = 4))) + 
   annotate("text", x = 63, y=5, color = "firebrick3", fontface = "bold",
            label = paste("R2 =", round(summary(partprod_MLotu_invsimps)$adj.r.squared, digits = 4), "\n", 
-                         "p =", round(unname(summary(partprod_MLotu_invsimps)$coefficients[,4][2]), digits = 4))); otu_invsimps_vegan
+                         "p =", round(unname(summary(partprod_MLotu_invsimps)$coefficients[,4][2]), digits = 4))); 
 
 
 
@@ -726,14 +882,16 @@ otu_simpseven_vegan <- ggplot(ML_otu_simpseven_stats, aes(x=mean, y=frac_bacprod
                          "p =", round(unname(summary(freeprod_ML_otu_simpseven)$coefficients[,4][2]), digits = 4))) + 
   annotate("text", x = 0.015, y=7, color = "firebrick3", fontface = "bold",
            label = paste("R2 =", round(summary(partprod_MLotu_simpseven)$adj.r.squared, digits = 4), "\n", 
-                         "p =", round(unname(summary(partprod_MLotu_simpseven)$coefficients[,4][2]), digits = 4))); otu_simpseven_vegan
+                         "p =", round(unname(summary(partprod_MLotu_simpseven)$coefficients[,4][2]), digits = 4))); 
 
 otu_vegan <- plot_grid(otu_rich_vegan, otu_simpseven_vegan, otu_shannon_vegan, otu_invsimps_vegan,
           labels = c("A", "B", "C", "D"), 
           align = "h", nrow = 2, ncol = 2)
+otu_vegan
 
 #ggsave("Figures/vegan_otu_alpha_vs_prod.png", otu_vegan, dpi = 600, units = "in", width = 10, height = 8)
 ```
+
 
 ## Oligotyping Analysis 
 ```{r vegan-oligotyping-alphadiv}
@@ -835,7 +993,7 @@ oligo_rich_vegan <- ggplot(ML_oligo_rich_stats, aes(x=mean, y=frac_bacprod, colo
                          "p =", round(unname(summary(freeprod_ML_oligo_rich)$coefficients[,4][2]), digits = 4))) + 
   annotate("text", x = 260, y=25, color = "firebrick3", fontface = "bold",
            label = paste("R2 =", round(summary(partprod_MLoligo_rich)$adj.r.squared, digits = 4), "\n", 
-                         "p =", round(unname(summary(partprod_MLoligo_rich)$coefficients[,4][2]), digits = 4))); oligo_rich_vegan
+                         "p =", round(unname(summary(partprod_MLoligo_rich)$coefficients[,4][2]), digits = 4))); 
 
 
 
@@ -876,7 +1034,7 @@ oligo_shannon_vegan <- ggplot(ML_oligo_shannon_stats, aes(x=mean, y=frac_bacprod
                          "p =", round(unname(summary(freeprod_ML_oligo_shannon)$coefficients[,4][2]), digits = 4))) + 
   annotate("text", x = 4.7, y=5, color = "firebrick3", fontface = "bold",
            label = paste("R2 =", round(summary(partprod_MLoligo_shannon)$adj.r.squared, digits = 4), "\n", 
-                         "p =", round(unname(summary(partprod_MLoligo_shannon)$coefficients[,4][2]), digits = 4))); oligo_shannon_vegan
+                         "p =", round(unname(summary(partprod_MLoligo_shannon)$coefficients[,4][2]), digits = 4))); 
 
 
 
@@ -917,7 +1075,7 @@ oligo_invsimps_vegan <- ggplot(ML_oligo_invsimps_stats, aes(x=mean, y=frac_bacpr
                          "p =", round(unname(summary(freeprod_ML_oligo_invsimps)$coefficients[,4][2]), digits = 4))) + 
   annotate("text", x = 63, y=5, color = "firebrick3", fontface = "bold",
            label = paste("R2 =", round(summary(partprod_MLoligo_invsimps)$adj.r.squared, digits = 4), "\n", 
-                         "p =", round(unname(summary(partprod_MLoligo_invsimps)$coefficients[,4][2]), digits = 4))); oligo_invsimps_vegan
+                         "p =", round(unname(summary(partprod_MLoligo_invsimps)$coefficients[,4][2]), digits = 4))); 
 
 
 
@@ -958,19 +1116,22 @@ oligo_simpseven_vegan <- ggplot(ML_oligo_simpseven_stats, aes(x=mean, y=frac_bac
                          "p =", round(unname(summary(freeprod_ML_oligo_simpseven)$coefficients[,4][2]), digits = 4))) + 
   annotate("text", x = 0.20, y=5, color = "firebrick3", fontface = "bold",
            label = paste("R2 =", round(summary(partprod_MLoligo_simpseven)$adj.r.squared, digits = 4), "\n", 
-                         "p =", round(unname(summary(partprod_MLoligo_simpseven)$coefficients[,4][2]), digits = 4))); oligo_simpseven_vegan
+                         "p =", round(unname(summary(partprod_MLoligo_simpseven)$coefficients[,4][2]), digits = 4))); 
 
 oligotyping_vegan <- plot_grid(oligo_rich_vegan, oligo_simpseven_vegan,  oligo_shannon_vegan, oligo_invsimps_vegan,
           labels = c("A", "B", "C", "D"), 
           align = "h", nrow = 2, ncol = 2)
+oligotyping_vegan
 
 #ggsave("Figures/vegan_oligo_alpha_vs_prod.png", oligotyping_vegan, dpi = 600, units = "in", width = 10, height = 8)
 
 ```
 
 
-# Phylum Level Analysis
-```{r}
+
+#  Stacked Bar plots for taxonomic structure
+## OTU Phylum Level Analysis
+```{r out-stacked-bar}
 musk_scaled_otu_merged_pruned <- subset_samples(scaled_otu_merged_pruned, project == "Muskegon_Lake" & 
                                            year == "2015" &
                                            limnion == "Top" &
@@ -1018,135 +1179,57 @@ ggplot(musk_scaled_otu_merged_pruned_phylum, aes(x = season, y = Abundance, fill
 ```
 
 
-# Phylum production analysis
-```{r}
-# My own subsetting function, similar to phyloseq::subset_taxa, except taxa can 
-# be passed as arguments within functions without weird environment errors
-#
-# Args:
-#   physeq: a phyloseq object
-#   taxrank: taxonomic rank to filter on
-#   taxa: a vector of taxa groups to filter on
-#
-# Returns: 
-#   a phyloseq object subsetted to the x taxa in taxrank
-my_subset_taxa <- function(physeq, taxrank, taxa) {
-  physeq_tax_sub <- tax_table(physeq)[tax_table(physeq)[ , taxrank] %in% taxa, ]
-  tax_table(physeq) <- physeq_tax_sub
-  return(physeq)
-}
+## Oligotyping Phylum level analysis
+```{r oligotyping-stacked-bar, eval = FALSE}
+musk_scaled_oligo_merged_pruned <- subset_samples(scaled_oligo_merged_pruned, project == "Muskegon_Lake" & 
+                                           year == "2015" &
+                                           limnion == "Top" &
+                                           fraction %in% c("WholePart", "Free"))
+
+# Fix month levels in sample_data
+sample_data(musk_scaled_oligo_merged_pruned)$fraction <- factor(
+  sample_data(musk_scaled_oligo_merged_pruned)$fraction, 
+  levels = c("WholePart", "Free")
+)
+
+sample_data(musk_scaled_oligo_merged_pruned)$lakesite <- factor(
+  sample_data(musk_scaled_oligo_merged_pruned)$lakesite, 
+  levels = c("MOT", "MDP", "MBR", "MIN")
+)
 
 
 
+musk_scaled_oligo_merged_pruned_phylum <- musk_scaled_oligo_merged_pruned %>%
+  tax_glom(taxrank = "Phylum") %>%                     # agglomerate at phylum level
+  transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
+  psmelt() %>%                                         # Melt to long format
+  filter(Abundance > 0.02) %>%                         # Filter out low abundance taxa
+  arrange(Phylum)                                      # Sort data frame alphabetically by phylum
 
 
-# Initialize parameters
-trials <- 100
-min_lib <- min(sample_sums(musk_scaled_otu_merged_pruned)) # Depth we are rarefying to
-
-# Groups to estimate alpha diversity for 
-mytaxa <- c("Acidobacteria", "Actinobacteria", "Alphaproteobacteria", "Armatimonadetes",
-            "Bacteroidetes", "Betaproteobacteria", "Chlorobi", "Chloroflexi",
-            "Cyanobacteria","Deltaproteobacteria", "Gammaproteobacteria", 
-            "Planctomycetes","Verrucomicrobia")
-names(mytaxa) <- mytaxa
-
-# Taxonomic ranks of mytaxa
-mytaxa_taxrank <- c("Phylum", "Phylum", "Phylum", "Phylum", "Phylum", "Phylum", 
-                      "Phylum", "Phylum", "Phylum", "Phylum", "Phylum", "Phylum", "Phylum")
-names(mytaxa_taxrank) <- mytaxa
-
-# Data frame to hold alpha diversity estimates over trials
-alphadiv_df <- data.frame(matrix(nrow = nsamples(musk_scaled_otu_merged_pruned), ncol = trials))
-
-# Initialize empty df's for richness and evenness of all taxa in mytaxa
-richness <- lapply(mytaxa, function(x) {return(alphadiv_df)} )
-shannon <- lapply(mytaxa, function(x) {return(alphadiv_df)} )
-invsimps <- lapply(mytaxa, function(x) {return(alphadiv_df)} )
-simpseven <- lapply(mytaxa, function(x) {return(alphadiv_df)} )
-
-alphadiv_list <- list(richness = richness, shannon = shannon, invsimps = invsimps, simpseven = simpseven)
+# Set colors for plotting
+phylum_colors <- c(
+  "#CBD588", "#5F7FC7", "orange","#DA5724", "#508578", "plum1",
+   "firebrick4", "white", "#D14285","seagreen3", "gold", 
+  "#8569D5", "firebrick1", "peachpuff"
+)
 
 
-# Set the seed for reproducibility
-set.seed(3)
-
-# Run trials to subsample and estimate diversity
-for (i in 1:100) {
-  
-  # Subsample
-  rarefied_physeq <- rarefy_even_depth(musk_scaled_otu_merged_pruned, sample.size = min_lib, verbose = FALSE, replace = TRUE)
-  
-  # Generate alpha-diversity estimates for each taxonomic group
-  for (t in mytaxa) {
-
-    # Subset the taxa
-    physeq_sub <- my_subset_taxa(physeq = rarefied_physeq, 
-                                 taxrank = mytaxa_taxrank[t], 
-                                 taxa = t)
-    
-    # Calculate observed richness for that group and store value in a df column
-    richness <- estimate_richness(physeq_sub, measures = "Observed")[ ,1]
-    alphadiv_list$richness[[t]][ ,i] <- richness
-    
-    # Calculate observed shannon for that group and store value in a df column
-    shannon <- estimate_richness(physeq_sub, measures = "Shannon")[ ,1]
-    alphadiv_list$shannon[[t]][ ,i] <- shannon
-    
-    # Calculate observed invsimps for that group and store value in a df column
-    invsimps <- estimate_richness(physeq_sub, measures = "InvSimpson")[ ,1]
-    alphadiv_list$invsimps[[t]][ ,i] <- invsimps
-     
-    # Calculate Simpson's Evenness for that group and store value in a df column
-    alphadiv_list$simpseven[[t]][ ,i] <- (estimate_richness(physeq_sub, measures = "InvSimpson")[ ,1]/richness)
-
-  }
-}
-
-# Calculate the means of richness and inverse simpson from the 100 trials
-alphadiv_est <- lapply(alphadiv_list, function(div_measure) {
-    lapply(div_measure, function(taxa_group) {
-        alpha_mean <- rowMeans(taxa_group)
-        return(alpha_mean)
-    })  
-})
-
-# Convert alphadiv_est richness and simpson's E lists into wide data frames
-l <- lapply(alphadiv_est, function(x) {
-  # convert from list to data.frame
-  est_df <- plyr::ldply(.data = x, .fun = data.frame)
-  names(est_df) <- c("Taxa", "Diversity")
-  
-  # Add in SampleID column and spread to wide format
-  r <- est_df %>%
-    mutate(norep_filter_name = rep(sample_names(musk_scaled_otu_merged_pruned), length(mytaxa)))
-  return(r)
-})
-
-# Merge sample metadata with these estimates
-merge_dat <- data.frame(sample_data(musk_scaled_otu_merged_pruned)) %>%
-  select(norep_filter_name, Chl_Lab_ugperL, TP_ugperL, pH, frac_bacprod, NH3_mgperL, NO3_mgperL,
-         lakesite, fraction, season) #%>%
-  #mutate(logChla = log(Chla)) %>%
-  #mutate(logPhyco = log(Phycocyanin + 0.1)) %>%
-  #mutate(logTP = log(TP)) %>%
-  #mutate(logTurb = log(Turbidity))
-
-# Create a df with a "Diversity" column that includes richness and inv. simpson,
-# and log-chl a values from erie sample_data
-alpha_comb1 <- l$richness %>% 
-  left_join(y = l$shannon, by = c("Taxa", "norep_filter_name")) %>%   # Join the richness and inv_simp df's
-  rename(Richness = Diversity.x, Shannon = Diversity.y) 
-
-alpha_comb2 <- l$invsimps %>%   
-  left_join(y = l$simpseven, by = c("Taxa", "norep_filter_name")) %>%   # Join the richness and inv_simp df's
-  rename(Inverse_Simpson = Diversity.x, Simpsons_Evenness = Diversity.y) 
-
-alpha_comb_final <- alpha_comb1 %>%
-  left_join(y = alpha_comb2, by = c("Taxa", "norep_filter_name")) %>%
-  left_join(merge_dat, by = "norep_filter_name") %>%                  # Join with merged nutrient data
-  gather(key = "Alphadiv", value = "Estimate", Richness, Shannon, Inverse_Simpson, Simpsons_Evenness)
+# Plot 
+ggplot(musk_scaled_oligo_merged_pruned_phylum, aes(x = season, y = Abundance, fill = Phylum)) + 
+  facet_grid(fraction~lakesite) +
+  geom_bar(stat = "identity", color = "black") +
+  scale_fill_manual(values = phylum_colors) +
+  guides(fill = guide_legend(reverse = FALSE, keywidth = 1, keyheight = 1)) +
+  ylab("Relative Abundance (Phyla > 2%) \n") +
+  ggtitle("Oligotyping Phylum Composition of 2015 Muskegon Lake \n Bacterial Communities by Sampling Site") +
+  theme(strip.background = element_rect(fill = "white"),
+        axis.text.x = element_text(colour = "black", angle=45, hjust = 1, vjust = 1))
 ```
+
+
+
+
 
 
 ## Phylum Diversity plots
@@ -1278,5 +1361,135 @@ environ_seasons
 ```
 
 
+
+# Phylum production analysis
+```{r phylum-div-prod, eval = FALSE}
+# Michelle Berry's subsetting function, similar to phyloseq::subset_taxa, except taxa can 
+# be passed as arguments within functions without weird environment errors
+#
+# Args:
+#   physeq: a phyloseq object
+#   taxrank: taxonomic rank to filter on
+#   taxa: a vector of taxa groups to filter on
+#
+# Returns: 
+#   a phyloseq object subsetted to the x taxa in taxrank
+my_subset_taxa <- function(physeq, taxrank, taxa) {
+  physeq_tax_sub <- tax_table(physeq)[tax_table(physeq)[ , taxrank] %in% taxa, ]
+  tax_table(physeq) <- physeq_tax_sub
+  return(physeq)
+}
+
+
+
+
+
+# Initialize parameters
+trials <- 100
+min_lib <- min(sample_sums(musk_scaled_otu_merged_pruned)) # Depth we are rarefying to
+
+# Groups to estimate alpha diversity for 
+mytaxa <- c("Acidobacteria", "Actinobacteria", "Alphaproteobacteria", "Armatimonadetes",
+            "Bacteroidetes", "Betaproteobacteria", "Chlorobi", "Chloroflexi",
+            "Cyanobacteria","Deltaproteobacteria", "Gammaproteobacteria", 
+            "Planctomycetes","Verrucomicrobia")
+names(mytaxa) <- mytaxa
+
+# Taxonomic ranks of mytaxa
+mytaxa_taxrank <- c("Phylum", "Phylum", "Phylum", "Phylum", "Phylum", "Phylum", 
+                      "Phylum", "Phylum", "Phylum", "Phylum", "Phylum", "Phylum", "Phylum")
+names(mytaxa_taxrank) <- mytaxa
+
+# Data frame to hold alpha diversity estimates over trials
+alphadiv_df <- data.frame(matrix(nrow = nsamples(musk_scaled_otu_merged_pruned), ncol = trials))
+
+# Initialize empty df's for richness and evenness of all taxa in mytaxa
+richness <- lapply(mytaxa, function(x) {return(alphadiv_df)} )
+shannon <- lapply(mytaxa, function(x) {return(alphadiv_df)} )
+invsimps <- lapply(mytaxa, function(x) {return(alphadiv_df)} )
+simpseven <- lapply(mytaxa, function(x) {return(alphadiv_df)} )
+
+alphadiv_list <- list(richness = richness, shannon = shannon, invsimps = invsimps, simpseven = simpseven)
+
+
+# Set the seed for reproducibility
+set.seed(3)
+
+# Run trials to subsample and estimate diversity
+for (i in 1:100) {
+  
+  # Subsample
+  rarefied_physeq <- rarefy_even_depth(musk_scaled_otu_merged_pruned, sample.size = min_lib, verbose = FALSE, replace = TRUE)
+  
+  # Generate alpha-diversity estimates for each taxonomic group
+  for (t in mytaxa) {
+
+    # Subset the taxa
+    physeq_sub <- my_subset_taxa(physeq = rarefied_physeq, 
+                                 taxrank = mytaxa_taxrank[t], 
+                                 taxa = t)
+    
+    # Calculate observed richness for that group and store value in a df column
+    richness <- estimate_richness(physeq_sub, measures = "Observed")[ ,1]
+    alphadiv_list$richness[[t]][ ,i] <- richness
+    
+    # Calculate observed shannon for that group and store value in a df column
+    shannon <- estimate_richness(physeq_sub, measures = "Shannon")[ ,1]
+    alphadiv_list$shannon[[t]][ ,i] <- shannon
+    
+    # Calculate observed invsimps for that group and store value in a df column
+    invsimps <- estimate_richness(physeq_sub, measures = "InvSimpson")[ ,1]
+    alphadiv_list$invsimps[[t]][ ,i] <- invsimps
+     
+    # Calculate Simpson's Evenness for that group and store value in a df column
+    alphadiv_list$simpseven[[t]][ ,i] <- (estimate_richness(physeq_sub, measures = "InvSimpson")[ ,1]/richness)
+
+  }
+}
+
+# Calculate the means of richness and inverse simpson from the 100 trials
+alphadiv_est <- lapply(alphadiv_list, function(div_measure) {
+    lapply(div_measure, function(taxa_group) {
+        alpha_mean <- rowMeans(taxa_group)
+        return(alpha_mean)
+    })  
+})
+
+# Convert alphadiv_est richness and simpson's E lists into wide data frames
+l <- lapply(alphadiv_est, function(x) {
+  # convert from list to data.frame
+  est_df <- plyr::ldply(.data = x, .fun = data.frame)
+  names(est_df) <- c("Taxa", "Diversity")
+  
+  # Add in SampleID column and spread to wide format
+  r <- est_df %>%
+    mutate(norep_filter_name = rep(sample_names(musk_scaled_otu_merged_pruned), length(mytaxa)))
+  return(r)
+})
+
+# Merge sample metadata with these estimates
+merge_dat <- data.frame(sample_data(musk_scaled_otu_merged_pruned)) %>%
+  select(norep_filter_name, Chl_Lab_ugperL, TP_ugperL, pH, frac_bacprod, NH3_mgperL, NO3_mgperL,
+         lakesite, fraction, season) #%>%
+  #mutate(logChla = log(Chla)) %>%
+  #mutate(logPhyco = log(Phycocyanin + 0.1)) %>%
+  #mutate(logTP = log(TP)) %>%
+  #mutate(logTurb = log(Turbidity))
+
+# Create a df with a "Diversity" column that includes richness and inv. simpson,
+# and log-chl a values from erie sample_data
+alpha_comb1 <- l$richness %>% 
+  left_join(y = l$shannon, by = c("Taxa", "norep_filter_name")) %>%   # Join the richness and inv_simp df's
+  rename(Richness = Diversity.x, Shannon = Diversity.y) 
+
+alpha_comb2 <- l$invsimps %>%   
+  left_join(y = l$simpseven, by = c("Taxa", "norep_filter_name")) %>%   # Join the richness and inv_simp df's
+  rename(Inverse_Simpson = Diversity.x, Simpsons_Evenness = Diversity.y) 
+
+alpha_comb_final <- alpha_comb1 %>%
+  left_join(y = alpha_comb2, by = c("Taxa", "norep_filter_name")) %>%
+  left_join(merge_dat, by = "norep_filter_name") %>%                  # Join with merged nutrient data
+  gather(key = "Alphadiv", value = "Estimate", Richness, Shannon, Inverse_Simpson, Simpsons_Evenness)
+```
 
 

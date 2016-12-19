@@ -1,0 +1,208 @@
+Loading required package: flowFDA
+Loading required package: flowCore
+Loading required package: flowViz
+Loading required package: lattice
+Loading required package: flowFP
+Loading required package: multcomp
+Loading required package: mvtnorm
+Loading required package: survival
+Loading required package: TH.data
+Loading required package: MASS
+
+Attaching package: ‘TH.data’
+
+The following object is masked from ‘package:MASS’:
+
+    geyser
+
+Loading required package: mclust
+Package 'mclust' version 5.2
+Type 'citation("mclust")' for citing this R package in publications.
+
+Attaching package: ‘flowFDA’
+
+The following object is masked from ‘package:mclust’:
+
+    print.Mclust
+
+Loading required package: methods
+
+Attaching package: ‘phyloseq’
+
+The following object is masked from ‘package:flowFP’:
+
+    sampleNames
+
+The following object is masked from ‘package:flowCore’:
+
+    sampleNames
+
+Fri Dec 16 14:30:29 2016	Calculating Phenoflow Hill Diversity Estimates with phyloseq data
+	**WARNING** this functions assumes that rows are samples and columns
+      	are taxa in your phyloseq object, please verify.
+Fri Dec 16 14:30:30 2016	Calculating diversity for sample 1/163 --- MBRBS515
+Fri Dec 16 14:38:04 2016	Calculating diversity for sample 2/163 --- MBRBS714
+Fri Dec 16 14:49:34 2016	Calculating diversity for sample 3/163 --- MBRBS715
+Fri Dec 16 14:58:53 2016	Calculating diversity for sample 4/163 --- MBRBS914
+Fri Dec 16 15:15:00 2016	Calculating diversity for sample 5/163 --- MBRBS915
+Fri Dec 16 15:23:22 2016	Calculating diversity for sample 6/163 --- MBREF515
+Fri Dec 16 15:26:52 2016	Calculating diversity for sample 7/163 --- MBREF714
+Fri Dec 16 15:29:46 2016	Calculating diversity for sample 8/163 --- MBREF715
+Fri Dec 16 15:32:24 2016	Calculating diversity for sample 9/163 --- MBREF914
+Fri Dec 16 15:35:35 2016	Calculating diversity for sample 10/163 --- MBREF915
+Fri Dec 16 15:39:32 2016	Calculating diversity for sample 11/163 --- MBREJ515
+Fri Dec 16 15:45:03 2016	Calculating diversity for sample 12/163 --- MBREJ715
+Fri Dec 16 15:49:11 2016	Calculating diversity for sample 13/163 --- MBREJ915
+Fri Dec 16 15:51:56 2016	Calculating diversity for sample 14/163 --- MBREK515
+Fri Dec 16 15:54:29 2016	Calculating diversity for sample 15/163 --- MBREK715
+Fri Dec 16 15:56:22 2016	Calculating diversity for sample 16/163 --- MBREK915
+Fri Dec 16 15:58:54 2016	Calculating diversity for sample 17/163 --- MBREP515
+Fri Dec 16 16:02:49 2016	Calculating diversity for sample 18/163 --- MBREP714
+Fri Dec 16 16:08:01 2016	Calculating diversity for sample 19/163 --- MBREP715
+Fri Dec 16 16:11:37 2016	Calculating diversity for sample 20/163 --- MBREP914
+Fri Dec 16 16:16:12 2016	Calculating diversity for sample 21/163 --- MBREP915
+Fri Dec 16 16:22:40 2016	Calculating diversity for sample 22/163 --- MBRHF515
+Fri Dec 16 16:27:05 2016	Calculating diversity for sample 23/163 --- MBRHF714
+Fri Dec 16 16:31:35 2016	Calculating diversity for sample 24/163 --- MBRHF715
+Fri Dec 16 16:36:28 2016	Calculating diversity for sample 25/163 --- MBRHF914
+Fri Dec 16 16:42:41 2016	Calculating diversity for sample 26/163 --- MBRHF915
+Fri Dec 16 16:48:03 2016	Calculating diversity for sample 27/163 --- MBRHJ515
+Fri Dec 16 16:54:33 2016	Calculating diversity for sample 28/163 --- MBRHJ715
+Fri Dec 16 16:58:24 2016	Calculating diversity for sample 29/163 --- MBRHJ915
+Fri Dec 16 17:03:17 2016	Calculating diversity for sample 30/163 --- MBRHK515
+Fri Dec 16 17:06:22 2016	Calculating diversity for sample 31/163 --- MBRHK715
+Fri Dec 16 17:09:29 2016	Calculating diversity for sample 32/163 --- MBRHK915
+Fri Dec 16 17:14:01 2016	Calculating diversity for sample 33/163 --- MBRHP515
+Fri Dec 16 17:19:29 2016	Calculating diversity for sample 34/163 --- MBRHP714
+Fri Dec 16 17:26:34 2016	Calculating diversity for sample 35/163 --- MBRHP715
+Fri Dec 16 17:27:41 2016	Calculating diversity for sample 36/163 --- MBRHP914
+Fri Dec 16 17:34:07 2016	Calculating diversity for sample 37/163 --- MBRHP915
+Fri Dec 16 17:38:30 2016	Calculating diversity for sample 38/163 --- MDPBS514
+Fri Dec 16 17:59:28 2016	Calculating diversity for sample 39/163 --- MDPBS515
+Fri Dec 16 18:09:01 2016	Calculating diversity for sample 40/163 --- MDPBS714
+Fri Dec 16 18:28:44 2016	Calculating diversity for sample 41/163 --- MDPBS715
+Fri Dec 16 18:38:13 2016	Calculating diversity for sample 42/163 --- MDPBS914
+Fri Dec 16 18:57:17 2016	Calculating diversity for sample 43/163 --- MDPBS915
+Fri Dec 16 19:06:04 2016	Calculating diversity for sample 44/163 --- MDPEF514
+Fri Dec 16 19:16:12 2016	Calculating diversity for sample 45/163 --- MDPEF515
+Fri Dec 16 19:18:25 2016	Calculating diversity for sample 46/163 --- MDPEF714
+Fri Dec 16 19:21:34 2016	Calculating diversity for sample 47/163 --- MDPEF715
+Fri Dec 16 19:24:18 2016	Calculating diversity for sample 48/163 --- MDPEF914
+Fri Dec 16 19:27:43 2016	Calculating diversity for sample 49/163 --- MDPEF915
+Fri Dec 16 19:31:28 2016	Calculating diversity for sample 50/163 --- MDPEJ515
+Fri Dec 16 19:34:14 2016	Calculating diversity for sample 51/163 --- MDPEJ715
+Fri Dec 16 19:37:06 2016	Calculating diversity for sample 52/163 --- MDPEJ915
+Fri Dec 16 19:40:44 2016	Calculating diversity for sample 53/163 --- MDPEK515
+Fri Dec 16 19:43:00 2016	Calculating diversity for sample 54/163 --- MDPEK715
+Fri Dec 16 19:44:51 2016	Calculating diversity for sample 55/163 --- MDPEK915
+Fri Dec 16 19:47:51 2016	Calculating diversity for sample 56/163 --- MDPEP514
+Fri Dec 16 19:54:56 2016	Calculating diversity for sample 57/163 --- MDPEP515
+Fri Dec 16 20:00:01 2016	Calculating diversity for sample 58/163 --- MDPEP714
+Fri Dec 16 20:04:13 2016	Calculating diversity for sample 59/163 --- MDPEP715
+Fri Dec 16 20:09:06 2016	Calculating diversity for sample 60/163 --- MDPEP914
+Fri Dec 16 20:13:42 2016	Calculating diversity for sample 61/163 --- MDPEP915
+Fri Dec 16 20:18:38 2016	Calculating diversity for sample 62/163 --- MDPHF514
+Fri Dec 16 20:24:58 2016	Calculating diversity for sample 63/163 --- MDPHF515
+Fri Dec 16 20:30:39 2016	Calculating diversity for sample 64/163 --- MDPHF714
+Fri Dec 16 20:35:41 2016	Calculating diversity for sample 65/163 --- MDPHF715
+Fri Dec 16 20:40:40 2016	Calculating diversity for sample 66/163 --- MDPHF914
+Fri Dec 16 20:49:36 2016	Calculating diversity for sample 67/163 --- MDPHF915
+Fri Dec 16 20:57:47 2016	Calculating diversity for sample 68/163 --- MDPHJ515
+Fri Dec 16 21:00:58 2016	Calculating diversity for sample 69/163 --- MDPHJ715
+Fri Dec 16 21:05:30 2016	Calculating diversity for sample 70/163 --- MDPHJ915
+Fri Dec 16 21:06:56 2016	Calculating diversity for sample 71/163 --- MDPHK515
+Fri Dec 16 21:10:14 2016	Calculating diversity for sample 72/163 --- MDPHK715
+Fri Dec 16 21:14:12 2016	Calculating diversity for sample 73/163 --- MDPHK915
+Fri Dec 16 21:19:28 2016	Calculating diversity for sample 74/163 --- MDPHP514
+Fri Dec 16 21:24:57 2016	Calculating diversity for sample 75/163 --- MDPHP515
+Fri Dec 16 21:32:08 2016	Calculating diversity for sample 76/163 --- MDPHP714
+Fri Dec 16 21:39:08 2016	Calculating diversity for sample 77/163 --- MDPHP715
+Fri Dec 16 21:43:10 2016	Calculating diversity for sample 78/163 --- MDPHP914
+Fri Dec 16 21:48:32 2016	Calculating diversity for sample 79/163 --- MDPHP915
+Fri Dec 16 21:56:38 2016	Calculating diversity for sample 80/163 --- MINBS514
+Fri Dec 16 22:31:08 2016	Calculating diversity for sample 81/163 --- MINBS515
+Fri Dec 16 22:44:27 2016	Calculating diversity for sample 82/163 --- MINBS714
+Fri Dec 16 23:14:39 2016	Calculating diversity for sample 83/163 --- MINBS715
+Fri Dec 16 23:28:05 2016	Calculating diversity for sample 84/163 --- MINBS914
+Fri Dec 16 23:55:06 2016	Calculating diversity for sample 85/163 --- MINBS915
+Sat Dec 17 00:09:48 2016	Calculating diversity for sample 86/163 --- MINEF514
+Sat Dec 17 00:27:36 2016	Calculating diversity for sample 87/163 --- MINEF515
+Sat Dec 17 00:33:47 2016	Calculating diversity for sample 88/163 --- MINEF714
+Sat Dec 17 00:37:59 2016	Calculating diversity for sample 89/163 --- MINEF715
+Sat Dec 17 00:46:13 2016	Calculating diversity for sample 90/163 --- MINEF914
+Sat Dec 17 00:54:21 2016	Calculating diversity for sample 91/163 --- MINEF915
+Sat Dec 17 01:01:43 2016	Calculating diversity for sample 92/163 --- MINEJ515
+Sat Dec 17 01:09:31 2016	Calculating diversity for sample 93/163 --- MINEJ715
+Sat Dec 17 01:14:05 2016	Calculating diversity for sample 94/163 --- MINEJ915
+Sat Dec 17 01:17:38 2016	Calculating diversity for sample 95/163 --- MINEK515
+Sat Dec 17 01:21:57 2016	Calculating diversity for sample 96/163 --- MINEK715
+Sat Dec 17 01:25:21 2016	Calculating diversity for sample 97/163 --- MINEK915
+Sat Dec 17 01:29:49 2016	Calculating diversity for sample 98/163 --- MINEP514
+Sat Dec 17 01:32:18 2016	Calculating diversity for sample 99/163 --- MINEP515
+Sat Dec 17 01:35:56 2016	Calculating diversity for sample 100/163 --- MINEP714
+Sat Dec 17 01:41:56 2016	Calculating diversity for sample 101/163 --- MINEP715
+Sat Dec 17 01:47:41 2016	Calculating diversity for sample 102/163 --- MINEP914
+Sat Dec 17 01:57:00 2016	Calculating diversity for sample 103/163 --- MINEP915
+Sat Dec 17 02:06:03 2016	Calculating diversity for sample 104/163 --- MINHF514
+Sat Dec 17 02:17:16 2016	Calculating diversity for sample 105/163 --- MINHF515
+Sat Dec 17 02:23:07 2016	Calculating diversity for sample 106/163 --- MINHF714
+Sat Dec 17 02:28:30 2016	Calculating diversity for sample 107/163 --- MINHF715
+Sat Dec 17 02:35:22 2016	Calculating diversity for sample 108/163 --- MINHF914
+Sat Dec 17 02:42:02 2016	Calculating diversity for sample 109/163 --- MINHF915
+Sat Dec 17 02:50:23 2016	Calculating diversity for sample 110/163 --- MINHJ515
+Sat Dec 17 02:57:24 2016	Calculating diversity for sample 111/163 --- MINHJ715
+Sat Dec 17 03:05:18 2016	Calculating diversity for sample 112/163 --- MINHJ915
+Sat Dec 17 03:08:47 2016	Calculating diversity for sample 113/163 --- MINHK515
+Sat Dec 17 03:13:11 2016	Calculating diversity for sample 114/163 --- MINHK715
+Sat Dec 17 03:16:39 2016	Calculating diversity for sample 115/163 --- MINHK915
+Sat Dec 17 03:20:58 2016	Calculating diversity for sample 116/163 --- MINHP514
+Sat Dec 17 03:32:45 2016	Calculating diversity for sample 117/163 --- MINHP515
+Sat Dec 17 03:42:35 2016	Calculating diversity for sample 118/163 --- MINHP714
+Sat Dec 17 03:53:08 2016	Calculating diversity for sample 119/163 --- MINHP715
+Sat Dec 17 04:02:05 2016	Calculating diversity for sample 120/163 --- MINHP914
+Sat Dec 17 04:12:46 2016	Calculating diversity for sample 121/163 --- MINHP915
+Sat Dec 17 04:20:38 2016	Calculating diversity for sample 122/163 --- MOTBS514
+Sat Dec 17 04:49:52 2016	Calculating diversity for sample 123/163 --- MOTBS515
+Sat Dec 17 05:00:55 2016	Calculating diversity for sample 124/163 --- MOTBS714
+Sat Dec 17 05:24:51 2016	Calculating diversity for sample 125/163 --- MOTBS715
+Sat Dec 17 05:36:16 2016	Calculating diversity for sample 126/163 --- MOTBS914
+Sat Dec 17 05:56:58 2016	Calculating diversity for sample 127/163 --- MOTBS915
+Sat Dec 17 06:07:10 2016	Calculating diversity for sample 128/163 --- MOTEF514
+Sat Dec 17 06:14:39 2016	Calculating diversity for sample 129/163 --- MOTEF515
+Sat Dec 17 06:18:31 2016	Calculating diversity for sample 130/163 --- MOTEF714
+Sat Dec 17 06:21:19 2016	Calculating diversity for sample 131/163 --- MOTEF715
+Sat Dec 17 06:24:29 2016	Calculating diversity for sample 132/163 --- MOTEF914
+Sat Dec 17 06:28:34 2016	Calculating diversity for sample 133/163 --- MOTEF915
+Sat Dec 17 06:32:54 2016	Calculating diversity for sample 134/163 --- MOTEJ515
+Sat Dec 17 06:36:46 2016	Calculating diversity for sample 135/163 --- MOTEJ715
+Sat Dec 17 06:39:19 2016	Calculating diversity for sample 136/163 --- MOTEJ915
+Sat Dec 17 06:43:06 2016	Calculating diversity for sample 137/163 --- MOTEK515
+Sat Dec 17 06:45:43 2016	Calculating diversity for sample 138/163 --- MOTEK715
+Sat Dec 17 06:47:42 2016	Calculating diversity for sample 139/163 --- MOTEK915
+Sat Dec 17 06:50:57 2016	Calculating diversity for sample 140/163 --- MOTEP514
+Sat Dec 17 06:58:57 2016	Calculating diversity for sample 141/163 --- MOTEP515
+Sat Dec 17 07:03:41 2016	Calculating diversity for sample 142/163 --- MOTEP714
+Sat Dec 17 07:08:07 2016	Calculating diversity for sample 143/163 --- MOTEP715
+Sat Dec 17 07:11:06 2016	Calculating diversity for sample 144/163 --- MOTEP914
+Sat Dec 17 07:16:05 2016	Calculating diversity for sample 145/163 --- MOTEP915
+Sat Dec 17 07:21:25 2016	Calculating diversity for sample 146/163 --- MOTHF514
+Sat Dec 17 07:28:39 2016	Calculating diversity for sample 147/163 --- MOTHF515
+Sat Dec 17 07:32:35 2016	Calculating diversity for sample 148/163 --- MOTHF714
+Sat Dec 17 07:36:05 2016	Calculating diversity for sample 149/163 --- MOTHF715
+Sat Dec 17 07:39:50 2016	Calculating diversity for sample 150/163 --- MOTHF914
+Sat Dec 17 07:43:49 2016	Calculating diversity for sample 151/163 --- MOTHF915
+Sat Dec 17 07:47:30 2016	Calculating diversity for sample 152/163 --- MOTHJ515
+Sat Dec 17 07:52:09 2016	Calculating diversity for sample 153/163 --- MOTHJ715
+Sat Dec 17 07:52:38 2016	Calculating diversity for sample 154/163 --- MOTHJ915
+Sat Dec 17 07:56:04 2016	Calculating diversity for sample 155/163 --- MOTHK515
+Sat Dec 17 07:59:52 2016	Calculating diversity for sample 156/163 --- MOTHK715
+Sat Dec 17 08:02:55 2016	Calculating diversity for sample 157/163 --- MOTHK915
+Sat Dec 17 08:05:08 2016	Calculating diversity for sample 158/163 --- MOTHP514
+Sat Dec 17 08:18:58 2016	Calculating diversity for sample 159/163 --- MOTHP515
+Sat Dec 17 08:23:37 2016	Calculating diversity for sample 160/163 --- MOTHP714
+Sat Dec 17 08:30:04 2016	Calculating diversity for sample 161/163 --- MOTHP715
+Sat Dec 17 08:33:51 2016	Calculating diversity for sample 162/163 --- MOTHP914
+Sat Dec 17 08:40:08 2016	Calculating diversity for sample 163/163 --- MOTHP915
+Sat Dec 17 08:44:35 2016 	 Done with all 163 samples
+Sat Dec 17 08:44:35 2016	Exporting Phenoflow Hill Diversity Estimates to Phenoflow_diversity.RData
+Sat Dec 17 08:44:35 2016	Done! Time to work on your alpha diversity analysis!

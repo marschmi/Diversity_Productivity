@@ -1,0 +1,23 @@
+####  PBS preamble
+#PBS -N otu_phenoflow
+#PBS -M marschmi@umich.edu
+#PBS -m abe
+
+#PBS -l nodes=1:ppn=4,mem=10gb,walltime=100:00:00
+#PBS -V
+
+#PBS -A vdenef_flux
+#PBS -l qos=flux
+#PBS -q flux
+####  End PBS preamble
+
+#  Show list of CPUs you ran on, if you're running under PBS
+if [ -n "$PBS_NODEFILE" ]; then cat $PBS_NODEFILE; fi
+
+#  Change to the directory you submitted from
+if [ -n "$PBS_O_WORKDIR" ]; then cd $PBS_O_WORKDIR; fi
+pwd
+
+##############################################
+# Run phenoflow
+Rscript make_phenoflow_diversity.R otu_merged_musk_Physeq.RData &>log.txt

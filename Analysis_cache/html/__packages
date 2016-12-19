@@ -13,3 +13,5 @@ viridis
 data.table
 stringr
 iNEXT
+tidyr
+ape
