@@ -42,7 +42,7 @@ source("Muskegon_functions.R")
 #  Load in the taxonomy and shared data
 otu_tax <- "mothur/stability.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.an.unique_list.0.03.cons.taxonomy"
 otu_shared <- "mothur/stability.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.an.unique_list.shared"
-otu_dat <- import_mothur(mothur_shared_file = otu_shared, mothur_constaxonomy_file = otu_tax)
+otu_data <- import_mothur(mothur_shared_file = otu_shared, mothur_constaxonomy_file = otu_tax)
 
 # Fix the taxonomy names
 colnames(tax_table(otu_data)) <- c("Kingdom","Phylum","Class","Order","Family","Genus","Species")
@@ -1507,32 +1507,140 @@ flow_cy <- read.csv2("metadata/flow_cytometry.csv", header = TRUE) %>%
          HNA_per_uL = (HNA_counts*dilution)/volume_uL,
          HNA_percent = (HNA_counts)/raw_counts*100,
          LNA_per_uL = (LNA_counts*dilution)/volume_uL,
-         LNA_percent = (LNA_counts)/raw_counts)
+         LNA_percent = (LNA_counts)/raw_counts,
+         Nuc_acid_ratio = HNA_per_uL/LNA_per_uL)
 
+# Fix the factor levels for nice plotting
 flow_cy$Site <- factor(flow_cy$Site,  levels = c("MOT", "MDP", "MBR", "MIN"))
+flow_cy$Season <- factor(flow_cy$Season,  levels = c("Spring", "Summer", "Fall"))
 
-#substr(flow_cy$Sample_16S, 5)
+# Create a new column so we can merge with other data frames
+flow_cy$norep_water_name <- paste(substring(flow_cy$Sample_16S,1,4), substring(flow_cy$Sample_16S,7,9), sep = "")
+
+# Prepare the dataframes with Bopi's data
+free_samples <- subset_samples(otu_merged_musk, fraction == "Free")
+free_samples <-  sample_data(free_samples)
+
+# Read in the Flow Cytometry Diversity data that Ruben calculated with Phenoflow 
+flow_div <- read.csv("Phenoflow/Diversity.fcm.marian.csv", header = TRUE) %>%
+  select(-X) 
+
+flow_data <- left_join(flow_div, flow_cy, by = "Sample") %>%
+    filter(Lake == "Muskegon") 
+
+HNA_prod <- left_join(flow_data, free_samples, by = "norep_water_name") 
+
+
+
+####  PRODUCTION VS HNA
+
+ggplot(HNA_prod, aes(x = Site, y = tot_bacprod, fill = Season, shape = Site)) + ggtitle("Surface samples only") +
+  geom_boxplot(alpha = 0.5, fill = "#C5DBF2",color = "black", show.legend = FALSE) +
+  scale_fill_manual(values = c("#51BAAE", "#241B50", "#FD0F27")) +
+  scale_shape_manual(values = c(21, 22, 23, 25)) +
+  geom_point(size = 3.5) + facet_grid(.~Year) + 
+  guides(fill = guide_legend(override.aes = list(shape = 24))) 
+
+
+r1 <- ggplot(HNA_prod, aes(x = HNA_per_uL, y = tot_bacprod)) + ggtitle("Surface samples only") +
+  scale_fill_manual(values = c("#51BAAE", "#241B50", "#FD0F27")) +
+  scale_shape_manual(values = c(21, 22, 23, 25)) +
+  geom_point(size = 3.5, aes(fill = Season, shape = Site)) + #facet_grid(.~Year) + 
+  geom_smooth(method = "lm", color = "black") + 
+  guides(fill = guide_legend(override.aes = list(shape = 24))) 
+
+r2 <- ggplot(HNA_prod, aes(x = HNA_percent, y = tot_bacprod)) + ggtitle("Surface samples only") +
+  scale_fill_manual(values = c("#51BAAE", "#241B50", "#FD0F27")) +
+  scale_shape_manual(values = c(21, 22, 23, 25)) +
+  geom_point(size = 3.5, aes(fill = Season, shape = Site)) + #facet_grid(.~Year) + 
+  geom_smooth(method = "lm", color = "black") + 
+  guides(fill = guide_legend(override.aes = list(shape = 24))) 
+
+r3 <- ggplot(HNA_prod, aes(x = cells_per_uL, y = tot_bacprod)) + ggtitle("Surface samples only") +
+  scale_fill_manual(values = c("#51BAAE", "#241B50", "#FD0F27")) +
+  scale_shape_manual(values = c(21, 22, 23, 25)) +
+  geom_point(size = 3.5, aes(fill = Season, shape = Site)) + #facet_grid(.~Year) + 
+  geom_smooth(method = "lm", color = "black") + 
+  guides(fill = guide_legend(override.aes = list(shape = 24))) 
+
+r4 <-ggplot(HNA_prod, aes(x = Nuc_acid_ratio, y = tot_bacprod)) + ggtitle("Surface samples only") +
+  scale_fill_manual(values = c("#51BAAE", "#241B50", "#FD0F27")) +
+  scale_shape_manual(values = c(21, 22, 23, 25)) +
+  geom_point(size = 3.5, aes(fill = Season, shape = Site)) + #facet_grid(.~Year) + 
+  geom_smooth(method = "lm", color = "black") + 
+  guides(fill = guide_legend(override.aes = list(shape = 24))) 
+
+r5 <- ggplot(HNA_prod, aes(x = LNA_per_uL, y = tot_bacprod)) + ggtitle("Surface samples only") +
+  scale_fill_manual(values = c("#51BAAE", "#241B50", "#FD0F27")) +
+  scale_shape_manual(values = c(21, 22, 23, 25)) +
+  geom_point(size = 3.5, aes(fill = Season, shape = Site)) + #facet_grid(.~Year) + 
+  geom_smooth(method = "lm", color = "black") + 
+  guides(fill = guide_legend(override.aes = list(shape = 24))) 
+
+r6 <- ggplot(HNA_prod, aes(x = LNA_percent, y = tot_bacprod)) + ggtitle("Surface samples only") +
+  scale_fill_manual(values = c("#51BAAE", "#241B50", "#FD0F27")) +
+  scale_shape_manual(values = c(21, 22, 23, 25)) +
+  geom_point(size = 3.5, aes(fill = Season, shape = Site)) + #facet_grid(.~Year) + 
+  geom_smooth(method = "lm", color = "black") + 
+  guides(fill = guide_legend(override.aes = list(shape = 24))) 
+
+
+rr <- plot_grid(r1, r5, r3, r2, r6, r4, 
+          labels = c("A", "B", "C", "D", "E", "F"), 
+          align = "h", nrow = 2, ncol = 3)
+
+
+#ggsave("Figures/HNA_LNA_vs_production.png", rr, dpi = 600, units = "in", width = 14, height = 8)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 ###  HNA PER uL
+limits_musk <- c(600,3700)
+
 surface_HNA <- ggplot(filter(flow_cy, Depth == "Surface"), 
-       aes(x = Site, y = HNA_per_uL, fill = Site, color = Season)) + 
-  geom_boxplot(alpha = 0.5, color = "black") + 
-  scale_y_continuous(limits = c(600,3700)) + 
-  geom_jitter(size = 3.5) + facet_grid(.~Year) + ggtitle("Surface samples only")
+       aes(x = Site, y = HNA_per_uL, fill = Season, shape = Site)) + ggtitle("Surface samples only") +
+  scale_y_continuous(limits = limits_musk) + 
+  geom_boxplot(alpha = 0.5, fill = "#C5DBF2",color = "black", show.legend = FALSE) +
+  scale_fill_manual(values = c("#51BAAE", "#241B50", "#FD0F27")) +
+  scale_shape_manual(values = c(21, 22, 23, 25)) +
+  geom_point(size = 3.5) + facet_grid(.~Year) + 
+  guides(fill = guide_legend(override.aes = list(shape = 24))) 
+
+
 
 deep_HNA <- ggplot(filter(flow_cy, Depth == "Deep"), 
-       aes(x = Site, y = HNA_per_uL, fill = Site, color = Season)) + 
-  geom_boxplot(alpha = 0.5, color = "black") + 
-  scale_y_continuous(limits = c(600,3700)) + 
-  geom_jitter(size = 3.5) + facet_grid(.~Year) + ggtitle("Deep samples only")
+       aes(x = Site, y = HNA_per_uL, fill = Season, shape = Site)) + 
+  scale_y_continuous(limits = limits_musk) + ggtitle("Deep samples only") +
+  geom_boxplot(alpha = 0.5, fill = "#C5DBF2",color = "black", show.legend = FALSE) +
+  scale_fill_manual(values = c("#51BAAE", "#241B50", "#FD0F27")) +
+  scale_shape_manual(values = c(21, 22, 23, 25)) +
+  geom_point(size = 3.5) + facet_grid(.~Year) + 
+  guides(fill = guide_legend(override.aes = list(shape = 24))) 
 
 all_HNA <- ggplot(filter(flow_cy), 
-       aes(x = Site, y = HNA_per_uL, fill = Site, color = Season)) + 
-  geom_boxplot(alpha = 0.5, color = "black") +
-  scale_y_continuous(limits = c(600,3700)) + 
-  geom_jitter(size = 3.5) + facet_grid(.~Year) + ggtitle("All samples")
-
+       aes(x = Site, y = HNA_per_uL, fill = Season, shape = Depth)) + ggtitle("All samples") +
+  scale_y_continuous(limits = limits_musk) + 
+  geom_boxplot(alpha = 0.5, fill = "#C5DBF2",color = "black", show.legend = FALSE) +
+  scale_fill_manual(values = c("#51BAAE", "#241B50", "#FD0F27")) +
+  scale_shape_manual(values = c(21, 22, 23, 25)) +
+  geom_point(size = 3.5) + facet_grid(.~Year) + 
+  guides(fill = guide_legend(override.aes = list(shape = 24))) 
 
 HNA_per_uL_plots <- plot_grid(surface_HNA,deep_HNA, all_HNA,
           labels = c("A", "B", "C"), 
@@ -1540,31 +1648,48 @@ HNA_per_uL_plots <- plot_grid(surface_HNA,deep_HNA, all_HNA,
 HNA_per_uL_plots
 
 
+
 # HNA: LNA RATIO
 lim_HNA <- c(10,60)
 
 surface_HNA_percent <- ggplot(filter(flow_cy, Depth == "Surface"), 
-       aes(x = Site, y = HNA_percent, fill = Site, color = Season)) + 
-  geom_boxplot(alpha = 0.5, color = "black") + 
+       aes(x = Site, y = HNA_percent, shape = Site, fill = Season)) + ggtitle("Surface samples only") +
   scale_y_continuous(limits = lim_HNA) + 
-  geom_jitter(size = 3.5) + facet_grid(.~Year) + ggtitle("Surface samples only")
+  geom_boxplot(alpha = 0.5, fill = "#C5DBF2", color = "black", show.legend = FALSE) +
+  scale_fill_manual(values = c("#51BAAE", "#241B50", "#FD0F27")) +
+  scale_shape_manual(values = c(21, 22, 23, 25)) +
+  geom_point(size = 3.5) + facet_grid(.~Year) + 
+  guides(fill = guide_legend(override.aes = list(shape = 24))) 
 
 deep_HNA_percent <- ggplot(filter(flow_cy, Depth == "Deep"), 
-       aes(x = Site, y = HNA_percent, fill = Site, color = Season)) + 
-  geom_boxplot(alpha = 0.5, color = "black") + 
+       aes(x = Site, y = HNA_percent, shape = Site, fill = Season)) + ggtitle("Deep samples only") + 
   scale_y_continuous(limits = lim_HNA) + 
-  geom_jitter(size = 3.5) + facet_grid(.~Year) + ggtitle("Deep samples only")
+  geom_boxplot(alpha = 0.5, fill = "#C5DBF2",color = "black", show.legend = FALSE) +
+  scale_fill_manual(values = c("#51BAAE", "#241B50", "#FD0F27")) +
+  scale_shape_manual(values = c(21, 22, 23, 25)) +
+  geom_point(size = 3.5) + facet_grid(.~Year) + 
+  guides(fill = guide_legend(override.aes = list(shape = 24))) 
 
 all_HNA_percent <- ggplot(filter(flow_cy), 
-       aes(x = Site, y = HNA_percent, fill = Site, color = Season)) + 
-  geom_boxplot(alpha = 0.5, color = "black") +
+       aes(x = Site, y = HNA_percent, shape = Depth, fill = Season)) + ggtitle("All samples") + 
   scale_y_continuous(limits = lim_HNA) + 
-  geom_jitter(size = 3.5) + facet_grid(.~Year) + ggtitle("All samples")
+  geom_boxplot(alpha = 0.5, fill = "#C5DBF2",color = "black", show.legend = FALSE) +
+  scale_fill_manual(values = c("#51BAAE", "#241B50", "#FD0F27")) +
+  scale_shape_manual(values = c(21, 22, 23, 25)) +
+  geom_point(size = 3.5) + facet_grid(.~Year) + 
+  guides(fill = guide_legend(override.aes = list(shape = 24))) 
 
 
 HNA_percent_plots <- plot_grid(surface_HNA_percent,deep_HNA_percent, all_HNA_percent,
           labels = c("A", "B", "C"), 
           align = "h", nrow = 3, ncol = 1)
+
+
+muskegon_HNA <- plot_grid(HNA_per_uL_plots,HNA_percent_plots,
+          labels = c("1", "2"), 
+          align = "h", nrow = 1, ncol = 2)
+
+#ggsave("Figures/muskegon_HNA.png", muskegon_HNA, dpi = 600, units = "in", width = 14, height = 10)
 
 ```
 
