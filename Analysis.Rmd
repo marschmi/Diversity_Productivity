@@ -242,7 +242,7 @@ ggplot(data.frame(sum = sample_sums(oligo_merged_musk)), aes(x = sum)) +
 ```
 
 
-# Phenoflow Alpha diversity analysis
+# Phenoflow Alpha Diversity Analysis
 
 ## OTU Phenoflow analysis
 ```{r otu-phenoflow}
@@ -552,8 +552,7 @@ oligotyping_phenoflow
 ```
 
 
-
-
+# Vegan Alpha Diversity Analysis
 ## Remove samples with too few reads
 ```{r rarefy-and-scale}
 ##  OTU: SUBSAMPLE AT 6600
@@ -576,8 +575,7 @@ scaled_oligo_merged_pruned <- oligo_merged_pruned %>%
   scale_reads(round = "round") 
 ```
 
-
-# Alpha Diversity:  Analysis ran on December 16th, 2016
+## Rarefy Read Depth Analysis ran on December 16th, 2016
 ```{r calculate-alphadiv}
 # Initialize matrices to store richness and evenness estimates
  # nsamp <- nsamples(oligo_merged_pruned)
@@ -659,8 +657,8 @@ scaled_oligo_merged_pruned <- oligo_merged_pruned %>%
  
 ```
 
-# Vegan Alpha Diversity Analysis
-## OTU Analysis 
+## Vegan Alpha Diversity Analysis
+### OTU Analysis 
 ```{r vegan-otu-alphadiv}
 # Load values
 nsamp <- nsamples(otu_merged_pruned)
@@ -892,8 +890,7 @@ otu_vegan
 ggsave("Figures/vegan_otu_alpha_vs_prod.png", otu_vegan, dpi = 600, units = "in", width = 10, height = 8)
 ```
 
-
-## Oligotyping Analysis 
+### Oligotyping Analysis 
 ```{r vegan-oligotyping-alphadiv}
 # Load values
 nsamp <- nsamples(oligo_merged_pruned)
@@ -1130,8 +1127,8 @@ oligotyping_vegan
 
 
 #  Stacked Bar plots for taxonomic structure
-## OTU Phylum Level Analysis
-```{r out-stacked-bar}
+## OTU  Phylum Stacked Bar 
+```{r otu-stacked-bar}
 musk_scaled_otu_merged_pruned <- subset_samples(scaled_otu_merged_pruned, project == "Muskegon_Lake" & 
                                            year == "2015" &
                                            limnion == "Top" &
@@ -1181,8 +1178,7 @@ otu_stack_bar <- ggplot(musk_scaled_otu_merged_pruned_phylum, aes(x = season, y 
 
 ```
 
-
-## Oligotyping Phylum level analysis
+## Oligotyping Phylum Stacked Bar 
 ```{r oligotyping-stacked-bar, eval = FALSE}
 musk_scaled_oligo_merged_pruned <- subset_samples(scaled_oligo_merged_pruned, project == "Muskegon_Lake" & 
                                            year == "2015" &
@@ -1232,61 +1228,7 @@ ggplot(musk_scaled_oligo_merged_pruned_phylum, aes(x = season, y = Abundance, fi
 
 
 
-
-
-## Phylum Diversity plots
-
-```{r}
-
-
-# ######################################################### RICHNESS
-# #  Subset a dataframe with the key information
-# ML_oligo_rich_stats <- filter(oligo_alphadiv, 
-#                               measure == "Richness" & 
-#                                 project == "Muskegon_Lake" & 
-#                                 fraction %in% c("WholePart", "Free") & 
-#                                 year == "2015")
-# 
-# 
-# # Can fractional production be predicted by richness? 
-# free_ML_oligo_rich_stats <- filter(ML_oligo_rich_stats, fraction == "Free")
-# freeprod_ML_oligo_rich <- lm(frac_bacprod ~ mean, data = free_ML_oligo_rich_stats)
-# freeprod_ML_oligo_rich
-# summary(freeprod_ML_oligo_rich)
-# 
-# part_ML_abs_rich_stats <- filter(ML_oligo_rich_stats, fraction == "WholePart")
-# partprod_MLoligo_rich <- lm(frac_bacprod ~ mean, data = part_ML_abs_rich_stats)
-# partprod_MLoligo_rich
-# summary(partprod_MLoligo_rich)
-
-# Plot 
-ggplot(filter(alpha_comb_final, Taxa == "Cyanobacteria"), 
-       aes(x=Estimate, y=frac_bacprod, color = fraction)) + 
-  geom_point(size = 3.5) + 
-  ggtitle("OTU: Cyanobacteria") +
-  scale_color_manual(values = c("firebrick3","cornflowerblue"), limits = c("WholePart", "Free")) +
-  facet_wrap( ~ Alphadiv, ncol=2, scales="free_x") +
-  #scale_x_continuous(expand = c(0,0)) + 
-  #scale_y_continuous(limits = c(0,70),expand = c(0,0)) + 
-  ylab("Production (μgC/L/hr)") + xlab("Observed Richness (D0)") +
-  #geom_smooth(data=subset(ML_oligo_rich_stats, fraction == "Free"), method='lm') + 
-  #geom_smooth(data=subset(ML_oligo_rich_stats, fraction == "WholePart"), method='lm') + 
-  theme(legend.position="right",        
-        legend.title=element_blank())
- # annotate("text", x = 210, y=45, color = "cornflowerblue", fontface = "bold",
-#           label = paste("R2 =", round(summary(freeprod_ML_oligo_rich)$adj.r.squared, digits = 4), "\n", 
-#                         "p =", round(unname(summary(freeprod_ML_oligo_rich)$coefficients[,4][2]), digits = 4))) + 
-#  annotate("text", x = 260, y=25, color = "firebrick3", fontface = "bold",
-#           label = paste("R2 =", round(summary(partprod_MLoligo_rich)$adj.r.squared, digits = 4), "\n", 
-#                         "p =", round(unname(summary(partprod_MLoligo_rich)$coefficients[,4][2]), digits = 4))); oligo_rich_vegan
-
-```
-
-
-
-
-
-## Environmental parameters Production 
+# Environmental Conditions 
 ```{r}
 prod_data <- data.frame(sample_data(musk_scaled_otu_merged_pruned))
 
@@ -1545,14 +1487,14 @@ ggplot(HNA_prod, aes(x = Site, y = tot_bacprod, fill = Season, shape = Site)) + 
 r1 <- ggplot(HNA_prod, aes(x = HNA_per_uL, y = tot_bacprod)) + ggtitle("Surface samples only") +
   scale_fill_manual(values = c("#51BAAE", "#241B50", "#FD0F27")) +
   scale_shape_manual(values = c(21, 22, 23, 25)) +
-  geom_point(size = 3.5, aes(fill = Season, shape = Site)) + #facet_grid(.~Year) + 
+  geom_point(size = 3.5, aes(fill = Season, shape = Site), show.legend = FALSE) + #facet_grid(.~Year) + 
   geom_smooth(method = "lm", color = "black") + 
   guides(fill = guide_legend(override.aes = list(shape = 24))) 
 
 r2 <- ggplot(HNA_prod, aes(x = HNA_percent, y = tot_bacprod)) + ggtitle("Surface samples only") +
   scale_fill_manual(values = c("#51BAAE", "#241B50", "#FD0F27")) +
   scale_shape_manual(values = c(21, 22, 23, 25)) +
-  geom_point(size = 3.5, aes(fill = Season, shape = Site)) + #facet_grid(.~Year) + 
+  geom_point(size = 3.5, aes(fill = Season, shape = Site), show.legend = FALSE) + #facet_grid(.~Year) + 
   geom_smooth(method = "lm", color = "black") + 
   guides(fill = guide_legend(override.aes = list(shape = 24))) 
 
@@ -1573,14 +1515,14 @@ r4 <-ggplot(HNA_prod, aes(x = Nuc_acid_ratio, y = tot_bacprod)) + ggtitle("Surfa
 r5 <- ggplot(HNA_prod, aes(x = LNA_per_uL, y = tot_bacprod)) + ggtitle("Surface samples only") +
   scale_fill_manual(values = c("#51BAAE", "#241B50", "#FD0F27")) +
   scale_shape_manual(values = c(21, 22, 23, 25)) +
-  geom_point(size = 3.5, aes(fill = Season, shape = Site)) + #facet_grid(.~Year) + 
+  geom_point(size = 3.5, aes(fill = Season, shape = Site), show.legend = FALSE) + #facet_grid(.~Year) + 
   geom_smooth(method = "lm", color = "black") + 
   guides(fill = guide_legend(override.aes = list(shape = 24))) 
 
 r6 <- ggplot(HNA_prod, aes(x = LNA_percent, y = tot_bacprod)) + ggtitle("Surface samples only") +
   scale_fill_manual(values = c("#51BAAE", "#241B50", "#FD0F27")) +
   scale_shape_manual(values = c(21, 22, 23, 25)) +
-  geom_point(size = 3.5, aes(fill = Season, shape = Site)) + #facet_grid(.~Year) + 
+  geom_point(size = 3.5, aes(fill = Season, shape = Site), show.legend = FALSE) + #facet_grid(.~Year) + 
   geom_smooth(method = "lm", color = "black") + 
   guides(fill = guide_legend(override.aes = list(shape = 24))) 
 
@@ -1589,27 +1531,88 @@ rr <- plot_grid(r1, r5, r3, r2, r6, r4,
           labels = c("A", "B", "C", "D", "E", "F"), 
           align = "h", nrow = 2, ncol = 3)
 
-
 #ggsave("Figures/HNA_LNA_vs_production.png", rr, dpi = 600, units = "in", width = 14, height = 8)
 
 
 
+##################################################################################################################################
+##################################################################################################################################
+##################################################################################################################################
+
+
+a <- ggplot(HNA_prod, aes(x = HNA_per_uL, y = attached_bac)) + ggtitle("Surface samples only") +
+  scale_fill_manual(values = c("#51BAAE", "#241B50", "#FD0F27")) +
+  scale_shape_manual(values = c(21, 22, 23, 25)) +
+  geom_point(size = 3.5, aes(fill = Season, shape = Site)) + #facet_grid(.~Year) + 
+  geom_smooth(method = "lm", color = "black") + 
+  guides(fill = guide_legend(override.aes = list(shape = 24))) +
+  theme(legend.position = c(0.15, 0.75))
+
+b <- ggplot(HNA_prod, aes(x = HNA_per_uL, y = perc_attached_abund)) + ggtitle("Surface samples only") +
+  scale_fill_manual(values = c("#51BAAE", "#241B50", "#FD0F27")) +
+  scale_shape_manual(values = c(21, 22, 23, 25)) +
+  geom_point(size = 3.5, aes(fill = Season, shape = Site)) + #facet_grid(.~Year) + 
+  geom_smooth(method = "lm", color = "black") + 
+  guides(fill = guide_legend(override.aes = list(shape = 24))) +
+  theme(legend.position = c(0.15, 0.75))
+
+ab <- plot_grid(a, b,
+          labels = c("A", "B"), 
+          align = "h", nrow = 1, ncol = 2)
+
+#ggsave("Figures/HNA_vs_attached_bac.png", ab, dpi = 600, units = "in", width = 10, height = 6)
 
 
 
 
+ggplot(HNA_prod, aes(x = cells_per_uL, y = total_bac_abund/1000)) + ggtitle("Surface samples only") +
+  scale_fill_manual(values = c("#51BAAE", "#241B50", "#FD0F27")) +
+  scale_shape_manual(values = c(21, 22, 23, 25)) +
+  geom_point(size = 3.5, aes(fill = Season, shape = Site)) + #facet_grid(.~Year) + 
+  geom_smooth(method = "lm", color = "black") + 
+  guides(fill = guide_legend(override.aes = list(shape = 24))) +
+  theme(legend.position = c(0.2, 0.75))
 
 
+##################################################################################################################################
+##################################################################################################################################
+##################################################################################################################################
+# Plot D0 Observed Richness
+d0 <- ggplot(HNA_prod, aes(x=D0, y=tot_bacprod)) + 
+  geom_point(size = 3.5) + geom_errorbarh(aes(xmin = D0 - D0.sd, xmax = D0 + D0.sd), width = 0.2) + 
+  ggtitle("Phenotypic Div: Phenoflow") +
+  ylab("Total Production (μgC/L/hr)") + xlab("Observed Richness (D0)") +
+  theme(legend.position=c(0.15,0.9), legend.title=element_blank()) +
+  geom_smooth(method = "lm", color = "black") + 
+  scale_x_continuous(limits = c(13800, 16300)) 
 
 
+d1 <- ggplot(HNA_prod, aes(x=D1, y=tot_bacprod)) + 
+  geom_point(size = 3.5) + geom_errorbarh(aes(xmin = D1 - D1.sd, xmax = D1 + D1.sd), width = 0.2) + 
+  ggtitle("Phenotypic Div: Phenoflow") +
+  ylab("Total Production (μgC/L/hr)") + xlab("Shannon Entropy (D1)") +
+  theme(legend.position=c(0.15,0.9), legend.title=element_blank()) +
+  geom_smooth(method = "lm", color = "black") +
+  scale_x_continuous(limits = c(3000, 3700)) 
+
+d2 <- ggplot(HNA_prod, aes(x=D2, y=tot_bacprod)) + 
+  geom_point(size = 3.5) + geom_errorbarh(aes(xmin = D2 - D2.sd, xmax = D2 + D2.sd), width = 0.2) + 
+  ggtitle("Phenotypic Div: Phenoflow") +
+  ylab("Total Production (μgC/L/hr)") + xlab("Inverse Simpson (D2)") +
+  theme(legend.position=c(0.15,0.9), legend.title=element_blank()) +
+  geom_smooth(method = "lm", color = "black") + 
+  scale_x_continuous(limits = c(1850, 2300)) 
 
 
+dd <- plot_grid(d0, d1, d2,
+          labels = c("A", "B", "C"), 
+          align = "h", nrow = 1, ncol = 3)
 
+ggsave("Figures/phenotypic_div_vs_total_production.png", dd, dpi = 600, units = "in", width = 10, height = 6)
 
-
-
-
-
+##################################################################################################################################
+##################################################################################################################################
+##################################################################################################################################
 ###  HNA PER uL
 limits_musk <- c(600,3700)
 
@@ -1690,6 +1693,16 @@ muskegon_HNA <- plot_grid(HNA_per_uL_plots,HNA_percent_plots,
           align = "h", nrow = 1, ncol = 2)
 
 #ggsave("Figures/muskegon_HNA.png", muskegon_HNA, dpi = 600, units = "in", width = 14, height = 10)
+
+
+ggplot(filter(flow_cy), 
+       aes(x = Site, y = cells_per_uL, shape = Depth, fill = Season)) + ggtitle("All samples") + 
+  #scale_y_continuous(limits = lim_HNA) + 
+  geom_boxplot(alpha = 0.5, fill = "#C5DBF2",color = "black", show.legend = FALSE) +
+  scale_fill_manual(values = c("#51BAAE", "#241B50", "#FD0F27")) +
+  scale_shape_manual(values = c(21, 22, 23, 25)) +
+  geom_point(size = 3.5) + facet_grid(.~Year) + 
+  guides(fill = guide_legend(override.aes = list(shape = 24))) 
 
 ```
 
