@@ -1137,13 +1137,11 @@ musk_scaled_otu_merged_pruned <- subset_samples(scaled_otu_merged_pruned, projec
 # Fix month levels in sample_data
 sample_data(musk_scaled_otu_merged_pruned)$fraction <- factor(
   sample_data(musk_scaled_otu_merged_pruned)$fraction, 
-  levels = c("WholePart", "Free")
-)
+  levels = c("WholePart", "Free"))
 
 sample_data(musk_scaled_otu_merged_pruned)$lakesite <- factor(
   sample_data(musk_scaled_otu_merged_pruned)$lakesite, 
-  levels = c("MOT", "MDP", "MBR", "MIN")
-)
+  levels = c("MOT", "MDP", "MBR", "MIN"))
 
 
 
@@ -1321,8 +1319,7 @@ my_subset_taxa <- function(physeq, taxrank, taxa) {
   return(physeq)
 }
 
-
-
+free_samps <- subset_samples(musk_scaled_otu_merged_pruned, fraction == "Free")
 
 
 # Initialize parameters
@@ -1460,8 +1457,10 @@ flow_cy$Season <- factor(flow_cy$Season,  levels = c("Spring", "Summer", "Fall")
 flow_cy$norep_water_name <- paste(substring(flow_cy$Sample_16S,1,4), substring(flow_cy$Sample_16S,7,9), sep = "")
 
 # Prepare the dataframes with Bopi's data
-free_samples <- subset_samples(otu_merged_musk, fraction == "Free")
-free_samples <-  sample_data(free_samples)
+free_sample_physeq <- subset_samples(otu_merged_musk, fraction == "Free")
+free_samples <-  sample_data(free_sample_physeq)
+
+
 
 # Read in the Flow Cytometry Diversity data that Ruben calculated with Phenoflow 
 flow_div <- read.csv("Phenoflow/Diversity.fcm.marian.csv", header = TRUE) %>%
@@ -1472,8 +1471,58 @@ flow_data <- left_join(flow_div, flow_cy, by = "Sample") %>%
 
 HNA_prod <- left_join(flow_data, free_samples, by = "norep_water_name") 
 
+##  PREPARE A PHYLOSEQ OBJECT FOR 
+HNA_prod2 <- left_join(free_samples, flow_data, by = "norep_water_name") 
+row.names(HNA_prod2) <- HNA_prod2$norep_filter_name
+sample_data(free_sample_physeq) <- HNA_prod2
+
+```
 
 
+# Calculate the Absolute abundances!
+```{r prepare-peter-physeq}
+### MODIFY TO ABSOLUTE ABUNDANCES!
+
+# First let's calculate the proportion
+peter_physeq <- free_sample_physeq 
+rel_abund_physeq <- peter_physeq %>%
+  transform_sample_counts(function(x) {x/sum(x)} ) # Transform to rel. abundance
+
+# Multiply the proportion by the total number of cells
+relabund_otu <- otu_table(rel_abund_physeq)
+absabund_counts_otu <- relabund_otu * sample_data(peter_physeq)$cells_per_uL
+stopifnot(rowSums(absabund_counts_otu) == sample_data(peter_physeq)$cells_per_uL) # Sanity check
+otu_table(peter_physeq) <- absabund_counts_otu # Reassign the otu_table to be the absolute counts
+otu_table(peter_physeq)[1:5,1:15]
+
+## From counts to absolute abundance proprtions 
+absabund_proportion_otu <- peter_physeq %>%
+  transform_sample_counts(function(x) {x/sum(x)} ) # Transform to rel. abundance
+otu_table(absabund_proportion_otu)[1:5,1:15] == otu_table(rel_abund_physeq)[1:5,1:15] # Relative and absolute proportions are the same!
+
+# Final otu data frames
+peter_otu_counts <- absabund_counts_otu # OTU COUNTS TABLE
+peter_otu_proportion <- otu_table(absabund_proportion_otu) # OTU PROPORTION TABLE
+
+# Write the files 
+#write.csv(peter_otu_counts, "peter/muskegon_absolute_otu_counts.csv")
+#write.csv(peter_otu_proportion, "peter/muskegon_otu_proportions.csv")
+
+HNA_prod3 <- HNA_prod2 %>%
+  select(norep_filter_name, lakesite, limnion, year, 
+         tot_bacprod,
+         cells_per_uL, HNA_per_uL, HNA_percent, LNA_per_uL, LNA_percent) %>%
+  rename(depth = limnion)
+
+row.names(HNA_prod3) = NULL
+
+#write.csv(HNA_prod3, "peter/sample_data.csv")
+
+```
+
+
+### HNA VS LNA 
+```{r}
 ####  PRODUCTION VS HNA
 
 ggplot(HNA_prod, aes(x = Site, y = tot_bacprod, fill = Season, shape = Site)) + ggtitle("Surface samples only") +
