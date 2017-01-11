@@ -1505,18 +1505,106 @@ peter_otu_counts <- absabund_counts_otu # OTU COUNTS TABLE
 peter_otu_proportion <- otu_table(absabund_proportion_otu) # OTU PROPORTION TABLE
 
 # Write the files 
-#write.csv(peter_otu_counts, "peter/muskegon_absolute_otu_counts.csv")
-#write.csv(peter_otu_proportion, "peter/muskegon_otu_proportions.csv")
+#write.table(peter_otu_counts, "peter/muskegon_absolute_otu_counts.tsv", sep = "\t")
+#write.table(peter_otu_proportion, "peter/muskegon_otu_proportions.tsv", sep = "\t")
+
+#write.xlsx(x = peter_otu_counts, file = "peter/muskegon_absolute_otu_counts.xlsx")
+#write.xlsx(x = peter_otu_proportion, file = "peter/muskegon_otu_proportions.xlsx")
 
 HNA_prod3 <- HNA_prod2 %>%
-  select(norep_filter_name, lakesite, limnion, year, 
+  select(norep_filter_name, lakesite, limnion, year, season,
          tot_bacprod,
          cells_per_uL, HNA_per_uL, HNA_percent, LNA_per_uL, LNA_percent) %>%
   rename(depth = limnion)
 
 row.names(HNA_prod3) = NULL
 
-#write.csv(HNA_prod3, "peter/sample_data.csv")
+#write.table(HNA_prod3, "peter/sample_data.tsv", sep = "\t")
+#write.xlsx(x = HNA_prod3, file = "peter/sample_data.xlsx")
+
+season_colors <- c(
+  Spring = "#675B78",
+  Summer = "#AC6C82",
+  Fall = "#EB7B88")
+
+
+lakesite_colors <- c(
+  MIN = "#C24704",
+  MBR = "#D9CC3C",
+  MDP = "#A0E0BA",
+  MOT = "#00ADA7")
+
+year_colors <- c(
+  "2014" = "#F8BB0A", 
+  "2015" = "#FF4E50")
+
+
+tot_bacprod_plot1 <- ggplot(HNA_prod3, aes(y = tot_bacprod, x = lakesite, color = lakesite, fill = lakesite)) +
+  geom_boxplot(alpha = 0.5) + 
+  geom_point(size = 3, position=position_jitterdodge(dodge.width=0.9)) +
+  scale_color_manual(values = lakesite_colors) +
+  scale_fill_manual(values = lakesite_colors)
+
+
+tot_bacprod_plot2 <- ggplot(HNA_prod3, aes(y = tot_bacprod, x = lakesite, color = year, fill = year)) +
+  geom_boxplot(alpha = 0.5) + 
+  geom_point(size = 3, position=position_jitterdodge(dodge.width=0.9)) +
+  scale_color_manual(values = year_colors) +
+  scale_fill_manual(values = year_colors)
+
+
+tot_bacprod_plot3 <- ggplot(HNA_prod3, aes(y = tot_bacprod, x = lakesite, color = season, fill = season)) +
+  geom_boxplot(alpha = 0.5) + 
+  geom_point(size = 3, position=position_jitterdodge(dodge.width=0.9)) +
+  scale_color_manual(values = season_colors) +
+  scale_fill_manual(values = season_colors)
+
+a_plot1 <- ggplot(HNA_prod3, aes(y = HNA_percent, x = lakesite, color = lakesite, fill = lakesite)) +
+  geom_boxplot(alpha = 0.5) + 
+  geom_point(size = 3, position=position_jitterdodge(dodge.width=0.9)) +
+  scale_color_manual(values = lakesite_colors) +
+  scale_fill_manual(values = lakesite_colors)
+
+
+a_plot2 <- ggplot(HNA_prod3, aes(y = HNA_percent, x = lakesite, color = year, fill = year)) +
+  geom_boxplot(alpha = 0.5) + 
+  geom_point(size = 3, position=position_jitterdodge(dodge.width=0.9)) +
+  scale_color_manual(values = year_colors) +
+  scale_fill_manual(values = year_colors)
+
+
+a_plot3 <- ggplot(HNA_prod3, aes(y = HNA_percent, x = lakesite, color = season, fill = season)) +
+  geom_boxplot(alpha = 0.5) + 
+  geom_point(size = 3, position=position_jitterdodge(dodge.width=0.9)) +
+  scale_color_manual(values = season_colors) +
+  scale_fill_manual(values = season_colors)
+
+
+tot_bacprod_plotz <- plot_grid(tot_bacprod_plot1, tot_bacprod_plot2, tot_bacprod_plot3, 
+           labels = c("A", "B", "C"), 
+           align = "h", nrow = 3, ncol = 1)
+
+#ggsave("Figures/tot_bacprod_factors.png", tot_bacprod_plotz, dpi = 600, units = "in", width = 5, height = 6)
+
+
+# Write a season table for peter
+season_df <- HNA_prod3 %>%
+  select(norep_filter_name, season)
+write.table(season_df, "peter/sample_season_data.tsv", sep = "\t", row.names = FALSE)
+
+
+
+a_plotz <- plot_grid(tot_bacprod_plot1, a_plot1,tot_bacprod_plot2, a_plot2, tot_bacprod_plot3, a_plot3,
+          labels = c("A", "B", "C", "D", "E", "F"), 
+          align = "h", nrow = 3, ncol = 2)
+
+
+ggplot(HNA_prod3, aes(y = HNA_percent, x = lakesite, color = lakesite, fill = lakesite)) +
+  geom_boxplot(alpha = 0.5) + 
+  geom_point(size = 3, position=position_jitterdodge(dodge.width=0.6)) +
+  scale_color_manual(values = lakesite_colors) +
+  scale_fill_manual(values = lakesite_colors)
+
 
 ```
 
