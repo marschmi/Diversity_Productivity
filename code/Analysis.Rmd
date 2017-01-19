@@ -16,6 +16,87 @@ knitr::opts_chunk$set(eval = TRUE,
                       fig.align = "center", 
                       fig.width = 7,
                       fig.height = 7)
+
+
+# Set global colors for the different taxonomic phyla
+phylum_colors <- c(
+  Acidobacteria = "navy", 
+  Actinobacteria = "darkslategray2", 
+  Alphaproteobacteria = "tomato", 
+  Aminicenantes = "cornflowerblue",
+  Armatimonadetes = "wheat", 
+  Bacteria_unclassified = "#508578", 
+  Bacteroidetes = "gold", 
+  Betaproteobacteria = "plum1", 
+  "Candidate_division_OP3" = "slategray3",
+  Chlamydiae = "#A20E42",
+  Chlorobi="magenta", 
+  Chloroflexi="black", 
+  Cyanobacteria = "limegreen",
+  "Deinococcus-Thermus" = "black",
+  Deltaproteobacteria = "grey", 
+  Firmicutes = "#3E9B96",
+  Gammaproteobacteria = "cyan",
+  Gemmatimonadetes = "yellow",
+  Gracilibacteria = "#FD823F",
+  JTB23 = "#B5D6AA",
+  Latescibacteria = "salmon4",
+  Lentisphaerae = "palevioletred1",
+  Nitrospirae = "forestgreen",
+  Omnitrophica = "violet",
+  Microgenomates = "blue",
+  Parcubacteria = "#531A4D",
+  Planctomycetes = "darkorange", 
+  Proteobacteria_unclassified = "greenyellow",
+  Spirochaetae = "royalblue",
+  TA06 = "peachpuff",
+  TA18 = "burlywood", 
+  TM6 = "olivedrab",
+  Verrucomicrobia = "purple4",
+  "WCHB1-60" = "green")
+
+
+# Set global colors for the different months of the year 
+month_colors <- c(
+  April = "black",
+  May = "#d4b9da",
+  June = "#c994c7",
+  July = "#df65b0",
+  August = "#e7298a",
+  September = "#ce1256",
+  October = "#91003f")
+
+
+# Set global colors for the filter fraction sizes 
+fraction_colors <- c(
+  Particle = "firebrick3", 
+  Free = "cornflowerblue",
+  Whole = "#FF6600", 
+  Sediment = "#8A2667")
+
+depth_colors <- c(
+  Top = "#1AB58A",
+  Middle = "#2F438A",
+  Bottom = "#FD7400")
+
+lakesite_colors <- c(
+  MIN = "#C24704",
+  MBR = "#D9CC3C",
+  MDP = "#A0E0BA",
+  MOT = "#00ADA7")
+
+season_colors <- c(
+  Spring = "#675B78",
+  Summer = "#AC6C82",
+  Fall = "#EB7B88")
+
+nuc_acid_type_colors <- c(
+  DNA = "#F8BB0A", 
+  RNA = "#FF4E50")
+
+year_colors <- c(
+  "2014" = "#F8BB0A", 
+  "2015" = "#FF4E50")
 ```
 
 # Load Libraries
@@ -1521,22 +1602,6 @@ row.names(HNA_prod3) = NULL
 
 #write.table(HNA_prod3, "peter/sample_data.tsv", sep = "\t")
 #write.xlsx(x = HNA_prod3, file = "peter/sample_data.xlsx")
-
-season_colors <- c(
-  Spring = "#675B78",
-  Summer = "#AC6C82",
-  Fall = "#EB7B88")
-
-
-lakesite_colors <- c(
-  MIN = "#C24704",
-  MBR = "#D9CC3C",
-  MDP = "#A0E0BA",
-  MOT = "#00ADA7")
-
-year_colors <- c(
-  "2014" = "#F8BB0A", 
-  "2015" = "#FF4E50")
 
 
 tot_bacprod_plot1 <- ggplot(HNA_prod3, aes(y = tot_bacprod, x = lakesite, color = lakesite, fill = lakesite)) +
