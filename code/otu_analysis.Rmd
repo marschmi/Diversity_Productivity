@@ -52,43 +52,12 @@ source("set_colors.R")
 
 ## Add metadata to the phyloseq objects to Merge samples
 ```{r merge_samples}
-# Add the metadata to our phyloseq object! 
-##  Add metadata to OTUs
-sample_data(otu_data) <- complete_meta_df
-otu_data <- prune_taxa(taxa_sums(otu_data) > 0, otu_data)
-
-
-# Merged metadata
-merged_complete_meta_df<- 
-  select(complete_meta_df, -c(names, replicate, nuc_acid_type, water_name)) %>% 
-  distinct() %>%
-  arrange(norep_filter_name)
-
-## Add Production data from GVSU AWRI provided by the lab of Bopi Biddanda
-bopi_data <- read.csv("data/metadata/production_data.csv") %>%
-  dplyr::rename(norep_filter_name = names)  %>% # rename "names" column to "norep_filter_name"
-  select(-c(X, limnion, fraction, month, year, season))
-
-## Merge two metadata files together!
-df1 <- full_join(merged_complete_meta_df, bopi_data) %>%
-  select(-c(Depth, month)) 
-
-# provide row.names to match sample
-row.names(df1) <- df1$norep_filter_name
-
-# merge samples for OTUs
-otu_merged <- merge_samples(otu_data, group = "norep_filter_name", fun = "sum")
-sample_names(otu_merged) == row.names(merged_complete_meta_df) # Sanity check
-
-# Add nice sample information
-sample_data(otu_merged) <- df1
 ```
 
 
 # Subset Muskegon Samples
 ```{r subset-muskegon}
-# Subset Mukegon Lake samples out of the OTU phyloseq object
-otu_merged_musk <- subset_samples(physeq = otu_merged, project == "Muskegon_Lake")
+
 ```
 
 
@@ -820,47 +789,7 @@ alpha_comb_final <- alpha_comb1 %>%
 # High vs Low nucleic acid bacteria
 ## Muskegon Lake Only
 ```{r muskegon-HNA-vs-LNA}
-flow_cy <- read.csv2("metadata/flow_cytometry.csv", header = TRUE) %>%
-  select(-X) %>%
-  filter(Lake == "Muskegon") %>%
-  # Rename columns so they are more representative of the data within them
-  rename(volume_uL = volume, 
-         raw_counts = counts,
-         HNA_counts = HNA,
-         LNA_counts = LNA) %>%
-  mutate(cells_per_uL = (raw_counts*dilution)/volume_uL,
-         HNA_per_uL = (HNA_counts*dilution)/volume_uL,
-         HNA_percent = (HNA_counts)/raw_counts*100,
-         LNA_per_uL = (LNA_counts*dilution)/volume_uL,
-         LNA_percent = (LNA_counts)/raw_counts,
-         Nuc_acid_ratio = HNA_per_uL/LNA_per_uL)
 
-# Fix the factor levels for nice plotting
-flow_cy$Site <- factor(flow_cy$Site,  levels = c("MOT", "MDP", "MBR", "MIN"))
-flow_cy$Season <- factor(flow_cy$Season,  levels = c("Spring", "Summer", "Fall"))
-
-# Create a new column so we can merge with other data frames
-flow_cy$norep_water_name <- paste(substring(flow_cy$Sample_16S,1,4), substring(flow_cy$Sample_16S,7,9), sep = "")
-
-# Prepare the dataframes with Bopi's data
-free_sample_physeq <- subset_samples(otu_merged_musk, fraction == "Free")
-free_samples <-  sample_data(free_sample_physeq)
-
-
-
-# Read in the Flow Cytometry Diversity data that Ruben calculated with Phenoflow 
-flow_div <- read.csv("Phenoflow/Diversity.fcm.marian.csv", header = TRUE) %>%
-  select(-X) 
-
-flow_data <- left_join(flow_div, flow_cy, by = "Sample") %>%
-    filter(Lake == "Muskegon") 
-
-HNA_prod <- left_join(flow_data, free_samples, by = "norep_water_name") 
-
-##  PREPARE A PHYLOSEQ OBJECT FOR 
-HNA_prod2 <- left_join(free_samples, flow_data, by = "norep_water_name") 
-row.names(HNA_prod2) <- HNA_prod2$norep_filter_name
-sample_data(free_sample_physeq) <- HNA_prod2
 
 ```
 
