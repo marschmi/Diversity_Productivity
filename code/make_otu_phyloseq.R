@@ -167,7 +167,35 @@ FL_df3 <- filter(df3, fraction %in% c("WholeFree", "Free", "Sediment"))
 final_meta_dataframe <- bind_rows(FL_df3, PA_df3)
 row.names(final_meta_dataframe) <- final_meta_dataframe$norep_filter_name
 
-sample_data(otu_merged_musk_pruned) <- final_meta_dataframe
+
+
+############################################################################################################################################
+############################################################################################################################################
+###################################################################### ADD PHENOFLOW ALPHA DIVERSITY INFORMATION 
+# Loads a data object called "phenoflow_diversity"
+load("../data/PhenoFlow/otu_phenoflow/Phenoflow_diversity.RData")
+phenoflow_diversity <- as.data.frame(phenoflow_diversity)
+
+phenoflow_diversity$norep_filter_name <- row.names(phenoflow_diversity)
+
+alpha_div <- phenoflow_diversity %>%
+  select(-D0.bre, -sd.D0.bre) %>%
+  dplyr::rename(D0_SD = sd.D0,
+                D0_chao = D0.chao,
+                D0_chao_sd = sd.D0.chao,
+                D1_sd = sd.D1,
+                D2_sd = sd.D2)
+
+final_meta_dataframe_alpha <- left_join(final_meta_dataframe, alpha_div, by = "norep_filter_name")
+
+row.names(final_meta_dataframe_alpha) <- final_meta_dataframe_alpha$norep_filter_name
+
+
+############################################################################################################################################
+############################################################################################################################################
+###################################################################### FINALIZE THE PHYLOSEQ OBJECT
+## Finally, add the big metadata frame to the sample_data of otu_merged_musk_pruned
+sample_data(otu_merged_musk_pruned) <- final_meta_dataframe_alpha
 
 # Create a new file called "Phyloseq.RData" that has the phyloseq object
 save(list="otu_merged_musk_pruned", file=paste0("../data/otu_merged_musk_pruned.RData")) 
