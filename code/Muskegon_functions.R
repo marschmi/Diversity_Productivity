@@ -1,8 +1,12 @@
 ###  Functions for Mukegon Analysis
 
 # 1. make_metadata = create metadata from sample ID information in $names column
-# 2. scale_reads = scale reads to equal sequencing depth
-# 6. show_otu = show the top 10 rows and columns of an otu table
+# 2. matround = a "real" rounding function
+# 3. scale_reads = scale reads to equal sequencing depth  
+# 4. make_metadata_norep = create metadata from sample ID information in $names column without a replicate
+# 5. plot_sample_sums =  Draws a 3 paneled plot including: 1. histogram, 2. density, and 3. boxplot of the total number of sequences per sample.
+# 6. muskegon_lakesite = fixes the name of the Muskegon lakesites (e.g. "MIN" = "Inlet")
+# 7. show_otu = show the top 10 rows and columns of an otu table
 
 
 
@@ -131,9 +135,20 @@ make_muskegon_metadata <- function(dataframe){
 
 
 
+#################################################################################### 2
+#################################################################################### 2
+# This function was written by Michelle Berry , available at http://deneflab.github.io/MicrobeMiseq/
+# Better rounding function than R's base round
+matround <- function(x){trunc(x+0.5)}
+#################################################################################### 2
+#################################################################################### 2
 
-#################################################################################### 2
-#################################################################################### 2
+
+
+
+
+#################################################################################### 3
+#################################################################################### 3
 
 # Modified from code written by Michelle Berry, available at http://deneflab.github.io/MicrobeMiseq/ 
 # Scales reads by 
@@ -163,14 +178,14 @@ scale_reads <- function(physeq, n = min(sample_sums(physeq)), round = "round") {
   return(physeq.scale)
 }
 
-#################################################################################### 2
-#################################################################################### 2
-
-
-
-
 #################################################################################### 3
 #################################################################################### 3
+
+
+
+
+#################################################################################### 4
+#################################################################################### 4
 
 ## Written for this data by Marian Schmidt on July 21st, 2016
 ## This function adds the categorical metadata to a dataframe based on the sample name
@@ -279,13 +294,13 @@ make_metadata_norep <- function(dataframe){
   
 }  
 
-#################################################################################### 3
-#################################################################################### 3
-
-
-
 #################################################################################### 4
 #################################################################################### 4
+
+
+
+#################################################################################### 5
+#################################################################################### 5
 
 # This function will make a 3 paneled plot including: 
 # A. histogram, B. density, and C. boxplot of the total number of sequences per sample.
@@ -294,45 +309,58 @@ make_metadata_norep <- function(dataframe){
 # dataframe = a dataframe with information
 # x_total_seqs = a column in dataframe with the total number of sequences per sample
 # fill variable = a categorical variable to fill in the boxplot, hostogram and density plots by
-# pal = a color brewer pallette to color the plot by
+# brewer_pal = a color brewer pallette to color the plot by
 
 
-plot_sample_sums <- function(dataframe, x_total_seqs, fill_variable, pal){
+plot_sample_sums <- function(dataframe, x_total_seqs, fill_variable, brewer_pal = "Set1"){
   
   # Histogram
   year_hist <- ggplot(dataframe, aes_string(x = x_total_seqs, fill = fill_variable)) +
     xlab("# of Seqs/Sample") + ylab("Count") +
     geom_histogram(position = "dodge",binwidth = 2000) +
     scale_y_continuous(expand = c(0,0)) + scale_x_continuous(expand = c(0,0)) +
-    scale_fill_brewer(palette=pal)
+    scale_fill_brewer(palette=brewer_pal) + 
+    theme(legend.position = "none", 
+          axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
+  
   
   # Density Plot
   year_dens <- ggplot(dataframe, aes_string(x = x_total_seqs, fill = fill_variable)) +
     xlab("# of Seqs/Sample") + ylab("Density") +
     geom_density(alpha = 0.5) +
     scale_y_continuous(expand = c(0,0)) + scale_x_continuous(expand = c(0,0)) +
-    scale_fill_brewer(palette=pal)
+    scale_fill_brewer(palette=brewer_pal) + 
+    theme(legend.position = "none", 
+          axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
   
   # Boxplot
   year_box <- ggplot(dataframe, aes_string(y = x_total_seqs, x = fill_variable, fill = fill_variable)) + 
     xlab(fill_variable) + ylab("# of Seqs/Sample") +
     geom_boxplot(color = "black") + 
-    scale_fill_brewer(palette=pal)
+    scale_fill_brewer(palette=brewer_pal) +
+    theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
   
-  return(plot_grid(year_hist, year_dens, year_box, labels = c("A", "B", "C"), 
-                   align = "h", nrow = 1, ncol = 3))
   
+  return(ggdraw() +
+            draw_plot(year_hist, 0, 0, 0.3, 1) +
+            draw_plot(year_dens, 0.28, 0, 0.33, 1) + # 1st = where to start drawing, 3rd = width, 4th = height
+            draw_plot(year_box, 0.6, 0, 0.4, 1) + # 3rd = width, 4th = height
+            draw_plot_label(c("A", "B", "C"), 
+                            c(0, 0.3, 0.58), # Where along the x-axis would you like the labels?
+                            c(1, 1, 1),  # Put the label at the top of the plotting space (y-axis)
+                            size = 15) # Size of label
+  )
 }
 
-#################################################################################### 4
-#################################################################################### 4
-
-
-
-
-
 #################################################################################### 5
 #################################################################################### 5
+
+
+
+
+
+#################################################################################### 6
+#################################################################################### 6
 # Make a new column called "station" with the human name of the Muskegon sampling stations
 muskegon_lakesite <- function(dataframe){
   
@@ -349,17 +377,17 @@ muskegon_lakesite <- function(dataframe){
   return(dataframe)
 }
 
-#################################################################################### 5
-#################################################################################### 5 
+#################################################################################### 6
+#################################################################################### 6 
 
 
-#################################################################################### 6
-#################################################################################### 6
+#################################################################################### 7
+#################################################################################### 7
 # This function was written by Marian Schmidt
 # Show the top of an OTU table
 show_otu <- function(dataframe, nrow = 10, ncol = 10){
   dataframe[1:nrow,1:ncol]
 }
-#################################################################################### 6
-#################################################################################### 6
+#################################################################################### 7
+#################################################################################### 7
 

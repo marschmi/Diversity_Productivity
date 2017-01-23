@@ -5,7 +5,7 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(eval = TRUE, 
-                      echo = TRUE, 
+                      echo = FALSE, 
                       cache = TRUE,
                       include = TRUE,
                       collapse = FALSE,
@@ -19,7 +19,7 @@ knitr::opts_chunk$set(eval = TRUE,
 ```
 
 # Load Libraries
-```{r load-libraries, echo = FALSE, message = FALSE, include = FALSE}
+```{r load-libraries}
 library(ggplot2)
 library(devtools)
 library(phyloseq)
@@ -40,70 +40,176 @@ source("set_colors.R")
 
 ## Load Mothur OTU Data 
 ```{r load-data-files}
-```
-
-
-
-# Load in Metadata to raw phyloseq object
-```{r metadata-load}
-
-```
-
-
-## Add metadata to the phyloseq objects to Merge samples
-```{r merge_samples}
-```
-
-
-# Subset Muskegon Samples
-```{r subset-muskegon}
-
+# Loads a phyloseq object named otu_merged_musk_pruned)
+load("../data/otu_merged_musk_pruned.RData")
 ```
 
 
 
 # Sample Sequencing Read Counts
-```{r seq-read-count}
+```{r seq-read-count, fig.align='center', fig.height=4, fig.width=10}
 # Check the sequencing depth of each sample 
-sums_otu <- data.frame(rowSums(otu_table(otu_merged_musk)))
+sums_otu <- data.frame(rowSums(otu_table(otu_merged_musk_pruned)))
 colnames(sums_otu) <- "Sample_TotalSeqs"
-sums_otu$sample <- row.names(sums_otu)
-sums_otu <- arrange(sums_otu, Sample_TotalSeqs) %>%
-  filter(Sample_TotalSeqs < 10000)
+sums_otu$names <- row.names(sums_otu)
+sums_otu <- arrange(sums_otu, Sample_TotalSeqs) 
+sums_otu <- make_metadata_norep(sums_otu)
 
-##  OTU: SUBSAMPLE AT 6600
+
+##  PLOT BASED ON 
+plot_sample_sums(dataframe = sums_otu, x_total_seqs = "Sample_TotalSeqs", fill_variable = "project")
+## YEAR
+plot_sample_sums(dataframe = sums_otu, x_total_seqs = "Sample_TotalSeqs", fill_variable = "year")
+## FRACTION
+plot_sample_sums(dataframe = sums_otu, x_total_seqs = "Sample_TotalSeqs", fill_variable = "fraction")
+
 
 ####  Create a plot of the number of sequences per sample
-ggplot(sums_otu, aes(x=reorder(sample, Sample_TotalSeqs), y = Sample_TotalSeqs)) + 
-  ylab("Number of Sequences per Sample") +
+total_sums <- ggplot(sums_otu, aes(x=reorder(names, Sample_TotalSeqs), y = Sample_TotalSeqs)) + 
+  ylab("# of Seqs per Sample") +
   geom_bar(stat = "identity", colour="black",fill="cornflowerblue")  + xlab("Sample Name") + 
-  ggtitle("OTU: Samples less than 10,000 reads") + 
+  ggtitle("All Samples: Sequencing Depth") + 
+  theme(axis.text.x = element_blank())  
+
+sums_lessthan10000 <- ggplot(filter(sums_otu, Sample_TotalSeqs < 10000),
+                                    aes(x=reorder(names, Sample_TotalSeqs), y = Sample_TotalSeqs)) + 
+  ylab("# of Seqs per Sample") +
+  geom_bar(stat = "identity", colour="black",fill="cornflowerblue")  + xlab("Sample Name") + 
+  ggtitle("Samples with less than 10,000 reads") + 
   theme(axis.text.x = element_text(colour = "black", size=16, angle=45, hjust = 1, vjust = 1))
+
+# DRAW THE TWO PLOTS 
+ggdraw() +
+  draw_plot(total_sums, 0, 0, 0.7, 1) +
+  draw_plot(sums_lessthan10000, 0.7, 0, 0.3, 1) + # 1st = where to start drawing, 3rd = width, 4th = height
+  draw_plot_label(c("A", "B"), 
+                  c(0, 0.7), # Where along the x-axis would you like the labels?
+                  c(1, 1),  # Put the label at the top of the plotting space (y-axis)
+                  size = 15) # Size of label
 ```
 
 
-# Phenoflow Alpha Diversity Analysis
+# Scale Reads for Between Sample Diversity Analysis 
+```{r scaled_reads_seq_depth, fig.align='center', fig.height=4, fig.width=10}
+otu_merged_musk_pruned_noMOTHJ715 <- subset_samples(otu_merged_musk_pruned, norep_filter_name !="MOTHJ715")
 
-## OTU Phenoflow analysis
-```{r otu-phenoflow}
-# OTU analysis
-# Create a new file called "otu_merged_musk_Physeq.RData" that has the phyloseq object
-#save(list=c("otu_merged_musk"), file=paste0("Phenoflow/otu_merged_musk_Physeq.RData")) # Will be run on Flux
-otu_phenoflow_alpha <- get(load("Phenoflow/otu_phenoflow/Phenoflow_diversity.RData"))
+scale_otu_merged_musk_pruned <- scale_reads(otu_merged_musk_pruned_noMOTHJ715, round = "matround")
 
-# Add the rownames so that it can be combined with the metadata
-otu_phenoflow_alpha <- data.frame(otu_phenoflow_alpha, norep_filter_name = rownames(otu_phenoflow_alpha))
+# Check the sequencing depth of each sample 
+scaled_sums_otu <- data.frame(rowSums(otu_table(scale_otu_merged_musk_pruned)))
+colnames(scaled_sums_otu) <- "Sample_TotalSeqs"
+scaled_sums_otu$names <- row.names(scaled_sums_otu)
+scaled_sums_otu <- arrange(scaled_sums_otu, Sample_TotalSeqs) %>%
+  make_metadata_norep()
+
+
+##  PLOT BASED ON 
+plot_sample_sums(dataframe = scaled_sums_otu, x_total_seqs = "Sample_TotalSeqs", fill_variable = "project")
+## LIMNION
+plot_sample_sums(dataframe = scaled_sums_otu, x_total_seqs = "Sample_TotalSeqs", fill_variable = "limnion")
+```
+
+
+```{r metadata_dataframes}
 # Create the metadata information 
-meta_dat <- data.frame(sample_data(otu_merged_musk))
-# Merge phenoflow data and 
-otu_phenoflow_alpha <- merge(otu_phenoflow_alpha, meta_dat, by = "norep_filter_name") %>%
-  select(-sd.D0.bre, -D0.bre)
+meta_data <- data.frame(sample_data(otu_merged_musk_pruned)) 
 
-
+# Simpson's Evenness
+meta_data <- meta_data %>%
+  mutate(simps_even = D2/D0)
 
 ### PREPARE DATA FRAMES FOR PHENOFLOW ALPHA DIVERSITY ANALYSIS
-free_otu_alpha <- filter(otu_phenoflow_alpha, fraction == "Free" & norep_filter_name != "MOTHJ715" & year == "2015")
-part_otu_alpha <- filter(otu_phenoflow_alpha, fraction == "WholePart" & norep_filter_name != "MOTHJ715" & year == "2015")
+free_meta_data <- filter(meta_data, fraction %in% c("Free", "WholeFree") & norep_filter_name != "MOTHJ715")
+part_meta_data <- filter(meta_data, fraction %in% c("Particle", "WholePart") & norep_filter_name != "MOTHJ715")
+
+
+```
+
+
+# Is there a relationship between diversity and productivity?
+## For total production?
+```{r totdal_prodcution_vs_div}
+
+##  How linked are the diversities of the fractions?
+
+# Free Living:
+free_samps_alpha <- filter(free_meta_data, fraction == "Free" & year == "2015") %>% 
+  select(norep_filter_name, fraction, D0, D1, D2, simps_even) %>%
+  gather("div_metric", "value", D0, D1, D2, simps_even) %>%
+  unite("frac_div_metric", fraction, div_metric, sep = "_") %>%
+  spread(frac_div_metric, value) %>%
+  mutate(norep_water_name = paste(substr(norep_filter_name,1,4), substr(norep_filter_name, 6, 8), sep = "")) %>%
+  select(-norep_filter_name)
+
+
+wholefree_samps_alpha <- filter(free_meta_data, fraction == "WholeFree" & year == "2015") %>% 
+  select(norep_filter_name, fraction, D0, D1, D2, simps_even) %>%
+  gather(div_metric, value, D0, D1, D2, simps_even) %>%
+  unite(frac_div_metric, fraction, div_metric, sep = "_") %>%
+  spread(frac_div_metric, value) %>%
+  mutate(norep_water_name = paste(substr(norep_filter_name,1,4), substr(norep_filter_name, 6, 8), sep = "")) %>%
+  select(-norep_filter_name)
+
+
+FL_alpha <- left_join(free_samps_alpha, wholefree_samps_alpha, by = "norep_water_name")
+
+lm(frac_bacprod ~ D0.chao, data = part_otu_alpha)
+part_otu_D0chao_stats
+summary(part_otu_D0chao_stats)
+
+free_fraction_D0 <- ggplot(FL_alpha, aes(x = WholeFree_D0, y = Free_D0)) + 
+  geom_point() + ggtitle("All Free Living Samples") + 
+  geom_smooth(method = "lm") +
+  xlim(300, 2000) + ylim(300, 2000) + 
+  geom_abline(slope = 1, intercept = 0)
+
+
+
+
+free_fraction_D1 <- ggplot(FL_alpha, aes(x = WholeFree_D1, y = Free_D1)) + 
+  geom_point() + ggtitle("All Free Living Samples") + 
+  geom_smooth(method = "lm") + 
+  xlim(0, 150) + ylim(0,150) + 
+  geom_abline(slope = 1, intercept = 0)
+
+free_fraction_D2 <- ggplot(FL_alpha, aes(x = WholeFree_D2, y = Free_D2)) + 
+  geom_point() + ggtitle("All Free Living Samples") + 
+  geom_smooth(method = "lm") +
+  xlim(10, 55) + ylim(10, 55) +
+  geom_abline(slope = 1, intercept = 0)
+
+free_fraction_simps_even <- ggplot(FL_alpha, aes(x = WholeFree_simps_even, y = Free_simps_even)) + 
+  geom_point() + ggtitle("All Free Living Samples") + 
+  geom_smooth(method = "lm") +
+  xlim(0.015, 0.08) + ylim(0.015, 0.08) +
+  geom_abline(slope = 1, intercept = 0)
+  
+plot_grid()
+
+
+
+
+
+
+ggplot(free_meta_data, aes(x = D1, y = tot_bacprod)) + 
+  geom_point() + geom_smooth(method = "lm")
+
+ggplot(part_meta_data, aes(x = D1, y = tot_bacprod)) + 
+  geom_point() + geom_smooth(method = "lm")
+
+```
+
+
+
+
+## For fractionated bacterial production?
+
+
+
+
+
+## OTU Phenoflow analysis
+```{r otu-phenoflow, eval = FALSE}
 
 
 # Can fractional production be predicted by phenoflow D0 observed richness? 
@@ -239,7 +345,7 @@ otu_phenoflow
 
 # Vegan Alpha Diversity Analysis
 ## Remove samples with too few reads
-```{r rarefy-and-scale}
+```{r rarefy-and-scale, eval = FALSE}
 ##  OTU: SUBSAMPLE AT 6600
 # Prune samples out that have too few reads
 otu_merged_pruned <- prune_samples(sample_sums(otu_merged) > 6600, otu_merged)
@@ -252,7 +358,7 @@ scaled_otu_merged_pruned <- otu_merged_pruned %>%
 ```
 
 ## Rarefy Read Depth Analysis ran on December 16th, 2016
-```{r calculate-alphadiv}
+```{r calculate-alphadiv, eval = FALSE}
 # # Initialize matrices to store richness and evenness estimates
  # nsamp <- nsamples(otu_merged_pruned)
  # min_lib <- min(sample_sums(otu_merged_pruned)) - 1
@@ -294,7 +400,7 @@ scaled_otu_merged_pruned <- otu_merged_pruned %>%
 
 ## Vegan Alpha Diversity Analysis
 ### OTU Analysis 
-```{r vegan-otu-alphadiv}
+```{r vegan-otu-alphadiv, eval = FALSE}
 # Load values
 nsamp <- nsamples(otu_merged_pruned)
 min_lib <- min(sample_sums(otu_merged_pruned)) - 1
@@ -530,7 +636,7 @@ ggsave("Figures/vegan_otu_alpha_vs_prod.png", otu_vegan, dpi = 600, units = "in"
 
 #  Stacked Bar plots for taxonomic structure
 ## OTU  Phylum Stacked Bar 
-```{r otu-stacked-bar}
+```{r otu-stacked-bar, eval = FALSE}
 musk_scaled_otu_merged_pruned <- subset_samples(scaled_otu_merged_pruned, project == "Muskegon_Lake" & 
                                            year == "2015" &
                                            limnion == "Top" &
@@ -582,7 +688,7 @@ otu_stack_bar <- ggplot(musk_scaled_otu_merged_pruned_phylum, aes(x = season, y 
 
 
 # Environmental Conditions 
-```{r}
+```{r, eval = FALSE}
 prod_data <- data.frame(sample_data(musk_scaled_otu_merged_pruned))
 
 ggplot(prod_data, aes(x = season, y = tot_bacprod, color = lakesite, group = lakesite, linetype = lakesite)) + 
@@ -788,14 +894,14 @@ alpha_comb_final <- alpha_comb1 %>%
 
 # High vs Low nucleic acid bacteria
 ## Muskegon Lake Only
-```{r muskegon-HNA-vs-LNA}
+```{r muskegon-HNA-vs-LNA, eval = FALSE}
 
 
 ```
 
 
 # Calculate the Absolute abundances!
-```{r prepare-peter-physeq}
+```{r prepare-peter-physeq, eval = FALSE}
 ### MODIFY TO ABSOLUTE ABUNDANCES!
 
 # First let's calculate the proportion
@@ -909,7 +1015,7 @@ ggplot(HNA_prod3, aes(y = HNA_percent, x = lakesite, color = lakesite, fill = la
 
 
 ### HNA VS LNA 
-```{r}
+```{r, eval = FALSE}
 ####  PRODUCTION VS HNA
 
 ggplot(HNA_prod, aes(x = Site, y = tot_bacprod, fill = Season, shape = Site)) + ggtitle("Surface samples only") +
@@ -1143,7 +1249,7 @@ ggplot(filter(flow_cy),
 ```
 
 
-```{r all-HNA-vs-LNA}
+```{r all-HNA-vs-LNA, eval = FALSE}
 all_flow_cy <- read.csv2("metadata/flow_cytometry.csv", header = TRUE) %>%
   select(-X) %>%
   # Rename columns so they are more representative of the data within them
