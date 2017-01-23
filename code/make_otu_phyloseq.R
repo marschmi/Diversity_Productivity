@@ -119,9 +119,7 @@ flow_cy <- read.csv2("../data/metadata/flow_cytometry.csv", header = TRUE) %>%
 # Create a new column so we can merge with other data frames
 flow_cy$norep_water_name <- paste(substring(flow_cy$Sample_16S,1,4), substring(flow_cy$Sample_16S,7,9), sep = "")
 
-
-
-row.names(df1)
+# Join original metadata and flow cytometry metadata
 df2 <- left_join(df1, flow_cy, by = "norep_water_name")
 row.names(df2) <- row.names(df1)
 
@@ -152,17 +150,25 @@ otu_merged_musk_pruned <- prune_taxa(taxa_sums(otu_merged_musk) > 0, otu_merged_
 # Remove the flow cytometry data from the particle samples!
 df3 <- sample_data(otu_merged_musk_pruned)
 
+
 # # Subset the particle samples 
-# PA_df3 <- filter(df3, fraction %in% c("WholePart", "Particle"))
-# flow_cy_columns <- colnames(flow_cy)
-# 
-# for (i in flow_cy_columns){
-#   if PA_df3$flow_cy_columns == flow_cy_columns{
-#     PA_df3$flow_cy_columns = NULL
-#   }
-# }
-# 
-# # Subset the FL samples 
-# FL_df3 <- filter(df3, fraction %in% c("WholeFree", "Free", "Sediment"))
-# 
-# 
+PA_df3 <- filter(df3, fraction %in% c("WholePart", "Particle"))
+flow_cy_columns <- colnames(flow_cy)
+
+##  Make all of the clow cytometry columns NA
+for(i in flow_cy_columns){
+  PA_df3[,i] <- NA
+}
+
+# Subset the FL samples
+FL_df3 <- filter(df3, fraction %in% c("WholeFree", "Free", "Sediment"))
+
+## Recombine the dataframe back together with flow cytometry information as NA for Particle Samples
+final_meta_dataframe <- bind_rows(FL_df3, PA_df3)
+row.names(final_meta_dataframe) <- final_meta_dataframe$norep_filter_name
+
+sample_data(otu_merged_musk_pruned) <- final_meta_dataframe
+
+# Create a new file called "Phyloseq.RData" that has the phyloseq object
+save(list="otu_merged_musk_pruned", file=paste0("../data/otu_merged_musk_pruned.RData")) 
+
