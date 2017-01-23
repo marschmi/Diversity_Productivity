@@ -121,11 +121,12 @@ meta_data <- meta_data %>%
 ### PREPARE DATA FRAMES FOR PHENOFLOW ALPHA DIVERSITY ANALYSIS
 free_meta_data <- filter(meta_data, fraction %in% c("Free", "WholeFree") & norep_filter_name != "MOTHJ715")
 part_meta_data <- filter(meta_data, fraction %in% c("Particle", "WholePart") & norep_filter_name != "MOTHJ715")
+nosed_meta_data <- filter(meta_data, fraction != "Sediment")
 ```
 
 
 ##  How linked are the diversities of the fractions?
-```{r free_vs_wholefree_diversity}
+```{r free_vs_wholefree_diversity, fig.align='center', fig.height=8, fig.width=10}
 # Free Living:
 free_samps_alpha <- filter(free_meta_data, fraction == "Free" & year == "2015") %>% 
   select(norep_filter_name, fraction, D0, D1, D2, simps_even) %>%
@@ -190,12 +191,13 @@ free_fraction_simps_even <- ggplot(FL_alpha, aes(x = WholeFree_simps_even, y = F
 free_vs_freepart_div_plots <- plot_grid(free_fraction_D0, free_fraction_D1, free_fraction_D2, free_fraction_simps_even, 
           labels = c("A", "B", "C", "D"), ncol = 2, nrow = 2)
 
+free_vs_freepart_div_plots
 #ggsave("../Figures/free_vs_wholefree_div_plots.png", plot = free_vs_freepart_div_plots, dpi = 600, width = 10, height = 8)
 
 ```
 
 ##  How linked are the diversities of the fractions?
-```{r part_vs_wholepart_diversity}
+```{r part_vs_wholepart_diversity, fig.align='center', fig.height=8, fig.width=10}
 # Free Living:
 part_samps_alpha <- filter(part_meta_data, fraction == "Particle" & year == "2015") %>% # & norep_filter_name != "MBRHJ515"
   select(norep_filter_name, fraction, D0, D1, D2, simps_even) %>%
@@ -259,14 +261,22 @@ PA_fraction_simps_even <- ggplot(PA_alpha, aes(x = WholePart_simps_even, y = Par
   
 part_vs_wholepart_div_plots <- plot_grid(PA_fraction_D0, PA_fraction_D1, PA_fraction_D2, PA_fraction_simps_even, 
           labels = c("A", "B", "C", "D"), ncol = 2, nrow = 2)
-#ggsave("../Figures/part_vs_wholepart_div_plots.png", plot = part_vs_wholepart_div_plots, dpi = 600, width = 10, height = 8)
 
+part_vs_wholepart_div_plots
+#ggsave("../Figures/part_vs_wholepart_div_plots.png", plot = part_vs_wholepart_div_plots, dpi = 600, width = 10, height = 8)
 ```
 
 
 # Is there a relationship between diversity and productivity?
 ## For total production?
+```{r totalproduction_vs_diversity}
+ggplot(nosed_meta_data, aes(y = tot_bacprod, x = D2, color = season, shape = fraction)) +
+  geom_point(size = 5) +
+  scale_color_manual(values = season_colors) +
+  xlim(0, 200)
 
+
+```
 
 
 
@@ -278,8 +288,6 @@ part_vs_wholepart_div_plots <- plot_grid(PA_fraction_D0, PA_fraction_D1, PA_frac
 
 ## OTU Phenoflow analysis
 ```{r otu-phenoflow, eval = FALSE}
-
-
 # Can fractional production be predicted by phenoflow D0 observed richness? 
 # FREE LIVING
 free_otu_D0_stats <- lm(frac_bacprod ~ D0, data = free_otu_alpha)

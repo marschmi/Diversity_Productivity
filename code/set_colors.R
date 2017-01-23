@@ -3,7 +3,7 @@
 
 
 # Set global colors for the different taxonomic phyla
-phylum_colors <- c(
+phylum_colors <- c( 
   Acidobacteria = "navy", 
   Actinobacteria = "darkslategray2", 
   Alphaproteobacteria = "tomato", 
