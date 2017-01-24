@@ -1,6 +1,6 @@
 ## Purpose:  Set the global colors based on important factors
 ## Author: Marian L. Schmidt 
-
+ 
 
 # Set global colors for the different taxonomic phyla
 phylum_colors <- c( 
@@ -41,9 +41,10 @@ phylum_colors <- c(
 
 # Set global colors for the filter fraction sizes 
 fraction_colors <- c(
-  Particle = "firebrick3", 
+  Particle = "firebrick3",
   Free = "cornflowerblue",
-  Whole = "#FF6600", 
+  WholePart = "#FF6600", 
+  WholeFree = "skyblue",
   Sediment = "#8A2667")
 
 # Set global colors for the depth of the sample

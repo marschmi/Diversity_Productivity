@@ -2,6 +2,21 @@
 # Created: January 24th, 2016
 
 
+# Vegan Alpha Diversity Analysis
+## Remove samples with too few reads
+#```{r rarefy-and-scale, eval = FALSE}
+##  OTU: SUBSAMPLE AT 6600
+# Prune samples out that have too few reads
+otu_merged_pruned <- prune_samples(sample_sums(otu_merged) > 6600, otu_merged)
+otu_merged_pruned <- prune_taxa(taxa_sums(otu_merged_pruned) > 0, otu_merged_pruned)
+min(sample_sums(otu_merged_pruned))
+
+# Scale the samples
+scaled_otu_merged_pruned <- otu_merged_pruned %>%
+  scale_reads(round = "round") 
+#```
+
+
 
 ## Rarefy Read Depth Analysis ran on December 16th, 2016
 #```{r calculate-alphadiv, eval = FALSE}
