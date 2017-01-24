@@ -8,6 +8,7 @@ knitr::opts_chunk$set(eval = TRUE,
                       echo = FALSE, 
                       cache = TRUE,
                       include = TRUE,
+                      warning = FALSE,
                       collapse = FALSE,
                       dependson = NULL,
                       engine = "R", # Chunks will always have R code, unless noted
@@ -150,7 +151,7 @@ FL_alpha <- left_join(free_samps_alpha, wholefree_samps_alpha, by = "norep_water
 lm_FL_D0 <- lm(Free_D0 ~ WholeFree_D0, data = FL_alpha)
 
 free_fraction_D0 <- ggplot(FL_alpha, aes(x = WholeFree_D0, y = Free_D0)) + 
-  geom_point() + geom_smooth(method = "lm") +
+  geom_point(size = 3) + geom_smooth(method = "lm") +
   xlim(300, 2000) + ylim(300, 2000) + 
   geom_abline(slope = 1, intercept = 0) +
   annotate("text", x = 1000, y=500, color = "black", fontface = "bold",
@@ -161,7 +162,7 @@ free_fraction_D0 <- ggplot(FL_alpha, aes(x = WholeFree_D0, y = Free_D0)) +
 lm_FL_D1 <- lm(Free_D1 ~ WholeFree_D1, data = FL_alpha)
 
 free_fraction_D1 <- ggplot(FL_alpha, aes(x = WholeFree_D1, y = Free_D1)) + 
-  geom_point() + geom_smooth(method = "lm") + 
+  geom_point(size = 3) + geom_smooth(method = "lm") +
   xlim(0, 175) + ylim(0,175) + 
   geom_abline(slope = 1, intercept = 0) +
   annotate("text", x = 100, y=25, color = "black", fontface = "bold",
@@ -171,7 +172,7 @@ free_fraction_D1 <- ggplot(FL_alpha, aes(x = WholeFree_D1, y = Free_D1)) +
 lm_FL_D2 <- lm(Free_D2 ~ WholeFree_D2, data = FL_alpha)
 
 free_fraction_D2 <- ggplot(FL_alpha, aes(x = WholeFree_D2, y = Free_D2)) + 
-  geom_point() + geom_smooth(method = "lm") +
+  geom_point(size = 3) + geom_smooth(method = "lm") +
   xlim(10, 55) + ylim(10, 55) +
   geom_abline(slope = 1, intercept = 0) +
   annotate("text", x = 35, y=17, color = "black", fontface = "bold",
@@ -181,7 +182,7 @@ free_fraction_D2 <- ggplot(FL_alpha, aes(x = WholeFree_D2, y = Free_D2)) +
 lm_FL_simps_even <- lm(Free_simps_even ~ WholeFree_simps_even, data = FL_alpha)
 
 free_fraction_simps_even <- ggplot(FL_alpha, aes(x = WholeFree_simps_even, y = Free_simps_even)) + 
-  geom_point() + geom_smooth(method = "lm") +
+  geom_point(size = 3) + geom_smooth(method = "lm") +
   xlim(0.015, 0.08) + ylim(0.015, 0.08) +
   geom_abline(slope = 1, intercept = 0) +
   annotate("text", x = 0.03, y=0.05, color = "black", fontface = "bold",
@@ -221,7 +222,7 @@ PA_alpha <- left_join(part_samps_alpha, wholepart_samps_alpha, by = "norep_water
 lm_PA_D0 <- lm(Particle_D0 ~ WholePart_D0, data = PA_alpha)
 
 PA_fraction_D0 <- ggplot(PA_alpha, aes(x = WholePart_D0, y = Particle_D0)) + 
-  geom_point() + geom_smooth(method = "lm", se = FALSE) +
+  geom_point(size = 3) + geom_smooth(method = "lm", se = FALSE) +
   xlim(0, 2200) + ylim(0, 2200) + 
   geom_abline(slope = 1, intercept = 0) +
   annotate("text", x = 1500, y=300, color = "black", fontface = "bold",
@@ -232,7 +233,7 @@ PA_fraction_D0 <- ggplot(PA_alpha, aes(x = WholePart_D0, y = Particle_D0)) +
 lm_PA_D1 <- lm(Particle_D1 ~ WholePart_D1, data = PA_alpha)
 
 PA_fraction_D1 <- ggplot(PA_alpha, aes(x = WholePart_D1, y = Particle_D1)) + 
-  geom_point() + geom_smooth(method = "lm") + 
+  geom_point(size = 3) + geom_smooth(method = "lm") + 
   xlim(0, 620) + ylim(0,620) + 
   geom_abline(slope = 1, intercept = 0) +
   annotate("text", x = 150, y=500, color = "black", fontface = "bold",
@@ -242,7 +243,7 @@ PA_fraction_D1 <- ggplot(PA_alpha, aes(x = WholePart_D1, y = Particle_D1)) +
 lm_PA_D2 <- lm(Particle_D2 ~ WholePart_D2, data = PA_alpha)
 
 PA_fraction_D2 <- ggplot(PA_alpha, aes(x = WholePart_D2, y = Particle_D2)) + 
-  geom_point() + geom_smooth(method = "lm") +
+  geom_point(size = 3) + geom_smooth(method = "lm") +
   xlim(10, 250) + ylim(10, 250) +
   geom_abline(slope = 1, intercept = 0) +
   annotate("text", x = 50, y=175, color = "black", fontface = "bold",
@@ -252,7 +253,7 @@ PA_fraction_D2 <- ggplot(PA_alpha, aes(x = WholePart_D2, y = Particle_D2)) +
 lm_PA_simps_even <- lm(Particle_simps_even ~ WholePart_simps_even, data = PA_alpha)
 
 PA_fraction_simps_even <- ggplot(PA_alpha, aes(x = WholePart_simps_even, y = Particle_simps_even)) + 
-  geom_point() + geom_smooth(method = "lm", se = FALSE) +
+  geom_point(size = 3) + geom_smooth(method = "lm", se = FALSE) +
   xlim(0.01, 0.2) + ylim(0.01, 0.2) +
   geom_abline(slope = 1, intercept = 0) +
   annotate("text", x = 0.06, y=0.12, color = "black", fontface = "bold",
@@ -269,14 +270,144 @@ part_vs_wholepart_div_plots
 
 # Is there a relationship between diversity and productivity?
 ## For total production?
-```{r totalproduction_vs_diversity}
-ggplot(nosed_meta_data, aes(y = tot_bacprod, x = D2, color = season, shape = fraction)) +
-  geom_point(size = 5) +
-  scale_color_manual(values = season_colors) +
-  xlim(0, 200)
 
+### D1 Diversity with Total Production Analysis 
+```{r D1_totalproduction_vs_diversity, fig.align='center', fig.height=6, fig.width=14}
+#### ALL WATER SAMPLES VS TOTAL BACTERIAL PRODUCTION 
+# Is there a significant relationship?
+lm_all_totprod_D1 <- lm(tot_bacprod ~ D1, data = nosed_meta_data)
+summary(lm_all_totprod_D1)
+# Plot the relationship 
+plot_totprod_water_D1 <- ggplot(nosed_meta_data, aes(y = tot_bacprod, x = D1)) +
+  geom_point(aes(color = lakesite, shape = season), size = 3) +
+  scale_color_manual(values = lakesite_colors) +
+  #xlim(0, 100) + # For D2
+  xlim(0, 400) +
+  geom_smooth(method = "lm", data = ) + 
+  ggtitle("All Water Samples") + 
+  annotate("text", x = 250, y = 10 , # For D2:  x = 70, y=10, 
+           color = "black", fontface = "bold",
+           label = paste("R2 =", round(summary(lm_all_totprod_D1)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lm_all_totprod_D1)$coefficients[,4][2]), digits = 4)))+
+  theme(legend.position = c(0.12, 0.7), 
+        legend.text = element_text(size = 10))
 
+#### FREE LIVING SAMPLES VS TOTAL BACTERIAL PRODUCTION 
+# Is there a significant relationship?
+lm_free_totprod_D1 <- lm(tot_bacprod ~ D1, data = free_meta_data)
+summary(lm_free_totprod_D1)
+# Plot the relationship 
+plot_totprod_free_D1 <- ggplot(free_meta_data, aes(y = tot_bacprod, x = D1)) +
+  geom_point(aes(color = lakesite, shape = season), size = 3) +
+  scale_color_manual(values = lakesite_colors) +
+  #xlim(0, 60) + # FOR D2
+  geom_smooth(method = "lm", data = ) + 
+  ggtitle("Free-Living Samples Only") + 
+  annotate("text",  x = 125, y = 10, # For D2:  x = 40, y=5, 
+           color = "black", fontface = "bold",
+           label = paste("R2 =", round(summary(lm_free_totprod_D1)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lm_free_totprod_D1)$coefficients[,4][2]), digits = 4)))+
+  theme(legend.position = c(0.12, 0.7), 
+        legend.text = element_text(size = 10))
+
+#### PARTICLE ASSOCIATED SAMPLES VS TOTAL BACTERIAL PRODUCTION 
+# Is there a significant relationship?
+lm_part_totprod_D1 <- lm(tot_bacprod ~ D1, data = part_meta_data)
+summary(lm_part_totprod_D1)
+# Plot the relationship 
+plot_totprod_part_D1 <- ggplot(part_meta_data, aes(y = tot_bacprod, x = D1)) +
+  geom_point(aes(color = lakesite, shape = season), size = 3) +
+  scale_color_manual(values = lakesite_colors) +
+  #xlim(0, 100) +  #For D2
+  xlim(0, 400) + 
+  geom_smooth(method = "lm", data = ) + 
+  ggtitle("Particle Samples Only") + 
+  annotate("text", x = 250, y = 10, # For D2:  x = 40, y=5, 
+           color = "black", fontface = "bold",
+           label = paste("R2 =", round(summary(lm_part_totprod_D1)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lm_part_totprod_D1)$coefficients[,4][2]), digits = 4))) +
+  theme(legend.position = c(0.12, 0.7), 
+        legend.text = element_text(size = 10))
+
+plot_D1_totprod <- plot_grid(plot_totprod_water_D1, plot_totprod_free_D1, plot_totprod_part_D1,
+          labels = c("A", "B", "C"), ncol = 3)
+plot_D1_totprod
+#ggsave(plot = plot_D1_totprod, 
+#       filename = "../Figures/totbacprod_vs_D1.png", 
+#       dpi = 600, 
+#       height = 6, width = 16)
 ```
+
+### D2 Diversity with Total Production Analysis 
+```{r D2_totalproduction_vs_diversity, fig.align='center', fig.height=6, fig.width=14}
+#### ALL WATER SAMPLES VS TOTAL BACTERIAL PRODUCTION 
+# Is there a significant relationship?
+lm_all_totprod_D2 <- lm(tot_bacprod ~ D2, data = nosed_meta_data)
+summary(lm_all_totprod_D2)
+# Plot the relationship
+plot_totprod_water_D2 <- ggplot(nosed_meta_data, aes(y = tot_bacprod, x = D2)) +
+  geom_point(aes(color = lakesite, shape = season), size = 3) +
+  scale_color_manual(values = lakesite_colors) +
+  xlim(0, 100) + ylim(0, 100) + 
+  geom_smooth(method = "lm") + 
+  ggtitle("All Water Samples") + 
+  annotate("text", x = 70, y=10, 
+           color = "black", fontface = "bold",
+           label = paste("R2 =", round(summary(lm_all_totprod_D2)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lm_all_totprod_D2)$coefficients[,4][2]), digits = 4)))+
+  theme(legend.position = c(0.12, 0.7), 
+        legend.text = element_text(size = 10))
+
+#### FREE LIVING SAMPLES VS TOTAL BACTERIAL PRODUCTION 
+# Is there a significant relationship?
+lm_free_totprod_D2 <- lm(tot_bacprod ~ D2, data = free_meta_data)
+summary(lm_free_totprod_D2)
+# Plot the relationship
+plot_totprod_free_D2 <- ggplot(free_meta_data, aes(y = tot_bacprod, x = D2)) +
+  geom_point(aes(color = lakesite, shape = season), size = 3) +
+  scale_color_manual(values = lakesite_colors) +
+  xlim(0, 60) + # FOR D2
+  geom_smooth(method = "lm") + 
+  ggtitle("Free-Living Samples Only") + 
+  annotate("text", x = 50, y=10, 
+           color = "black", fontface = "bold",
+           label = paste("R2 =", round(summary(lm_free_totprod_D2)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lm_free_totprod_D2)$coefficients[,4][2]), digits = 4)))+
+  theme(legend.position = c(0.12, 0.7), 
+        legend.text = element_text(size = 10))
+
+#### PARTICLE ASSOCIATED SAMPLES VS TOTAL BACTERIAL PRODUCTION 
+# Is there a significant relationship?
+rlm_part_totprod_D2 <- rlm(tot_bacprod ~ D2, data = part_meta_data)
+anoval
+summary(lm_part_totprod_D2)
+summary(rlm_part_totprod_D2)
+car::Anova(rlm_part_totprod_D2)
+# TO calculate bootstrapped confiendence intervals on qq plot
+car::qqPlot(rlm_part_totprod_D2)
+# Plot the relationship
+plot_totprod_part_D2 <- ggplot(part_meta_data, aes(y = tot_bacprod, x = D2)) +
+  geom_point(aes(color = lakesite, shape = season), size = 3) +
+  scale_color_manual(values = lakesite_colors) +
+  xlim(0, 100) +  #For D2
+  geom_smooth(method = "rlm", color = "black") + 
+  ggtitle("Particle Samples Only") + 
+  annotate("text", x = 75, y=10, 
+           color = "black", fontface = "bold",
+           label = paste("R2 =", round(summary(lm_part_totprod_D2)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lm_part_totprod_D2)$coefficients[,4][2]), digits = 4))) +
+  theme(legend.position = c(0.12, 0.7), 
+        legend.text = element_text(size = 10))
+
+plot_D2_totprod <- plot_grid(plot_totprod_water_D2, plot_totprod_free_D2, plot_totprod_part_D2,
+          labels = c("A", "B", "C"), ncol = 3)
+plot_D2_totprod
+#ggsave(plot = plot_D2_totprod, 
+#       filename = "../Figures/totbacprod_vs_D2.png", 
+#       dpi = 600, 
+#       height = 6, width = 16)
+```
+
 
 
 
