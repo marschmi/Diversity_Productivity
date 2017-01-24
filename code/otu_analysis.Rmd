@@ -123,6 +123,22 @@ meta_data <- meta_data %>%
 free_meta_data <- filter(meta_data, fraction %in% c("Free", "WholeFree") & norep_filter_name != "MOTHJ715")
 part_meta_data <- filter(meta_data, fraction %in% c("Particle", "WholePart") & norep_filter_name != "MOTHJ715")
 nosed_meta_data <- filter(meta_data, fraction != "Sediment")
+
+
+# For 2015 data only 
+all_top_2015_df <- filter(meta_data, limnion == "Top" & 
+                              norep_filter_name != "MOTHJ715" & 
+                              year == "2015")
+
+wholefree_2015_df <- filter(meta_data, fraction == "WholeFree" & 
+                              limnion == "Top" & 
+                              norep_filter_name != "MOTHJ715" & 
+                              year == "2015")
+
+wholeparticle_2015_df <- filter(meta_data, fraction == "WholePart" & 
+                                  limnion == "Top" &
+                                  norep_filter_name != "MOTHJ715" & 
+                                  year == "2015")
 ```
 
 
@@ -276,7 +292,7 @@ part_vs_wholepart_div_plots
 #### ALL WATER SAMPLES VS TOTAL BACTERIAL PRODUCTION 
 # Is there a significant relationship?
 lm_all_totprod_D1 <- lm(tot_bacprod ~ D1, data = nosed_meta_data)
-summary(lm_all_totprod_D1)
+#summary(lm_all_totprod_D1)
 # Plot the relationship 
 plot_totprod_water_D1 <- ggplot(nosed_meta_data, aes(y = tot_bacprod, x = D1)) +
   geom_point(aes(color = lakesite, shape = season), size = 3) +
@@ -295,7 +311,7 @@ plot_totprod_water_D1 <- ggplot(nosed_meta_data, aes(y = tot_bacprod, x = D1)) +
 #### FREE LIVING SAMPLES VS TOTAL BACTERIAL PRODUCTION 
 # Is there a significant relationship?
 lm_free_totprod_D1 <- lm(tot_bacprod ~ D1, data = free_meta_data)
-summary(lm_free_totprod_D1)
+#summary(lm_free_totprod_D1)
 # Plot the relationship 
 plot_totprod_free_D1 <- ggplot(free_meta_data, aes(y = tot_bacprod, x = D1)) +
   geom_point(aes(color = lakesite, shape = season), size = 3) +
@@ -313,7 +329,7 @@ plot_totprod_free_D1 <- ggplot(free_meta_data, aes(y = tot_bacprod, x = D1)) +
 #### PARTICLE ASSOCIATED SAMPLES VS TOTAL BACTERIAL PRODUCTION 
 # Is there a significant relationship?
 lm_part_totprod_D1 <- lm(tot_bacprod ~ D1, data = part_meta_data)
-summary(lm_part_totprod_D1)
+#summary(lm_part_totprod_D1)
 # Plot the relationship 
 plot_totprod_part_D1 <- ggplot(part_meta_data, aes(y = tot_bacprod, x = D1)) +
   geom_point(aes(color = lakesite, shape = season), size = 3) +
@@ -343,7 +359,7 @@ plot_D1_totprod
 #### ALL WATER SAMPLES VS TOTAL BACTERIAL PRODUCTION 
 # Is there a significant relationship?
 lm_all_totprod_D2 <- lm(tot_bacprod ~ D2, data = nosed_meta_data)
-summary(lm_all_totprod_D2)
+#summary(lm_all_totprod_D2)
 # Plot the relationship
 plot_totprod_water_D2 <- ggplot(nosed_meta_data, aes(y = tot_bacprod, x = D2)) +
   geom_point(aes(color = lakesite, shape = season), size = 3) +
@@ -361,7 +377,7 @@ plot_totprod_water_D2 <- ggplot(nosed_meta_data, aes(y = tot_bacprod, x = D2)) +
 #### FREE LIVING SAMPLES VS TOTAL BACTERIAL PRODUCTION 
 # Is there a significant relationship?
 lm_free_totprod_D2 <- lm(tot_bacprod ~ D2, data = free_meta_data)
-summary(lm_free_totprod_D2)
+#summary(lm_free_totprod_D2)
 # Plot the relationship
 plot_totprod_free_D2 <- ggplot(free_meta_data, aes(y = tot_bacprod, x = D2)) +
   geom_point(aes(color = lakesite, shape = season), size = 3) +
@@ -379,7 +395,7 @@ plot_totprod_free_D2 <- ggplot(free_meta_data, aes(y = tot_bacprod, x = D2)) +
 #### PARTICLE ASSOCIATED SAMPLES VS TOTAL BACTERIAL PRODUCTION 
 # Is there a significant relationship?
 lm_part_totprod_D2 <- lm(tot_bacprod ~ D2, data = part_meta_data) 
-summary(lm_part_totprod_D2)
+#summary(lm_part_totprod_D2)
 
 # To put less weight in the 
 #rlm_part_totprod_D2 <- rlm(tot_bacprod ~ D2, data = part_meta_data) # To perform robust regression 
@@ -465,35 +481,28 @@ plots_D2_particles_only
 
 
 
-## For fractionated bacterial production?
-
-
-
-
-
-## OTU Phenoflow analysis
+# Is there a relationship between diversity and *fractionated* bacterial production?
 ```{r otu-phenoflow, eval = FALSE}
 # Can fractional production be predicted by phenoflow D0 observed richness? 
 # FREE LIVING
-free_otu_D0_stats <- lm(frac_bacprod ~ D0, data = free_otu_alpha)
-free_otu_D0_stats
-summary(free_otu_D0_stats)
+free_otu_D0_stats <- lm(frac_bacprod ~ D0, data = wholefree_2015_df)
+#summary(free_otu_D0_stats)
 
 # PARTICLE
-part_otu_D0_stats <- lm(frac_bacprod ~ D0, data = part_otu_alpha)
-part_otu_D0_stats
-summary(part_otu_D0_stats)
+part_otu_D0_stats <- lm(frac_bacprod ~ D0, data = wholeparticle_2015_df)
+#summary(part_otu_D0_stats)
 
 # Plot D0 Observed Richness
-otu_pheno_D0 <- ggplot(otu_phenoflow_alpha, aes(x=D0, y=frac_bacprod, color = fraction)) + 
-  geom_point(size = 3.5) + geom_errorbarh(aes(xmin = D0 - sd.D0, xmax = D0 + sd.D0), width = 0.2) + 
-  ggtitle("OTU: Phenoflow") +
+otu_pheno_D0 <- ggplot(all_top_2015_df, aes(x=D0, y=frac_bacprod, color = fraction)) + 
+  geom_point(size = 3.5) + 
+  geom_errorbarh(aes(xmin = D0 - D0_SD, xmax = D0 + D0_SD)) + 
+  geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod)) + 
   scale_color_manual(values = c("firebrick3","cornflowerblue"), limits = c("WholePart", "Free")) +
-  scale_x_continuous(limits = c(0,2000)) + 
-  scale_y_continuous(limits = c(0,70),expand = c(0,0)) + 
+  #scale_x_continuous(limits = c(0,2000)) + 
+  #scale_y_continuous(limits = c(0,70),expand = c(0,0)) + 
   ylab("Production (μgC/L/hr)") + xlab("Observed Richness (D0)") +
-  #geom_smooth(data=subset(otu_phenoflow_alpha, fraction == "Free"), method='lm') + 
-  geom_smooth(data=subset(otu_phenoflow_alpha, fraction == "WholePart"), method='lm') + 
+  #geom_smooth(data=subset(all_top_2015_df, fraction == "Free"), method='lm') + 
+  geom_smooth(data=subset(all_top_2015_df, fraction == "WholePart"), method='lm') + 
   theme(legend.position=c(0.15,0.9), legend.title=element_blank()) +
   annotate("text", x = 1000, y=35, color = "cornflowerblue", fontface = "bold",
            label = paste("R2 =", round(summary(free_otu_D0_stats)$adj.r.squared, digits = 4), "\n", 
@@ -505,25 +514,24 @@ otu_pheno_D0 <- ggplot(otu_phenoflow_alpha, aes(x=D0, y=frac_bacprod, color = fr
 
 # Can fractional production be predicted by phenoflow chao1? 
 # FREE LIVING
-free_otu_D0chao_stats <- lm(frac_bacprod ~ D0.chao, data = free_otu_alpha)
-free_otu_D0chao_stats
-summary(free_otu_D0chao_stats)
+free_otu_D0chao_stats <- lm(frac_bacprod ~ D0_chao, data = wholefree_2015_df)
+#summary(free_otu_D0chao_stats)
 
 # PARTICLE
-part_otu_D0chao_stats <- lm(frac_bacprod ~ D0.chao, data = part_otu_alpha)
-part_otu_D0chao_stats
-summary(part_otu_D0chao_stats)
+part_otu_D0chao_stats <- lm(frac_bacprod ~ D0_chao, data = wholeparticle_2015_df)
+#summary(part_otu_D0chao_stats)
  
 # Plot  chao1
-otu_pheno_D0chao <- ggplot(otu_phenoflow_alpha, aes(x=D0.chao, y=frac_bacprod, color = fraction)) + 
-  geom_point(size = 3.5) + geom_errorbarh(aes(xmin = D0.chao - sd.D0.chao, xmax = D0.chao + sd.D0.chao), width = 0.2) + 
-  ggtitle("OTU: Phenoflow") +
+otu_pheno_D0chao <- ggplot(all_top_2015_df, aes(x=D0_chao, y=frac_bacprod, color = fraction)) + 
+  geom_point(size = 3.5) + 
+  geom_errorbarh(aes(xmin = D0_chao - D0_chao_sd, xmax = D0_chao + D0_chao_sd)) + 
+  geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod)) + 
   scale_color_manual(values = c("firebrick3","cornflowerblue"), limits = c("WholePart", "Free")) +
-  scale_x_continuous(limits = c(200,4000)) + 
-  scale_y_continuous(limits = c(0,70),expand = c(0,0)) + 
+  #scale_x_continuous(limits = c(200,4000)) + 
+  #scale_y_continuous(limits = c(0,70),expand = c(0,0)) + 
   ylab("Production (μgC/L/hr)") + xlab("Chao1 (D0)") +
-  #geom_smooth(data=subset(otu_phenoflow_alpha, fraction == "Free"), method='lm') + 
-  geom_smooth(data=subset(otu_phenoflow_alpha, fraction == "WholePart"), method='lm') + 
+  #geom_smooth(data=subset(all_top_2015_df, fraction == "Free"), method='lm') + 
+  geom_smooth(data=subset(all_top_2015_df, fraction == "WholePart"), method='lm') + 
   theme(legend.position=c(0.15,0.9), legend.title=element_blank()) +
   annotate("text", x = 2000, y=35, color = "cornflowerblue", fontface = "bold",
            label = paste("R2 =", round(summary(free_otu_D0chao_stats)$adj.r.squared, digits = 4), "\n", 
@@ -535,25 +543,24 @@ otu_pheno_D0chao <- ggplot(otu_phenoflow_alpha, aes(x=D0.chao, y=frac_bacprod, c
 
 # Can fractional production be predicted by phenoflow D1 SHANNON ENTROPY? 
 # FREE LIVING
-free_otu_D1_stats <- lm(frac_bacprod ~ D1, data = free_otu_alpha)
-free_otu_D1_stats
-summary(free_otu_D1_stats)
+free_otu_D1_stats <- lm(frac_bacprod ~ D1, data = wholefree_2015_df)
+#summary(free_otu_D1_stats)
 
 # PARTICLE
-part_otu_D1_stats <- lm(frac_bacprod ~ D1, data = part_otu_alpha)
-part_otu_D1_stats
-summary(part_otu_D1_stats)
+part_otu_D1_stats <- lm(frac_bacprod ~ D1, data = wholeparticle_2015_df)
+#summary(part_otu_D1_stats)
 
 # Plot D1 SHANNON ENTROPY
-otu_pheno_D1 <- ggplot(otu_phenoflow_alpha, aes(x=D1, y=frac_bacprod, color = fraction)) + 
-  geom_point(size = 3.5) + geom_errorbarh(aes(xmin = D1 - sd.D1, xmax = D1 + sd.D1), width = 0.2) + 
-  ggtitle("OTU: Phenoflow") +
+otu_pheno_D1 <- ggplot(all_top_2015_df, aes(x=D1, y=frac_bacprod, color = fraction)) + 
+  geom_point(size = 3.5) + 
+  geom_errorbarh(aes(xmin = D1 - D1_sd, xmax = D1 + D1_sd)) + 
+  geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod)) + 
   scale_color_manual(values = c("firebrick3","cornflowerblue"), limits = c("WholePart", "Free")) +
-  scale_x_continuous(limits = c(0,400), expand = c(0,0)) + 
-  scale_y_continuous(limits = c(0,70),expand = c(0,0)) + 
+  #scale_x_continuous(limits = c(0,400), expand = c(0,0)) + 
+  #scale_y_continuous(limits = c(0,70),expand = c(0,0)) + 
   ylab("Production (μgC/L/hr)") + xlab("Shannon Entropy (D1)") +
-  #geom_smooth(data=subset(otu_phenoflow_alpha, fraction == "Free"), method='lm') + 
-  geom_smooth(data=subset(otu_phenoflow_alpha, fraction == "WholePart"), method='lm') + 
+  #geom_smooth(data=subset(all_top_2015_df, fraction == "Free"), method='lm') + 
+  geom_smooth(data=subset(all_top_2015_df, fraction == "WholePart"), method='lm') + 
   theme(legend.position=c(0.85,0.9), legend.title=element_blank()) +
   annotate("text", x = 175, y=35, color = "cornflowerblue", fontface = "bold",
            label = paste("R2 =", round(summary(free_otu_D1_stats)$adj.r.squared, digits = 4), "\n", 
@@ -565,25 +572,24 @@ otu_pheno_D1 <- ggplot(otu_phenoflow_alpha, aes(x=D1, y=frac_bacprod, color = fr
 
 # Can fractional production be predicted by phenoflow D2 INVERSE SIMPSON? 
 # FREE LIVING
-free_otu_D2_stats <- lm(frac_bacprod ~ D2, data = free_otu_alpha)
-free_otu_D2_stats
-summary(free_otu_D2_stats)
+free_otu_D2_stats <- lm(frac_bacprod ~ D2, data = wholefree_2015_df)
+#summary(free_otu_D2_stats)
 
 # PARTICLE
-part_otu_D2_stats <- lm(frac_bacprod ~ D2, data = part_otu_alpha)
-part_otu_D2_stats
-summary(part_otu_D2_stats)
+part_otu_D2_stats <- lm(frac_bacprod ~ D2, data = wholeparticle_2015_df)
+#summary(part_otu_D2_stats)
 
 # Plot D2 INVERSE SIMPSON
-otu_pheno_D2 <- ggplot(otu_phenoflow_alpha, aes(x=D2, y=frac_bacprod, color = fraction)) + 
-  geom_point(size = 3.5) + geom_errorbarh(aes(xmin = D2 - sd.D2, xmax = D2 + sd.D2), width = 0.2) + 
-  ggtitle("OTU: Phenoflow") +
+otu_pheno_D2 <- ggplot(all_top_2015_df, aes(x=D2, y=frac_bacprod, color = fraction)) + 
+  geom_point(size = 3.5) + 
+  geom_errorbarh(aes(xmin = D2 - D2_sd, xmax = D2 + D2_sd)) +
+  geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod)) + 
   scale_color_manual(values = c("firebrick3","cornflowerblue"), limits = c("WholePart", "Free")) +
-  scale_x_continuous(limits = c(0,80), expand = c(0,0)) + 
-  scale_y_continuous(limits = c(0,70),expand = c(0,0)) + 
+  #scale_x_continuous(limits = c(0,80), expand = c(0,0)) + 
+  #scale_y_continuous(limits = c(0,70),expand = c(0,0)) + 
   ylab("Production (μgC/L/hr)") + xlab("Inverse Simpson (D2)") +
-  #geom_smooth(data=subset(otu_phenoflow_alpha, fraction == "Free"), method='lm') + 
-  geom_smooth(data=subset(otu_phenoflow_alpha, fraction == "WholePart"), method='lm') + 
+  #geom_smooth(data=subset(all_top_2015_df, fraction == "Free"), method='lm') + 
+  geom_smooth(data=subset(all_top_2015_df, fraction == "WholePart"), method='lm') + 
   theme(legend.position=c(0.85,0.9), legend.title=element_blank()) +
   annotate("text", x = 40, y=45, color = "cornflowerblue", fontface = "bold",
            label = paste("R2 =", round(summary(free_otu_D2_stats)$adj.r.squared, digits = 4), "\n", 
@@ -593,8 +599,36 @@ otu_pheno_D2 <- ggplot(otu_phenoflow_alpha, aes(x=D2, y=frac_bacprod, color = fr
                          "p =", round(unname(summary(part_otu_D2_stats)$coefficients[,4][2]), digits = 4)))
 
 
+# Can fractional production be predicted by phenoflow D2 INVERSE SIMPSON? 
+# FREE LIVING
+free_otu_simps_even_stats <- lm(frac_bacprod ~ D2/D0, data = wholefree_2015_df)
+#summary(free_otu_simps_even_stats)
 
-otu_phenoflow <- plot_grid(otu_pheno_D0, otu_pheno_D0chao, otu_pheno_D1, otu_pheno_D2,
+# PARTICLE
+part_otu_simps_even_stats <- lm(frac_bacprod ~ D2/D0, data = wholeparticle_2015_df)
+#summary(part_otu_simps_even_stats)
+
+# Plot D2 INVERSE SIMPSON
+otu_pheno_simps_even <- ggplot(all_top_2015_df, aes(x=D2/D0, y=frac_bacprod, color = fraction)) + 
+  geom_point(size = 3.5) + 
+  geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod)) + 
+  scale_color_manual(values = c("firebrick3","cornflowerblue"), limits = c("WholePart", "Free")) +
+  #scale_x_continuous(limits = c(0,80), expand = c(0,0)) + 
+  #scale_y_continuous(limits = c(0,70),expand = c(0,0)) + 
+  ylab("Production (μgC/L/hr)") + xlab("Simpson's Evenness (D2/D0)") +
+  #geom_smooth(data=subset(all_top_2015_df, fraction == "Free"), method='lm') + 
+  #geom_smooth(data=subset(all_top_2015_df, fraction == "WholePart"), method='lm') + 
+  theme(legend.position=c(0.85,0.9), legend.title=element_blank()) +
+  annotate("text", x = 0.04, y=60, color = "cornflowerblue", fontface = "bold",
+           label = paste("R2 =", round(summary(free_otu_simps_even_stats)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(free_otu_simps_even_stats)$coefficients[,4][2]), digits = 4))) + 
+  annotate("text", x = 0.06, y=35, color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(part_otu_simps_even_stats)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(part_otu_simps_even_stats)$coefficients[,4][2]), digits = 4)))
+
+otu_pheno_simps_even
+
+otu_phenoflow <- plot_grid(otu_pheno_D0, otu_pheno_D0chao, otu_pheno_D1, otu_pheno_D2, 
           labels = c("A", "B", "C", "D"), 
           align = "h", nrow = 2, ncol = 2)
 otu_phenoflow
