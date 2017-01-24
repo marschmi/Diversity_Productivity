@@ -378,19 +378,23 @@ plot_totprod_free_D2 <- ggplot(free_meta_data, aes(y = tot_bacprod, x = D2)) +
 
 #### PARTICLE ASSOCIATED SAMPLES VS TOTAL BACTERIAL PRODUCTION 
 # Is there a significant relationship?
-rlm_part_totprod_D2 <- rlm(tot_bacprod ~ D2, data = part_meta_data)
-anoval
+lm_part_totprod_D2 <- lm(tot_bacprod ~ D2, data = part_meta_data) 
 summary(lm_part_totprod_D2)
-summary(rlm_part_totprod_D2)
-car::Anova(rlm_part_totprod_D2)
+
+# To put less weight in the 
+#rlm_part_totprod_D2 <- rlm(tot_bacprod ~ D2, data = part_meta_data) # To perform robust regression 
+#summary(rlm_part_totprod_D2)
+#car::Anova(rlm_part_totprod_D2)
 # TO calculate bootstrapped confiendence intervals on qq plot
-car::qqPlot(rlm_part_totprod_D2)
+#car::qqPlot(rlm_part_totprod_D2)
+# To plot robust regression in ggplot do geom_smooth(method = "rlm")
+
 # Plot the relationship
 plot_totprod_part_D2 <- ggplot(part_meta_data, aes(y = tot_bacprod, x = D2)) +
   geom_point(aes(color = lakesite, shape = season), size = 3) +
   scale_color_manual(values = lakesite_colors) +
-  xlim(0, 100) +  #For D2
-  geom_smooth(method = "rlm", color = "black") + 
+  xlim(0, 100) +
+  geom_smooth(method = "lm", color = "black") + 
   ggtitle("Particle Samples Only") + 
   annotate("text", x = 75, y=10, 
            color = "black", fontface = "bold",
@@ -399,13 +403,63 @@ plot_totprod_part_D2 <- ggplot(part_meta_data, aes(y = tot_bacprod, x = D2)) +
   theme(legend.position = c(0.12, 0.7), 
         legend.text = element_text(size = 10))
 
+
+### Different particulate fractions 
+## Particle (20-3um) fraction only 
+particle_df <- filter(part_meta_data, fraction == "Particle")
+lm_part_only_totprod_D2 <- lm(tot_bacprod ~ D2, data = particle_df) 
+plot_totprod_partonly_D2 <- ggplot(particle_df, aes(y = tot_bacprod, x = D2)) +
+  geom_point(aes(color = lakesite, shape = season), size = 3) +
+  scale_color_manual(values = lakesite_colors) +
+  xlim(0, 100) +
+  geom_smooth(method = "lm", color = "black") + 
+  ggtitle("Particle: 20-3 um") + 
+  annotate("text", x = 75, y=10, 
+           color = "black", fontface = "bold",
+           label = paste("R2 =", round(summary(lm_part_only_totprod_D2)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lm_part_only_totprod_D2)$coefficients[,4][2]), digits = 4))) +
+  theme(legend.position = c(0.14, 0.6), 
+        legend.text = element_text(size = 10))
+
+### Whole Particle (3+ um) fraction only 
+wholepart_df <- filter(part_meta_data, fraction == "WholePart")
+lm_wholepart_only_totprod_D2 <- lm(tot_bacprod ~ D2, data = wholepart_df) 
+plot_totprod_wholepartonly_D2 <- ggplot(wholepart_df, aes(y = tot_bacprod, x = D2)) +
+  geom_point(aes(color = lakesite, shape = season), size = 3) +
+  scale_color_manual(values = lakesite_colors) +
+  xlim(0, 100) +
+  geom_smooth(method = "lm", color = "black") + 
+  ggtitle("Particle: 3+ um") + 
+  annotate("text", x = 75, y=10, 
+           color = "black", fontface = "bold",
+           label = paste("R2 =", round(summary(lm_wholepart_only_totprod_D2)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lm_wholepart_only_totprod_D2)$coefficients[,4][2]), digits = 4))) +
+  theme(legend.position = "none", 
+        legend.text = element_text(size = 10))
+
+
+## Put all the plots together
 plot_D2_totprod <- plot_grid(plot_totprod_water_D2, plot_totprod_free_D2, plot_totprod_part_D2,
           labels = c("A", "B", "C"), ncol = 3)
 plot_D2_totprod
+
+
 #ggsave(plot = plot_D2_totprod, 
 #       filename = "../Figures/totbacprod_vs_D2.png", 
 #       dpi = 600, 
 #       height = 6, width = 16)
+
+### Particle Fractions 
+title <- ggdraw() + draw_label("Particle Fractions Only", fontface='bold')
+plots_D2_particles_only <- plot_grid(title, 
+                                     plot_grid(plot_totprod_partonly_D2, plot_totprod_wholepartonly_D2, 
+                                               labels=c('A', 'B')), 
+                                     ncol=1, rel_heights=c(0.1, 1)) # rel_heights values control title margins
+plots_D2_particles_only
+#ggsave(plot = plots_D2_particles_only, 
+#       filename = "../Figures/particle_totbacprod_vs_D2.png", 
+#       dpi = 600, 
+#       height = 4, width = 8)
 ```
 
 
