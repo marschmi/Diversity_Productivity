@@ -1,7 +1,18 @@
 ---
-title: "November 2016 Mothur & Oligotyping Analysis of Muskegon 2014-2015"
-output: html_document
-
+title: "Diversity-Productivity Relationships in Muskegon Lake"
+author: "Marian L. Schmidt"
+date: "January 2017"
+output:
+  html_document:
+    code_folding: show
+    highlight: haddock
+    keep_md: yes
+    theme: united
+    toc: yes
+    toc_float:
+      collapsed: no
+      smooth_scroll: yes
+      toc_depth: 3
 ---
 
 ```{r setup, include=FALSE}
@@ -107,16 +118,33 @@ scale_otu_merged_musk_nosed <- scale_reads(otu_merged_musk_pruned_nosed, round =
 
 ### Particle Samples 
 otu_merged_musk_pruned_particle <- subset_samples(otu_merged_musk_pruned, 
-                                               norep_filter_name !="MOTHJ715" & fraction %in% c("WholePart", "Particle"))
+                                               norep_filter_name !="MOTHJ715" & 
+                                                 fraction %in% c("WholePart", "Particle"))
 min(sample_sums(otu_merged_musk_pruned_particle))
 scale_otu_merged_musk_particle <- scale_reads(otu_merged_musk_pruned_particle, round = "matround")
 
+# To only do analysis on wholeparticle samples 
+otu_merged_musk_pruned_wholepart_top <- subset_samples(otu_merged_musk_pruned, 
+                                               norep_filter_name !="MOTHJ715" & 
+                                                 fraction == "WholePart" &
+                                                 limnion == "Top")
+min(sample_sums(otu_merged_musk_pruned_wholepart_top))
+scale_otu_merged_musk_wholepart_top <- scale_reads(otu_merged_musk_pruned_wholepart_top, round = "matround")
+
+
 ### Free-Living Samples 
 otu_merged_musk_pruned_free <- subset_samples(otu_merged_musk_pruned, 
-                                               norep_filter_name !="MOTHJ715" & fraction %in% c("WholeFree", "Free"))
+                                               norep_filter_name !="MOTHJ715" & 
+                                                fraction %in% c("WholeFree", "Free"))
 min(sample_sums(otu_merged_musk_pruned_free))
 scale_otu_merged_musk_free <- scale_reads(otu_merged_musk_pruned_free, round = "matround")
-
+# To only do analysis on wholeparticle samples 
+otu_merged_musk_pruned_wholefree_top <- subset_samples(otu_merged_musk_pruned, 
+                                               norep_filter_name !="MOTHJ715" & 
+                                                 fraction == "WholeFree" &
+                                                 limnion == "Top")
+min(sample_sums(otu_merged_musk_pruned_wholefree_top))
+scale_otu_merged_musk_wholefree_top <- scale_reads(otu_merged_musk_pruned_wholefree_top, round = "matround")
 
 
 
@@ -758,6 +786,143 @@ otu_phenoflow
 ```
 
 
+
+# Phylum production analysis
+```{r phylum-div-prod, eval = FALSE}
+# Michelle Berry's subsetting function, similar to phyloseq::subset_taxa, except taxa can 
+# be passed as arguments within functions without weird environment errors
+#
+# Args:
+#   physeq: a phyloseq object
+#   taxrank: taxonomic rank to filter on
+#   taxa: a vector of taxa groups to filter on
+#
+# Returns: 
+#   a phyloseq object subsetted to the x taxa in taxrank
+my_subset_taxa <- function(physeq, taxrank, taxa) {
+  physeq_tax_sub <- tax_table(physeq)[tax_table(physeq)[ , taxrank] %in% taxa, ]
+  tax_table(physeq) <- physeq_tax_sub
+  return(physeq)
+}
+
+## Scale phyloseq objects of whole free and whole particle:
+# scale_otu_merged_musk_wholefree_top
+# scale_otu_merged_musk_wholepart_top
+
+
+# Initialize parameters
+trials <- 100
+min_lib <- min(sample_sums(musk_scaled_otu_merged_pruned)) # Depth we are rarefying to
+
+# Groups to estimate alpha diversity for 
+mytaxa <- c("Acidobacteria", "Actinobacteria", "Alphaproteobacteria", "Armatimonadetes",
+            "Bacteroidetes", "Betaproteobacteria", "Chlorobi", "Chloroflexi",
+            "Cyanobacteria","Deltaproteobacteria", "Gammaproteobacteria", 
+            "Planctomycetes","Verrucomicrobia")
+names(mytaxa) <- mytaxa
+
+# Taxonomic ranks of mytaxa
+mytaxa_taxrank <- c("Phylum", "Phylum", "Phylum", "Phylum", "Phylum", "Phylum", 
+                      "Phylum", "Phylum", "Phylum", "Phylum", "Phylum", "Phylum", "Phylum")
+names(mytaxa_taxrank) <- mytaxa
+
+# Data frame to hold alpha diversity estimates over trials
+alphadiv_df <- data.frame(matrix(nrow = nsamples(musk_scaled_otu_merged_pruned), ncol = trials))
+
+# Initialize empty df's for richness and evenness of all taxa in mytaxa
+richness <- lapply(mytaxa, function(x) {return(alphadiv_df)} )
+shannon <- lapply(mytaxa, function(x) {return(alphadiv_df)} )
+invsimps <- lapply(mytaxa, function(x) {return(alphadiv_df)} )
+simpseven <- lapply(mytaxa, function(x) {return(alphadiv_df)} )
+
+alphadiv_list <- list(richness = richness, shannon = shannon, invsimps = invsimps, simpseven = simpseven)
+
+
+# Set the seed for reproducibility
+set.seed(3)
+
+# Run trials to subsample and estimate diversity
+for (i in 1:100) {
+  
+  # Subsample
+  rarefied_physeq <- rarefy_even_depth(musk_scaled_otu_merged_pruned, sample.size = min_lib, verbose = FALSE, replace = TRUE)
+  
+  # Generate alpha-diversity estimates for each taxonomic group
+  for (t in mytaxa) {
+
+    # Subset the taxa
+    physeq_sub <- my_subset_taxa(physeq = rarefied_physeq, 
+                                 taxrank = mytaxa_taxrank[t], 
+                                 taxa = t)
+    
+    # Calculate observed richness for that group and store value in a df column
+    richness <- estimate_richness(physeq_sub, measures = "Observed")[ ,1]
+    alphadiv_list$richness[[t]][ ,i] <- richness
+    
+    # Calculate observed shannon for that group and store value in a df column
+    shannon <- estimate_richness(physeq_sub, measures = "Shannon")[ ,1]
+    alphadiv_list$shannon[[t]][ ,i] <- shannon
+    
+    # Calculate observed invsimps for that group and store value in a df column
+    invsimps <- estimate_richness(physeq_sub, measures = "InvSimpson")[ ,1]
+    alphadiv_list$invsimps[[t]][ ,i] <- invsimps
+     
+    # Calculate Simpson's Evenness for that group and store value in a df column
+    alphadiv_list$simpseven[[t]][ ,i] <- (estimate_richness(physeq_sub, measures = "InvSimpson")[ ,1]/richness)
+
+  }
+}
+
+# Calculate the means of richness and inverse simpson from the 100 trials
+alphadiv_est <- lapply(alphadiv_list, function(div_measure) {
+    lapply(div_measure, function(taxa_group) {
+        alpha_mean <- rowMeans(taxa_group)
+        return(alpha_mean)
+    })  
+})
+
+# Convert alphadiv_est richness and simpson's E lists into wide data frames
+l <- lapply(alphadiv_est, function(x) {
+  # convert from list to data.frame
+  est_df <- plyr::ldply(.data = x, .fun = data.frame)
+  names(est_df) <- c("Taxa", "Diversity")
+  
+  # Add in SampleID column and spread to wide format
+  r <- est_df %>%
+    mutate(norep_filter_name = rep(sample_names(musk_scaled_otu_merged_pruned), length(mytaxa)))
+  return(r)
+})
+
+# Merge sample metadata with these estimates
+merge_dat <- data.frame(sample_data(musk_scaled_otu_merged_pruned)) %>%
+  select(norep_filter_name, Chl_Lab_ugperL, TP_ugperL, pH, frac_bacprod, NH3_mgperL, NO3_mgperL,
+         lakesite, fraction, season) #%>%
+  #mutate(logChla = log(Chla)) %>%
+  #mutate(logPhyco = log(Phycocyanin + 0.1)) %>%
+  #mutate(logTP = log(TP)) %>%
+  #mutate(logTurb = log(Turbidity))
+
+# Create a df with a "Diversity" column that includes richness and inv. simpson,
+# and log-chl a values from erie sample_data
+alpha_comb1 <- l$richness %>% 
+  left_join(y = l$shannon, by = c("Taxa", "norep_filter_name")) %>%   # Join the richness and inv_simp df's
+  rename(Richness = Diversity.x, Shannon = Diversity.y) 
+
+alpha_comb2 <- l$invsimps %>%   
+  left_join(y = l$simpseven, by = c("Taxa", "norep_filter_name")) %>%   # Join the richness and inv_simp df's
+  rename(Inverse_Simpson = Diversity.x, Simpsons_Evenness = Diversity.y) 
+
+alpha_comb_final <- alpha_comb1 %>%
+  left_join(y = alpha_comb2, by = c("Taxa", "norep_filter_name")) %>%
+  left_join(merge_dat, by = "norep_filter_name") %>%                  # Join with merged nutrient data
+  gather(key = "Alphadiv", value = "Estimate", Richness, Shannon, Inverse_Simpson, Simpsons_Evenness)
+```
+
+
+
+
+
+
 # How do the samples relate to each other? 
 ## PCOA
 ```{r PCOA, fig.width=16, fig.height=8}
@@ -1006,134 +1171,6 @@ environ_seasons
 
 
 
-# Phylum production analysis
-```{r phylum-div-prod, eval = FALSE}
-# Michelle Berry's subsetting function, similar to phyloseq::subset_taxa, except taxa can 
-# be passed as arguments within functions without weird environment errors
-#
-# Args:
-#   physeq: a phyloseq object
-#   taxrank: taxonomic rank to filter on
-#   taxa: a vector of taxa groups to filter on
-#
-# Returns: 
-#   a phyloseq object subsetted to the x taxa in taxrank
-my_subset_taxa <- function(physeq, taxrank, taxa) {
-  physeq_tax_sub <- tax_table(physeq)[tax_table(physeq)[ , taxrank] %in% taxa, ]
-  tax_table(physeq) <- physeq_tax_sub
-  return(physeq)
-}
-
-free_samps <- subset_samples(musk_scaled_otu_merged_pruned, fraction == "Free")
-
-
-# Initialize parameters
-trials <- 100
-min_lib <- min(sample_sums(musk_scaled_otu_merged_pruned)) # Depth we are rarefying to
-
-# Groups to estimate alpha diversity for 
-mytaxa <- c("Acidobacteria", "Actinobacteria", "Alphaproteobacteria", "Armatimonadetes",
-            "Bacteroidetes", "Betaproteobacteria", "Chlorobi", "Chloroflexi",
-            "Cyanobacteria","Deltaproteobacteria", "Gammaproteobacteria", 
-            "Planctomycetes","Verrucomicrobia")
-names(mytaxa) <- mytaxa
-
-# Taxonomic ranks of mytaxa
-mytaxa_taxrank <- c("Phylum", "Phylum", "Phylum", "Phylum", "Phylum", "Phylum", 
-                      "Phylum", "Phylum", "Phylum", "Phylum", "Phylum", "Phylum", "Phylum")
-names(mytaxa_taxrank) <- mytaxa
-
-# Data frame to hold alpha diversity estimates over trials
-alphadiv_df <- data.frame(matrix(nrow = nsamples(musk_scaled_otu_merged_pruned), ncol = trials))
-
-# Initialize empty df's for richness and evenness of all taxa in mytaxa
-richness <- lapply(mytaxa, function(x) {return(alphadiv_df)} )
-shannon <- lapply(mytaxa, function(x) {return(alphadiv_df)} )
-invsimps <- lapply(mytaxa, function(x) {return(alphadiv_df)} )
-simpseven <- lapply(mytaxa, function(x) {return(alphadiv_df)} )
-
-alphadiv_list <- list(richness = richness, shannon = shannon, invsimps = invsimps, simpseven = simpseven)
-
-
-# Set the seed for reproducibility
-set.seed(3)
-
-# Run trials to subsample and estimate diversity
-for (i in 1:100) {
-  
-  # Subsample
-  rarefied_physeq <- rarefy_even_depth(musk_scaled_otu_merged_pruned, sample.size = min_lib, verbose = FALSE, replace = TRUE)
-  
-  # Generate alpha-diversity estimates for each taxonomic group
-  for (t in mytaxa) {
-
-    # Subset the taxa
-    physeq_sub <- my_subset_taxa(physeq = rarefied_physeq, 
-                                 taxrank = mytaxa_taxrank[t], 
-                                 taxa = t)
-    
-    # Calculate observed richness for that group and store value in a df column
-    richness <- estimate_richness(physeq_sub, measures = "Observed")[ ,1]
-    alphadiv_list$richness[[t]][ ,i] <- richness
-    
-    # Calculate observed shannon for that group and store value in a df column
-    shannon <- estimate_richness(physeq_sub, measures = "Shannon")[ ,1]
-    alphadiv_list$shannon[[t]][ ,i] <- shannon
-    
-    # Calculate observed invsimps for that group and store value in a df column
-    invsimps <- estimate_richness(physeq_sub, measures = "InvSimpson")[ ,1]
-    alphadiv_list$invsimps[[t]][ ,i] <- invsimps
-     
-    # Calculate Simpson's Evenness for that group and store value in a df column
-    alphadiv_list$simpseven[[t]][ ,i] <- (estimate_richness(physeq_sub, measures = "InvSimpson")[ ,1]/richness)
-
-  }
-}
-
-# Calculate the means of richness and inverse simpson from the 100 trials
-alphadiv_est <- lapply(alphadiv_list, function(div_measure) {
-    lapply(div_measure, function(taxa_group) {
-        alpha_mean <- rowMeans(taxa_group)
-        return(alpha_mean)
-    })  
-})
-
-# Convert alphadiv_est richness and simpson's E lists into wide data frames
-l <- lapply(alphadiv_est, function(x) {
-  # convert from list to data.frame
-  est_df <- plyr::ldply(.data = x, .fun = data.frame)
-  names(est_df) <- c("Taxa", "Diversity")
-  
-  # Add in SampleID column and spread to wide format
-  r <- est_df %>%
-    mutate(norep_filter_name = rep(sample_names(musk_scaled_otu_merged_pruned), length(mytaxa)))
-  return(r)
-})
-
-# Merge sample metadata with these estimates
-merge_dat <- data.frame(sample_data(musk_scaled_otu_merged_pruned)) %>%
-  select(norep_filter_name, Chl_Lab_ugperL, TP_ugperL, pH, frac_bacprod, NH3_mgperL, NO3_mgperL,
-         lakesite, fraction, season) #%>%
-  #mutate(logChla = log(Chla)) %>%
-  #mutate(logPhyco = log(Phycocyanin + 0.1)) %>%
-  #mutate(logTP = log(TP)) %>%
-  #mutate(logTurb = log(Turbidity))
-
-# Create a df with a "Diversity" column that includes richness and inv. simpson,
-# and log-chl a values from erie sample_data
-alpha_comb1 <- l$richness %>% 
-  left_join(y = l$shannon, by = c("Taxa", "norep_filter_name")) %>%   # Join the richness and inv_simp df's
-  rename(Richness = Diversity.x, Shannon = Diversity.y) 
-
-alpha_comb2 <- l$invsimps %>%   
-  left_join(y = l$simpseven, by = c("Taxa", "norep_filter_name")) %>%   # Join the richness and inv_simp df's
-  rename(Inverse_Simpson = Diversity.x, Simpsons_Evenness = Diversity.y) 
-
-alpha_comb_final <- alpha_comb1 %>%
-  left_join(y = alpha_comb2, by = c("Taxa", "norep_filter_name")) %>%
-  left_join(merge_dat, by = "norep_filter_name") %>%                  # Join with merged nutrient data
-  gather(key = "Alphadiv", value = "Estimate", Richness, Shannon, Inverse_Simpson, Simpsons_Evenness)
-```
 
 
 
