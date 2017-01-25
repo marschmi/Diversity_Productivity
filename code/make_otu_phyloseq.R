@@ -112,7 +112,7 @@ flow_cy <- read.csv2("../data/metadata/flow_cytometry.csv", header = TRUE) %>%
          HNA_per_uL = (HNA_counts*dilution)/volume_uL,
          HNA_percent = (HNA_counts)/raw_counts*100,
          LNA_per_uL = (LNA_counts*dilution)/volume_uL,
-         LNA_percent = (LNA_counts)/raw_counts,
+         LNA_percent = (LNA_counts)/raw_counts*100,
          Nuc_acid_ratio = HNA_per_uL/LNA_per_uL) %>%
   select(-Lake)
 
@@ -189,6 +189,38 @@ alpha_div <- phenoflow_diversity %>%
 final_meta_dataframe_alpha <- left_join(final_meta_dataframe, alpha_div, by = "norep_filter_name")
 
 row.names(final_meta_dataframe_alpha) <- final_meta_dataframe_alpha$norep_filter_name
+
+
+############################################################################################################################################
+############################################################################################################################################
+###################################################################### ADD DNA CONCENTRATION INFORMATION 
+# DNA_2014 <- read.csv("../data/metadata/2014_DNAextraction.csv", header = TRUE)
+# 
+# DNA14 <- DNA_2014 %>%
+#   mutate(rep_filter_name = paste(substring(Sample,1,5), substring(Sample,7,7), substring(Sample,9,11),sep = ""),
+#          norep_filter_name = paste(substring(Sample,1,4), substring(Sample,7,7), substring(Sample,9,11), sep = ""))
+#   
+# 
+# 
+# DNA_2015 <- read.csv("../data/metadata/2015_DNAextraction.csv", header = TRUE)
+# DNA15 <- DNA_2015 %>%
+#   ## Subset only the samples that were sequenced
+#   dplyr::filter(plate_Map == "yes_plateC") %>%
+#   # Create new columns with key information for subsetting and data manipulation
+#   mutate(rep_filter_name = sequencing_ID,
+#          norep_filter_name = paste(substring(rep_filter_name,1,4), substring(rep_filter_name,6,9), sep = ""),
+#          replicate = substring(rep_filter_name,5,5)) %>%
+#   # Select relevant columns 
+#   dplyr::select(rep_filter_name, norep_filter_name, dna_concentration_ng_per_ul, replicate) %>%
+#   # Create one 
+#   unite(rep_dna_conc, dna_concentration_ng_per_ul, replicate, sep = "_dnaconcrep") %>%
+#   # Remove the column to include 
+#   dplyr::select(-rep_filter_name) %>%
+#   separate(rep_dna_conc, into = c("Concentration","Replicate"), sep = "_") %>%
+#   mutate(Replicate = replace(Replicate, Replicate == "dnaconcrep3", "dnaconcrep1")) %>%
+#   spread(Replicate, Concentration) 
+# 
+
 
 
 ############################################################################################################################################

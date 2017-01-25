@@ -162,7 +162,7 @@ plot_sample_sums(dataframe = scaled_sums_otu, x_total_seqs = "Sample_TotalSeqs",
 plot_sample_sums(dataframe = scaled_sums_otu, x_total_seqs = "Sample_TotalSeqs", fill_variable = "limnion")
 ```
 
-
+  
 ```{r metadata_dataframes}
 # Create the metadata information 
 meta_data <- data.frame(sample_data(otu_merged_musk_pruned)) 
@@ -182,20 +182,26 @@ nosed_meta_data <- filter(meta_data, fraction != "Sediment")
 ```{r free_vs_wholefree_diversity, fig.height=8, fig.width=10}
 # Free Living:
 free_samps_alpha <- filter(free_meta_data, fraction == "Free" & year == "2015") %>% 
-  select(norep_filter_name, fraction, D0, D1, D2, simps_even) %>%
+  dplyr::select(norep_filter_name, fraction, D0, D1, D2, simps_even) %>%
+  # Make a new column called "div_metric" that includes the hill diversity metric
   gather("div_metric", "value", D0, D1, D2, simps_even) %>%
+  # Combine the diversity metric and fraction into one column called frac_div_metric
   unite("frac_div_metric", fraction, div_metric, sep = "_") %>%
+  # Spread frac_div_metric into 4 columns for each hill div metric
   spread(frac_div_metric, value) %>%
   mutate(norep_water_name = paste(substr(norep_filter_name,1,4), substr(norep_filter_name, 6, 8), sep = "")) %>%
-  select(-norep_filter_name)
+  dplyr::select(-norep_filter_name)
 
 wholefree_samps_alpha <- filter(free_meta_data, fraction == "WholeFree" & year == "2015") %>% 
-  select(norep_filter_name, fraction, D0, D1, D2, simps_even) %>%
+  dplyr::select(norep_filter_name, fraction, D0, D1, D2, simps_even) %>%
+  # Make a new column called "div_metric" that includes the hill diversity metric
   gather(div_metric, value, D0, D1, D2, simps_even) %>%
+  # Combine the diversity metric and fraction into one column called frac_div_metric
   unite(frac_div_metric, fraction, div_metric, sep = "_") %>%
+  # Spread frac_div_metric into 4 columns for each hill div metric
   spread(frac_div_metric, value) %>%
   mutate(norep_water_name = paste(substr(norep_filter_name,1,4), substr(norep_filter_name, 6, 8), sep = "")) %>%
-  select(-norep_filter_name)
+  dplyr::select(-norep_filter_name)
 
 
 FL_alpha <- left_join(free_samps_alpha, wholefree_samps_alpha, by = "norep_water_name")
