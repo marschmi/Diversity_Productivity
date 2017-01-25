@@ -44,7 +44,7 @@ January 2017
 
 <img src="Figures/cached/scaled_reads_seq_depth-1.png" style="display: block; margin: auto;" /><img src="Figures/cached/scaled_reads_seq_depth-2.png" style="display: block; margin: auto;" />
 
-
+# Create all of the metadta frames for future analysis    
 
 
 
@@ -60,10 +60,56 @@ January 2017
 # Is there a relationship between diversity and productivity?
 ## For total production?
 
+**Note:** The total production data is only for the surface during 2014 and 2015!
+
 ### D1 Diversity with Total Production Analysis 
+
+```
+## 
+## Call:
+## lm(formula = tot_bacprod ~ D1, data = free_only)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -35.605 -13.805  -5.895  11.639  50.840 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)   
+## (Intercept)  -2.8194    15.7627  -0.179  0.85976   
+## D1            0.5663     0.1952   2.901  0.00854 **
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 22.68 on 21 degrees of freedom
+## Multiple R-squared:  0.2861,	Adjusted R-squared:  0.2521 
+## F-statistic: 8.417 on 1 and 21 DF,  p-value: 0.008541
+```
+
 <img src="Figures/cached/D1_totalproduction_vs_diversity-1.png" style="display: block; margin: auto;" />
 
 ### D2 Diversity with Total Production Analysis 
+
+```
+## 
+## Call:
+## lm(formula = tot_bacprod ~ D2, data = wholepart_only_2015)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -31.536  -9.476  -2.387   4.804  30.750 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)  
+## (Intercept)   9.9256     9.3408   1.063   0.3129  
+## D2            0.6127     0.2038   3.007   0.0132 *
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 18.11 on 10 degrees of freedom
+## Multiple R-squared:  0.4748,	Adjusted R-squared:  0.4222 
+## F-statistic: 9.039 on 1 and 10 DF,  p-value: 0.0132
+```
+
 <img src="Figures/cached/D2_totalproduction_vs_diversity-1.png" style="display: block; margin: auto;" /><img src="Figures/cached/D2_totalproduction_vs_diversity-2.png" style="display: block; margin: auto;" />
 
 # Is there a relationship between HNA cells per uL and Total Production?
