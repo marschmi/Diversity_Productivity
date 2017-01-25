@@ -812,7 +812,7 @@ my_subset_taxa <- function(physeq, taxrank, taxa) {
 
 # Initialize parameters
 trials <- 100
-min_lib <- min(sample_sums(musk_scaled_otu_merged_pruned)) # Depth we are rarefying to
+min_lib <- min(sample_sums(scale_otu_merged_musk_wholepart_top)) # Depth we are rarefying to
 
 # Groups to estimate alpha diversity for 
 mytaxa <- c("Acidobacteria", "Actinobacteria", "Alphaproteobacteria", "Armatimonadetes",
@@ -827,25 +827,23 @@ mytaxa_taxrank <- c("Phylum", "Phylum", "Phylum", "Phylum", "Phylum", "Phylum",
 names(mytaxa_taxrank) <- mytaxa
 
 # Data frame to hold alpha diversity estimates over trials
-alphadiv_df <- data.frame(matrix(nrow = nsamples(musk_scaled_otu_merged_pruned), ncol = trials))
+alphadiv_df <- data.frame(matrix(nrow = nsamples(scale_otu_merged_musk_wholepart_top), ncol = trials))
 
 # Initialize empty df's for richness and evenness of all taxa in mytaxa
 richness <- lapply(mytaxa, function(x) {return(alphadiv_df)} )
-shannon <- lapply(mytaxa, function(x) {return(alphadiv_df)} )
 invsimps <- lapply(mytaxa, function(x) {return(alphadiv_df)} )
-simpseven <- lapply(mytaxa, function(x) {return(alphadiv_df)} )
 
-alphadiv_list <- list(richness = richness, shannon = shannon, invsimps = invsimps, simpseven = simpseven)
+alphadiv_list <- list(richness = richness, invsimps = invsimps)
 
 
 # Set the seed for reproducibility
-set.seed(3)
+set.seed(777)
 
 # Run trials to subsample and estimate diversity
 for (i in 1:100) {
   
   # Subsample
-  rarefied_physeq <- rarefy_even_depth(musk_scaled_otu_merged_pruned, sample.size = min_lib, verbose = FALSE, replace = TRUE)
+  rarefied_physeq <- rarefy_even_depth(scale_otu_merged_musk_wholepart_top, sample.size = min_lib, verbose = FALSE, replace = TRUE)
   
   # Generate alpha-diversity estimates for each taxonomic group
   for (t in mytaxa) {
@@ -859,16 +857,9 @@ for (i in 1:100) {
     richness <- estimate_richness(physeq_sub, measures = "Observed")[ ,1]
     alphadiv_list$richness[[t]][ ,i] <- richness
     
-    # Calculate observed shannon for that group and store value in a df column
-    shannon <- estimate_richness(physeq_sub, measures = "Shannon")[ ,1]
-    alphadiv_list$shannon[[t]][ ,i] <- shannon
-    
     # Calculate observed invsimps for that group and store value in a df column
     invsimps <- estimate_richness(physeq_sub, measures = "InvSimpson")[ ,1]
     alphadiv_list$invsimps[[t]][ ,i] <- invsimps
-     
-    # Calculate Simpson's Evenness for that group and store value in a df column
-    alphadiv_list$simpseven[[t]][ ,i] <- (estimate_richness(physeq_sub, measures = "InvSimpson")[ ,1]/richness)
 
   }
 }
@@ -889,36 +880,60 @@ l <- lapply(alphadiv_est, function(x) {
   
   # Add in SampleID column and spread to wide format
   r <- est_df %>%
-    mutate(norep_filter_name = rep(sample_names(musk_scaled_otu_merged_pruned), length(mytaxa)))
+    mutate(norep_filter_name = rep(sample_names(scale_otu_merged_musk_wholepart_top), length(mytaxa)))
   return(r)
 })
 
 # Merge sample metadata with these estimates
-merge_dat <- data.frame(sample_data(musk_scaled_otu_merged_pruned)) %>%
-  select(norep_filter_name, Chl_Lab_ugperL, TP_ugperL, pH, frac_bacprod, NH3_mgperL, NO3_mgperL,
-         lakesite, fraction, season) #%>%
-  #mutate(logChla = log(Chla)) %>%
-  #mutate(logPhyco = log(Phycocyanin + 0.1)) %>%
-  #mutate(logTP = log(TP)) %>%
-  #mutate(logTurb = log(Turbidity))
+merge_dat <- data.frame(sample_data(scale_otu_merged_musk_wholepart_top)) %>%
+  dplyr::select(norep_filter_name, Chl_Lab_ugperL, TP_ugperL, pH, frac_bacprod, NH3_mgperL, NO3_mgperL,
+         lakesite, fraction, season) 
 
 # Create a df with a "Diversity" column that includes richness and inv. simpson,
 # and log-chl a values from erie sample_data
 alpha_comb1 <- l$richness %>% 
-  left_join(y = l$shannon, by = c("Taxa", "norep_filter_name")) %>%   # Join the richness and inv_simp df's
-  rename(Richness = Diversity.x, Shannon = Diversity.y) 
-
-alpha_comb2 <- l$invsimps %>%   
-  left_join(y = l$simpseven, by = c("Taxa", "norep_filter_name")) %>%   # Join the richness and inv_simp df's
-  rename(Inverse_Simpson = Diversity.x, Simpsons_Evenness = Diversity.y) 
+  left_join(y = l$invsimps, by = c("Taxa", "norep_filter_name")) %>%   # Join the richness and inv_simp df's
+  rename(Richness = Diversity.x, Inverse_Simpson = Diversity.y) 
 
 alpha_comb_final <- alpha_comb1 %>%
-  left_join(y = alpha_comb2, by = c("Taxa", "norep_filter_name")) %>%
   left_join(merge_dat, by = "norep_filter_name") %>%                  # Join with merged nutrient data
-  gather(key = "Alphadiv", value = "Estimate", Richness, Shannon, Inverse_Simpson, Simpsons_Evenness)
+  gather(key = "Alphadiv", value = "Estimate", Richness, Inverse_Simpson) 
 ```
 
 
+```{r plot_phylum_diversity, fig.width=6, fig.height=20}
+ggplot(alpha_comb_final, aes(x = Estimate, y =frac_bacprod)) + 
+  geom_point() +
+  geom_smooth(method = "lm") + 
+  facet_grid(Taxa~Alphadiv, scales = "free_x")
+
+ggsave("../Figures/phyla_alphadiv.png", dpi = 600, width = 6, height = 20)
+```
+
+
+
+
+```{r specific_phyla}
+actinos <- filter(alpha_comb_final, Taxa == "Actinobacteria")
+lm_actino_rich <- lm(frac_bacprod ~ Estimate, data = filter(actinos, Alphadiv == "Richness"))
+lm_actino_invsimps <- lm(frac_bacprod ~ Estimate, data = filter(actinos, Alphadiv == "Inverse_Simpson"))
+
+ggplot(actinos, aes(x = Estimate, y =frac_bacprod)) + 
+  geom_point() +
+  #geom_smooth(method = "lm") + 
+  facet_grid(Taxa~Alphadiv, scales = "free_x")
+
+
+
+bacteroidetes <- filter(alpha_comb_final, Taxa == "Bacteroidetes")
+lm_bactero_rich <- lm(frac_bacprod ~ Estimate, data = filter(bacteroidetes, Alphadiv == "Richness"))
+lm_bactero_invsimps <- lm(frac_bacprod ~ Estimate, data = filter(bacteroidetes, Alphadiv == "Inverse_Simpson"))
+
+ggplot(bacteroidetes, aes(x = Estimate, y =frac_bacprod)) + 
+  geom_point() +
+  geom_smooth(method = "lm", data = filter(bacteroidetes, Alphadiv == "Richness")) + 
+  facet_grid(Taxa~Alphadiv, scales = "free_x")
+```
 
 
 

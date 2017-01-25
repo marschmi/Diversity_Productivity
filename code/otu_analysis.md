@@ -187,6 +187,46 @@ January 2017
 
 
 
+```
+## Error in ggplot(alpha_comb_final, aes(x = Estimate, y = frac_bacprod)): object 'alpha_comb_final' not found
+```
+
+
+
+
+
+```
+## Error in filter_(.data, .dots = lazyeval::lazy_dots(...)): object 'alpha_comb_final' not found
+```
+
+```
+## Error in filter_(.data, .dots = lazyeval::lazy_dots(...)): object 'actinos' not found
+```
+
+```
+## Error in filter_(.data, .dots = lazyeval::lazy_dots(...)): object 'actinos' not found
+```
+
+```
+## Error in ggplot(actinos, aes(x = Estimate, y = frac_bacprod)): object 'actinos' not found
+```
+
+```
+## Error in filter_(.data, .dots = lazyeval::lazy_dots(...)): object 'alpha_comb_final' not found
+```
+
+```
+## Error in filter_(.data, .dots = lazyeval::lazy_dots(...)): object 'bacteroidetes' not found
+```
+
+```
+## Error in filter_(.data, .dots = lazyeval::lazy_dots(...)): object 'bacteroidetes' not found
+```
+
+```
+## Error in ggplot(bacteroidetes, aes(x = Estimate, y = frac_bacprod)): object 'bacteroidetes' not found
+```
+
 
 
 
