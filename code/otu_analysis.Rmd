@@ -788,7 +788,7 @@ otu_phenoflow
 
 
 # Phylum production analysis
-```{r phylum-div-prod, eval = FALSE}
+```{r phylum-div-prod}
 # Michelle Berry's subsetting function, similar to phyloseq::subset_taxa, except taxa can 
 # be passed as arguments within functions without weird environment errors
 #
