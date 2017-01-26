@@ -54,6 +54,13 @@ January 2017
 ##  How linked are the diversities of the fractions?
 <img src="Figures/cached/part_vs_wholepart_diversity-1.png" style="display: block; margin: auto;" />
 
+## Take another look at the diversity metrics by fraction
+<img src="Figures/cached/compare-diversities-1.png" style="display: block; margin: auto;" />
+
+# How does diversity compare to the sequencing depth 
+<img src="Figures/cached/div_vs_seqdepth-1.png" style="display: block; margin: auto;" /><img src="Figures/cached/div_vs_seqdepth-2.png" style="display: block; margin: auto;" /><img src="Figures/cached/div_vs_seqdepth-3.png" style="display: block; margin: auto;" /><img src="Figures/cached/div_vs_seqdepth-4.png" style="display: block; margin: auto;" />
+
+
 
 
 
@@ -61,6 +68,32 @@ January 2017
 ## For total production?
 
 **Note:** The total production data is only for the surface during 2014 and 2015!
+
+### D0 Diversity with Total Production Analysis
+
+```
+## 
+## Call:
+## lm(formula = tot_bacprod ~ D0, data = free_only)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -27.564 -15.461  -7.066   8.312  60.731 
+## 
+## Coefficients:
+##              Estimate Std. Error t value Pr(>|t|)  
+## (Intercept) 23.015567   9.002661   2.557   0.0184 *
+## D0           0.016699   0.007045   2.370   0.0274 *
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 23.85 on 21 degrees of freedom
+## Multiple R-squared:  0.2111,	Adjusted R-squared:  0.1735 
+## F-statistic: 5.618 on 1 and 21 DF,  p-value: 0.02743
+```
+
+<img src="Figures/cached/D0_totalproduction_vs_diversity-1.png" style="display: block; margin: auto;" /><img src="Figures/cached/D0_totalproduction_vs_diversity-2.png" style="display: block; margin: auto;" /><img src="Figures/cached/D0_totalproduction_vs_diversity-3.png" style="display: block; margin: auto;" />
+
 
 ### D1 Diversity with Total Production Analysis 
 
@@ -111,6 +144,9 @@ January 2017
 ```
 
 <img src="Figures/cached/D2_totalproduction_vs_diversity-1.png" style="display: block; margin: auto;" /><img src="Figures/cached/D2_totalproduction_vs_diversity-2.png" style="display: block; margin: auto;" />
+
+#### Dear marian, check out this website:  https://www.rdocumentation.org/packages/wle/versions/0.9-91/topics/wle.lm
+
 
 # Is there a relationship between HNA cells per uL and Total Production?
 <img src="Figures/cached/totalproduction_vs_HNA-LNA-1.png" style="display: block; margin: auto;" /><img src="Figures/cached/totalproduction_vs_HNA-LNA-2.png" style="display: block; margin: auto;" />

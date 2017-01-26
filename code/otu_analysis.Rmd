@@ -55,6 +55,8 @@ source("set_colors.R")
 ```{r load-data-files}
 # Loads a phyloseq object named otu_merged_musk_pruned)
 load("../data/otu_merged_musk_pruned.RData")
+# The name of the phyloseq object is: 
+# otu_merged_musk_pruned 
 ```
 
 
@@ -67,7 +69,6 @@ colnames(sums_otu) <- "Sample_TotalSeqs"
 sums_otu$names <- row.names(sums_otu)
 sums_otu <- arrange(sums_otu, Sample_TotalSeqs) 
 sums_otu <- make_metadata_norep(sums_otu)
-
 
 ##  PLOT BASED ON 
 plot_sample_sums(dataframe = sums_otu, x_total_seqs = "Sample_TotalSeqs", fill_variable = "project")
@@ -99,6 +100,18 @@ ggdraw() +
                   c(0, 0.7), # Where along the x-axis would you like the labels?
                   c(1, 1),  # Put the label at the top of the plotting space (y-axis)
                   size = 15) # Size of label
+
+
+
+## Add total sequences to metadata frame 
+metdf <- sample_data(otu_merged_musk_pruned)
+sums_otu$norep_filter_name <- sums_otu$names
+sums_otu2 <- select(sums_otu, norep_filter_name, Sample_TotalSeqs)
+metdf_num2 <- left_join(metdf, sums_otu2, by = "norep_filter_name")
+row.names(metdf_num2) <- metdf_num2$norep_filter_name
+# Rename the sample data 
+sample_data(otu_merged_musk_pruned) <- metdf_num2
+
 ```
 
 
@@ -174,7 +187,7 @@ meta_data <- meta_data %>%
 ### PREPARE DATA FRAMES FOR PHENOFLOW ALPHA DIVERSITY ANALYSIS
 free_meta_data <- filter(meta_data, fraction %in% c("Free", "WholeFree") & norep_filter_name != "MOTHJ715" & limnion == "Top")
 part_meta_data <- filter(meta_data, fraction %in% c("Particle", "WholePart") & norep_filter_name != "MOTHJ715" & limnion == "Top")
-nosed_meta_data <- filter(meta_data, fraction != "Sediment")
+nosed_meta_data <- filter(meta_data, fraction != "Sediment" & limnion == "Top")
 
 # Only "True Free Living and Particle" From 20um prefiltered samples 
 free_only <- filter(free_meta_data, fraction == "Free")
@@ -333,6 +346,76 @@ part_vs_wholepart_div_plots
 #ggsave("../Figures/part_vs_wholepart_div_plots.png", plot = part_vs_wholepart_div_plots, dpi = 600, width = 10, height = 8)
 ```
 
+## Take another look at the diversity metrics by fraction
+```{r compare-diversities, fig.width=10, fig.height = 10}
+# How do the diversities compare with each other in terms of their scales?
+fraction_divs <- nosed_meta_data %>%
+  filter(limnion == "Top") %>%
+  dplyr::select(1:7,norep_filter_name, 60:69) %>%
+  gather(div_metric, div_value, D0, D0_chao, D1, D2) %>%
+  select(-norep_water_name)
+
+# Set the factor levels to be the order we'd like
+fraction_divs$fraction <- factor(fraction_divs$fraction,  levels = c("WholePart", "Particle", "WholeFree", "Free"))
+fraction_divs$lakesite <- factor(fraction_divs$lakesite,  levels = c("MOT", "MDP", "MBR", "MIN"))
+
+ggplot(fraction_divs, aes(x = lakesite, y = div_value)) + 
+  geom_jitter(aes(color = fraction), size = 3, position = position_dodge(width = 0.8)) + 
+  geom_boxplot(aes(fill = fraction), alpha =0.5) +
+  scale_color_manual(values = fraction_colors) + 
+  scale_fill_manual(values = fraction_colors) + 
+  facet_wrap(~div_metric, scales = "free_y") +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
+        legend.position = c(0.1, 0.9), 
+        strip.background = element_rect(fill = NA), 
+        strip.text.x = element_text(face = "bold"))
+```
+
+# How does diversity compare to the sequencing depth 
+```{r div_vs_seqdepth, fig.width=12, fig.height = 4}
+ggplot(nosed_meta_data, aes(x = Sample_TotalSeqs, y = D0)) + 
+  geom_point(size = 3) + 
+  facet_grid(.~fraction, scale = "free_x") + 
+  geom_smooth(method = "lm") + 
+  ggtitle("D0: Species Richness") + 
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
+        legend.position = c(0.1, 0.9), 
+        strip.background = element_rect(fill = NA), 
+        strip.text.x = element_text(face = "bold"))
+
+ggplot(nosed_meta_data, aes(x = Sample_TotalSeqs, y = D0_chao)) + 
+  geom_point(size = 3) + 
+  facet_grid(.~fraction, scale = "free_x") + 
+  geom_smooth(method = "lm") + 
+  ggtitle("D0: Chao 1") + 
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
+        legend.position = c(0.1, 0.9), 
+        strip.background = element_rect(fill = NA), 
+        strip.text.x = element_text(face = "bold"))
+
+ggplot(nosed_meta_data, aes(x = Sample_TotalSeqs, y = D1)) + 
+  geom_point(size = 3) + 
+  facet_grid(.~fraction, scale = "free_x") + 
+  geom_smooth(method = "lm") + 
+  ggtitle("D1: Exponential of Shannon Entropy") + 
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
+        legend.position = c(0.1, 0.9), 
+        strip.background = element_rect(fill = NA), 
+        strip.text.x = element_text(face = "bold"))
+
+ggplot(nosed_meta_data, aes(x = Sample_TotalSeqs, y = D2)) + 
+  geom_point(size = 3) + 
+  facet_grid(.~fraction, scale = "free_x") + 
+  geom_smooth(method = "lm") + 
+  ggtitle("D2: Inverse Simpson") + 
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
+        legend.position = c(0.1, 0.9), 
+        strip.background = element_rect(fill = NA), 
+        strip.text.x = element_text(face = "bold"))
+
+```
+
+
 
 
 
@@ -340,6 +423,96 @@ part_vs_wholepart_div_plots
 ## For total production?
 
 **Note:** The total production data is only for the surface during 2014 and 2015!
+
+### D0 Diversity with Total Production Analysis
+```{r D0_totalproduction_vs_diversity, fig.height=6, fig.width=14}
+#### FREE LIVING SAMPLES VS TOTAL BACTERIAL PRODUCTION 
+# Is there a significant relationship?
+lm_freeonly_totprod_D0 <- lm(tot_bacprod ~ D0, data = free_only)
+summary(lm_freeonly_totprod_D0)
+
+# Plot the relationship 
+plot_totprod_free_D0 <-  ggplot(free_only, aes(y = tot_bacprod, x = D0)) +
+  geom_point(aes(color = lakesite), size = 3) +
+  scale_color_manual(values = lakesite_colors) +
+  geom_smooth(method = "lm", color = "black") + 
+  ggtitle("20 um Prefiltered Free-Living Only") + 
+  annotate("text",  x = 2250, y = 5, # For D2:  x = 40, y=5, 
+           color = "black", fontface = "bold",
+           label = paste("R2 =", round(summary(lm_freeonly_totprod_D0)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lm_freeonly_totprod_D0)$coefficients[,4][2]), digits = 4)))+
+  theme(legend.position = c(0.8, 0.1), 
+        legend.text = element_text(size = 10))
+  
+
+
+# Individually for 2014 and 2015, the trend is NS 
+lm_freeonly_totprod_D0_2014 <- lm(tot_bacprod ~ D0, data = filter(free_only, year == "2014"))
+lm_freeonly_totprod_D0_2015 <- lm(tot_bacprod ~ D0, data = filter(free_only, year == "2015"))
+
+# The trend is also insignificant for the whole free fraction 
+lm_wholefreeonly_totprod_D0 <- lm(tot_bacprod ~ D0, data = wholefree_only)
+
+ggplot(wholefree_only, aes(y = tot_bacprod, x = D0)) +
+  geom_point(aes(color = lakesite), size = 3) +
+  scale_color_manual(values = lakesite_colors) +
+  geom_smooth(method = "lm", color = "black") + 
+  ggtitle("WholeFree Only") + 
+  annotate("text",  x = 750, y = 5, # For D2:  x = 40, y=5, 
+           color = "black", fontface = "bold",
+           label = paste("R2 =", round(summary(lm_wholefreeonly_totprod_D0)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lm_wholefreeonly_totprod_D0)$coefficients[,4][2]), digits = 4)))+
+  theme(legend.position = c(0.8, 0.1), 
+        legend.text = element_text(size = 10))
+
+
+#### PARTICLE ASSOCIATED SAMPLES VS TOTAL BACTERIAL PRODUCTION 
+# Is there a significant relationship?
+lm_partonly_totprod_D0 <- lm(tot_bacprod ~ D0, data = part_only)
+#summary(lm_partonly_totprod_D0)
+# Plot the relationship 
+plot_totprod_part_D0 <- ggplot(part_only, aes(y = tot_bacprod, x = D0)) +
+  geom_point(aes(color = lakesite), size = 3) +
+  scale_color_manual(values = lakesite_colors) +
+  ggtitle("Particle (3-20 um) Samples Only") + 
+  annotate("text", x = 1700, y = 75, # For D2:  x = 40, y=5, 
+           color = "black", fontface = "bold",
+           label = paste("R2 =", round(summary(lm_partonly_totprod_D0)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lm_partonly_totprod_D0)$coefficients[,4][2]), digits = 4))) +
+  theme(legend.position = c(0.12, 0.7), 
+        legend.text = element_text(size = 10))
+
+# Trend is NS in 2014 & 2015
+lm_partonly_totprod_D0_2014 <- lm(tot_bacprod ~ D0, data = filter(part_only, year == "2014"))
+lm_partonly_totprod_D0_2015 <- lm(tot_bacprod ~ D0, data = filter(part_only, year == "2015"))
+# The trend is also insignificant for the whole particle fraction 
+lm_wholepartonly_totprod_D0 <- lm(tot_bacprod ~ D0, data = wholepart_only)
+
+
+ggplot(wholepart_only, aes(y = tot_bacprod, x = D0)) +
+  geom_point(aes(color = lakesite), size = 3) +
+  scale_color_manual(values = lakesite_colors) +
+  geom_smooth(method = "lm", color = "black") + 
+  ggtitle("WholePart Only") + 
+  annotate("text",  x = 1200, y = 5, # For D2:  x = 40, y=5, 
+           color = "black", fontface = "bold",
+           label = paste("R2 =", round(summary(lm_wholepartonly_totprod_D0)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lm_wholepartonly_totprod_D0)$coefficients[,4][2]), digits = 4)))+
+  theme(legend.position = c(0.8, 0.1), 
+        legend.text = element_text(size = 10))
+
+
+plot_D0_totprod <- plot_grid(plot_totprod_free_D0, plot_totprod_part_D0,
+          labels = c("A", "B"), ncol = 2)
+plot_D0_totprod
+
+
+#ggsave(plot = plot_D0_totprod, 
+#       filename = "../Figures/totbacprod_vs_D0.png", 
+#       dpi = 600, 
+#       height = 6, width = 16)
+```
+
 
 ### D1 Diversity with Total Production Analysis 
 ```{r D1_totalproduction_vs_diversity, fig.height=6, fig.width=14}
