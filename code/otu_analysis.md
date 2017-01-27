@@ -847,37 +847,146 @@ ggplot(nosed_meta_data, aes(x = Sample_TotalSeqs, y = D2)) +
 
 
 # Is there a relationship between diversity and productivity?
-## For total production?
 
 **Note:** The total production data is only for the surface during 2014 and 2015!
 
-### D0 Diversity with Total Production Analysis
+## D0 vs Total Production
 
+```r
+#### FREE LIVING SAMPLES VS TOTAL BACTERIAL PRODUCTION 
+# Is there a significant relationship between FL D0 and total production?
+lm_freeonly_totprod_D0 <- lm(tot_bacprod ~ D0, data = free_only)
+# Plot the relationship 
+plot_totprod_free_D0 <-  ggplot(free_only, aes(y = tot_bacprod, x = D0)) +
+  geom_point(aes(color = lakesite), size = 3) +
+  scale_color_manual(values = lakesite_colors) +
+  geom_smooth(method = "lm", color = "black") + 
+  ggtitle("20 um Prefiltered Free-Living Only") + 
+  annotate("text",  x = 2250, y = 5, # For D2:  x = 40, y=5, 
+           color = "black", fontface = "bold",
+           label = paste("R2 =", round(summary(lm_freeonly_totprod_D0)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lm_freeonly_totprod_D0)$coefficients[,4][2]), digits = 4)))+
+  theme(legend.position = c(0.8, 0.1), 
+        legend.text = element_text(size = 10))
+
+
+# Individually for 2014 and 2015, the trend is NS 
+# summary(lm(tot_bacprod ~ D0, data = filter(free_only, year == "2014"))) # NS
+# summary(lm(tot_bacprod ~ D0, data = filter(free_only, year == "2015"))) # NS
+
+# The trend is close to signifincant!
+lm_wholefreeonly_totprod_D0 <- lm(tot_bacprod ~ D0, data = wholefree_only)
+# Plot the relationship between wholefree and total production 
+plot_totprod_wholefree_D0 <- ggplot(wholefree_only, aes(y = tot_bacprod, x = D0)) +
+  geom_point(aes(color = lakesite), size = 3) +
+  scale_color_manual(values = lakesite_colors) +
+  geom_smooth(method = "lm", color = "black") + 
+  ggtitle("WholeFree Only") + 
+  annotate("text",  x = 800, y = 2, # For D2:  x = 40, y=5, 
+           color = "black", fontface = "bold",
+           label = paste("R2 =", round(summary(lm_wholefreeonly_totprod_D0)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lm_wholefreeonly_totprod_D0)$coefficients[,4][2]), digits = 4)))+
+  theme(legend.position = c(0.12, 0.8), 
+        legend.text = element_text(size = 10))
+
+
+## Prefiltered 2015 free only 
+free_only_2015_D0 <- filter(free_only, year == "2015")
+lm_free2015_only_totprod_D0 <- lm(tot_bacprod ~ D0, data = free_only_2015_D0) 
+plot_totprod_freeonly_2015_D0 <- ggplot(free_only_2015_D0, aes(y = tot_bacprod, x = D0)) +
+  geom_point(aes(color = lakesite), size = 3) +
+  scale_color_manual(values = lakesite_colors) +
+  #geom_smooth(method = "lm", color = "black") + 
+  ggtitle("2015 Prefiltered Free-Living") + 
+  annotate("text", x = 1250, y=20, 
+           color = "black", fontface = "bold",
+           label = paste("R2 =", round(summary(lm_free2015_only_totprod_D0)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lm_free2015_only_totprod_D0)$coefficients[,4][2]), digits = 4))) +
+  theme(legend.position = c(0.12, 0.8), 
+        legend.text = element_text(size = 10))
+
+
+
+#### PARTICLE ASSOCIATED SAMPLES VS TOTAL BACTERIAL PRODUCTION 
+# Is there a significant relationship?
+lm_partonly_totprod_D0 <- lm(tot_bacprod ~ D0, data = part_only)
+# Plot the relationship 
+plot_totprod_part_D0 <- ggplot(part_only, aes(y = tot_bacprod, x = D0)) +
+  geom_point(aes(color = lakesite), size = 3) +
+  scale_color_manual(values = lakesite_colors) +
+  ggtitle("2014 & 2015 Prefiltered Particle") + 
+  annotate("text", x = 1700, y = 75, # For D2:  x = 40, y=5, 
+           color = "black", fontface = "bold",
+           label = paste("R2 =", round(summary(lm_partonly_totprod_D0)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lm_partonly_totprod_D0)$coefficients[,4][2]), digits = 4))) +
+  theme(legend.position = c(0.8, 0.1), 
+        legend.text = element_text(size = 10))
+
+# Trend is NS in 2014 & 2015
+#summary(lm(tot_bacprod ~ D0, data = filter(part_only, year == "2014"))) # NS
+#summary(lm(tot_bacprod ~ D0, data = filter(part_only, year == "2015"))) # NS
+
+### Different particulate fractions 
+## Particle (20-3um) fraction only 
+part_only_2015_D0 <- filter(part_only, year == "2015")
+lm_part2015_only_totprod_D0 <- lm(tot_bacprod ~ D0, data = part_only_2015_D0) 
+plot_totprod_partonly_2015_D0 <- ggplot(part_only_2015_D0, aes(y = tot_bacprod, x = D0)) +
+  geom_point(aes(color = lakesite), size = 3) +
+  scale_color_manual(values = lakesite_colors) +
+  #geom_smooth(method = "lm", color = "black") + 
+  ggtitle("2015 Prefiltered Particle") + 
+  annotate("text", x = 1800, y=15, 
+           color = "black", fontface = "bold",
+           label = paste("R2 =", round(summary(lm_part2015_only_totprod_D0)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lm_part2015_only_totprod_D0)$coefficients[,4][2]), digits = 4))) +
+  theme(legend.position = c(0.12, 0.7), 
+        legend.text = element_text(size = 10))
+
+
+
+# The trend is signifincant!
+lm_wholepartonly_totprod_D0 <- lm(tot_bacprod ~ D0, data = wholepart_only)
+# Plot the relationship between wholepart and total production 
+plot_totprod_wholepart_D0 <- ggplot(wholepart_only, aes(y = tot_bacprod, x = D0)) +
+  geom_point(aes(color = lakesite), size = 3) +
+  scale_color_manual(values = lakesite_colors) +
+  geom_smooth(method = "lm", color = "black") + 
+  ggtitle("WholePart Only") + 
+  annotate("text",  x = 1400, y = 5, # For D2:  x = 40, y=5, 
+           color = "black", fontface = "bold",
+           label = paste("R2 =", round(summary(lm_wholepartonly_totprod_D0)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lm_wholepartonly_totprod_D0)$coefficients[,4][2]), digits = 4)))+
+  theme(legend.position = c(0.12, 0.7), 
+        legend.text = element_text(size = 10))
+
+### Plot it all together for the pre-filtered fractions 
+plot_D0_totprod_prefilt <- plot_grid(plot_totprod_free_D0, plot_totprod_part_D0,
+          labels = c("A", "B"), ncol = 2)
+plot_D0_totprod_prefilt
 ```
-## 
-## Call:
-## lm(formula = tot_bacprod ~ D0, data = free_only)
-## 
-## Residuals:
-##     Min      1Q  Median      3Q     Max 
-## -27.564 -15.461  -7.066   8.312  60.731 
-## 
-## Coefficients:
-##              Estimate Std. Error t value Pr(>|t|)  
-## (Intercept) 23.015567   9.002661   2.557   0.0184 *
-## D0           0.016699   0.007045   2.370   0.0274 *
-## ---
-## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-## 
-## Residual standard error: 23.85 on 21 degrees of freedom
-## Multiple R-squared:  0.2111,	Adjusted R-squared:  0.1735 
-## F-statistic: 5.618 on 1 and 21 DF,  p-value: 0.02743
+
+<img src="Figures/cached/D0_totalproduction_vs_diversity-1.png" style="display: block; margin: auto;" />
+
+```r
+### Plot it all together for both of the free living fractions fractions 
+plot_D0_totprod_FL_comparison <- plot_grid(plot_totprod_freeonly_2015_D0, plot_totprod_wholefree_D0,
+          labels = c("A", "B"), ncol = 2)
+plot_D0_totprod_FL_comparison
 ```
 
-<img src="Figures/cached/D0_totalproduction_vs_diversity-1.png" style="display: block; margin: auto;" /><img src="Figures/cached/D0_totalproduction_vs_diversity-2.png" style="display: block; margin: auto;" /><img src="Figures/cached/D0_totalproduction_vs_diversity-3.png" style="display: block; margin: auto;" />
+<img src="Figures/cached/D0_totalproduction_vs_diversity-2.png" style="display: block; margin: auto;" />
+
+```r
+### Plot it all together for both of the particle associated fractions fractions 
+plot_D0_totprod_PA_comparison <- plot_grid(plot_totprod_partonly_2015_D0, plot_totprod_wholepart_D0,
+          labels = c("A", "B"), ncol = 2)
+plot_D0_totprod_PA_comparison
+```
+
+<img src="Figures/cached/D0_totalproduction_vs_diversity-3.png" style="display: block; margin: auto;" />
 
 
-### D1 Diversity with Total Production Analysis 
+## D1 vs Total Production
 
 ```
 ## 
@@ -900,9 +1009,31 @@ ggplot(nosed_meta_data, aes(x = Sample_TotalSeqs, y = D2)) +
 ## F-statistic: 8.417 on 1 and 21 DF,  p-value: 0.008541
 ```
 
-<img src="Figures/cached/D1_totalproduction_vs_diversity-1.png" style="display: block; margin: auto;" />
+```
+## 
+## Call:
+## lm(formula = tot_bacprod ~ D1, data = filter(free_only, year == 
+##     "2014"))
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -27.316 -17.080  -8.436  11.435  48.405 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)  
+## (Intercept)  -2.0794    26.9704  -0.077   0.9402  
+## D1            0.5859     0.2974   1.970   0.0803 .
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 24.04 on 9 degrees of freedom
+## Multiple R-squared:  0.3013,	Adjusted R-squared:  0.2237 
+## F-statistic: 3.881 on 1 and 9 DF,  p-value: 0.08033
+```
 
-### D2 Diversity with Total Production Analysis 
+<img src="Figures/cached/D1_totalproduction_vs_diversity-1.png" style="display: block; margin: auto;" /><img src="Figures/cached/D1_totalproduction_vs_diversity-2.png" style="display: block; margin: auto;" /><img src="Figures/cached/D1_totalproduction_vs_diversity-3.png" style="display: block; margin: auto;" />
+
+## D2 vs Total Production
 
 ```
 ## 
@@ -925,9 +1056,9 @@ ggplot(nosed_meta_data, aes(x = Sample_TotalSeqs, y = D2)) +
 ## F-statistic: 9.039 on 1 and 10 DF,  p-value: 0.0132
 ```
 
-<img src="Figures/cached/D2_totalproduction_vs_diversity-1.png" style="display: block; margin: auto;" /><img src="Figures/cached/D2_totalproduction_vs_diversity-2.png" style="display: block; margin: auto;" />
+<img src="Figures/cached/D2_totalproduction_vs_diversity-1.png" style="display: block; margin: auto;" /><img src="Figures/cached/D2_totalproduction_vs_diversity-2.png" style="display: block; margin: auto;" /><img src="Figures/cached/D2_totalproduction_vs_diversity-3.png" style="display: block; margin: auto;" />
 
-#### Dear marian, check out this website:  https://www.rdocumentation.org/packages/wle/versions/0.9-91/topics/wle.lm
+
 
 
 # Is there a relationship between HNA cells per uL and Total Production?
