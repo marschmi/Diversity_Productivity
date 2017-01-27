@@ -31,7 +31,7 @@ knitr::opts_chunk$set(eval = TRUE,
                       fig.height = 7)
 ```
 
-# Load Libraries
+
 ```{r load-libraries}
 library(ggplot2)
 library(devtools)
@@ -52,17 +52,16 @@ source("set_colors.R")
 ```
 
 ## Load Mothur OTU Data 
-```{r load-data-files}
+```{r load-data-files, echo = TRUE}
 # Loads a phyloseq object named otu_merged_musk_pruned)
 load("../data/otu_merged_musk_pruned.RData")
 # The name of the phyloseq object is: 
-# otu_merged_musk_pruned 
+otu_merged_musk_pruned 
 ```
 
 
-
-# Sample Sequencing Read Counts
-```{r seq-read-count, fig.height=4, fig.width=10}
+# How do the *summed* sample sequencing read counts vary before modification?
+```{r seq-read-count, fig.height=4, fig.width=10, echo = TRUE}
 # Check the sequencing depth of each sample 
 sums_otu <- data.frame(rowSums(otu_table(otu_merged_musk_pruned)))
 colnames(sums_otu) <- "Sample_TotalSeqs"
@@ -89,8 +88,8 @@ sums_lessthan10000 <- ggplot(filter(sums_otu, Sample_TotalSeqs < 10000),
                                     aes(x=reorder(names, Sample_TotalSeqs), y = Sample_TotalSeqs)) + 
   ylab("# of Seqs per Sample") +
   geom_bar(stat = "identity", colour="black",fill="cornflowerblue")  + xlab("Sample Name") + 
-  ggtitle("Samples with less than 10,000 reads") + 
-  theme(axis.text.x = element_text(colour = "black", size=16, angle=45, hjust = 1, vjust = 1))
+  ggtitle("Samples with less \n than 10,000 reads") + 
+  theme(axis.text.x = element_blank())  
 
 # DRAW THE TWO PLOTS 
 ggdraw() +
@@ -101,8 +100,6 @@ ggdraw() +
                   c(1, 1),  # Put the label at the top of the plotting space (y-axis)
                   size = 15) # Size of label
 
-
-
 ## Add total sequences to metadata frame 
 metdf <- sample_data(otu_merged_musk_pruned)
 sums_otu$norep_filter_name <- sums_otu$names
@@ -111,54 +108,57 @@ metdf_num2 <- left_join(metdf, sums_otu2, by = "norep_filter_name")
 row.names(metdf_num2) <- metdf_num2$norep_filter_name
 # Rename the sample data 
 sample_data(otu_merged_musk_pruned) <- metdf_num2
-
 ```
 
 
-# Scale Reads for Between Sample Diversity Analysis 
-```{r scaled_reads_seq_depth, fig.align='center', fig.height=4, fig.width=10}
+# How do the *scaled* (for beta diversity) sample sequencing read counts vary?
+```{r scaled_reads_seq_depth, fig.align='center', fig.height=4, fig.width=10, echo = TRUE}
 ## ALL SAMPLES 
 otu_merged_musk_pruned_noMOTHJ715 <- subset_samples(otu_merged_musk_pruned, norep_filter_name !="MOTHJ715")
-min(sample_sums(otu_merged_musk_pruned_noMOTHJ715))
+min(sample_sums(otu_merged_musk_pruned_noMOTHJ715)) # Scaling value 
 scale_otu_merged_musk_pruned <- scale_reads(otu_merged_musk_pruned_noMOTHJ715, round = "matround")
+scale_otu_merged_musk_pruned # ALL Samples phyloseq object
 
 ### Water Samples 
 otu_merged_musk_pruned_nosed <- subset_samples(otu_merged_musk_pruned, 
                                                norep_filter_name !="MOTHJ715" & fraction != "Sediment")
-min(sample_sums(otu_merged_musk_pruned_nosed))
+min(sample_sums(otu_merged_musk_pruned_nosed)) # Scaling value 
 scale_otu_merged_musk_nosed <- scale_reads(otu_merged_musk_pruned_nosed, round = "matround")
-
+scale_otu_merged_musk_nosed # Water samples only
 
 ### Particle Samples 
 otu_merged_musk_pruned_particle <- subset_samples(otu_merged_musk_pruned, 
                                                norep_filter_name !="MOTHJ715" & 
                                                  fraction %in% c("WholePart", "Particle"))
-min(sample_sums(otu_merged_musk_pruned_particle))
+min(sample_sums(otu_merged_musk_pruned_particle)) # Scaling value 
 scale_otu_merged_musk_particle <- scale_reads(otu_merged_musk_pruned_particle, round = "matround")
+scale_otu_merged_musk_particle # Particle and Whole particle samples only (both surface and bottom) 
 
 # To only do analysis on wholeparticle samples 
 otu_merged_musk_pruned_wholepart_top <- subset_samples(otu_merged_musk_pruned, 
                                                norep_filter_name !="MOTHJ715" & 
                                                  fraction == "WholePart" &
                                                  limnion == "Top")
-min(sample_sums(otu_merged_musk_pruned_wholepart_top))
+min(sample_sums(otu_merged_musk_pruned_wholepart_top)) # Scaling value 
 scale_otu_merged_musk_wholepart_top <- scale_reads(otu_merged_musk_pruned_wholepart_top, round = "matround")
-
+scale_otu_merged_musk_wholepart_top # Wholeparticle samples only (no prefilter; from the surface only)
 
 ### Free-Living Samples 
 otu_merged_musk_pruned_free <- subset_samples(otu_merged_musk_pruned, 
                                                norep_filter_name !="MOTHJ715" & 
                                                 fraction %in% c("WholeFree", "Free"))
-min(sample_sums(otu_merged_musk_pruned_free))
+min(sample_sums(otu_merged_musk_pruned_free)) # Scaling value 
 scale_otu_merged_musk_free <- scale_reads(otu_merged_musk_pruned_free, round = "matround")
-# To only do analysis on wholeparticle samples 
+scale_otu_merged_musk_free # All Free living samples (Free and wholeFree; both surface and bottom)
+
+# To only do analysis on WholeFree samples 
 otu_merged_musk_pruned_wholefree_top <- subset_samples(otu_merged_musk_pruned, 
                                                norep_filter_name !="MOTHJ715" & 
                                                  fraction == "WholeFree" &
                                                  limnion == "Top")
-min(sample_sums(otu_merged_musk_pruned_wholefree_top))
+min(sample_sums(otu_merged_musk_pruned_wholefree_top)) # Scaling value 
 scale_otu_merged_musk_wholefree_top <- scale_reads(otu_merged_musk_pruned_wholefree_top, round = "matround")
-
+scale_otu_merged_musk_wholefree_top # Only WholeFree samples (from the surface)
 
 
 # Check the sequencing depth of each sample 
@@ -168,15 +168,14 @@ scaled_sums_otu$names <- row.names(scaled_sums_otu)
 scaled_sums_otu <- arrange(scaled_sums_otu, Sample_TotalSeqs) %>%
   make_metadata_norep()
 
-
-##  PLOT BASED ON 
+##  Plot based on all samples 
 plot_sample_sums(dataframe = scaled_sums_otu, x_total_seqs = "Sample_TotalSeqs", fill_variable = "project")
-## LIMNION
+##  Plot based on depth of samples 
 plot_sample_sums(dataframe = scaled_sums_otu, x_total_seqs = "Sample_TotalSeqs", fill_variable = "limnion")
 ```
 
-# Create all of the metadta frames for future analysis    
-```{r metadata_dataframes}
+  
+```{r create_metadata_dataframes}
 # Create the metadata information 
 meta_data <- data.frame(sample_data(otu_merged_musk_pruned)) 
 
@@ -196,16 +195,85 @@ part_only <- filter(part_meta_data, fraction == "Particle")
 ## 2015 specific samples that have NOT been prefiltered (whole water)
 wholefree_only <- filter(free_meta_data, fraction == "WholeFree")
 wholepart_only <- filter(part_meta_data, fraction == "WholePart")
+
+####################### FOR FRACTION DIVERSITY PLOTS 
+# How do the diversities compare with each other in terms of their scales?
+fraction_divs <- nosed_meta_data %>%
+  filter(limnion == "Top") %>%
+  dplyr::select(1:7,norep_filter_name, 60:69) %>%
+  gather(div_metric, div_value, D0, D0_chao, D1, D2) %>%
+  select(-norep_water_name)
+
+# Set the factor levels to be the order we'd like
+fraction_divs$fraction <- factor(fraction_divs$fraction,  levels = c("WholePart", "Particle", "WholeFree", "Free"))
+fraction_divs$lakesite <- factor(fraction_divs$lakesite,  levels = c("MOT", "MDP", "MBR", "MIN"))
 ```
 
 
-##  How linked are the diversities of the fractions?
-```{r free_vs_wholefree_diversity, fig.height=8, fig.width=10}
-# Free Living:
+#  How linked are the diversities of the fractions?
+## Free Living Sample Diversity Comparison  
+```{r free_vs_wholefree_diversity, fig.height=8, fig.width=10, echo = TRUE}
+# Plot diversity based only on fraction 
+ggplot(filter(fraction_divs, fraction %in% c("Free","WholeFree")),
+       aes(x = fraction, y = div_value)) + 
+  geom_jitter(aes(color = fraction), size = 3, width = 0.2) + 
+  geom_boxplot(aes(fill = fraction), alpha =0.5) +
+  scale_color_manual(values = fraction_colors) + 
+  scale_fill_manual(values = fraction_colors) + 
+  facet_wrap(~div_metric, scales = "free_y") +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
+        legend.position = c(0.07, 0.93), 
+        strip.background = element_rect(fill = NA), 
+        strip.text.x = element_text(face = "bold"))
+
+# Plot diversity based on lakesite lumped together
+ggplot(filter(fraction_divs, fraction %in% c("Free","WholeFree")),
+       aes(x = lakesite, y = div_value)) + 
+  geom_jitter(aes(color = lakesite), size = 3, width = 0.2) + 
+  geom_boxplot(aes(fill = lakesite), alpha =0.5) +
+  scale_color_manual(values = lakesite_colors) + 
+  scale_fill_manual(values = lakesite_colors) + 
+  facet_wrap(~div_metric, scales = "free_y") +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
+        legend.position = c(0.07, 0.93), 
+        strip.background = element_rect(fill = NA), 
+        strip.text.x = element_text(face = "bold"))
+
+
+# Value of Diversity estimate on y-axis and site vs fraction on x-axis
+ggplot(filter(fraction_divs, fraction %in% c("Free","WholeFree")),
+       aes(x = lakesite, y = div_value)) + 
+  geom_jitter(aes(color = fraction), size = 3, position = position_dodge(width = 0.8)) + 
+  geom_boxplot(aes(fill = fraction), alpha =0.5) +
+  scale_color_manual(values = fraction_colors) + 
+  scale_fill_manual(values = fraction_colors) + 
+  facet_wrap(~div_metric, scales = "free_y") +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
+        legend.position = c(0.07, 0.93), 
+        strip.background = element_rect(fill = NA), 
+        strip.text.x = element_text(face = "bold"))
+
+###  ARE THERE DIFFERENCES BETWEEN FRACTION AND LAKESITE WITHIN THE FREE LIVING?
+free_fraction_divs <- filter(fraction_divs, fraction %in% c("Free","WholeFree"))
+#### Significant difference between D0 lakesite and fraction?
+summary(aov(div_value ~ fraction*lakesite,  
+            data = filter(free_fraction_divs, div_metric == "D0")))
+#### Significant difference between D0_chao lakesite and fraction?
+summary(aov(div_value ~ fraction*lakesite,  
+            data = filter(free_fraction_divs, div_metric == "D0_chao")))
+#### Significant difference between D1 lakesite and fraction?
+summary(aov(div_value ~ fraction*lakesite,  
+            data = filter(free_fraction_divs, div_metric == "D1")))
+#### Significant difference between D2 lakesite and fraction?
+summary(aov(div_value ~ fraction*lakesite,  
+            data = filter(free_fraction_divs, div_metric == "D2")))
+
+
+# Prepare data frames for plotting diversity of wholefree vs free 
 free_samps_alpha <- filter(free_meta_data, fraction == "Free" & year == "2015") %>% 
-  dplyr::select(norep_filter_name, fraction, D0, D1, D2, simps_even) %>%
+  dplyr::select(norep_filter_name, fraction, D0, D0_chao, D1, D2, simps_even) %>%
   # Make a new column called "div_metric" that includes the hill diversity metric
-  gather("div_metric", "value", D0, D1, D2, simps_even) %>%
+  gather("div_metric", "value", D0, D0_chao, D1, D2, simps_even) %>%
   # Combine the diversity metric and fraction into one column called frac_div_metric
   unite("frac_div_metric", fraction, div_metric, sep = "_") %>%
   # Spread frac_div_metric into 4 columns for each hill div metric
@@ -213,10 +281,11 @@ free_samps_alpha <- filter(free_meta_data, fraction == "Free" & year == "2015") 
   mutate(norep_water_name = paste(substr(norep_filter_name,1,4), substr(norep_filter_name, 6, 8), sep = "")) %>%
   dplyr::select(-norep_filter_name)
 
+# Prepare data frames for plotting diversity of wholefree vs free 
 wholefree_samps_alpha <- filter(free_meta_data, fraction == "WholeFree" & year == "2015") %>% 
-  dplyr::select(norep_filter_name, fraction, D0, D1, D2, simps_even) %>%
+  dplyr::select(norep_filter_name, fraction, D0, D0_chao, D1, D2, simps_even) %>%
   # Make a new column called "div_metric" that includes the hill diversity metric
-  gather(div_metric, value, D0, D1, D2, simps_even) %>%
+  gather(div_metric, value, D0, D1, D2, D0_chao, simps_even) %>%
   # Combine the diversity metric and fraction into one column called frac_div_metric
   unite(frac_div_metric, fraction, div_metric, sep = "_") %>%
   # Spread frac_div_metric into 4 columns for each hill div metric
@@ -224,11 +293,13 @@ wholefree_samps_alpha <- filter(free_meta_data, fraction == "WholeFree" & year =
   mutate(norep_water_name = paste(substr(norep_filter_name,1,4), substr(norep_filter_name, 6, 8), sep = "")) %>%
   dplyr::select(-norep_filter_name)
 
-
+# join the data frames together 
 FL_alpha <- left_join(free_samps_alpha, wholefree_samps_alpha, by = "norep_water_name")
 
-lm_FL_D0 <- lm(Free_D0 ~ WholeFree_D0, data = FL_alpha)
 
+# Is there a linear relationship between free and whole free D0 diversity?
+lm_FL_D0 <- lm(Free_D0 ~ WholeFree_D0, data = FL_alpha)
+# Plot linear relationship between free and whole free D0 diversity
 free_fraction_D0 <- ggplot(FL_alpha, aes(x = WholeFree_D0, y = Free_D0)) + 
   geom_point(size = 3) + geom_smooth(method = "lm") +
   xlim(300, 2000) + ylim(300, 2000) + 
@@ -238,8 +309,21 @@ free_fraction_D0 <- ggplot(FL_alpha, aes(x = WholeFree_D0, y = Free_D0)) +
                          "p =", round(unname(summary(lm_FL_D0)$coefficients[,4][2]), digits = 8)))
 
 
-lm_FL_D1 <- lm(Free_D1 ~ WholeFree_D1, data = FL_alpha)
+# Is there a linear relationship between free and whole free D0_chao diversity?
+lm_FL_simps_D0_chao <- lm(Free_D0_chao ~ WholeFree_D0_chao, data = FL_alpha)
+# Plot linear relationship between free and whole free D0 diversity
+free_fraction_D0_chao <- ggplot(FL_alpha, aes(x = WholeFree_D0_chao, y = Free_D0_chao)) + 
+  geom_point(size = 3) + geom_smooth(method = "lm") +
+  xlim(300, 3600) + ylim(300, 3600) +
+  geom_abline(slope = 1, intercept = 0) +
+  annotate("text", x = 3000, y=500, color = "black", fontface = "bold",
+           label = paste("R2 =", round(summary(lm_FL_simps_D0_chao)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lm_FL_simps_D0_chao)$coefficients[,4][2]), digits = 5)))
 
+
+# Is there a linear relationship between free and whole free D1 diversity?
+lm_FL_D1 <- lm(Free_D1 ~ WholeFree_D1, data = FL_alpha)
+# Plot linear relationship between free and whole free D1 diversity
 free_fraction_D1 <- ggplot(FL_alpha, aes(x = WholeFree_D1, y = Free_D1)) + 
   geom_point(size = 3) + geom_smooth(method = "lm") +
   xlim(0, 175) + ylim(0,175) + 
@@ -248,8 +332,9 @@ free_fraction_D1 <- ggplot(FL_alpha, aes(x = WholeFree_D1, y = Free_D1)) +
            label = paste("R2 =", round(summary(lm_FL_D1)$adj.r.squared, digits = 4), "\n", 
                          "p =", round(unname(summary(lm_FL_D1)$coefficients[,4][2]), digits = 12)))
 
+# Is there a linear relationship between free and whole free D2 diversity?
 lm_FL_D2 <- lm(Free_D2 ~ WholeFree_D2, data = FL_alpha)
-
+# Plot linear relationship between free and whole free D2 diversity
 free_fraction_D2 <- ggplot(FL_alpha, aes(x = WholeFree_D2, y = Free_D2)) + 
   geom_point(size = 3) + geom_smooth(method = "lm") +
   xlim(10, 55) + ylim(10, 55) +
@@ -257,18 +342,8 @@ free_fraction_D2 <- ggplot(FL_alpha, aes(x = WholeFree_D2, y = Free_D2)) +
   annotate("text", x = 35, y=17, color = "black", fontface = "bold",
            label = paste("R2 =", round(summary(lm_FL_D2)$adj.r.squared, digits = 4), "\n", 
                          "p =", round(unname(summary(lm_FL_D2)$coefficients[,4][2]), digits = 8)))
-
-lm_FL_simps_even <- lm(Free_simps_even ~ WholeFree_simps_even, data = FL_alpha)
-
-free_fraction_simps_even <- ggplot(FL_alpha, aes(x = WholeFree_simps_even, y = Free_simps_even)) + 
-  geom_point(size = 3) + geom_smooth(method = "lm") +
-  xlim(0.015, 0.08) + ylim(0.015, 0.08) +
-  geom_abline(slope = 1, intercept = 0) +
-  annotate("text", x = 0.03, y=0.05, color = "black", fontface = "bold",
-           label = paste("R2 =", round(summary(lm_FL_simps_even)$adj.r.squared, digits = 4), "\n", 
-                         "p =", round(unname(summary(lm_FL_simps_even)$coefficients[,4][2]), digits = 5)))
   
-free_vs_freepart_div_plots <- plot_grid(free_fraction_D0, free_fraction_D1, free_fraction_D2, free_fraction_simps_even, 
+free_vs_freepart_div_plots <- plot_grid(free_fraction_D0, free_fraction_D0_chao, free_fraction_D1, free_fraction_D2, 
           labels = c("A", "B", "C", "D"), ncol = 2, nrow = 2)
 
 free_vs_freepart_div_plots
@@ -276,30 +351,90 @@ free_vs_freepart_div_plots
 
 ```
 
-##  How linked are the diversities of the fractions?
-```{r part_vs_wholepart_diversity, fig.height=8, fig.width=10}
-# Free Living:
+##  Particle-Associated Diversity Comparison 
+```{r part_vs_wholepart_diversity, fig.height=8, fig.width=10, echo = TRUE}
+# Plot diversity based only on fraction 
+ggplot(filter(fraction_divs, fraction %in% c("Particle","WholePart")),
+       aes(x = fraction, y = div_value)) + 
+  geom_jitter(aes(color = fraction), size = 3, width = 0.2) + 
+  geom_boxplot(aes(fill = fraction), alpha =0.5) +
+  scale_color_manual(values = fraction_colors) + 
+  scale_fill_manual(values = fraction_colors) + 
+  facet_wrap(~div_metric, scales = "free_y") +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
+        legend.position = c(0.07, 0.93), 
+        strip.background = element_rect(fill = NA), 
+        strip.text.x = element_text(face = "bold"))
+
+# Plot based on lakesite lumped together
+ggplot(filter(fraction_divs, fraction %in% c("Particle","WholePart")),
+       aes(x = lakesite, y = div_value)) + 
+  geom_jitter(aes(color = lakesite), size = 3, width = 0.2) + 
+  geom_boxplot(aes(fill = lakesite), alpha =0.5) +
+  scale_color_manual(values = lakesite_colors) + 
+  scale_fill_manual(values = lakesite_colors) + 
+  facet_wrap(~div_metric, scales = "free_y") +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
+        legend.position = c(0.07, 0.93), 
+        strip.background = element_rect(fill = NA), 
+        strip.text.x = element_text(face = "bold"))
+
+
+# Value of Diversity estimate on y-axis and site vs fraction on x-axis
+ggplot(filter(fraction_divs, fraction %in% c("Particle","WholePart")),
+       aes(x = lakesite, y = div_value)) + 
+  geom_jitter(aes(color = fraction), size = 3, position = position_dodge(width = 0.8)) + 
+  geom_boxplot(aes(fill = fraction), alpha =0.5) +
+  scale_color_manual(values = fraction_colors) + 
+  scale_fill_manual(values = fraction_colors) + 
+  facet_wrap(~div_metric, scales = "free_y") +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
+        legend.position = c(0.07, 0.93), 
+        strip.background = element_rect(fill = NA), 
+        strip.text.x = element_text(face = "bold"))
+
+
+###  ARE THERE DIFFERENCES BETWEEN FRACTION AND LAKESITE WITHIN PARTICLE ASSOCIATION?
+part_fraction_divs <- filter(fraction_divs, fraction %in% c("Particle","WholePart"))
+
+#### Significant difference between D0 lakesite and fraction?
+summary(aov(div_value ~ fraction*lakesite,  
+            data = filter(part_fraction_divs, div_metric == "D0")))
+#### Significant difference between D0_chao lakesite and fraction?
+summary(aov(div_value ~ fraction*lakesite,  
+            data = filter(part_fraction_divs, div_metric == "D0_chao")))
+#### Significant difference between D1 lakesite and fraction?
+summary(aov(div_value ~ fraction*lakesite,  
+            data = filter(part_fraction_divs, div_metric == "D1")))
+#### Significant difference between D2 lakesite and fraction?
+summary(aov(div_value ~ fraction*lakesite,  
+            data = filter(part_fraction_divs, div_metric == "D2")))
+
+
+# Prepare data frames for plotting diversity of wholepart vs particle 
 part_samps_alpha <- filter(part_meta_data, fraction == "Particle" & year == "2015") %>% # & norep_filter_name != "MBRHJ515"
-  select(norep_filter_name, fraction, D0, D1, D2, simps_even) %>%
-  gather("div_metric", "value", D0, D1, D2, simps_even) %>%
+  select(norep_filter_name, fraction, D0, D0_chao, D1, D2, simps_even) %>%
+  gather("div_metric", "value", D0, D0_chao, D1, D2, simps_even) %>%
   unite("frac_div_metric", fraction, div_metric, sep = "_") %>%
   spread(frac_div_metric, value) %>%
   mutate(norep_water_name = paste(substr(norep_filter_name,1,4), substr(norep_filter_name, 6, 8), sep = "")) %>%
   select(-norep_filter_name)
 
+# Prepare data frames for plotting diversity of wholepart vs particle 
 wholepart_samps_alpha <- filter(part_meta_data, fraction == "WholePart" & year == "2015") %>% # & norep_filter_name != "MBRHJ515"
-  select(norep_filter_name, fraction, D0, D1, D2, simps_even) %>%
-  gather(div_metric, value, D0, D1, D2, simps_even) %>%
+  select(norep_filter_name, fraction, D0, D0_chao, D1, D2, simps_even) %>%
+  gather(div_metric, value, D0, D0_chao, D1, D2, simps_even) %>%
   unite(frac_div_metric, fraction, div_metric, sep = "_") %>%
   spread(frac_div_metric, value) %>%
   mutate(norep_water_name = paste(substr(norep_filter_name,1,4), substr(norep_filter_name, 6, 8), sep = "")) %>%
   select(-norep_filter_name)
 
-
+# Combine the data frames into one
 PA_alpha <- left_join(part_samps_alpha, wholepart_samps_alpha, by = "norep_water_name")
 
+# Is there a linear relationship between particle and WholePart D0 diversity?
 lm_PA_D0 <- lm(Particle_D0 ~ WholePart_D0, data = PA_alpha)
-
+# Plot the linear relationship between particle and WholePart D0 diversity
 PA_fraction_D0 <- ggplot(PA_alpha, aes(x = WholePart_D0, y = Particle_D0)) + 
   geom_point(size = 3) + geom_smooth(method = "lm", se = FALSE) +
   xlim(0, 2200) + ylim(0, 2200) + 
@@ -309,8 +444,21 @@ PA_fraction_D0 <- ggplot(PA_alpha, aes(x = WholePart_D0, y = Particle_D0)) +
                          "p =", round(unname(summary(lm_PA_D0)$coefficients[,4][2]), digits = 4)))
 
 
-lm_PA_D1 <- lm(Particle_D1 ~ WholePart_D1, data = PA_alpha)
+# Is there a linear relationship between particle and WholePart D0_chao diversity?
+lm_PA_D0_chao <- lm(Particle_D0_chao ~ WholePart_D0_chao, data = PA_alpha)
+# Plot the linear relationship between particle and WholePart D0_chao diversity
+PA_fraction_D0_chao <- ggplot(PA_alpha, aes(x = WholePart_D0_chao, y = Particle_D0_chao)) + 
+  geom_point(size = 3) + geom_smooth(method = "lm", se = FALSE) +
+  xlim(0, 2200) + ylim(0, 2200) + 
+  geom_abline(slope = 1, intercept = 0) +
+  annotate("text", x = 1500, y=300, color = "black", fontface = "bold",
+           label = paste("R2 =", round(summary(lm_PA_D0_chao)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lm_PA_D0_chao)$coefficients[,4][2]), digits = 4)))
 
+
+# Is there a linear relationship between particle and WholePart D1 diversity?
+lm_PA_D1 <- lm(Particle_D1 ~ WholePart_D1, data = PA_alpha)
+# Plot the linear relationship between particle and WholePart D1 diversity
 PA_fraction_D1 <- ggplot(PA_alpha, aes(x = WholePart_D1, y = Particle_D1)) + 
   geom_point(size = 3) + geom_smooth(method = "lm") + 
   xlim(0, 620) + ylim(0,620) + 
@@ -319,8 +467,9 @@ PA_fraction_D1 <- ggplot(PA_alpha, aes(x = WholePart_D1, y = Particle_D1)) +
            label = paste("R2 =", round(summary(lm_PA_D1)$adj.r.squared, digits = 4), "\n", 
                          "p =", round(unname(summary(lm_PA_D1)$coefficients[,4][2]), digits = 5)))
 
+# Is there a linear relationship between particle and WholePart D2 diversity?
 lm_PA_D2 <- lm(Particle_D2 ~ WholePart_D2, data = PA_alpha)
-
+# Plot the linear relationship between particle and WholePart D2 diversity
 PA_fraction_D2 <- ggplot(PA_alpha, aes(x = WholePart_D2, y = Particle_D2)) + 
   geom_point(size = 3) + geom_smooth(method = "lm") +
   xlim(10, 250) + ylim(10, 250) +
@@ -339,74 +488,79 @@ PA_fraction_simps_even <- ggplot(PA_alpha, aes(x = WholePart_simps_even, y = Par
            label = paste("R2 =", round(summary(lm_PA_simps_even)$adj.r.squared, digits = 4), "\n", 
                          "p =", round(unname(summary(lm_PA_simps_even)$coefficients[,4][2]), digits = 5)))
   
-part_vs_wholepart_div_plots <- plot_grid(PA_fraction_D0, PA_fraction_D1, PA_fraction_D2, PA_fraction_simps_even, 
+part_vs_wholepart_div_plots <- plot_grid(PA_fraction_D0, PA_fraction_D0_chao, PA_fraction_D1, PA_fraction_D2, 
           labels = c("A", "B", "C", "D"), ncol = 2, nrow = 2)
 
 part_vs_wholepart_div_plots
 #ggsave("../Figures/part_vs_wholepart_div_plots.png", plot = part_vs_wholepart_div_plots, dpi = 600, width = 10, height = 8)
 ```
 
-## Take another look at the diversity metrics by fraction
-```{r compare-diversities, fig.width=10, fig.height = 10}
-# How do the diversities compare with each other in terms of their scales?
-fraction_divs <- nosed_meta_data %>%
-  filter(limnion == "Top") %>%
-  dplyr::select(1:7,norep_filter_name, 60:69) %>%
-  gather(div_metric, div_value, D0, D0_chao, D1, D2) %>%
-  select(-norep_water_name)
 
-# Set the factor levels to be the order we'd like
-fraction_divs$fraction <- factor(fraction_divs$fraction,  levels = c("WholePart", "Particle", "WholeFree", "Free"))
-fraction_divs$lakesite <- factor(fraction_divs$lakesite,  levels = c("MOT", "MDP", "MBR", "MIN"))
 
-ggplot(fraction_divs, aes(x = lakesite, y = div_value)) + 
-  geom_jitter(aes(color = fraction), size = 3, position = position_dodge(width = 0.8)) + 
-  geom_boxplot(aes(fill = fraction), alpha =0.5) +
-  scale_color_manual(values = fraction_colors) + 
-  scale_fill_manual(values = fraction_colors) + 
-  facet_wrap(~div_metric, scales = "free_y") +
-  theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
-        legend.position = c(0.1, 0.9), 
-        strip.background = element_rect(fill = NA), 
-        strip.text.x = element_text(face = "bold"))
-```
 
-# How does diversity compare to the sequencing depth 
-```{r div_vs_seqdepth, fig.width=12, fig.height = 4}
+# Is there a significant relationship between sequencing depth and diversity?
+```{r div_vs_seqdepth, fig.width=10, fig.height = 4, echo = TRUE}
+
+## Is there a significant relationship between sequencing depth and D0?
+summary(lm(D0 ~ Sample_TotalSeqs,data = filter(nosed_meta_data, fraction == "Free"))) # p = 0.002 but R2 = -0.09 
+#summary(lm(D0 ~ Sample_TotalSeqs,data = filter(nosed_meta_data, fraction == "WholeFree"))) # NS
+summary(lm(D0 ~ Sample_TotalSeqs,data = filter(nosed_meta_data, fraction == "Particle"))) # Significant!
+#summary(lm(D0 ~ Sample_TotalSeqs,data = filter(nosed_meta_data, fraction == "WholePart"))) # NS
+
+# Plot Sequencing depth vs D0
 ggplot(nosed_meta_data, aes(x = Sample_TotalSeqs, y = D0)) + 
   geom_point(size = 3) + 
   facet_grid(.~fraction, scale = "free_x") + 
-  geom_smooth(method = "lm") + 
+  geom_smooth(method = "lm", data = filter(nosed_meta_data, fraction %in% c("Free", "Particle"))) + 
   ggtitle("D0: Species Richness") + 
   theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
         legend.position = c(0.1, 0.9), 
         strip.background = element_rect(fill = NA), 
         strip.text.x = element_text(face = "bold"))
 
+## Is there a significant relationship between sequencing depth and D0_chao?
+summary(lm(D0_chao ~ Sample_TotalSeqs,data = filter(nosed_meta_data, fraction == "Free"))) # pval = 0.006, R2 = 0.27  
+#summary(lm(D0_chao ~ Sample_TotalSeqs,data = filter(nosed_meta_data, fraction == "WholeFree"))) # NS
+#summary(lm(D0_chao ~ Sample_TotalSeqs,data = filter(nosed_meta_data, fraction == "Particle"))) # NS
+#summary(lm(D0_chao ~ Sample_TotalSeqs,data = filter(nosed_meta_data, fraction == "WholePart"))) #  NS
+
+# Plot the relationship between D0_chao and sequencing depth 
 ggplot(nosed_meta_data, aes(x = Sample_TotalSeqs, y = D0_chao)) + 
   geom_point(size = 3) + 
   facet_grid(.~fraction, scale = "free_x") + 
-  geom_smooth(method = "lm") + 
+  geom_smooth(method = "lm", data = filter(nosed_meta_data, fraction == "Free")) + 
   ggtitle("D0: Chao 1") + 
   theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
         legend.position = c(0.1, 0.9), 
         strip.background = element_rect(fill = NA), 
         strip.text.x = element_text(face = "bold"))
 
+## Is there a significant relationship between sequencing depth and D1?
+#summary(lm(D1 ~ Sample_TotalSeqs,data = filter(nosed_meta_data, fraction == "Free"))) # NS
+#summary(lm(D1 ~ Sample_TotalSeqs,data = filter(nosed_meta_data, fraction == "WholeFree"))) # NS 
+#summary(lm(D1 ~ Sample_TotalSeqs,data = filter(nosed_meta_data, fraction == "Particle"))) # NS
+#summary(lm(D1 ~ Sample_TotalSeqs,data = filter(nosed_meta_data, fraction == "WholePart"))) # NS
+
+# Plot the relationship between D1 and sequencing depth 
 ggplot(nosed_meta_data, aes(x = Sample_TotalSeqs, y = D1)) + 
   geom_point(size = 3) + 
   facet_grid(.~fraction, scale = "free_x") + 
-  geom_smooth(method = "lm") + 
   ggtitle("D1: Exponential of Shannon Entropy") + 
   theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
         legend.position = c(0.1, 0.9), 
         strip.background = element_rect(fill = NA), 
         strip.text.x = element_text(face = "bold"))
 
+## Is there a significant relationship between sequencing depth and D2?
+#summary(lm(D2 ~ Sample_TotalSeqs,data = filter(nosed_meta_data, fraction == "Free"))) # NS
+#summary(lm(D2 ~ Sample_TotalSeqs,data = filter(nosed_meta_data, fraction == "WholeFree"))) # NS 
+#summary(lm(D2 ~ Sample_TotalSeqs,data = filter(nosed_meta_data, fraction == "Particle"))) # NS
+#summary(lm(D2 ~ Sample_TotalSeqs,data = filter(nosed_meta_data, fraction == "WholePart"))) # NS
+
+# Plot the relationship between D2 and sequencing depth 
 ggplot(nosed_meta_data, aes(x = Sample_TotalSeqs, y = D2)) + 
   geom_point(size = 3) + 
   facet_grid(.~fraction, scale = "free_x") + 
-  geom_smooth(method = "lm") + 
   ggtitle("D2: Inverse Simpson") + 
   theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
         legend.position = c(0.1, 0.9), 
