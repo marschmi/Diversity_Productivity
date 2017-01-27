@@ -862,7 +862,7 @@ plot_totprod_free_D0 <-  ggplot(free_only, aes(y = tot_bacprod, x = D0)) +
   scale_color_manual(values = lakesite_colors) +
   geom_smooth(method = "lm", color = "black") + 
   ggtitle("20 um Prefiltered Free-Living Only") + 
-  annotate("text",  x = 2250, y = 5, # For D2:  x = 40, y=5, 
+  annotate("text",  x = 2250, y = 15, # For D2:  x = 40, y=5, 
            color = "black", fontface = "bold",
            label = paste("R2 =", round(summary(lm_freeonly_totprod_D0)$adj.r.squared, digits = 4), "\n", 
                          "p =", round(unname(summary(lm_freeonly_totprod_D0)$coefficients[,4][2]), digits = 4)))+
@@ -988,6 +988,13 @@ plot_D0_totprod_PA_comparison
 
 ## D1 vs Total Production
 
+```r
+#### FREE LIVING SAMPLES VS TOTAL BACTERIAL PRODUCTION 
+# Is there a significant relationship?
+lm_freeonly_totprod_D1 <- lm(tot_bacprod ~ D1, data = free_only)
+summary(lm_freeonly_totprod_D1)
+```
+
 ```
 ## 
 ## Call:
@@ -1007,6 +1014,40 @@ plot_D0_totprod_PA_comparison
 ## Residual standard error: 22.68 on 21 degrees of freedom
 ## Multiple R-squared:  0.2861,	Adjusted R-squared:  0.2521 
 ## F-statistic: 8.417 on 1 and 21 DF,  p-value: 0.008541
+```
+
+```r
+# Plot the relationship 
+plot_totprod_free_D1 <-  ggplot(free_only, aes(y = tot_bacprod, x = D1)) +
+  geom_point(aes(color = lakesite), size = 3) +
+  scale_color_manual(values = lakesite_colors) +
+  geom_smooth(method = "lm", color = "black") + 
+  ggtitle("20 um Prefiltered Free-Living Only") + 
+  annotate("text",  x = 120, y = 5, # For D2:  x = 40, y=5, 
+           color = "black", fontface = "bold",
+           label = paste("R2 =", round(summary(lm_freeonly_totprod_D1)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lm_freeonly_totprod_D1)$coefficients[,4][2]), digits = 4)))+
+  theme(legend.position = c(0.12, 0.7), 
+        legend.text = element_text(size = 10))
+  
+## Prefiltered 2015 free only 
+free_only_2015_D1 <- filter(free_only, year == "2015")
+lm_free2015_only_totprod_D1 <- lm(tot_bacprod ~ D1, data = free_only_2015_D1) 
+plot_totprod_freeonly_2015_D1 <- ggplot(free_only_2015_D1, aes(y = tot_bacprod, x = D1)) +
+  geom_point(aes(color = lakesite), size = 3) +
+  scale_color_manual(values = lakesite_colors) +
+  #geom_smooth(method = "lm", color = "black") + 
+  ggtitle("2015 Prefiltered Free-Living") + 
+  annotate("text", x = 90, y=20, 
+           color = "black", fontface = "bold",
+           label = paste("R2 =", round(summary(lm_free2015_only_totprod_D1)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lm_free2015_only_totprod_D1)$coefficients[,4][2]), digits = 4))) +
+  theme(legend.position = c(0.12, 0.8), 
+        legend.text = element_text(size = 10))
+
+
+# Trend is only marginally significant (p = 0.08) in 2014 and NS in 2015
+summary(lm(tot_bacprod ~ D1, data = filter(free_only, year == "2014")))
 ```
 
 ```
@@ -1031,9 +1072,194 @@ plot_D0_totprod_PA_comparison
 ## F-statistic: 3.881 on 1 and 9 DF,  p-value: 0.08033
 ```
 
-<img src="Figures/cached/D1_totalproduction_vs_diversity-1.png" style="display: block; margin: auto;" /><img src="Figures/cached/D1_totalproduction_vs_diversity-2.png" style="display: block; margin: auto;" /><img src="Figures/cached/D1_totalproduction_vs_diversity-3.png" style="display: block; margin: auto;" />
+```r
+#summary(lm(tot_bacprod ~ D1, data = filter(free_only, year == "2015"))) # NS
+
+# The trend is also insignificant for the whole free fraction 
+lm_wholefreeonly_totprod_D1 <- lm(tot_bacprod ~ D1, data = wholefree_only)
+# Plot the relationship between wholefree and total production 
+plot_totprod_wholefree_D1 <- ggplot(wholefree_only, aes(y = tot_bacprod, x = D1)) +
+  geom_point(aes(color = lakesite), size = 3) +
+  scale_color_manual(values = lakesite_colors) +
+  ggtitle("WholeFree Only") + 
+  annotate("text",  x = 100, y = 5, # For D2:  x = 40, y=5, 
+           color = "black", fontface = "bold",
+           label = paste("R2 =", round(summary(lm_wholefreeonly_totprod_D1)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lm_wholefreeonly_totprod_D1)$coefficients[,4][2]), digits = 4)))+
+  theme(legend.position = c(0.12, 0.8), 
+        legend.text = element_text(size = 10))
+
+
+#### PARTICLE ASSOCIATED SAMPLES VS TOTAL BACTERIAL PRODUCTION 
+# Is there a significant relationship?
+lm_partonly_totprod_D1 <- lm(tot_bacprod ~ D1, data = part_only)
+#summary(lm_partonly_totprod_D1)
+# Plot the relationship 
+plot_totprod_part_D1 <- ggplot(part_only, aes(y = tot_bacprod, x = D1)) +
+  geom_point(aes(color = lakesite), size = 3) +
+  scale_color_manual(values = lakesite_colors) +
+  ggtitle("Particle (3-20 um) Samples Only") + 
+  annotate("text", x = 175, y = 10, # For D2:  x = 40, y=5, 
+           color = "black", fontface = "bold",
+           label = paste("R2 =", round(summary(lm_partonly_totprod_D1)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lm_partonly_totprod_D1)$coefficients[,4][2]), digits = 4))) +
+  theme(legend.position = c(0.12, 0.7), 
+        legend.text = element_text(size = 10))
+
+# Trend is NS in 2014 & 2015
+# summary(lm(tot_bacprod ~ D1, data = filter(part_only, year == "2014"))) # NS
+# summary(lm(tot_bacprod ~ D1, data = filter(part_only, year == "2015")))  # NS
+
+
+### Different particulate fractions 
+## Particle (20-3um) fraction only 
+part_only_2015_D1 <- filter(part_only, year == "2015")
+lm_part2015_only_totprod_D1 <- lm(tot_bacprod ~ D1, data = part_only_2015_D1) 
+plot_totprod_partonly_2015_D1 <- ggplot(part_only_2015_D1, aes(y = tot_bacprod, x = D1)) +
+  geom_point(aes(color = lakesite), size = 3) +
+  scale_color_manual(values = lakesite_colors) +
+  #geom_smooth(method = "lm", color = "black") + 
+  ggtitle("2015 20um Prefiltered Particle") + 
+  annotate("text", x = 175, y=15, 
+           color = "black", fontface = "bold",
+           label = paste("R2 =", round(summary(lm_part2015_only_totprod_D1)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lm_part2015_only_totprod_D1)$coefficients[,4][2]), digits = 4))) +
+  theme(legend.position = c(0.12, 0.7), 
+        legend.text = element_text(size = 10))
+
+# The trend is close to significant for whole particle fraction 
+lm_wholepartonly_totprod_D1 <- lm(tot_bacprod ~ D1, data = wholepart_only)
+# Plot the relationship between wholefree and total production 
+plot_totprod_wholepart_D1 <- ggplot(wholepart_only, aes(y = tot_bacprod, x = D1)) +
+  geom_point(aes(color = lakesite), size = 3) +
+  scale_color_manual(values = lakesite_colors) +
+  geom_smooth(method = "lm", color = "black") + 
+  ggtitle("WholePart Only") + 
+  annotate("text",  x = 275, y = 10, # For D2:  x = 40, y=5, 
+           color = "black", fontface = "bold",
+           label = paste("R2 =", round(summary(lm_wholepartonly_totprod_D1)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lm_wholepartonly_totprod_D1)$coefficients[,4][2]), digits = 4)))+
+  theme(legend.position = c(0.12, 0.7), 
+        legend.text = element_text(size = 10))
+
+
+
+### Plot it all together for the pre-filtered fractions 
+plot_D1_totprod_prefilt <- plot_grid(plot_totprod_free_D1, plot_totprod_part_D1,
+          labels = c("A", "B"), ncol = 2)
+plot_D1_totprod_prefilt
+```
+
+<img src="Figures/cached/D1_totalproduction_vs_diversity-1.png" style="display: block; margin: auto;" />
+
+```r
+### Plot it all together for both of the free living fractions fractions 
+plot_D1_totprod_FL_comparison <- plot_grid(plot_totprod_freeonly_2015_D1, plot_totprod_wholefree_D1,
+          labels = c("A", "B"), ncol = 2)
+plot_D1_totprod_FL_comparison
+```
+
+<img src="Figures/cached/D1_totalproduction_vs_diversity-2.png" style="display: block; margin: auto;" />
+
+```r
+### Plot it all together for both of the particle associated fractions fractions 
+plot_D1_totprod_PA_comparison <- plot_grid(plot_totprod_partonly_2015_D1, plot_totprod_wholepart_D1,
+          labels = c("A", "B"), ncol = 2)
+plot_D1_totprod_PA_comparison
+```
+
+<img src="Figures/cached/D1_totalproduction_vs_diversity-3.png" style="display: block; margin: auto;" />
 
 ## D2 vs Total Production
+
+```r
+#### FREE LIVING SAMPLES VS TOTAL BACTERIAL PRODUCTION 
+# Is there a significant relationship?
+lm_freeonly_totprod_D2 <- lm(tot_bacprod ~ D2, data = free_only)
+#summary(lm_freeonly_totprod_D2)
+# Plot the relationship
+plot_totprod_free_D2 <- ggplot(free_only, aes(y = tot_bacprod, x = D2)) +
+  geom_point(aes(color = lakesite), size = 3) +
+  scale_color_manual(values = lakesite_colors) +
+  xlim(0, 60) + # FOR D2
+  #geom_smooth(method = "lm", color = "black") + 
+  ggtitle("20 um Prefiltered Free-Living Only") + 
+  annotate("text", x = 48, y=15, 
+           color = "black", fontface = "bold",
+           label = paste("R2 =", round(summary(lm_freeonly_totprod_D2)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lm_freeonly_totprod_D2)$coefficients[,4][2]), digits = 4)))+
+  theme(legend.position = c(0.12, 0.8), 
+        legend.text = element_text(size = 10))
+
+
+## Prefiltered 2015 free only 
+free_only_2015_D2 <- filter(free_only, year == "2015")
+lm_free2015_only_totprod_D2 <- lm(tot_bacprod ~ D2, data = free_only_2015_D2) 
+plot_totprod_freeonly_2015_D2 <- ggplot(free_only_2015_D2, aes(y = tot_bacprod, x = D2)) +
+  geom_point(aes(color = lakesite), size = 3) +
+  scale_color_manual(values = lakesite_colors) +
+  ggtitle("2015 Prefiltered Free-Living") + 
+  annotate("text", x = 30, y=70, 
+           color = "black", fontface = "bold",
+           label = paste("R2 =", round(summary(lm_free2015_only_totprod_D2)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lm_free2015_only_totprod_D2)$coefficients[,4][2]), digits = 4))) +
+  theme(legend.position = c(0.12, 0.8), 
+        legend.text = element_text(size = 10))
+
+
+# Insignificant trend for the wholefree fraction only 
+lm_wholefreeonly_totprod_D2 <- lm(tot_bacprod ~ D2, data = wholefree_only)
+# Plot the relationship between wholefree and total production 
+plot_totprod_wholefree_D2 <- ggplot(wholefree_only, aes(y = tot_bacprod, x = D2)) +
+  geom_point(aes(color = lakesite), size = 3) +
+  scale_color_manual(values = lakesite_colors) +
+  ggtitle("WholeFree Only") + 
+  annotate("text",  x = 40, y = 70, # For D2:  x = 40, y=5, 
+           color = "black", fontface = "bold",
+           label = paste("R2 =", round(summary(lm_wholefreeonly_totprod_D2)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lm_wholefreeonly_totprod_D2)$coefficients[,4][2]), digits = 4)))+
+  theme(legend.position = c(0.12, 0.8), 
+        legend.text = element_text(size = 10))
+
+
+#### PARTICLE ASSOCIATED SAMPLES VS TOTAL BACTERIAL PRODUCTION 
+# Is there a significant relationship?
+lm_partonly_totprod_D2 <- lm(tot_bacprod ~ D2, data = part_only) 
+# Plot the relationship
+plot_totprod_part_D2 <- ggplot(part_only, aes(y = tot_bacprod, x = D2)) +
+  geom_point(aes(color = lakesite), size = 3) +
+  scale_color_manual(values = lakesite_colors) +
+  geom_smooth(method = "lm", color = "black") + 
+  ggtitle("2014 +2015 Prefiltered Particle Only") + 
+  annotate("text", x = 55, y=5, 
+           color = "black", fontface = "bold",
+           label = paste("R2 =", round(summary(lm_partonly_totprod_D2)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lm_partonly_totprod_D2)$coefficients[,4][2]), digits = 4))) +
+  theme(legend.position = c(0.12, 0.8), 
+        legend.text = element_text(size = 10))
+
+
+### Different particulate fractions 
+## Particle (20-3um) fraction only 
+part_only_2015 <- filter(part_only, year == "2015")
+lm_part2015_only_totprod_D2 <- lm(tot_bacprod ~ D2, data = part_only_2015) 
+plot_totprod_partonly_2015_D2 <- ggplot(part_only_2015, aes(y = tot_bacprod, x = D2)) +
+  geom_point(aes(color = lakesite), size = 3) +
+  scale_color_manual(values = lakesite_colors) +
+  geom_smooth(method = "lm", color = "black") + 
+  ggtitle("2015 20um Prefiltered Particle") + 
+  annotate("text", x = 55, y=5, 
+           color = "black", fontface = "bold",
+           label = paste("R2 =", round(summary(lm_part2015_only_totprod_D2)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lm_part2015_only_totprod_D2)$coefficients[,4][2]), digits = 4))) +
+  theme(legend.position = c(0.12, 0.8), 
+        legend.text = element_text(size = 10))
+
+### Whole Particle (3+ um) fraction only 
+wholepart_only_2015 <- filter(wholepart_only, year == "2015")
+lm_wholepart2015_only_totprod_D2 <- lm(tot_bacprod ~ D2, data = wholepart_only_2015) 
+summary(lm_wholepart2015_only_totprod_D2)
+```
 
 ```
 ## 
@@ -1056,16 +1282,157 @@ plot_D0_totprod_PA_comparison
 ## F-statistic: 9.039 on 1 and 10 DF,  p-value: 0.0132
 ```
 
-<img src="Figures/cached/D2_totalproduction_vs_diversity-1.png" style="display: block; margin: auto;" /><img src="Figures/cached/D2_totalproduction_vs_diversity-2.png" style="display: block; margin: auto;" /><img src="Figures/cached/D2_totalproduction_vs_diversity-3.png" style="display: block; margin: auto;" />
+```r
+# So this data has 2 outliers and robust regression is necessary 
+#library(MASS)
+# To put less weight in the outliers -> run robust regression
+#rlm_wholepart2015_only_totprod_D2 <- rlm(tot_bacprod ~ D2, data = wholepart_only_2015) # To perform robust regression 
+#summary(rlm_wholepart2015_only_totprod_D2)
+#car::Anova(rlm_wholepart2015_only_totprod_D2)
+#detach("package:MASS", unload=TRUE)
+# TO calculate bootstrapped confiendence intervals on qq plot
+#car::qqPlot(rlm_part_totprod_D2)
+# To plot robust regression in ggplot do geom_smooth(method = "rlm")
+#robust_wholepart2015_only_totprod_D2 <- lmRob(tot_bacprod ~ D2, data = wholepart_only_2015)
+#summary(robust_wholepart2015_only_totprod_D2)
+
+#### Dear marian, check out this website:  https://www.rdocumentation.org/packages/wle/versions/0.9-91/topics/wle.lm
+
+plot_totprod_wholepartonly_D2 <- ggplot(wholepart_only_2015, aes(y = tot_bacprod, x = D2)) +
+  geom_point(aes(color = lakesite), size = 3) +
+  scale_color_manual(values = lakesite_colors) +
+  xlim(0, 100) +
+  geom_smooth(method = "lm", color = "black") + 
+  ggtitle("WholePart Only") + 
+  annotate("text", x = 75, y=10, 
+           color = "black", fontface = "bold",
+           label = paste("R2 =", round(summary(lm_wholepart2015_only_totprod_D2)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lm_wholepart2015_only_totprod_D2)$coefficients[,4][2]), digits = 4))) +
+  theme(legend.position = c(0.12, 0.8), 
+        legend.text = element_text(size = 10))
 
 
+## Put all the plots together
+plot_D2_totprod <- plot_grid(plot_totprod_free_D2, plot_totprod_part_D2,
+          labels = c("A", "B"), ncol = 2)
+plot_D2_totprod
+```
+
+<img src="Figures/cached/D2_totalproduction_vs_diversity-1.png" style="display: block; margin: auto;" />
+
+```r
+### Plot it all together for both of the free living fractions fractions 
+plot_D2_totprod_FL_comparison <- plot_grid(plot_totprod_freeonly_2015_D2, plot_totprod_wholefree_D2,
+          labels = c("A", "B"), ncol = 2)
+plot_D2_totprod_FL_comparison
+```
+
+<img src="Figures/cached/D2_totalproduction_vs_diversity-2.png" style="display: block; margin: auto;" />
+
+```r
+### Plot it all together for both of the particle associated fractions fractions 
+plot_D2_totprod_PA_comparison <- plot_grid(plot_totprod_partonly_2015_D2, plot_totprod_wholepartonly_D2,
+          labels = c("A", "B"), ncol = 2)
+plot_D2_totprod_PA_comparison
+```
+
+<img src="Figures/cached/D2_totalproduction_vs_diversity-3.png" style="display: block; margin: auto;" />
 
 
 # Is there a relationship between HNA cells per uL and Total Production?
-<img src="Figures/cached/totalproduction_vs_HNA-LNA-1.png" style="display: block; margin: auto;" /><img src="Figures/cached/totalproduction_vs_HNA-LNA-2.png" style="display: block; margin: auto;" />
+<img src="Figures/cached/totalproduction_vs_HNA-LNA-1.png" style="display: block; margin: auto;" />
+
+
+
+
+
+```r
+# Is there a relationship between HNA_percent and D2?
+lm_free_D0_vs_HNApercent <- lm(D0 ~ HNA_percent, data = free_meta_data)
+lm_free_D0chao_vs_HNApercent <- lm(D0_chao ~ HNA_percent, data = free_meta_data)
+lm_free_D1_vs_HNApercent <- lm(D1 ~ HNA_percent, data = free_meta_data)
+lm_free_D2_vs_HNApercent <- lm(D2 ~ HNA_percent, data = free_meta_data)
+
+
+ HNA_vs_D0 <- ggplot(free_meta_data, aes(x = D0, y = HNA_percent)) +
+  geom_point(aes(color = lakesite), size = 3) +
+  scale_color_manual(values = lakesite_colors) + 
+  geom_smooth(method = "lm", color = "black") + 
+  annotate("text", x = 2500, y=22, 
+           color = "black", fontface = "bold",
+           label = paste("R2 =", round(summary(lm_free_D0_vs_HNApercent)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lm_free_D0_vs_HNApercent)$coefficients[,4][2]), digits = 8))) +
+  theme(legend.position = c(0.12, 0.8), legend.text = element_text(size = 10))
+
+
+HNA_vs_chao <- ggplot(free_meta_data, aes(x = D0_chao, y = HNA_percent)) +
+  geom_point(aes(color = lakesite), size = 3) +
+  scale_color_manual(values = lakesite_colors) + 
+  geom_smooth(method = "lm", color = "black") + 
+  annotate("text", x = 4000, y=20, 
+           color = "black", fontface = "bold",
+           label = paste("R2 =", round(summary(lm_free_D0chao_vs_HNApercent)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lm_free_D0chao_vs_HNApercent)$coefficients[,4][2]), digits = 8))) +
+  theme(legend.position = c(0.12, 0.8), legend.text = element_text(size = 10))
+
+HNA_vs_D1 <- ggplot(free_meta_data, aes(x = D1, y = HNA_percent)) +
+  geom_point(aes(color = lakesite), size = 3) +
+  scale_color_manual(values = lakesite_colors) + 
+  geom_smooth(method = "lm", color = "black") + 
+  annotate("text", x = 120, y=22, 
+           color = "black", fontface = "bold",
+           label = paste("R2 =", round(summary(lm_free_D1_vs_HNApercent)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lm_free_D1_vs_HNApercent)$coefficients[,4][2]), digits = 8))) +
+  theme(legend.position = c(0.12, 0.8), legend.text = element_text(size = 10))
+
+
+HNA_vs_D2 <- ggplot(free_meta_data, aes(x = D2, y = HNA_percent)) +
+  geom_point(aes(color = lakesite), size = 3) +
+  scale_color_manual(values = lakesite_colors) + 
+  geom_smooth(method = "lm", color = "black") + 
+  annotate("text", x = 40, y=20, 
+           color = "black", fontface = "bold",
+           label = paste("R2 =", round(summary(lm_free_D2_vs_HNApercent)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lm_free_D2_vs_HNApercent)$coefficients[,4][2]), digits = 8))) +
+  theme(legend.position = c(0.12, 0.8), legend.text = element_text(size = 10))
+
+
+plot_grid(HNA_vs_D0, HNA_vs_chao, HNA_vs_D1, HNA_vs_D2,
+          labels = c("A", "B", "C", "D"),
+          ncol = 2, nrow = 2)
+```
+
+<img src="Figures/cached/HNA_vs_diversity-1.png" style="display: block; margin: auto;" />
+
+```r
+# Is there a relationship between LNA_percent and D2?
+lm_free_D2_vs_LNApercent <- lm(D2 ~ LNA_percent, data = free_meta_data)
+
+LNA_vs_D2 <- ggplot(free_meta_data, aes(x = D2, y = LNA_percent*100)) +
+  geom_point(aes(color = lakesite, shape = season), size = 3) +
+  scale_color_manual(values = lakesite_colors) + 
+  ggtitle("LNA cells per uL") + 
+  geom_smooth(method = "lm", color = "black") + 
+  annotate("text", x = 48, y=80, 
+           color = "black", fontface = "bold",
+           label = paste("R2 =", round(summary(lm_free_D2_vs_LNApercent)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lm_free_D2_vs_LNApercent)$coefficients[,4][2]), digits = 8))) +
+  theme(legend.position = c(0.15, 0.27), legend.text = element_text(size = 10))
+         
+HLNA_vs_D2 <- plot_grid(HNA_vs_D2, LNA_vs_D2, 
+     labels = c("A", "B"), 
+     ncol = 2)
+
+# There is apparently a correlation between HNA_Percent and diversity of free living bacteria 
+cor(free_meta_data$D2, free_meta_data$HNA_percent)
+```
 
 ```
-## [1] 0.4911129
+## [1] 0.5286299
+```
+
+```r
+cor.test(free_meta_data$D2, free_meta_data$HNA_percent)
 ```
 
 ```
@@ -1073,17 +1440,25 @@ plot_D0_totprod_PA_comparison
 ## 	Pearson's product-moment correlation
 ## 
 ## data:  free_meta_data$D2 and free_meta_data$HNA_percent
-## t = 4.6491, df = 68, p-value = 1.584e-05
+## t = 3.5775, df = 33, p-value = 0.001096
 ## alternative hypothesis: true correlation is not equal to 0
 ## 95 percent confidence interval:
-##  0.2895530 0.6509662
+##  0.2371629 0.7327859
 ## sample estimates:
 ##       cor 
-## 0.4911129
+## 0.5286299
+```
+
+```r
+cor(free_meta_data$D1, free_meta_data$HNA_percent)
 ```
 
 ```
-## [1] 0.4780852
+## [1] 0.5611953
+```
+
+```r
+cor.test(free_meta_data$D1, free_meta_data$HNA_percent)
 ```
 
 ```
@@ -1091,17 +1466,25 @@ plot_D0_totprod_PA_comparison
 ## 	Pearson's product-moment correlation
 ## 
 ## data:  free_meta_data$D1 and free_meta_data$HNA_percent
-## t = 4.4886, df = 68, p-value = 2.843e-05
+## t = 3.895, df = 33, p-value = 0.0004528
 ## alternative hypothesis: true correlation is not equal to 0
 ## 95 percent confidence interval:
-##  0.2738779 0.6410457
+##  0.2803854 0.7535211
 ## sample estimates:
 ##       cor 
-## 0.4780852
+## 0.5611953
+```
+
+```r
+cor(free_meta_data$D0, free_meta_data$HNA_percent)
 ```
 
 ```
-## [1] 0.7018938
+## [1] 0.7302206
+```
+
+```r
+cor.test(free_meta_data$D0, free_meta_data$HNA_percent)
 ```
 
 ```
@@ -1109,17 +1492,25 @@ plot_D0_totprod_PA_comparison
 ## 	Pearson's product-moment correlation
 ## 
 ## data:  free_meta_data$D0 and free_meta_data$HNA_percent
-## t = 8.126, df = 68, p-value = 1.294e-11
+## t = 6.1398, df = 33, p-value = 6.397e-07
 ## alternative hypothesis: true correlation is not equal to 0
 ## 95 percent confidence interval:
-##  0.5591364 0.8042289
+##  0.5246423 0.8553285
 ## sample estimates:
 ##       cor 
-## 0.7018938
+## 0.7302206
+```
+
+```r
+cor(free_meta_data$D0_chao, free_meta_data$HNA_percent)
 ```
 
 ```
-## [1] 0.7084204
+## [1] 0.7469442
+```
+
+```r
+cor.test(free_meta_data$D0_chao, free_meta_data$HNA_percent)
 ```
 
 ```
@@ -1127,13 +1518,13 @@ plot_D0_totprod_PA_comparison
 ## 	Pearson's product-moment correlation
 ## 
 ## data:  free_meta_data$D0_chao and free_meta_data$HNA_percent
-## t = 8.2769, df = 68, p-value = 6.883e-12
+## t = 6.4535, df = 33, p-value = 2.555e-07
 ## alternative hypothesis: true correlation is not equal to 0
 ## 95 percent confidence interval:
-##  0.5679950 0.8087668
+##  0.5508012 0.8649022
 ## sample estimates:
 ##       cor 
-## 0.7084204
+## 0.7469442
 ```
 
 
