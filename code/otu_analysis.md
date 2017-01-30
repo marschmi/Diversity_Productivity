@@ -6,6 +6,80 @@ January 2017
 
 
 
+```
+## Loading required package: permute
+```
+
+```
+## 
+## Attaching package: 'permute'
+```
+
+```
+## The following object is masked from 'package:devtools':
+## 
+##     check
+```
+
+```
+## Loading required package: lattice
+```
+
+```
+## This is vegan 2.4-1
+```
+
+```
+## 
+## Attaching package: 'dplyr'
+```
+
+```
+## The following objects are masked from 'package:stats':
+## 
+##     filter, lag
+```
+
+```
+## The following objects are masked from 'package:base':
+## 
+##     intersect, setdiff, setequal, union
+```
+
+```
+## 
+## Attaching package: 'cowplot'
+```
+
+```
+## The following object is masked from 'package:ggplot2':
+## 
+##     ggsave
+```
+
+```
+## -------------------------------------------------------------------------
+```
+
+```
+## data.table + dplyr code now lives in dtplyr.
+## Please library(dtplyr)!
+```
+
+```
+## -------------------------------------------------------------------------
+```
+
+```
+## 
+## Attaching package: 'data.table'
+```
+
+```
+## The following objects are masked from 'package:dplyr':
+## 
+##     between, last
+```
 
 ## Load Mothur OTU Data 
 
@@ -1585,22 +1659,9 @@ wholeparticle_2015_df <- dplyr::filter(meta_data, fraction == "WholePart" &
 # Can fractional production be predicted by phenoflow D2 INVERSE SIMPSON? 
 # FREE LIVING
 free_otu_simps_even_stats <- lm(frac_bacprod ~ D2/D0, data = wholefree_2015_df)
-```
-
-```
-## Error in is.data.frame(data): object 'wholefree_2015_df' not found
-```
-
-```r
 # PARTICLE
 part_otu_simps_even_stats <- lm(frac_bacprod ~ D2/D0, data = wholeparticle_2015_df)
-```
 
-```
-## Error in is.data.frame(data): object 'wholeparticle_2015_df' not found
-```
-
-```r
 # Plot D2 INVERSE SIMPSON
 ggplot(all_top_2015_df, aes(x=D2/D0, y=frac_bacprod, color = fraction)) + 
   geom_point(size = 3.5) + 
@@ -1616,9 +1677,7 @@ ggplot(all_top_2015_df, aes(x=D2/D0, y=frac_bacprod, color = fraction)) +
                          "p =", round(unname(summary(part_otu_simps_even_stats)$coefficients[,4][2]), digits = 4)))
 ```
 
-```
-## Error in ggplot(all_top_2015_df, aes(x = D2/D0, y = frac_bacprod, color = fraction)): object 'all_top_2015_df' not found
-```
+<img src="Figures/cached/fractional_production_vs_simps_even-1.png" style="display: block; margin: auto;" />
 
 
 
@@ -1753,46 +1812,12 @@ otu_phenoflow
 
 
 
-
-```
-## Error in ggplot(alpha_comb_final, aes(x = Estimate, y = frac_bacprod)): object 'alpha_comb_final' not found
-```
+<img src="Figures/cached/plot_phylum_diversity-1.png" style="display: block; margin: auto;" />
 
 
 
 
-
-```
-## Error in filter_(.data, .dots = lazyeval::lazy_dots(...)): object 'alpha_comb_final' not found
-```
-
-```
-## Error in filter_(.data, .dots = lazyeval::lazy_dots(...)): object 'actinos' not found
-```
-
-```
-## Error in filter_(.data, .dots = lazyeval::lazy_dots(...)): object 'actinos' not found
-```
-
-```
-## Error in ggplot(actinos, aes(x = Estimate, y = frac_bacprod)): object 'actinos' not found
-```
-
-```
-## Error in filter_(.data, .dots = lazyeval::lazy_dots(...)): object 'alpha_comb_final' not found
-```
-
-```
-## Error in filter_(.data, .dots = lazyeval::lazy_dots(...)): object 'bacteroidetes' not found
-```
-
-```
-## Error in filter_(.data, .dots = lazyeval::lazy_dots(...)): object 'bacteroidetes' not found
-```
-
-```
-## Error in ggplot(bacteroidetes, aes(x = Estimate, y = frac_bacprod)): object 'bacteroidetes' not found
-```
+<img src="Figures/cached/specific_phyla-1.png" style="display: block; margin: auto;" /><img src="Figures/cached/specific_phyla-2.png" style="display: block; margin: auto;" />
 
 
 

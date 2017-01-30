@@ -1156,7 +1156,7 @@ wholeparticle_2015_df <- dplyr::filter(meta_data, fraction == "WholePart" &
 ```
 
 
-```{r fractional_production_vs_simps_even, echo = TRUE, fig.height=4, fig.width=4}
+```{r fractional_production_vs_simps_even, echo = TRUE, fig.height=4, fig.width=5}
 # Can fractional production be predicted by phenoflow D2 INVERSE SIMPSON? 
 # FREE LIVING
 free_otu_simps_even_stats <- lm(frac_bacprod ~ D2/D0, data = wholefree_2015_df)
