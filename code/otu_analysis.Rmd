@@ -590,7 +590,7 @@ plot_totprod_free_D0 <-  ggplot(free_only, aes(y = tot_bacprod, x = D0)) +
            color = "black", fontface = "bold",
            label = paste("R2 =", round(summary(lm_freeonly_totprod_D0)$adj.r.squared, digits = 4), "\n", 
                          "p =", round(unname(summary(lm_freeonly_totprod_D0)$coefficients[,4][2]), digits = 4)))+
-  theme(legend.position = c(0.8, 0.1), 
+  theme(legend.position = c(0.8, 0.2), 
         legend.text = element_text(size = 10))
 
 
@@ -643,7 +643,7 @@ plot_totprod_part_D0 <- ggplot(part_only, aes(y = tot_bacprod, x = D0)) +
            color = "black", fontface = "bold",
            label = paste("R2 =", round(summary(lm_partonly_totprod_D0)$adj.r.squared, digits = 4), "\n", 
                          "p =", round(unname(summary(lm_partonly_totprod_D0)$coefficients[,4][2]), digits = 4))) +
-  theme(legend.position = c(0.8, 0.1), 
+  theme(legend.position = c(0.8, 0.2), 
         legend.text = element_text(size = 10))
 
 # Trend is NS in 2014 & 2015
@@ -708,13 +708,15 @@ plot_D0_totprod_PA_comparison
 lm_freeonly_totprod_D1 <- lm(tot_bacprod ~ D1, data = free_only)
 summary(lm_freeonly_totprod_D1)
 
+lm_freeonly_totprod_D1_MINE1F514 <- lm(tot_bacprod ~ D1, data = filter(free_only, Sample_16S != "MINE1F514"))
+
 # Plot the relationship 
 plot_totprod_free_D1 <-  ggplot(free_only, aes(y = tot_bacprod, x = D1)) +
   geom_point(aes(color = lakesite), size = 3) +
   scale_color_manual(values = lakesite_colors) +
   geom_smooth(method = "lm", color = "black") + 
   ggtitle("20 um Prefiltered Free-Living Only") + 
-  annotate("text",  x = 120, y = 5, # For D2:  x = 40, y=5, 
+  annotate("text",  x = 120, y = 10, # For D2:  x = 40, y=5, 
            color = "black", fontface = "bold",
            label = paste("R2 =", round(summary(lm_freeonly_totprod_D1)$adj.r.squared, digits = 4), "\n", 
                          "p =", round(unname(summary(lm_freeonly_totprod_D1)$coefficients[,4][2]), digits = 4)))+
@@ -765,7 +767,7 @@ plot_totprod_part_D1 <- ggplot(part_only, aes(y = tot_bacprod, x = D1)) +
   geom_point(aes(color = lakesite), size = 3) +
   scale_color_manual(values = lakesite_colors) +
   ggtitle("Particle (3-20 um) Samples Only") + 
-  annotate("text", x = 175, y = 10, # For D2:  x = 40, y=5, 
+  annotate("text", x = 175, y = 15, # For D2:  x = 40, y=5, 
            color = "black", fontface = "bold",
            label = paste("R2 =", round(summary(lm_partonly_totprod_D1)$adj.r.squared, digits = 4), "\n", 
                          "p =", round(unname(summary(lm_partonly_totprod_D1)$coefficients[,4][2]), digits = 4))) +
@@ -826,6 +828,11 @@ plot_D1_totprod_PA_comparison <- plot_grid(plot_totprod_partonly_2015_D1, plot_t
 plot_D1_totprod_PA_comparison
 ```
 
+### An important note:
+For D1 free living fraction (plot entitled "20 um Prefiltered Free-Living Only") there seems to be an outlier along both axes.  The regression without this point results in an **R2 of `r round(summary(lm_freeonly_totprod_D1_MINE1F514)$adj.r.squared, digits = 4)`, a pvalue of `r round(unname(summary(lm_freeonly_totprod_D1_MINE1F514)$coefficients[,4][2]), digits = 4)`**.
+
+
+
 ## D2 vs Total Production
 ```{r D2_totalproduction_vs_diversity,fig.width=10, fig.height = 4, echo = TRUE}
 #### FREE LIVING SAMPLES VS TOTAL BACTERIAL PRODUCTION 
@@ -837,7 +844,6 @@ plot_totprod_free_D2 <- ggplot(free_only, aes(y = tot_bacprod, x = D2)) +
   geom_point(aes(color = lakesite), size = 3) +
   scale_color_manual(values = lakesite_colors) +
   xlim(0, 60) + # FOR D2
-  #geom_smooth(method = "lm", color = "black") + 
   ggtitle("20 um Prefiltered Free-Living Only") + 
   annotate("text", x = 48, y=15, 
            color = "black", fontface = "bold",
@@ -977,7 +983,7 @@ plot_totprod_vs_cells <- ggplot(nosed_meta_data, aes(x = cells_per_uL, y = tot_b
            color = "black", fontface = "bold",
            label = paste("R2 =", round(summary(lm_all_totprod_cells)$adj.r.squared, digits = 4), "\n", 
                          "p =", round(unname(summary(lm_all_totprod_cells)$coefficients[,4][2]), digits = 5))) +
-  theme(legend.position = c(0.2, 0.67), legend.text = element_text(size = 10))
+  theme(legend.position = c(0.2, 0.7), legend.text = element_text(size = 10))
 
 
 # Is there a significant relationship between HNA per uL and total production?
@@ -1109,23 +1115,73 @@ cor.test(free_meta_data$D0_chao, free_meta_data$HNA_percent)
 
 
 
+# Relationship between Chla and Total Production?
+```{r chla-vs-totprod, echo = TRUE, fig.height=4, fig.width=5}
+# Is there a relationship between CHLOROPHYLL A and Total Production?
+lm_all_totprod_chla <- lm(tot_bacprod ~ Chl_Lab_ugperL, data = nosed_meta_data)
+# Plot the relationship
+ggplot(nosed_meta_data, aes(x = Chl_Lab_ugperL, y = tot_bacprod)) + 
+  geom_point(size = 3) +
+  geom_smooth(method = "lm") + 
+  annotate("text", x = 6, y=75, 
+           color = "black", fontface = "bold",
+           label = paste("R2 =", round(summary(lm_all_totprod_chla)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lm_all_totprod_chla)$coefficients[,4][2]), digits = 4)))+
+  theme(legend.position = c(0.12, 0.8), 
+        legend.text = element_text(size = 10))
+```
+
+There appears to be *no relationship* between **chlorophyll a and total production**.
+
+
+
 # Is there a relationship between diversity and *fractionated* bacterial production?
-```{r fractional_production_vs_diversity}
+```{r create-fracprod-metadata, echo = TRUE}
 # For 2015 data only 
-all_top_2015_df <- filter(meta_data, limnion == "Top" & 
+meta_data <- data.frame(sample_data(otu_merged_musk_pruned)) 
+
+all_top_2015_df <- dplyr::filter(meta_data, limnion == "Top" & 
                               norep_filter_name != "MOTHJ715" & 
                               year == "2015")
 
-wholefree_2015_df <- filter(meta_data, fraction == "WholeFree" & 
+wholefree_2015_df <- dplyr::filter(meta_data, fraction == "WholeFree" & 
                               limnion == "Top" & 
                               norep_filter_name != "MOTHJ715" & 
                               year == "2015")
 
-wholeparticle_2015_df <- filter(meta_data, fraction == "WholePart" & 
+wholeparticle_2015_df <- dplyr::filter(meta_data, fraction == "WholePart" & 
                                   limnion == "Top" &
                                   norep_filter_name != "MOTHJ715" & 
                                   year == "2015")
+```
 
+
+```{r fractional_production_vs_simps_even, echo = TRUE, fig.height=4, fig.width=4}
+# Can fractional production be predicted by phenoflow D2 INVERSE SIMPSON? 
+# FREE LIVING
+free_otu_simps_even_stats <- lm(frac_bacprod ~ D2/D0, data = wholefree_2015_df)
+# PARTICLE
+part_otu_simps_even_stats <- lm(frac_bacprod ~ D2/D0, data = wholeparticle_2015_df)
+
+# Plot D2 INVERSE SIMPSON
+ggplot(all_top_2015_df, aes(x=D2/D0, y=frac_bacprod, color = fraction)) + 
+  geom_point(size = 3.5) + 
+  geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod)) + 
+  scale_color_manual(values = c("firebrick3","cornflowerblue"), limits = c("WholePart", "Free")) +
+  ylab("Production (μgC/L/hr)") + xlab("Simpson's Evenness (D2/D0)") +
+  theme(legend.position=c(0.85,0.9), legend.title=element_blank()) +
+  annotate("text", x = 0.04, y=60, color = "cornflowerblue", fontface = "bold",
+           label = paste("R2 =", round(summary(free_otu_simps_even_stats)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(free_otu_simps_even_stats)$coefficients[,4][2]), digits = 4))) + 
+  annotate("text", x = 0.06, y=35, color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(part_otu_simps_even_stats)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(part_otu_simps_even_stats)$coefficients[,4][2]), digits = 4)))
+```
+
+
+
+
+```{r fractional_production_vs_diversity, echo = TRUE, fig.width=10, fig.height = 10}
 # Can fractional production be predicted by phenoflow D0 observed richness? 
 # FREE LIVING
 free_otu_D0_stats <- lm(frac_bacprod ~ D0, data = wholefree_2015_df)
@@ -1206,17 +1262,17 @@ otu_pheno_D1 <- ggplot(all_top_2015_df, aes(x=D1, y=frac_bacprod, color = fracti
 
 # Can fractional production be predicted by phenoflow D2 INVERSE SIMPSON? 
 # FREE LIVING
-free_otu_D2_stats <- lm(frac_bacprod ~ D2, data = wholefree_2015_df)
+lm_free_otu_D2_stats <- lm(frac_bacprod ~ D2, data = wholefree_2015_df)
 #summary(free_otu_D2_stats)
 
 # PARTICLE
-part_otu_D2_stats <- lm(frac_bacprod ~ D2, data = wholeparticle_2015_df)
-summary(part_otu_D2_stats)
+lm_part_otu_D2_stats <- lm(frac_bacprod ~ D2, data = wholeparticle_2015_df)
+#summary(part_otu_D2_stats)
 
 # To put less weight in the outliers -> run robust regression
-rlm_part_otu_D2_stats <- rlm(frac_bacprod ~ D2, data = wholeparticle_2015_df) # To perform robust regression 
-summary(rlm_part_otu_D2_stats)
-car::Anova(rlm_part_otu_D2_stats)
+#rlm_part_otu_D2_stats <- rlm(frac_bacprod ~ D2, data = wholeparticle_2015_df) # To perform robust regression 
+#summary(rlm_part_otu_D2_stats)
+#car::Anova(rlm_part_otu_D2_stats)
 # To plot robust regression in ggplot do geom_smooth(method = "rlm")
 
 
@@ -1230,39 +1286,11 @@ otu_pheno_D2 <- ggplot(all_top_2015_df, aes(x=D2, y=frac_bacprod, color = fracti
   geom_smooth(data=subset(all_top_2015_df, fraction == "WholePart"), method='lm') + 
   theme(legend.position=c(0.85,0.9), legend.title=element_blank()) +
   annotate("text", x = 40, y=45, color = "cornflowerblue", fontface = "bold",
-           label = paste("R2 =", round(summary(free_otu_D2_stats)$adj.r.squared, digits = 4), "\n", 
-                         "p =", round(unname(summary(free_otu_D2_stats)$coefficients[,4][2]), digits = 4))) + 
+           label = paste("R2 =", round(summary(lm_free_otu_D2_stats)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lm_free_otu_D2_stats)$coefficients[,4][2]), digits = 4))) + 
   annotate("text", x = 50, y=25, color = "firebrick3", fontface = "bold",
-           label = paste("R2 =", round(summary(part_otu_D2_stats)$adj.r.squared, digits = 4), "\n", 
-                         "p =", round(unname(summary(part_otu_D2_stats)$coefficients[,4][2]), digits = 4)))
-
-
-# Can fractional production be predicted by phenoflow D2 INVERSE SIMPSON? 
-# FREE LIVING
-free_otu_simps_even_stats <- lm(frac_bacprod ~ D2/D0, data = wholefree_2015_df)
-#summary(free_otu_simps_even_stats)
-
-# PARTICLE
-part_otu_simps_even_stats <- lm(frac_bacprod ~ D2/D0, data = wholeparticle_2015_df)
-#summary(part_otu_simps_even_stats)
-
-# Plot D2 INVERSE SIMPSON
-otu_pheno_simps_even <- ggplot(all_top_2015_df, aes(x=D2/D0, y=frac_bacprod, color = fraction)) + 
-  geom_point(size = 3.5) + 
-  geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod)) + 
-  scale_color_manual(values = c("firebrick3","cornflowerblue"), limits = c("WholePart", "Free")) +
-  ylab("Production (μgC/L/hr)") + xlab("Simpson's Evenness (D2/D0)") +
-  theme(legend.position=c(0.85,0.9), legend.title=element_blank()) +
-  annotate("text", x = 0.04, y=60, color = "cornflowerblue", fontface = "bold",
-           label = paste("R2 =", round(summary(free_otu_simps_even_stats)$adj.r.squared, digits = 4), "\n", 
-                         "p =", round(unname(summary(free_otu_simps_even_stats)$coefficients[,4][2]), digits = 4))) + 
-  annotate("text", x = 0.06, y=35, color = "firebrick3", fontface = "bold",
-           label = paste("R2 =", round(summary(part_otu_simps_even_stats)$adj.r.squared, digits = 4), "\n", 
-                         "p =", round(unname(summary(part_otu_simps_even_stats)$coefficients[,4][2]), digits = 4)))
-
-otu_pheno_simps_even
-#ggsave("../Figures/fracprod_vs_simpseven.png", otu_pheno_simps_even, dpi = 600, units = "in", width = 4, height = 3.5)
-
+           label = paste("R2 =", round(summary(lm_part_otu_D2_stats)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lm_part_otu_D2_stats)$coefficients[,4][2]), digits = 4)))
 
 otu_phenoflow <- plot_grid(otu_pheno_D0, otu_pheno_D0chao, otu_pheno_D1, otu_pheno_D2, 
           labels = c("A", "B", "C", "D"), 
