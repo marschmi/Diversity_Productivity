@@ -1,5 +1,6 @@
 ## Purpose: Create the .RData for the raw OTU phyloseq object
 ## Author: Marian L. Schmidt 
+## Last Edit: January 31st, 2017
 
 # Set up file
 library(phyloseq)
@@ -186,40 +187,58 @@ alpha_div <- phenoflow_diversity %>%
                 D1_sd = sd.D1,
                 D2_sd = sd.D2)
 
+# Join the alpha diversity data with the rest of the metadata
 final_meta_dataframe_alpha <- left_join(final_meta_dataframe, alpha_div, by = "norep_filter_name")
 
-row.names(final_meta_dataframe_alpha) <- final_meta_dataframe_alpha$norep_filter_name
 
 
 ############################################################################################################################################
 ############################################################################################################################################
 ###################################################################### ADD DNA CONCENTRATION INFORMATION 
-# DNA_2014 <- read.csv("../data/metadata/2014_DNAextraction.csv", header = TRUE)
-# 
-# DNA14 <- DNA_2014 %>%
-#   mutate(rep_filter_name = paste(substring(Sample,1,5), substring(Sample,7,7), substring(Sample,9,11),sep = ""),
-#          norep_filter_name = paste(substring(Sample,1,4), substring(Sample,7,7), substring(Sample,9,11), sep = ""))
-#   
-# 
-# 
-# DNA_2015 <- read.csv("../data/metadata/2015_DNAextraction.csv", header = TRUE)
-# DNA15 <- DNA_2015 %>%
-#   ## Subset only the samples that were sequenced
-#   dplyr::filter(plate_Map == "yes_plateC") %>%
-#   # Create new columns with key information for subsetting and data manipulation
-#   mutate(rep_filter_name = sequencing_ID,
-#          norep_filter_name = paste(substring(rep_filter_name,1,4), substring(rep_filter_name,6,9), sep = ""),
-#          replicate = substring(rep_filter_name,5,5)) %>%
-#   # Select relevant columns 
-#   dplyr::select(rep_filter_name, norep_filter_name, dna_concentration_ng_per_ul, replicate) %>%
-#   # Create one 
-#   unite(rep_dna_conc, dna_concentration_ng_per_ul, replicate, sep = "_dnaconcrep") %>%
-#   # Remove the column to include 
-#   dplyr::select(-rep_filter_name) %>%
-#   separate(rep_dna_conc, into = c("Concentration","Replicate"), sep = "_") %>%
-#   mutate(Replicate = replace(Replicate, Replicate == "dnaconcrep3", "dnaconcrep1")) %>%
-#   spread(Replicate, Concentration) 
-# 
+DNA_2014 <- read.csv("../data/metadata/2014_DNAextraction.csv", header = TRUE)
+DNA14 <- DNA_2014 %>%
+   mutate(rep_filter_name = paste(gsub("_", "", Sample)),
+          norep_filter_name = paste(substring(rep_filter_name,1,4), substring(rep_filter_name,6,9), sep = ""),
+          replicate = substring(rep_filter_name,5,5)) %>%
+  slice(1:73) %>%
+  # Select relevant columns
+  dplyr::select(rep_filter_name, norep_filter_name, dna_concentration_ng_per_ul, replicate) %>%
+  # Create one
+  unite(rep_dna_conc, dna_concentration_ng_per_ul, replicate, sep = "_dnaconcrep") %>%
+  # Remove the column to include
+  dplyr::select(-rep_filter_name) %>%
+  separate(rep_dna_conc, into = c("Concentration","Replicate"), sep = "_") %>%
+  mutate(Replicate = replace(Replicate, Replicate == "dnaconcrep3", "dnaconcrep1")) %>%
+  spread(Replicate, Concentration)
+
+
+
+DNA_2015 <- read.csv("../data/metadata/2015_DNAextraction.csv", header = TRUE)
+DNA15 <- DNA_2015 %>%
+  ## Subset only the samples that were sequenced
+  dplyr::filter(plate_Map %in% c("yes_plateC", "yes_plateD")) %>%
+  # Create new columns with key information for subsetting and data manipulation
+  mutate(rep_filter_name = sequencing_ID,
+         norep_filter_name = paste(substring(rep_filter_name,1,4), substring(rep_filter_name,6,9), sep = ""),
+         replicate = substring(rep_filter_name,5,5)) %>%
+  # Select relevant columns
+  dplyr::select(rep_filter_name, norep_filter_name, dna_concentration_ng_per_ul, replicate) %>%
+  # Create one
+  unite(rep_dna_conc, dna_concentration_ng_per_ul, replicate, sep = "_dnaconcrep") %>%
+  # Remove the column to include
+  dplyr::select(-rep_filter_name) %>%
+  separate(rep_dna_conc, into = c("Concentration","Replicate"), sep = "_") %>%
+  mutate(Replicate = replace(Replicate, Replicate == "dnaconcrep3", "dnaconcrep1")) %>%
+  spread(Replicate, Concentration)
+
+# Put the 2104 and 2015 data together into one data frame
+DNAs <- union(DNA14, DNA15)
+
+# Merge the rest of the metadata with the DNA concentration data!
+final_meta_dataframe_alpha_DNA <- left_join(final_meta_dataframe_alpha, DNAs, by = "norep_filter_name")
+
+# Rename the sample rows to match the sample names in the phyloseq object
+row.names(final_meta_dataframe_alpha_DNA) <- final_meta_dataframe_alpha_DNA$norep_filter_name
 
 
 
@@ -227,7 +246,7 @@ row.names(final_meta_dataframe_alpha) <- final_meta_dataframe_alpha$norep_filter
 ############################################################################################################################################
 ###################################################################### FINALIZE THE PHYLOSEQ OBJECT
 ## Finally, add the big metadata frame to the sample_data of otu_merged_musk_pruned
-sample_data(otu_merged_musk_pruned) <- final_meta_dataframe_alpha
+sample_data(otu_merged_musk_pruned) <- final_meta_dataframe_alpha_DNA
 
 # Create a new file called "Phyloseq.RData" that has the phyloseq object
 save(list="otu_merged_musk_pruned", file=paste0("../data/otu_merged_musk_pruned.RData")) 
