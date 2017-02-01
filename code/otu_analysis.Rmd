@@ -1047,6 +1047,24 @@ plot_totprod_vs_LNA <- ggplot(nosed_meta_data, aes(x = LNA_per_uL, y = tot_bacpr
 plots_totprod_vs_cellsHNALNA <- plot_grid(plot_totprod_vs_cells, plot_totprod_vs_HNA, plot_totprod_vs_LNA, 
           labels = c("A", "B", "C"), ncol = 3)
 plots_totprod_vs_cellsHNALNA
+
+
+df_hna_vs_lna <- nosed_meta_data %>%
+  dplyr::select(HNA_per_uL, LNA_per_uL, norep_filter_name) %>%
+  gather(cell_type, cells_per_uL, HNA_per_uL, LNA_per_uL)
+  
+  
+df_hna_vs_lna$cell_type[df_hna_vs_lna$cell_type == "HNA_per_uL"] <- "HNA"
+df_hna_vs_lna$cell_type[df_hna_vs_lna$cell_type == "LNA_per_uL"] <- "LNA"
+
+ggplot(df_hna_vs_lna, aes(x = cell_type, y = cells_per_uL, color = cell_type, fill = cell_type)) + 
+  geom_jitter(size = 3) + xlab("") + 
+  geom_boxplot(alpha = 0.5) +
+  theme(legend.position = c(0.15, 0.85)) +#
+  scale_fill_manual(values = c("#F8BB0A", "#FF4E50")) +
+  scale_color_manual(values = c("#F8BB0A", "#FF4E50")) 
+
+#ggsave("Figures/HNA_LNA_vs_cellperUL.png", dpi = 500, width = 5, height = 4)
 ```
 
 
