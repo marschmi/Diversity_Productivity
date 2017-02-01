@@ -6,80 +6,6 @@ January 2017
 
 
 
-```
-## Loading required package: permute
-```
-
-```
-## 
-## Attaching package: 'permute'
-```
-
-```
-## The following object is masked from 'package:devtools':
-## 
-##     check
-```
-
-```
-## Loading required package: lattice
-```
-
-```
-## This is vegan 2.4-1
-```
-
-```
-## 
-## Attaching package: 'dplyr'
-```
-
-```
-## The following objects are masked from 'package:stats':
-## 
-##     filter, lag
-```
-
-```
-## The following objects are masked from 'package:base':
-## 
-##     intersect, setdiff, setequal, union
-```
-
-```
-## 
-## Attaching package: 'cowplot'
-```
-
-```
-## The following object is masked from 'package:ggplot2':
-## 
-##     ggsave
-```
-
-```
-## -------------------------------------------------------------------------
-```
-
-```
-## data.table + dplyr code now lives in dtplyr.
-## Please library(dtplyr)!
-```
-
-```
-## -------------------------------------------------------------------------
-```
-
-```
-## 
-## Attaching package: 'data.table'
-```
-
-```
-## The following objects are masked from 'package:dplyr':
-## 
-##     between, last
-```
 
 ## Load Mothur OTU Data 
 
@@ -93,7 +19,7 @@ otu_merged_musk_pruned
 ```
 ## phyloseq-class experiment-level object
 ## otu_table()   OTU Table:         [ 52980 taxa and 163 samples ]
-## sample_data() Sample Data:       [ 163 samples by 67 sample variables ]
+## sample_data() Sample Data:       [ 163 samples by 69 sample variables ]
 ## tax_table()   Taxonomy Table:    [ 52980 taxa by 8 taxonomic ranks ]
 ```
 
@@ -187,7 +113,7 @@ scale_otu_merged_musk_pruned # ALL Samples phyloseq object
 ```
 ## phyloseq-class experiment-level object
 ## otu_table()   OTU Table:         [ 4664 taxa and 162 samples ]
-## sample_data() Sample Data:       [ 162 samples by 68 sample variables ]
+## sample_data() Sample Data:       [ 162 samples by 70 sample variables ]
 ## tax_table()   Taxonomy Table:    [ 4664 taxa by 8 taxonomic ranks ]
 ```
 
@@ -210,7 +136,7 @@ scale_otu_merged_musk_nosed # Water samples only
 ```
 ## phyloseq-class experiment-level object
 ## otu_table()   OTU Table:         [ 2914 taxa and 139 samples ]
-## sample_data() Sample Data:       [ 139 samples by 68 sample variables ]
+## sample_data() Sample Data:       [ 139 samples by 70 sample variables ]
 ## tax_table()   Taxonomy Table:    [ 2914 taxa by 8 taxonomic ranks ]
 ```
 
@@ -234,7 +160,7 @@ scale_otu_merged_musk_particle # Particle and Whole particle samples only (both 
 ```
 ## phyloseq-class experiment-level object
 ## otu_table()   OTU Table:         [ 2716 taxa and 69 samples ]
-## sample_data() Sample Data:       [ 69 samples by 68 sample variables ]
+## sample_data() Sample Data:       [ 69 samples by 70 sample variables ]
 ## tax_table()   Taxonomy Table:    [ 2716 taxa by 8 taxonomic ranks ]
 ```
 
@@ -259,7 +185,7 @@ scale_otu_merged_musk_wholepart_top # Wholeparticle samples only (no prefilter; 
 ```
 ## phyloseq-class experiment-level object
 ## otu_table()   OTU Table:         [ 4265 taxa and 12 samples ]
-## sample_data() Sample Data:       [ 12 samples by 68 sample variables ]
+## sample_data() Sample Data:       [ 12 samples by 70 sample variables ]
 ## tax_table()   Taxonomy Table:    [ 4265 taxa by 8 taxonomic ranks ]
 ```
 
@@ -283,7 +209,7 @@ scale_otu_merged_musk_free # All Free living samples (Free and wholeFree; both s
 ```
 ## phyloseq-class experiment-level object
 ## otu_table()   OTU Table:         [ 7020 taxa and 70 samples ]
-## sample_data() Sample Data:       [ 70 samples by 68 sample variables ]
+## sample_data() Sample Data:       [ 70 samples by 70 sample variables ]
 ## tax_table()   Taxonomy Table:    [ 7020 taxa by 8 taxonomic ranks ]
 ```
 
@@ -308,7 +234,7 @@ scale_otu_merged_musk_wholefree_top # Only WholeFree samples (from the surface)
 ```
 ## phyloseq-class experiment-level object
 ## otu_table()   OTU Table:         [ 4167 taxa and 12 samples ]
-## sample_data() Sample Data:       [ 12 samples by 68 sample variables ]
+## sample_data() Sample Data:       [ 12 samples by 70 sample variables ]
 ## tax_table()   Taxonomy Table:    [ 4167 taxa by 8 taxonomic ranks ]
 ```
 
@@ -755,8 +681,6 @@ part_vs_wholepart_div_plots
 ```
 
 
-
-
 # Is there a significant relationship between sequencing depth and diversity?
 
 ```r
@@ -916,7 +840,39 @@ ggplot(nosed_meta_data, aes(x = Sample_TotalSeqs, y = D2)) +
 
 <img src="Figures/cached/div_vs_seqdepth-4.png" style="display: block; margin: auto;" />
 
+# Does DNA extraction concentration influcence diversity?
 
+```r
+### Prepare the data frame 
+DNA_comparison <- nosed_meta_data %>%
+  dplyr::select(norep_filter_name, dnaconcrep1, dnaconcrep2, cells_per_uL, lakesite) %>%
+  mutate(dnaconcrep1 = as.numeric(dnaconcrep1),
+         dnaconcrep2 = as.numeric(dnaconcrep2),
+         mean_dna = (dnaconcrep1+dnaconcrep2)/2)
+
+# Calculate the linear models 
+lm_dna_conc <- lm(dnaconcrep1 ~ dnaconcrep2,  data = DNA_comparison)
+lm_cells_vs_meanDNA <- lm(mean_dna ~ cells_per_uL,  data = DNA_comparison)
+
+# Plot the trends 
+plot_grid(ggplot(DNA_comparison, aes(x = dnaconcrep1, y = dnaconcrep2)) + # First plot 
+            geom_point(size = 3) + geom_smooth(method = "lm") +
+            annotate("text",  x = 17, y = 3,
+              color = "black", fontface = "bold",
+               label = paste("R2 =", round(summary(lm_dna_conc)$adj.r.squared, digits = 4), "\n", 
+                             "p =", round(unname(summary(lm_dna_conc)$coefficients[,4][2]), digits = 8)))+
+            ggtitle("DNA Concentration Between Replicates"), 
+          ggplot(DNA_comparison, aes(x = mean_dna, y = cells_per_uL)) + # Second plot 
+            geom_point(size = 3) + geom_smooth(method = "lm") +
+            annotate("text",  x = 12, y = 4800,
+              color = "black", fontface = "bold",
+               label = paste("R2 =", round(summary(lm_cells_vs_meanDNA)$adj.r.squared, digits = 4), "\n", 
+                             "p =", round(unname(summary(lm_cells_vs_meanDNA)$coefficients[,4][2]), digits = 4)))+
+            ggtitle("Mean DNA Concentration vs Cell Numbers"),
+          labels = c("A", "B"), ncol = 2)
+```
+
+<img src="Figures/cached/dnaconc_vs_diversity-1.png" style="display: block; margin: auto;" />
 
 
 
@@ -1076,18 +1032,18 @@ summary(lm_freeonly_totprod_D1)
 ## 
 ## Residuals:
 ##     Min      1Q  Median      3Q     Max 
-## -35.605 -13.805  -5.895  11.639  50.840 
+## -35.708 -13.933  -5.967  11.833  50.741 
 ## 
 ## Coefficients:
 ##             Estimate Std. Error t value Pr(>|t|)   
-## (Intercept)  -2.8194    15.7627  -0.179  0.85976   
-## D1            0.5663     0.1952   2.901  0.00854 **
+## (Intercept)  -2.2905    15.8055  -0.145  0.88616   
+## D1            0.5613     0.1957   2.868  0.00921 **
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
-## Residual standard error: 22.68 on 21 degrees of freedom
-## Multiple R-squared:  0.2861,	Adjusted R-squared:  0.2521 
-## F-statistic: 8.417 on 1 and 21 DF,  p-value: 0.008541
+## Residual standard error: 22.75 on 21 degrees of freedom
+## Multiple R-squared:  0.2814,	Adjusted R-squared:  0.2472 
+## F-statistic: 8.225 on 1 and 21 DF,  p-value: 0.009208
 ```
 
 ```r
@@ -1247,7 +1203,7 @@ plot_D1_totprod_PA_comparison
 <img src="Figures/cached/D1_totalproduction_vs_diversity-3.png" style="display: block; margin: auto;" />
 
 ### An important note:
-For D1 free living fraction (plot entitled "20 um Prefiltered Free-Living Only") there seems to be an outlier along both axes.  The regression without this point results in an **R2 of 0.0748, a pvalue of 0.1162**.
+For D1 free living fraction (plot entitled "20 um Prefiltered Free-Living Only") there seems to be an outlier along both axes.  The regression without this point results in an **R2 of 0.0706, a pvalue of 0.1229**.
 
 
 
@@ -1348,18 +1304,18 @@ summary(lm_wholepart2015_only_totprod_D2)
 ## 
 ## Residuals:
 ##     Min      1Q  Median      3Q     Max 
-## -31.536  -9.476  -2.387   4.804  30.750 
+## -31.871  -9.731  -2.652   5.350  30.410 
 ## 
 ## Coefficients:
 ##             Estimate Std. Error t value Pr(>|t|)  
-## (Intercept)   9.9256     9.3408   1.063   0.3129  
-## D2            0.6127     0.2038   3.007   0.0132 *
+## (Intercept)  10.1587     9.3716   1.084   0.3038  
+## D2            0.6139     0.2045   3.003   0.0133 *
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
-## Residual standard error: 18.11 on 10 degrees of freedom
-## Multiple R-squared:  0.4748,	Adjusted R-squared:  0.4222 
-## F-statistic: 9.039 on 1 and 10 DF,  p-value: 0.0132
+## Residual standard error: 18.17 on 10 degrees of freedom
+## Multiple R-squared:  0.4741,	Adjusted R-squared:  0.4215 
+## F-statistic: 9.016 on 1 and 10 DF,  p-value: 0.01328
 ```
 
 ```r
@@ -1810,6 +1766,117 @@ otu_phenoflow
 
 # Phylum production analysis
 
+```r
+# Michelle Berry's subsetting function, similar to phyloseq::subset_taxa, except taxa can 
+# be passed as arguments within functions without weird environment errors
+#
+# Args:
+#   physeq: a phyloseq object
+#   taxrank: taxonomic rank to filter on
+#   taxa: a vector of taxa groups to filter on
+#
+# Returns: 
+#   a phyloseq object subsetted to the x taxa in taxrank
+my_subset_taxa <- function(physeq, taxrank, taxa) {
+  physeq_tax_sub <- tax_table(physeq)[tax_table(physeq)[ , taxrank] %in% taxa, ]
+  tax_table(physeq) <- physeq_tax_sub
+  return(physeq)
+}
+
+## Scale phyloseq objects of whole free and whole particle:
+# scale_otu_merged_musk_wholefree_top
+# scale_otu_merged_musk_wholepart_top
+
+
+# Initialize parameters
+trials <- 100
+min_lib <- min(sample_sums(scale_otu_merged_musk_wholepart_top)) # Depth we are rarefying to
+
+# Groups to estimate alpha diversity for 
+mytaxa <- c("Acidobacteria", "Actinobacteria", "Alphaproteobacteria", "Armatimonadetes",
+            "Bacteroidetes", "Betaproteobacteria", "Chlorobi", "Chloroflexi",
+            "Cyanobacteria","Deltaproteobacteria", "Gammaproteobacteria", 
+            "Planctomycetes","Verrucomicrobia")
+names(mytaxa) <- mytaxa
+
+# Taxonomic ranks of mytaxa
+mytaxa_taxrank <- c("Phylum", "Phylum", "Phylum", "Phylum", "Phylum", "Phylum", 
+                      "Phylum", "Phylum", "Phylum", "Phylum", "Phylum", "Phylum", "Phylum")
+names(mytaxa_taxrank) <- mytaxa
+
+# Data frame to hold alpha diversity estimates over trials
+alphadiv_df <- data.frame(matrix(nrow = nsamples(scale_otu_merged_musk_wholepart_top), ncol = trials))
+
+# Initialize empty df's for richness and evenness of all taxa in mytaxa
+richness <- lapply(mytaxa, function(x) {return(alphadiv_df)} )
+invsimps <- lapply(mytaxa, function(x) {return(alphadiv_df)} )
+
+alphadiv_list <- list(richness = richness, invsimps = invsimps)
+
+
+# Set the seed for reproducibility
+set.seed(777)
+
+# Run trials to subsample and estimate diversity
+for (i in 1:100) {
+  
+  # Subsample
+  rarefied_physeq <- rarefy_even_depth(scale_otu_merged_musk_wholepart_top, sample.size = min_lib, verbose = FALSE, replace = TRUE)
+  
+  # Generate alpha-diversity estimates for each taxonomic group
+  for (t in mytaxa) {
+
+    # Subset the taxa
+    physeq_sub <- my_subset_taxa(physeq = rarefied_physeq, 
+                                 taxrank = mytaxa_taxrank[t], 
+                                 taxa = t)
+    
+    # Calculate observed richness for that group and store value in a df column
+    richness <- estimate_richness(physeq_sub, measures = "Observed")[ ,1]
+    alphadiv_list$richness[[t]][ ,i] <- richness
+    
+    # Calculate observed invsimps for that group and store value in a df column
+    invsimps <- estimate_richness(physeq_sub, measures = "InvSimpson")[ ,1]
+    alphadiv_list$invsimps[[t]][ ,i] <- invsimps
+
+  }
+}
+
+# Calculate the means of richness and inverse simpson from the 100 trials
+alphadiv_est <- lapply(alphadiv_list, function(div_measure) {
+    lapply(div_measure, function(taxa_group) {
+        alpha_mean <- rowMeans(taxa_group)
+        return(alpha_mean)
+    })  
+})
+
+# Convert alphadiv_est richness and simpson's E lists into wide data frames
+l <- lapply(alphadiv_est, function(x) {
+  # convert from list to data.frame
+  est_df <- plyr::ldply(.data = x, .fun = data.frame)
+  names(est_df) <- c("Taxa", "Diversity")
+  
+  # Add in SampleID column and spread to wide format
+  r <- est_df %>%
+    mutate(norep_filter_name = rep(sample_names(scale_otu_merged_musk_wholepart_top), length(mytaxa)))
+  return(r)
+})
+
+# Merge sample metadata with these estimates
+merge_dat <- data.frame(sample_data(scale_otu_merged_musk_wholepart_top)) %>%
+  dplyr::select(norep_filter_name, Chl_Lab_ugperL, TP_ugperL, pH, frac_bacprod, NH3_mgperL, NO3_mgperL,
+         lakesite, fraction, season) 
+
+# Create a df with a "Diversity" column that includes richness and inv. simpson,
+# and log-chl a values from erie sample_data
+alpha_comb1 <- l$richness %>% 
+  left_join(y = l$invsimps, by = c("Taxa", "norep_filter_name")) %>%   # Join the richness and inv_simp df's
+  rename(Richness = Diversity.x, Inverse_Simpson = Diversity.y) 
+
+alpha_comb_final <- alpha_comb1 %>%
+  left_join(merge_dat, by = "norep_filter_name") %>%                  # Join with merged nutrient data
+  gather(key = "Alphadiv", value = "Estimate", Richness, Inverse_Simpson) 
+```
 
 
 <img src="Figures/cached/plot_phylum_diversity-1.png" style="display: block; margin: auto;" />
@@ -1817,7 +1884,442 @@ otu_phenoflow
 
 
 
-<img src="Figures/cached/specific_phyla-1.png" style="display: block; margin: auto;" /><img src="Figures/cached/specific_phyla-2.png" style="display: block; margin: auto;" />
+
+```r
+# CYANOS 
+cyanos <- filter(alpha_comb_final, Taxa == "Cyanobacteria")
+summary(lm(frac_bacprod ~ Estimate, data = filter(cyanos, Alphadiv == "Richness")))
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ Estimate, data = filter(cyanos, Alphadiv == 
+##     "Richness"))
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -11.9501  -4.0363  -0.7879   2.2606  14.7699 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)  
+## (Intercept)  27.3825     9.7451   2.810   0.0185 *
+## Estimate     -1.0138     0.5528  -1.834   0.0965 .
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 7.48 on 10 degrees of freedom
+## Multiple R-squared:  0.2517,	Adjusted R-squared:  0.1769 
+## F-statistic: 3.363 on 1 and 10 DF,  p-value: 0.09655
+```
+
+```r
+summary(lm(frac_bacprod ~ Estimate, data = filter(cyanos, Alphadiv == "Inverse_Simpson")))
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ Estimate, data = filter(cyanos, Alphadiv == 
+##     "Inverse_Simpson"))
+## 
+## Residuals:
+##    Min     1Q Median     3Q    Max 
+## -9.133 -6.143 -1.603  4.896 15.047 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)
+## (Intercept)    2.635      5.193   0.507    0.623
+## Estimate       1.923      1.231   1.562    0.149
+## 
+## Residual standard error: 7.753 on 10 degrees of freedom
+## Multiple R-squared:  0.1961,	Adjusted R-squared:  0.1157 
+## F-statistic:  2.44 on 1 and 10 DF,  p-value: 0.1494
+```
+
+```r
+# Plot it 
+ggplot(cyanos, aes(x = Estimate, y =frac_bacprod)) + 
+  geom_point(size = 3) +
+  #geom_smooth(method = "lm") + 
+  facet_grid(Taxa~Alphadiv, scales = "free_x")
+```
+
+<img src="Figures/cached/specific_phyla-1.png" style="display: block; margin: auto;" />
+
+```r
+# ACTINOBACTERIA
+actinos <- filter(alpha_comb_final, Taxa == "Actinobacteria")
+summary(lm(frac_bacprod ~ Estimate, data = filter(actinos, Alphadiv == "Richness")))
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ Estimate, data = filter(actinos, 
+##     Alphadiv == "Richness"))
+## 
+## Residuals:
+##    Min     1Q Median     3Q    Max 
+## -6.993 -4.725 -2.026  1.550 18.204 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)  
+## (Intercept)  -0.8996     6.3342  -0.142   0.8899  
+## Estimate      0.3954     0.2169   1.823   0.0983 .
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 7.492 on 10 degrees of freedom
+## Multiple R-squared:  0.2495,	Adjusted R-squared:  0.1744 
+## F-statistic: 3.324 on 1 and 10 DF,  p-value: 0.09827
+```
+
+```r
+summary(lm(frac_bacprod ~ Estimate, data = filter(actinos, Alphadiv == "Inverse_Simpson")))
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ Estimate, data = filter(actinos, 
+##     Alphadiv == "Inverse_Simpson"))
+## 
+## Residuals:
+##    Min     1Q Median     3Q    Max 
+## -7.298 -4.291 -2.771  2.293 20.345 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)
+## (Intercept)   2.5086     5.6970   0.440    0.669
+## Estimate      1.0443     0.7325   1.426    0.184
+## 
+## Residual standard error: 7.883 on 10 degrees of freedom
+## Multiple R-squared:  0.1689,	Adjusted R-squared:  0.08581 
+## F-statistic: 2.033 on 1 and 10 DF,  p-value: 0.1844
+```
+
+```r
+# Plot it 
+ggplot(actinos, aes(x = Estimate, y =frac_bacprod)) + 
+  geom_point(size = 3) +
+  #geom_smooth(method = "lm") + 
+  facet_grid(Taxa~Alphadiv, scales = "free_x")
+```
+
+<img src="Figures/cached/specific_phyla-2.png" style="display: block; margin: auto;" />
+
+```r
+# BACTEROIDETES
+bacteroidetes <- filter(alpha_comb_final, Taxa == "Bacteroidetes")
+summary(lm(frac_bacprod ~ Estimate, data = filter(bacteroidetes, Alphadiv == "Richness")))
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ Estimate, data = filter(bacteroidetes, 
+##     Alphadiv == "Richness"))
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -7.6629 -2.7171  0.2994  2.1157  8.2393 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)   
+## (Intercept) -7.61876    4.47790  -1.701  0.11970   
+## Estimate     0.13301    0.03191   4.168  0.00192 **
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 5.227 on 10 degrees of freedom
+## Multiple R-squared:  0.6347,	Adjusted R-squared:  0.5982 
+## F-statistic: 17.37 on 1 and 10 DF,  p-value: 0.001924
+```
+
+```r
+summary(lm(frac_bacprod ~ Estimate, data = filter(bacteroidetes, Alphadiv == "Inverse_Simpson")))
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ Estimate, data = filter(bacteroidetes, 
+##     Alphadiv == "Inverse_Simpson"))
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -12.1185  -4.5698  -0.0459   3.1462  17.3474 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)
+## (Intercept)   3.4586     5.3526   0.646    0.533
+## Estimate      0.3395     0.2526   1.344    0.209
+## 
+## Residual standard error: 7.959 on 10 degrees of freedom
+## Multiple R-squared:  0.1529,	Adjusted R-squared:  0.06823 
+## F-statistic: 1.805 on 1 and 10 DF,  p-value: 0.2087
+```
+
+```r
+# Plot it 
+ggplot(bacteroidetes, aes(x = Estimate, y =frac_bacprod)) + 
+  geom_point(size = 3) +
+  geom_smooth(method = "lm", data = filter(bacteroidetes, Alphadiv == "Richness")) + 
+  facet_grid(Taxa~Alphadiv, scales = "free_x")
+```
+
+<img src="Figures/cached/specific_phyla-3.png" style="display: block; margin: auto;" />
+
+```r
+# VERRUCOMICROBIA
+verruco <- filter(alpha_comb_final, Taxa == "Verrucomicrobia")
+summary(lm(frac_bacprod ~ Estimate, data = filter(verruco, Alphadiv == "Richness")))
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ Estimate, data = filter(verruco, 
+##     Alphadiv == "Richness"))
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -8.7749 -3.6735 -0.8133  0.9688 17.1741 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)  
+## (Intercept) -1.08011    5.34381  -0.202   0.8439  
+## Estimate     0.18490    0.08277   2.234   0.0495 *
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 7.063 on 10 degrees of freedom
+## Multiple R-squared:  0.3329,	Adjusted R-squared:  0.2662 
+## F-statistic:  4.99 on 1 and 10 DF,  p-value: 0.04951
+```
+
+```r
+summary(lm(frac_bacprod ~ Estimate, data = filter(verruco, Alphadiv == "Inverse_Simpson")))
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ Estimate, data = filter(verruco, 
+##     Alphadiv == "Inverse_Simpson"))
+## 
+## Residuals:
+##    Min     1Q Median     3Q    Max 
+## -8.105 -5.266 -0.816  1.435 13.436 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)  
+## (Intercept)   2.3166     3.5659   0.650   0.5306  
+## Estimate      1.1193     0.4383   2.554   0.0287 *
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 6.727 on 10 degrees of freedom
+## Multiple R-squared:  0.3948,	Adjusted R-squared:  0.3342 
+## F-statistic: 6.522 on 1 and 10 DF,  p-value: 0.02867
+```
+
+```r
+# Plot it 
+ggplot(verruco, aes(x = Estimate, y =frac_bacprod)) + 
+  geom_point(size = 3) +
+  geom_smooth(method = "lm") + 
+  facet_grid(Taxa~Alphadiv, scales = "free_x")
+```
+
+<img src="Figures/cached/specific_phyla-4.png" style="display: block; margin: auto;" />
+
+```r
+# PLANCTOMYCETES
+planctos <- filter(alpha_comb_final, Taxa == "Planctomycetes")
+summary(lm(frac_bacprod ~ Estimate, data = filter(planctos, Alphadiv == "Richness")))
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ Estimate, data = filter(planctos, 
+##     Alphadiv == "Richness"))
+## 
+## Residuals:
+##    Min     1Q Median     3Q    Max 
+## -7.854 -3.809 -2.180  2.100 16.492 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)  
+## (Intercept)  -2.2675     5.4025  -0.420   0.6836  
+## Estimate      0.2515     0.1034   2.431   0.0354 *
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 6.855 on 10 degrees of freedom
+## Multiple R-squared:  0.3715,	Adjusted R-squared:  0.3087 
+## F-statistic: 5.911 on 1 and 10 DF,  p-value: 0.03537
+```
+
+```r
+summary(lm(frac_bacprod ~ Estimate, data = filter(planctos, Alphadiv == "Inverse_Simpson")))
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ Estimate, data = filter(planctos, 
+##     Alphadiv == "Inverse_Simpson"))
+## 
+## Residuals:
+##    Min     1Q Median     3Q    Max 
+## -7.679 -5.685 -1.782  2.519 20.645 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)
+## (Intercept) 10.06117    6.25469   1.609    0.139
+## Estimate    -0.01158    0.62269  -0.019    0.986
+## 
+## Residual standard error: 8.647 on 10 degrees of freedom
+## Multiple R-squared:  3.46e-05,	Adjusted R-squared:  -0.09996 
+## F-statistic: 0.000346 on 1 and 10 DF,  p-value: 0.9855
+```
+
+```r
+# Plot it 
+ggplot(planctos, aes(x = Estimate, y =frac_bacprod)) + 
+  geom_point(size = 3) +
+  geom_smooth(method = "lm", data = filter(planctos, Alphadiv == "Richness")) + 
+  facet_grid(Taxa~Alphadiv, scales = "free_x")
+```
+
+<img src="Figures/cached/specific_phyla-5.png" style="display: block; margin: auto;" />
+
+```r
+# BETAPROTEOS
+betaprots <- filter(alpha_comb_final, Taxa == "Betaproteobacteria")
+summary(lm(frac_bacprod ~ Estimate, data = filter(betaprots, Alphadiv == "Richness")))
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ Estimate, data = filter(betaprots, 
+##     Alphadiv == "Richness"))
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -8.4535 -4.0698  0.0419  2.2796 12.3534 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)  
+## (Intercept) -6.02109    5.56245  -1.082   0.3045  
+## Estimate     0.29447    0.09701   3.036   0.0126 *
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 6.238 on 10 degrees of freedom
+## Multiple R-squared:  0.4796,	Adjusted R-squared:  0.4275 
+## F-statistic: 9.214 on 1 and 10 DF,  p-value: 0.01256
+```
+
+```r
+summary(lm(frac_bacprod ~ Estimate, data = filter(betaprots, Alphadiv == "Inverse_Simpson")))
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ Estimate, data = filter(betaprots, 
+##     Alphadiv == "Inverse_Simpson"))
+## 
+## Residuals:
+##    Min     1Q Median     3Q    Max 
+## -9.289 -5.062 -2.022  1.729 19.944 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)
+## (Intercept)  15.7027     9.9802   1.573    0.147
+## Estimate     -0.5350     0.9004  -0.594    0.566
+## 
+## Residual standard error: 8.499 on 10 degrees of freedom
+## Multiple R-squared:  0.0341,	Adjusted R-squared:  -0.06249 
+## F-statistic: 0.3531 on 1 and 10 DF,  p-value: 0.5656
+```
+
+```r
+# Plot it 
+ggplot(betaprots, aes(x = Estimate, y =frac_bacprod)) + 
+  geom_point(size = 3) +
+  geom_smooth(method = "lm", data = filter(betaprots, Alphadiv == "Richness")) + 
+  facet_grid(Taxa~Alphadiv, scales = "free_x")
+```
+
+<img src="Figures/cached/specific_phyla-6.png" style="display: block; margin: auto;" />
+
+```r
+# ALPHAPROTS
+alphaprots <- filter(alpha_comb_final, Taxa == "Alphaproteobacteria")
+summary(lm(frac_bacprod ~ Estimate, data = filter(alphaprots, Alphadiv == "Richness")))
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ Estimate, data = filter(alphaprots, 
+##     Alphadiv == "Richness"))
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -8.2159 -3.2062 -1.2829  0.9179 16.3440 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)  
+## (Intercept) -13.8984     9.9487  -1.397   0.1926  
+## Estimate      0.3924     0.1604   2.446   0.0345 *
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 6.84 on 10 degrees of freedom
+## Multiple R-squared:  0.3744,	Adjusted R-squared:  0.3118 
+## F-statistic: 5.984 on 1 and 10 DF,  p-value: 0.03448
+```
+
+```r
+summary(lm(frac_bacprod ~ Estimate, data = filter(alphaprots, Alphadiv == "Inverse_Simpson")))
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ Estimate, data = filter(alphaprots, 
+##     Alphadiv == "Inverse_Simpson"))
+## 
+## Residuals:
+##    Min     1Q Median     3Q    Max 
+## -8.377 -3.362 -1.517  1.694 21.487 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)
+## (Intercept)   2.3699     6.3966   0.370    0.719
+## Estimate      0.5029     0.3954   1.272    0.232
+## 
+## Residual standard error: 8.023 on 10 degrees of freedom
+## Multiple R-squared:  0.1393,	Adjusted R-squared:  0.0532 
+## F-statistic: 1.618 on 1 and 10 DF,  p-value: 0.2321
+```
+
+```r
+# Plot it 
+ggplot(alphaprots, aes(x = Estimate, y =frac_bacprod)) + 
+  geom_point(size = 3) +
+  geom_smooth(method = "lm", data = filter(alphaprots, Alphadiv == "Richness")) + 
+  facet_grid(Taxa~Alphadiv, scales = "free_x")
+```
+
+<img src="Figures/cached/specific_phyla-7.png" style="display: block; margin: auto;" />
 
 
 

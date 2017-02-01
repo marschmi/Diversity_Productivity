@@ -23,6 +23,7 @@ knitr::opts_chunk$set(eval = TRUE,
                       warning = FALSE,
                       collapse = FALSE,
                       dependson = NULL,
+                      message = FALSE,
                       engine = "R", # Chunks will always have R code, unless noted
                       error = TRUE,
                       fig.path="Figures/cached/",  # Set the figure options
@@ -495,8 +496,6 @@ part_vs_wholepart_div_plots
 ```
 
 
-
-
 # Is there a significant relationship between sequencing depth and diversity?
 ```{r div_vs_seqdepth, fig.width=10, fig.height = 4, echo = TRUE}
 ## Is there a significant relationship between sequencing depth and D0?
@@ -567,7 +566,36 @@ ggplot(nosed_meta_data, aes(x = Sample_TotalSeqs, y = D2)) +
 
 ```
 
+# Does DNA extraction concentration influcence diversity?
+```{r dnaconc_vs_diversity, fig.width=10, fig.height = 4, echo = TRUE}
+### Prepare the data frame 
+DNA_comparison <- nosed_meta_data %>%
+  dplyr::select(norep_filter_name, dnaconcrep1, dnaconcrep2, cells_per_uL, lakesite) %>%
+  mutate(dnaconcrep1 = as.numeric(dnaconcrep1),
+         dnaconcrep2 = as.numeric(dnaconcrep2),
+         mean_dna = (dnaconcrep1+dnaconcrep2)/2)
 
+# Calculate the linear models 
+lm_dna_conc <- lm(dnaconcrep1 ~ dnaconcrep2,  data = DNA_comparison)
+lm_cells_vs_meanDNA <- lm(mean_dna ~ cells_per_uL,  data = DNA_comparison)
+
+# Plot the trends 
+plot_grid(ggplot(DNA_comparison, aes(x = dnaconcrep1, y = dnaconcrep2)) + # First plot 
+            geom_point(size = 3) + geom_smooth(method = "lm") +
+            annotate("text",  x = 17, y = 3,
+              color = "black", fontface = "bold",
+               label = paste("R2 =", round(summary(lm_dna_conc)$adj.r.squared, digits = 4), "\n", 
+                             "p =", round(unname(summary(lm_dna_conc)$coefficients[,4][2]), digits = 8)))+
+            ggtitle("DNA Concentration Between Replicates"), 
+          ggplot(DNA_comparison, aes(x = mean_dna, y = cells_per_uL)) + # Second plot 
+            geom_point(size = 3) + geom_smooth(method = "lm") +
+            annotate("text",  x = 12, y = 4800,
+              color = "black", fontface = "bold",
+               label = paste("R2 =", round(summary(lm_cells_vs_meanDNA)$adj.r.squared, digits = 4), "\n", 
+                             "p =", round(unname(summary(lm_cells_vs_meanDNA)$coefficients[,4][2]), digits = 4)))+
+            ggtitle("Mean DNA Concentration vs Cell Numbers"),
+          labels = c("A", "B"), ncol = 2)
+```
 
 
 
@@ -1303,7 +1331,7 @@ otu_phenoflow
 
 
 # Phylum production analysis
-```{r phylum-div-prod}
+```{r phylum-div-prod, echo = TRUE}
 # Michelle Berry's subsetting function, similar to phyloseq::subset_taxa, except taxa can 
 # be passed as arguments within functions without weird environment errors
 #
@@ -1416,37 +1444,98 @@ alpha_comb_final <- alpha_comb1 %>%
 ```
 
 
-```{r plot_phylum_diversity, fig.width=6, fig.height=20}
+```{r plot_phylum_diversity, fig.width=8, fig.height=20}
 ggplot(alpha_comb_final, aes(x = Estimate, y =frac_bacprod)) + 
   geom_point() +
   geom_smooth(method = "lm") + 
   facet_grid(Taxa~Alphadiv, scales = "free_x")
 
-ggsave("../Figures/phyla_alphadiv.png", dpi = 600, width = 6, height = 20)
+alpha_comb_final$Alphadiv <- factor(alpha_comb_final$Alphadiv,
+                                    levels=c("Richness", "Inverse_Simpson"),
+                                    ordered=TRUE)
+
+#ggsave("../Figures/phyla_alphadiv.png", dpi = 600, width = 6, height = 20)
 ```
 
 
 
 
-```{r specific_phyla}
-actinos <- filter(alpha_comb_final, Taxa == "Actinobacteria")
-lm_actino_rich <- lm(frac_bacprod ~ Estimate, data = filter(actinos, Alphadiv == "Richness"))
-lm_actino_invsimps <- lm(frac_bacprod ~ Estimate, data = filter(actinos, Alphadiv == "Inverse_Simpson"))
-
-ggplot(actinos, aes(x = Estimate, y =frac_bacprod)) + 
-  geom_point() +
+```{r specific_phyla, fig.width=10, fig.height = 4, echo = TRUE}
+# CYANOS 
+cyanos <- filter(alpha_comb_final, Taxa == "Cyanobacteria")
+summary(lm(frac_bacprod ~ Estimate, data = filter(cyanos, Alphadiv == "Richness")))
+summary(lm(frac_bacprod ~ Estimate, data = filter(cyanos, Alphadiv == "Inverse_Simpson")))
+# Plot it 
+ggplot(cyanos, aes(x = Estimate, y =frac_bacprod)) + 
+  geom_point(size = 3) +
   #geom_smooth(method = "lm") + 
   facet_grid(Taxa~Alphadiv, scales = "free_x")
 
 
 
-bacteroidetes <- filter(alpha_comb_final, Taxa == "Bacteroidetes")
-lm_bactero_rich <- lm(frac_bacprod ~ Estimate, data = filter(bacteroidetes, Alphadiv == "Richness"))
-lm_bactero_invsimps <- lm(frac_bacprod ~ Estimate, data = filter(bacteroidetes, Alphadiv == "Inverse_Simpson"))
+# ACTINOBACTERIA
+actinos <- filter(alpha_comb_final, Taxa == "Actinobacteria")
+summary(lm(frac_bacprod ~ Estimate, data = filter(actinos, Alphadiv == "Richness")))
+summary(lm(frac_bacprod ~ Estimate, data = filter(actinos, Alphadiv == "Inverse_Simpson")))
+# Plot it 
+ggplot(actinos, aes(x = Estimate, y =frac_bacprod)) + 
+  geom_point(size = 3) +
+  #geom_smooth(method = "lm") + 
+  facet_grid(Taxa~Alphadiv, scales = "free_x")
 
+
+# BACTEROIDETES
+bacteroidetes <- filter(alpha_comb_final, Taxa == "Bacteroidetes")
+summary(lm(frac_bacprod ~ Estimate, data = filter(bacteroidetes, Alphadiv == "Richness")))
+summary(lm(frac_bacprod ~ Estimate, data = filter(bacteroidetes, Alphadiv == "Inverse_Simpson")))
+# Plot it 
 ggplot(bacteroidetes, aes(x = Estimate, y =frac_bacprod)) + 
-  geom_point() +
+  geom_point(size = 3) +
   geom_smooth(method = "lm", data = filter(bacteroidetes, Alphadiv == "Richness")) + 
+  facet_grid(Taxa~Alphadiv, scales = "free_x")
+
+
+# VERRUCOMICROBIA
+verruco <- filter(alpha_comb_final, Taxa == "Verrucomicrobia")
+summary(lm(frac_bacprod ~ Estimate, data = filter(verruco, Alphadiv == "Richness")))
+summary(lm(frac_bacprod ~ Estimate, data = filter(verruco, Alphadiv == "Inverse_Simpson")))
+# Plot it 
+ggplot(verruco, aes(x = Estimate, y =frac_bacprod)) + 
+  geom_point(size = 3) +
+  geom_smooth(method = "lm") + 
+  facet_grid(Taxa~Alphadiv, scales = "free_x")
+
+
+# PLANCTOMYCETES
+planctos <- filter(alpha_comb_final, Taxa == "Planctomycetes")
+summary(lm(frac_bacprod ~ Estimate, data = filter(planctos, Alphadiv == "Richness")))
+summary(lm(frac_bacprod ~ Estimate, data = filter(planctos, Alphadiv == "Inverse_Simpson")))
+# Plot it 
+ggplot(planctos, aes(x = Estimate, y =frac_bacprod)) + 
+  geom_point(size = 3) +
+  geom_smooth(method = "lm", data = filter(planctos, Alphadiv == "Richness")) + 
+  facet_grid(Taxa~Alphadiv, scales = "free_x")
+
+
+# BETAPROTEOS
+betaprots <- filter(alpha_comb_final, Taxa == "Betaproteobacteria")
+summary(lm(frac_bacprod ~ Estimate, data = filter(betaprots, Alphadiv == "Richness")))
+summary(lm(frac_bacprod ~ Estimate, data = filter(betaprots, Alphadiv == "Inverse_Simpson")))
+# Plot it 
+ggplot(betaprots, aes(x = Estimate, y =frac_bacprod)) + 
+  geom_point(size = 3) +
+  geom_smooth(method = "lm", data = filter(betaprots, Alphadiv == "Richness")) + 
+  facet_grid(Taxa~Alphadiv, scales = "free_x")
+
+
+# ALPHAPROTS
+alphaprots <- filter(alpha_comb_final, Taxa == "Alphaproteobacteria")
+summary(lm(frac_bacprod ~ Estimate, data = filter(alphaprots, Alphadiv == "Richness")))
+summary(lm(frac_bacprod ~ Estimate, data = filter(alphaprots, Alphadiv == "Inverse_Simpson")))
+# Plot it 
+ggplot(alphaprots, aes(x = Estimate, y =frac_bacprod)) + 
+  geom_point(size = 3) +
+  geom_smooth(method = "lm", data = filter(alphaprots, Alphadiv == "Richness")) + 
   facet_grid(Taxa~Alphadiv, scales = "free_x")
 ```
 
