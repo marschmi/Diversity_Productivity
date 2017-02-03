@@ -47,6 +47,7 @@ library(viridis)
 library(data.table)
 library(stringr)
 library(ape)
+library(picante)
 library(iNEXT) # iNEXT package for alpha diversity measurements 
 source("Muskegon_functions.R")
 source("set_colors.R")
@@ -597,6 +598,16 @@ plot_grid(ggplot(DNA_comparison, aes(x = dnaconcrep1, y = dnaconcrep2)) + # Firs
           labels = c("A", "B"), ncol = 2)
 ```
 
+# Faith's Phylogenetic Diversity
+```{r faiths_PD}
+# To calculate the sum of the phylogenetic branch length for samples, use the pd {picante} function
+faiths_pd <- pd(otu_table(otu_merged_musk_pruned), phy_tree(otu_merged_musk_pruned))
+head(comm.pd)
+
+plot_tree(otu_merged_musk_pruned)
+
+
+```
 
 
 # Is there a relationship between diversity and productivity?

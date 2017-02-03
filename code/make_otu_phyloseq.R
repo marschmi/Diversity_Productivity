@@ -14,7 +14,13 @@ source("Muskegon_functions.R")
 #  Load in the taxonomy and shared data
 otu_tax <- "../data/mothur/stability.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.an.unique_list.0.03.cons.taxonomy"
 otu_shared <- "../data/mothur/stability.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.an.unique_list.shared"
-otu_data <- import_mothur(mothur_shared_file = otu_shared, mothur_constaxonomy_file = otu_tax)
+otu_physeq <- import_mothur(mothur_shared_file = otu_shared, mothur_constaxonomy_file = otu_tax)
+
+
+tree_otu <- read.tree(file = "../data/fasttree/newick_tree_16s_OTU.tre")
+
+otu_data <- merge_phyloseq(otu_physeq, tree_otu)
+
 
 # Fix the taxonomy names
 colnames(tax_table(otu_data)) <- c("Kingdom","Phylum","Class","Order","Family","Genus","Species")
