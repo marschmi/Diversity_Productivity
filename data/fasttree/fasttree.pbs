@@ -1,0 +1,29 @@
+####  PBS preamble
+#PBS -N fasttree_16S_Musk_LakeMI
+#PBS -M marschmi@umich.edu
+#PBS -m abe
+
+#PBS -l nodes=1:ppn=20,mem=500gb,walltime=100:00:00
+#PBS -V
+
+#PBS -A vdenef_fluxm
+#PBS -l qos=flux
+#PBS -q fluxm
+####  End PBS preamble
+
+#  Show list of CPUs you ran on, if you're running under PBS
+if [ -n "$PBS_NODEFILE" ]; then cat $PBS_NODEFILE; fi
+
+#  Change to the directory you submitted from
+if [ -n "$PBS_O_WORKDIR" ]; then cd $PBS_O_WORKDIR; fi
+pwd
+
+##############################################
+
+# Infer a tree with fasttree with the GTR+CAT 
+### GTR: General time reversible model 
+
+## Input file to fasttree = rm_pipe_count_16s.fa
+## Output file to fasttree = newick_tree_16s_OTU.tre 
+
+FastTree -gtr -nt -fastest  < rm_pipe_count_16s.fa > newick_tree_16s_OTU.tre
