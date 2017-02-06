@@ -211,6 +211,91 @@ fraction_divs$lakesite <- factor(fraction_divs$lakesite,  levels = c("MOT", "MDP
 ```
 
 
+# Faith's Phylogenetic Diversity  
+
+This analysis was inspired by <a href="http://kembellab.ca/r-workshop/biodivR/SK_Biodiversity_R.html" target="_blank">Steve Kembells's tutorial</a> on biodiversity analysis in R with the `Picante` package. 
+
+```{r faiths_PD}
+# Remove the sediment data 
+nosed_physeq <- subset_samples(otu_merged_musk_pruned, fraction != "Sediment" & limnion == "Top")
+nosed_physeq <- prune_taxa(taxa_sums(nosed_physeq) > 0, nosed_physeq)
+
+# To calculate the sum of the phylogenetic branch length for samples, use the pd {picante} function
+# First force the OTU 
+otu_musk <- matrix(otu_table(nosed_physeq), nrow = nrow(otu_table(nosed_physeq)))
+rownames(otu_musk) <- sample_names(nosed_physeq)
+colnames(otu_musk) <- taxa_names(nosed_physeq)
+
+# Convert the count data to relative abundance by dividing each value by sample
+# total abundance with the vegan function `decostand` 
+relabund_otu <- decostand(otu_musk, method = "total")
+# check total abundance in each sample
+apply(relabund_otu, 1, sum)
+
+# Bring the tree out of the phyloseq object 
+tree_musk <- phy_tree(nosed_physeq)
+
+# metadata 
+metadata <- data.frame(sample_data(nosed_physeq))
+
+# check for mismatches/missing species between community data and phylo tree
+combined <- match.phylo.comm(tree_musk, relabund_otu)
+# the resulting object is a list with $phy and $comm elements.  replace our
+# original data with the sorted/matched data
+phy <- combined$phy
+comm <- combined$comm
+
+
+# compare species richness between fescue and mixedgrass habitats
+boxplot(specnumber(comm) ~ metadata$fraction, ylab = "# of species")
+
+#plot(specaccum(comm), xlab = "# of samples", ylab = "# of species")
+
+#all.equal(rownames(comm), rownames(phy))
+
+## WOOOOOO
+faiths_pd <- pd(relabund_otu, tree_musk, include.root = FALSE)
+```
+
+
+# Analysis of Faith's PD
+```{r faiths_PD_analysis}
+faiths_pd$norep_filter_name <- row.names(faiths_pd)
+nosed_meta_data_PD <- left_join(nosed_meta_data, faiths_pd, by = "norep_filter_name")
+
+
+plot_season_PD <- ggplot(nosed_meta_data_PD, aes(x = season, y = PD, color = season, fill = season)) + 
+  geom_jitter(size = 3) + geom_boxplot(alpha = 0.4) + ylab("Faith's PD") + 
+  scale_fill_manual(values = season_colors) +
+  scale_color_manual(values = season_colors) 
+
+plot_lakesite_PD <- ggplot(nosed_meta_data_PD, aes(x = lakesite, y = PD, color = lakesite, fill = lakesite)) + 
+  geom_jitter(size = 3) + geom_boxplot(alpha = 0.4) + ylab("Faith's PD") + 
+  scale_fill_manual(values = lakesite_colors) +
+  scale_color_manual(values = lakesite_colors) 
+
+plot_grid(plot_season_PD, plot_lakesite_PD, 
+          labels = c("A", "B"), 
+          ncol = 2)
+
+
+### Is there a correlation between species richness and faith's PD?
+lm_PD_vs_SR <- lm(PD ~ SR, data = nosed_meta_data_PD)
+ggplot(nosed_meta_data_PD, aes(y = PD, x = SR)) + 
+  geom_point(size = 3) + xlab("Faith's PD") + 
+  xlab("Species richness") +
+  geom_smooth(method = "lm") +
+    annotate("text", x = 3500, y=100, color = "black", fontface = "bold",
+           label = paste("R2 =", round(summary(lm_PD_vs_SR)$adj.r.squared, digits = 3), "\n", 
+                         "p =", round(unname(summary(lm_PD_vs_SR)$coefficients[,4][2]), digits = 52)))
+```
+
+Faith's PD is lower certain seasons and laksites.  However, Faith's PD is **highly correlated (!!!)** with species richness, and we already know that there are fewer species in summer and the Lake Michigan channel (MOT), so we need some way to compare phylogenetic diversity that takes this fact into account.
+
+
+
+
+
 #  How linked are the diversities of the fractions?
 ## Free Living Sample Diversity Comparison  
 ```{r free_vs_wholefree_diversity, fig.height=8, fig.width=10, echo = TRUE}
@@ -598,16 +683,6 @@ plot_grid(ggplot(DNA_comparison, aes(x = dnaconcrep1, y = dnaconcrep2)) + # Firs
           labels = c("A", "B"), ncol = 2)
 ```
 
-# Faith's Phylogenetic Diversity
-```{r faiths_PD}
-# To calculate the sum of the phylogenetic branch length for samples, use the pd {picante} function
-faiths_pd <- pd(otu_table(otu_merged_musk_pruned), phy_tree(otu_merged_musk_pruned))
-head(comm.pd)
-
-plot_tree(otu_merged_musk_pruned)
-
-
-```
 
 
 # Is there a relationship between diversity and productivity?
