@@ -37,18 +37,10 @@ knitr::opts_chunk$set(eval = TRUE,
 library(ggplot2)
 library(devtools)
 library(phyloseq)
-library(vegan)
 library(tidyr)
 library(dplyr)
-library(DT)
 library(cowplot)
-library(wesanderson) # for pretty colors
-library(viridis)
-library(data.table)
-library(stringr)
-library(ape)
-library(picante)
-library(iNEXT) # iNEXT package for alpha diversity measurements 
+library(picante) # Will also include ape and vegan 
 source("Muskegon_functions.R")
 source("set_colors.R")
 ```
@@ -245,21 +237,17 @@ combined <- match.phylo.comm(tree_musk, relabund_otu)
 phy <- combined$phy
 comm <- combined$comm
 
-
-# compare species richness between fescue and mixedgrass habitats
-boxplot(specnumber(comm) ~ metadata$fraction, ylab = "# of species")
-
-#plot(specaccum(comm), xlab = "# of samples", ylab = "# of species")
-
-#all.equal(rownames(comm), rownames(phy))
-
-## WOOOOOO
+## Calculate Faith's PD and species richness for sample 
 faiths_pd <- pd(relabund_otu, tree_musk, include.root = FALSE)
+faiths_pd$norep_filter_name <- row.names(faiths_pd)
+  
+#write.csv(faiths_pd, file = "../data/Faiths_PD.csv", row.names = FALSE)
 ```
 
 
-# Analysis of Faith's PD
+## Faith's PD & Richness 
 ```{r faiths_PD_analysis}
+# Join Faith's PD with the rest of the metadata 
 faiths_pd$norep_filter_name <- row.names(faiths_pd)
 nosed_meta_data_PD <- left_join(nosed_meta_data, faiths_pd, by = "norep_filter_name")
 
@@ -278,7 +266,6 @@ plot_grid(plot_season_PD, plot_lakesite_PD,
           labels = c("A", "B"), 
           ncol = 2)
 
-
 ### Is there a correlation between species richness and faith's PD?
 lm_PD_vs_SR <- lm(PD ~ SR, data = nosed_meta_data_PD)
 ggplot(nosed_meta_data_PD, aes(y = PD, x = SR)) + 
@@ -293,6 +280,28 @@ ggplot(nosed_meta_data_PD, aes(y = PD, x = SR)) +
 Faith's PD is lower certain seasons and laksites.  However, Faith's PD is **highly correlated (!!!)** with species richness, and we already know that there are fewer species in summer and the Lake Michigan channel (MOT), so we need some way to compare phylogenetic diversity that takes this fact into account.
 
 
+
+## MPD and MNTD
+
+Notes from Steve Kembell's tutorial: 
+
+- `mpd`: Calculates the mean pairwise distance between all species or individuals in each community.  
+- `mntd`: Calculates the mean nearest taxon distance, which is the average distance separating each species or individual in the community from its closest heterospecific relative.  
+- `ses.`: standardized effect size  
+        + Standardized effect sizes describe the difference between average phylogenetic distances in the observed communities versus null communities generated with some randomization method, standardized by the standard deviation of phylogenetic distances in the null data:
+
+The `mpd` and `mntd` functions differs slightly from the `pd` function in that they take a distance matrix as input rather than a phylogeny object. Therefore, we will use the `cophenetic` function to calculate the distance matrix from our phylogeny.  
+
+If the community data represent abundance measures, the abundance data can be taken into account. Doing so changes the interpretation of these metrics from the average distance among two randomly chosen species from a community, to the average distance among two randomly chosen individuals in a community.
+
+```{r mpd_mntd_picante}
+# convert phylogenety to a distance matrix
+phy_dist <- cophenetic(phy)
+
+# calculate standardized effect size mean pairwise distance (ses.mpd)
+# comm_sesmpd <- ses.mpd(comm, phy_dist, null.model = "richness", 
+#                       abundance.weighted = FALSE, runs = 999)
+```
 
 
 
