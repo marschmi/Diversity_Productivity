@@ -314,6 +314,65 @@ comm_sesmntd <- ses.mntd(comm, phy_dist, null.model = "richness",
 ```
 
 
+The output includes the following columns:
+
+- `ntaxa` - Number of taxa in community  
+- `mpd.obs` - Observed mpd in community  
+- `mpd.rand.mean` - Mean mpd in null communities  
+- `mpd.rand.sd` - Standard deviation of mpd in null communities  
+- `mpd.obs.rank` - Rank of observed mpd vs. null communities  
+- `mpd.obs.z` - Standardized effect size of mpd vs. null communities (equivalent to -NRI)  
+- `mpd.obs.p` - P-value (quantile) of observed mpd vs. null communities (= mpd.obs.rank / runs + 1)  
+- `runs` - Number of randomizations
+
+Interpretation:  
+
+- **Positive SES values (mpd.obs.z > 0) and high quantiles (mpd.obs.p > 0.95)** =  phylogenetic evenness relative to the null model. Higher MPD values indicate more phylogenetically different taxa within a community (@Ruiz-Gonzalez et al., 2015).   
+- **Negative SES values and low quantiles (mpd.obs.p < 0.05)** = phylogenetic clustering relative to the null model. 
+
+
+
+```{r ses_mpd_analysis}
+comm_sesmpd <- read.csv(file = "../data/ses_mpd.csv") %>%
+  dplyr::rename(norep_filter_name = X)
+
+comm_sesmpd <- inner_join(metadata, comm_sesmpd, by = "norep_filter_name")
+
+
+# compare ses.mpd between fractions
+plot_ses_mpd_seasonfrac <- 
+  ggplot(comm_sesmpd, aes(x = fraction, y = mpd.obs.z, color = season, fill = season)) + 
+  geom_point(size = 3, position = position_jitterdodge()) + ylab("Mean Phylogenetic Distance (SES)") + 
+  geom_boxplot(alpha = 0.5) +
+  scale_color_manual(values = season_colors) + 
+  scale_fill_manual(values = season_colors) + 
+  geom_hline(yintercept = 0) +
+  facet_grid(.~fraction, scale = "free_x")
+
+# compare ses.mpd between fractions
+plot_ses_mpd_pval_seasonfrac <- 
+  ggplot(comm_sesmpd, aes(x = fraction, y = mpd.obs.p, color = season, fill = season)) + 
+  geom_point(size = 3, position = position_jitterdodge()) + ylab("p-value") +
+  geom_boxplot(alpha = 0.5) +
+  scale_color_manual(values = season_colors) + 
+  scale_fill_manual(values = season_colors) + 
+  geom_hline(yintercept = 0.05) +
+  facet_grid(.~fraction, scale = "free_x")
+
+plot_grid(plot_ses_mpd_seasonfrac, plot_ses_mpd_pval_seasonfrac, 
+          labels = c("A", "B"), 
+          nrow = 2)
+
+
+ggplot(comm_sesmpd, aes(x = mpd.obs, y = mpd.rand.mean, color = fraction)) + 
+  geom_point(size = 3) + 
+  ylab("Mean mpd in Environmental Comminity") +
+  xlab("Mean mpd in Null Comminity")
+```
+
+
+`MPD` is generally thought to be more sensitive to tree-wide patterns of phylogenetic clustering and eveness, while `MNTD` is more sensitive to patterns of evenness and clustering closer to the tips of the phylogeny.
+
 
 #  How linked are the diversities of the fractions?
 ## Free Living Sample Diversity Comparison  
