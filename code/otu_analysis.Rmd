@@ -238,10 +238,11 @@ phy <- combined$phy
 comm <- combined$comm
 
 ## Calculate Faith's PD and species richness for sample 
-faiths_pd <- pd(relabund_otu, tree_musk, include.root = FALSE)
-faiths_pd$norep_filter_name <- row.names(faiths_pd)
+#faiths_pd <- pd(relabund_otu, tree_musk, include.root = FALSE)
+#faiths_pd$norep_filter_name <- row.names(faiths_pd)
   
 #write.csv(faiths_pd, file = "../data/Faiths_PD.csv", row.names = FALSE)
+faiths_pd <- read.csv("../data/Faiths_PD.csv", header = TRUE)
 ```
 
 
@@ -249,7 +250,7 @@ faiths_pd$norep_filter_name <- row.names(faiths_pd)
 ```{r faiths_PD_analysis}
 # Join Faith's PD with the rest of the metadata 
 faiths_pd$norep_filter_name <- row.names(faiths_pd)
-nosed_meta_data_PD <- left_join(nosed_meta_data, faiths_pd, by = "norep_filter_name")
+nosed_meta_data_PD <- left_join(faiths_pd, nosed_meta_data, by = "norep_filter_name")
 
 
 plot_season_PD <- ggplot(nosed_meta_data_PD, aes(x = season, y = PD, color = season, fill = season)) + 
@@ -299,8 +300,17 @@ If the community data represent abundance measures, the abundance data can be ta
 phy_dist <- cophenetic(phy)
 
 # calculate standardized effect size mean pairwise distance (ses.mpd)
-# comm_sesmpd <- ses.mpd(comm, phy_dist, null.model = "richness", 
-#                       abundance.weighted = FALSE, runs = 999)
+comm_sesmpd <- ses.mpd(comm, phy_dist, null.model = "richness", 
+                       abundance.weighted = FALSE, runs = 999)
+
+#write.csv(comm_sesmpd, file = "../data/ses_mpd.csv", row.names = TRUE)
+
+# calculate ses.mntd
+comm_sesmntd <- ses.mntd(comm, phy_dist, null.model = "richness", 
+                         abundance.weighted = FALSE, runs = 999)
+
+
+
 ```
 
 
