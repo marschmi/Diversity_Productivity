@@ -51,6 +51,10 @@ source("set_colors.R")
 load("../data/otu_merged_musk_pruned.RData")
 # The name of the phyloseq object is: 
 otu_merged_musk_pruned 
+
+# Remove tree because it's too computationally intensive
+otu_merged_musk_pruned <- merge_phyloseq(tax_table(otu_merged_musk_pruned), sample_data(otu_merged_musk_pruned), otu_table(otu_merged_musk_pruned))
+otu_merged_musk_pruned
 ```
 
 
@@ -209,47 +213,46 @@ This analysis was inspired by <a href="http://kembellab.ca/r-workshop/biodivR/SK
 
 ```{r faiths_PD}
 # Remove the sediment data 
-nosed_physeq <- subset_samples(otu_merged_musk_pruned, fraction != "Sediment" & limnion == "Top")
-nosed_physeq <- prune_taxa(taxa_sums(nosed_physeq) > 0, nosed_physeq)
+#nosed_physeq <- subset_samples(otu_merged_musk_pruned, fraction != "Sediment" & limnion == "Top")
+#nosed_physeq <- prune_taxa(taxa_sums(nosed_physeq) > 0, nosed_physeq)
 
 # To calculate the sum of the phylogenetic branch length for samples, use the pd {picante} function
 # First force the OTU 
-otu_musk <- matrix(otu_table(nosed_physeq), nrow = nrow(otu_table(nosed_physeq)))
-rownames(otu_musk) <- sample_names(nosed_physeq)
-colnames(otu_musk) <- taxa_names(nosed_physeq)
+#otu_musk <- matrix(otu_table(nosed_physeq), nrow = nrow(otu_table(nosed_physeq)))
+#rownames(otu_musk) <- sample_names(nosed_physeq)
+#colnames(otu_musk) <- taxa_names(nosed_physeq)
 
 # Convert the count data to relative abundance by dividing each value by sample
 # total abundance with the vegan function `decostand` 
-relabund_otu <- decostand(otu_musk, method = "total")
+#relabund_otu <- decostand(otu_musk, method = "total")
 # check total abundance in each sample
-apply(relabund_otu, 1, sum)
+#apply(relabund_otu, 1, sum)
 
 # Bring the tree out of the phyloseq object 
-tree_musk <- phy_tree(nosed_physeq)
+#tree_musk <- phy_tree(nosed_physeq)
 
 # metadata 
-metadata <- data.frame(sample_data(nosed_physeq))
+#metadata <- data.frame(sample_data(nosed_physeq))
 
 # check for mismatches/missing species between community data and phylo tree
-combined <- match.phylo.comm(tree_musk, relabund_otu)
+#combined <- match.phylo.comm(tree_musk, relabund_otu)
 # the resulting object is a list with $phy and $comm elements.  replace our
 # original data with the sorted/matched data
-phy <- combined$phy
-comm <- combined$comm
+#phy <- combined$phy
+#comm <- combined$comm
 
 ## Calculate Faith's PD and species richness for sample 
 #faiths_pd <- pd(relabund_otu, tree_musk, include.root = FALSE)
 #faiths_pd$norep_filter_name <- row.names(faiths_pd)
   
 #write.csv(faiths_pd, file = "../data/Faiths_PD.csv", row.names = FALSE)
-faiths_pd <- read.csv("../data/Faiths_PD.csv", header = TRUE)
+faiths_pd <- read.csv("../data/FaithsPD_relprop/Faiths_PD.csv", header = TRUE)
 ```
 
 
 ## Faith's PD & Richness 
 ```{r faiths_PD_analysis}
 # Join Faith's PD with the rest of the metadata 
-faiths_pd$norep_filter_name <- row.names(faiths_pd)
 nosed_meta_data_PD <- left_join(faiths_pd, nosed_meta_data, by = "norep_filter_name")
 
 
@@ -297,20 +300,17 @@ If the community data represent abundance measures, the abundance data can be ta
 
 ```{r mpd_mntd_picante}
 # convert phylogenety to a distance matrix
-phy_dist <- cophenetic(phy)
+#phy_dist <- cophenetic(phy)
 
 # calculate standardized effect size mean pairwise distance (ses.mpd)
-comm_sesmpd <- ses.mpd(comm, phy_dist, null.model = "richness", 
-                       abundance.weighted = FALSE, runs = 999)
+#comm_sesmpd <- ses.mpd(comm, phy_dist, null.model = "richness", 
+#                       abundance.weighted = FALSE, runs = 999)
 
 #write.csv(comm_sesmpd, file = "../data/ses_mpd.csv", row.names = TRUE)
 
 # calculate ses.mntd
-comm_sesmntd <- ses.mntd(comm, phy_dist, null.model = "richness", 
-                         abundance.weighted = FALSE, runs = 999)
-
-
-
+#comm_sesmntd <- ses.mntd(comm, phy_dist, null.model = "richness", 
+#                         abundance.weighted = FALSE, runs = 999)
 ```
 
 
@@ -333,10 +333,10 @@ Interpretation:
 
 
 ```{r ses_mpd_analysis}
-comm_sesmpd <- read.csv(file = "../data/ses_mpd.csv") %>%
+comm_sesmpd <- read.csv(file = "../data/FaithsPD_relprop/ses_mpd.csv") %>%
   dplyr::rename(norep_filter_name = X)
 
-comm_sesmpd <- inner_join(metadata, comm_sesmpd, by = "norep_filter_name")
+comm_sesmpd <- inner_join(nosed_meta_data_PD, comm_sesmpd, by = "norep_filter_name")
 
 
 # compare ses.mpd between fractions
@@ -363,6 +363,18 @@ plot_grid(plot_ses_mpd_seasonfrac, plot_ses_mpd_pval_seasonfrac,
           labels = c("A", "B"), 
           nrow = 2)
 
+library(RColorBrewer)
+myPalette <- colorRampPalette(rev(brewer.pal(11, "Spectral")))
+
+
+ggplot(comm_sesmpd, aes(x = fraction, y = mpd.obs.z, color = mpd.obs.p, shape = season)) + 
+  geom_point(size = 3, position = position_jitterdodge()) + ylab("Mean Pairwise Distance (ses.mpd)") + 
+  geom_hline(yintercept = 0.05) +
+  scale_colour_gradientn(colours = myPalette(100), limits=c(0.001, 1), name="p-value") +
+  #scale_colour_gradient2(low="red", high = "cornflowerblue", mid = "black", midpoint = 0.05) +
+  facet_grid(.~fraction, scale = "free_x") 
+
+
 
 ggplot(comm_sesmpd, aes(x = mpd.obs, y = mpd.rand.mean, color = fraction)) + 
   geom_point(size = 3) + 
@@ -372,6 +384,87 @@ ggplot(comm_sesmpd, aes(x = mpd.obs, y = mpd.rand.mean, color = fraction)) +
 
 
 `MPD` is generally thought to be more sensitive to tree-wide patterns of phylogenetic clustering and eveness, while `MNTD` is more sensitive to patterns of evenness and clustering closer to the tips of the phylogeny.
+
+# Rarefied analysis for phylogenetic tree 
+```{r rarefied_phylotree}
+load("../data/otu_merged_musk_pruned.RData")
+
+# Remove sediment samples and samples with low sequencing depth 
+nosed_otu_merged_musk_pruned1 <- subset_samples(otu_merged_musk_pruned, fraction != "Sediment")
+nosed_otu_merged_musk_pruned2 <- subset_samples(nosed_otu_merged_musk_pruned1, 
+                                                norep_filter_name != "MOTHJ715" & norep_filter_name != "MBRHP715")
+nosed_otu_merged_musk_pruned3 <- subset_samples(nosed_otu_merged_musk_pruned2, limnion == "Top")
+nosed_otu_merged_musk_pruned <- prune_taxa(taxa_sums(nosed_otu_merged_musk_pruned3) > 0, nosed_otu_merged_musk_pruned3) 
+nosed_otu_merged_musk_pruned
+
+sums_otu <- data.frame(rowSums(otu_table(nosed_otu_merged_musk_pruned)))
+colnames(sums_otu) <- "Sample_TotalSeqs"
+sums_otu$names <- row.names(sums_otu)
+sums_otu <- arrange(sums_otu, Sample_TotalSeqs) 
+sums_otu <- make_metadata_norep(sums_otu)
+
+plot_sample_sums(dataframe = sums_otu, x_total_seqs = "Sample_TotalSeqs", fill_variable = "fraction")
+
+# Since we are going to create a tree, we first need to rarefy the samples
+min_lib <- min(sample_sums(nosed_otu_merged_musk_pruned)) - 1
+min_lib
+
+# Set the seed for the randomization of rarefy-ing
+set.seed(777)
+
+nosed_otu_merged_musk_RAREFIED <- rarefy_even_depth(nosed_otu_merged_musk_pruned, sample.size = min_lib,
+                                                    verbose = FALSE, replace = TRUE)
+
+# To calculate the sum of the phylogenetic branch length for samples, use the pd {picante} function
+# First force the OTU 
+otu_musk_RAREIFIED <- matrix(otu_table(nosed_otu_merged_musk_RAREFIED), nrow = nrow(otu_table(nosed_otu_merged_musk_RAREFIED)))
+rownames(otu_musk_RAREIFIED) <- sample_names(nosed_otu_merged_musk_RAREFIED)
+colnames(otu_musk_RAREIFIED) <- taxa_names(nosed_otu_merged_musk_RAREFIED)
+
+# Convert the count data to relative abundance by dividing each value by sample
+# total abundance with the vegan function `decostand` 
+relabund_otu_RAREFIED <- decostand(otu_musk_RAREIFIED, method = "total")
+# check total abundance in each sample
+apply(relabund_otu_RAREFIED, 1, sum)
+
+# Bring the tree out of the phyloseq object 
+tree_musk_RAREFIED <- phy_tree(nosed_otu_merged_musk_RAREFIED)
+
+# metadata 
+metadata_RAREFIED <- data.frame(sample_data(nosed_otu_merged_musk_RAREFIED))
+
+# check for mismatches/missing species between community data and phylo tree
+combined_RAREFIED <- match.phylo.comm(tree_musk_RAREFIED, relabund_otu_RAREFIED)
+# the resulting object is a list with $phy and $comm elements.  replace our
+# original data with the sorted/matched data
+phy_RAREFIED <- combined_RAREFIED$phy
+comm_RAREFIED <- combined_RAREFIED$comm
+
+## Calculate Faith's PD and species richness for sample 
+faiths_pd_RAREFIED <- pd(relabund_otu_RAREFIED, tree_musk_RAREFIED, include.root = FALSE)
+faiths_pd_RAREFIED$norep_filter_name <- row.names(faiths_pd_RAREFIED)
+  
+write.csv(faiths_pd_RAREFIED, file = "../data/PD_rarefied_2895/faithsPD_rarefy.csv", row.names = FALSE)
+#faiths_pd <- read.csv("../data/FaithsPD_relprop/faithsPD_rarefy.csv", header = TRUE)
+
+# Remove the tree from the phyloseq object to prevent heavy computation in the future
+otu_merged_musk_pruned <- merge_phyloseq(tax_table(otu_merged_musk_pruned), sample_data(otu_merged_musk_pruned), otu_table(otu_merged_musk_pruned))
+otu_merged_musk_pruned
+
+
+
+
+
+
+
+
+
+
+```
+
+
+
+
 
 
 #  How linked are the diversities of the fractions?
@@ -874,6 +967,75 @@ plot_totprod_wholepart_D0 <- ggplot(wholepart_only, aes(y = tot_bacprod, x = D0)
                          "p =", round(unname(summary(lm_wholepartonly_totprod_D0)$coefficients[,4][2]), digits = 4)))+
   theme(legend.position = c(0.12, 0.7), 
         legend.text = element_text(size = 10))
+
+
+
+#########  SPEED TALK 
+wholetops <- filter(nosed_meta_data, fraction %in% c("WholePart", "WholeFree") & limnion == "Top") %>%
+  select(D0, fraction)
+
+dff <- data.frame(matrix(ncol = 2, nrow = 12))
+dff$X1 <- filter(wholetops, fraction == "WholePart")$D0
+dff$X2 <- filter(wholetops, fraction == "WholeFree")$D0
+dff <- rename(dff, Particle = X1, Free = X2)
+
+
+wilcox.test(wholetops$D0)
+
+obsrich_frac <- ggplot(wholetops, aes(x = fraction, y = D0)) +
+  #geom_point(size = 3, position=position_jitterdodge(dodge.width=0.9)) +
+  geom_boxplot(aes(fill = fraction, color = fraction), alpha = 0.5) +
+  geom_jitter(aes( color = fraction), size = 3) +
+  ylab("Observed Richness") + 
+  scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
+  scale_fill_manual(values = c("firebrick3", "cornflowerblue")) +
+  theme(legend.position = c(0.8, 0.8), 
+        legend.title = element_blank())
+
+#ggsave("../Figures/obsrich_frac.pdf", obsrich_frac, 
+#       units = "in", height = 4, width = 5, dpi = 400)
+
+
+
+
+
+# The trend is close to signifincant!
+lm_wholefreeonly_totprod_D0 <- lm(tot_bacprod ~ D0, data = wholefree_only)
+# Plot the relationship between wholefree and total production 
+speedtalk_totprod_wholefree_D0 <- ggplot(wholefree_only, aes(y = tot_bacprod, x = D0)) +
+  geom_point(color = "cornflowerblue", size = 3) +
+  geom_smooth(method = "lm", color = "cornflowerblue", se = FALSE, linetype = "longdash") + 
+  annotate("text",  x = 800, y = 2, # For D2:  x = 40, y=5, 
+           fontface = "bold", color = "cornflowerblue",
+           label = paste("R2 =", round(summary(lm_wholefreeonly_totprod_D0)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lm_wholefreeonly_totprod_D0)$coefficients[,4][2]), digits = 4)))+
+  theme(legend.position = c(0.12, 0.8), 
+        legend.text = element_text(size = 10))
+
+
+
+lm_wholepartonly_totprod_D0 <- lm(tot_bacprod ~ D0, data = wholepart_only)
+# Plot the relationship between wholepart and total production 
+speedtalk_totprod_wholepart_D0 <- ggplot(wholepart_only, aes(y = tot_bacprod, x = D0)) +
+  geom_point(color = "firebrick3",size = 3) +
+  geom_smooth(method = "lm", color = "firebrick3") + 
+  annotate("text",  x = 1400, y = 5, # For D2:  x = 40, y=5, 
+           fontface = "bold", color = "firebrick3",
+           label = paste("R2 =", round(summary(lm_wholepartonly_totprod_D0)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lm_wholepartonly_totprod_D0)$coefficients[,4][2]), digits = 4)))+
+  theme(legend.position = c(0.12, 0.7), 
+        legend.text = element_text(size = 10))
+
+
+#plot_grid(speedtalk_totprod_wholefree_D0, speedtalk_totprod_wholepart_D0,
+#          labels = c("A", "B"), 
+#          ncol = 2)
+
+
+
+
+
+
 
 ### Plot it all together for the pre-filtered fractions 
 plot_D0_totprod_prefilt <- plot_grid(plot_totprod_free_D0, plot_totprod_part_D0,
@@ -1508,8 +1670,49 @@ otu_phenoflow <- plot_grid(otu_pheno_D0, otu_pheno_D0chao, otu_pheno_D1, otu_phe
 otu_phenoflow
 
 #ggsave("../Figures/fracprod_vs_diversity.png", otu_phenoflow, dpi = 600, units = "in", width = 10, height = 8)
+
+ggsave("../Figures/fracprod_vs_D0.pdf", otu_pheno_D0, 
+       units = "in", height = 4, width = 5, dpi = 400)
+
+ggsave("../Figures/fracprod_vs_D2.pdf", otu_pheno_D2, 
+       units = "in", height = 4, width = 5, dpi = 400)
 ```
 
+
+
+
+```{r}
+
+
+# Can fractional production be predicted by phenoflow D0 observed richness? 
+# FREE LIVING
+free_otu_D0_percell <- lm(frac_bacprod/(total_bac_abund-attached_bac) ~ D0,
+                        data = wholefree_2015_df)
+summary(free_otu_D0_percell)
+
+# PARTICLE
+part_otu_D0_percell <- lm(frac_bacprod/attached_bac ~ D0, 
+                          data = filter(wholeparticle_2015_df, attached_bac != 0))
+summary(part_otu_D0_percell)
+
+# Plot D0 Observed Richness
+otu_pheno_D0_percell <- ggplot(all_top_2015_df, aes(x=D0, y=frac_bacprod, color = fraction)) + 
+  geom_point(size = 3.5) + 
+  geom_errorbarh(aes(xmin = D0 - D0_SD, xmax = D0 + D0_SD)) + 
+  geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod)) + 
+  scale_color_manual(values = c("firebrick3","cornflowerblue"), limits = c("WholePart", "Free")) +
+  ylab("Production (μgC/L/hr)") + xlab("Observed Richness (D0)") +
+  geom_smooth(data=subset(all_top_2015_df, fraction == "WholePart"), method='lm') + 
+  theme(legend.position=c(0.15,0.9), legend.title=element_blank()) +
+  annotate("text", x = 1000, y=35, color = "cornflowerblue", fontface = "bold",
+           label = paste("R2 =", round(summary(free_otu_D0_percell)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(free_otu_D0_percell)$coefficients[,4][2]), digits = 4))) + 
+  annotate("text", x = 1600, y=8, color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(part_otu_D0_percell)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(part_otu_D0_percell)$coefficients[,4][2]), digits = 4)))
+
+
+```
 
 
 # Phylum production analysis
