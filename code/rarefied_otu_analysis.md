@@ -1,0 +1,1662 @@
+# Rarefied Diversity Analysis
+Marian L. Schmidt  
+February 14, 2017  
+
+
+
+```r
+library(ggplot2)
+library(devtools)
+library(phyloseq)
+library(tidyr)
+library(dplyr)
+library(cowplot)
+library(picante) # Will also include ape and vegan 
+source("Muskegon_functions.R")
+source("set_colors.R")
+```
+
+
+# Rarefied Alpha Diversity Analysis
+## Remove samples with too few reads
+
+```r
+# Loads a phyloseq object named otu_merged_musk_pruned)
+load("../data/otu_merged_musk_pruned.RData")
+# The name of the phyloseq object is: 
+otu_merged_musk_pruned 
+```
+
+```
+## phyloseq-class experiment-level object
+## otu_table()   OTU Table:         [ 52980 taxa and 163 samples ]
+## sample_data() Sample Data:       [ 163 samples by 69 sample variables ]
+## tax_table()   Taxonomy Table:    [ 52980 taxa by 8 taxonomic ranks ]
+## phy_tree()    Phylogenetic Tree: [ 52980 tips and 52978 internal nodes ]
+```
+
+```r
+# Remove tree because it's too computationally intensive
+otu_merged_musk_pruned <- merge_phyloseq(tax_table(otu_merged_musk_pruned), sample_data(otu_merged_musk_pruned), otu_table(otu_merged_musk_pruned))
+otu_merged_musk_pruned
+```
+
+```
+## phyloseq-class experiment-level object
+## otu_table()   OTU Table:         [ 52980 taxa and 163 samples ]
+## sample_data() Sample Data:       [ 163 samples by 69 sample variables ]
+## tax_table()   Taxonomy Table:    [ 52980 taxa by 8 taxonomic ranks ]
+```
+
+```r
+# Remove MOTHJ715 and MBRHP715
+otu_merged_musk_pruned_noMOTHJ715_MBRHP715 <- subset_samples(otu_merged_musk_pruned, 
+                                                             norep_filter_name != "MOTHJ715" & 
+                                                               norep_filter_name != "MBRHP715")
+otu_merged_musk_pruned_noMOTHJ715_MBRHP715
+```
+
+```
+## phyloseq-class experiment-level object
+## otu_table()   OTU Table:         [ 52980 taxa and 161 samples ]
+## sample_data() Sample Data:       [ 161 samples by 69 sample variables ]
+## tax_table()   Taxonomy Table:    [ 52980 taxa by 8 taxonomic ranks ]
+```
+
+
+
+```r
+# Check the sequencing depth of each sample 
+sums_otu <- data.frame(rowSums(otu_table(otu_merged_musk_pruned_noMOTHJ715_MBRHP715)))
+colnames(sums_otu) <- "Sample_TotalSeqs"
+sums_otu$names <- row.names(sums_otu)
+sums_otu <- arrange(sums_otu, Sample_TotalSeqs) 
+sums_otu <- make_metadata_norep(sums_otu)
+
+## Add total sequences to metadata frame 
+metdf <- sample_data(otu_merged_musk_pruned_noMOTHJ715_MBRHP715)
+sums_otu$norep_filter_name <- sums_otu$names
+sums_otu2 <- select(sums_otu, norep_filter_name, Sample_TotalSeqs)
+metdf_num2 <- left_join(metdf, sums_otu2, by = "norep_filter_name")
+```
+
+```
+## Warning in class(x) <- c("tbl_df", "tbl", "data.frame"): Setting class(x)
+## to multiple strings ("tbl_df", "tbl", ...); result will no longer be an S4
+## object
+```
+
+```r
+row.names(metdf_num2) <- metdf_num2$norep_filter_name
+# Rename the sample data 
+sample_data(otu_merged_musk_pruned_noMOTHJ715_MBRHP715) <- metdf_num2
+
+# Calculate Hill diversity Simpson's Evenness
+meta_data <- data.frame(sample_data(otu_merged_musk_pruned_noMOTHJ715_MBRHP715))  %>%
+  mutate(simps_even = D2/D0)
+
+### PREPARE DATA FRAMES FOR PHENOFLOW ALPHA DIVERSITY ANALYSIS
+free_meta_data <- filter(meta_data, fraction %in% c("Free", "WholeFree") & norep_filter_name != "MOTHJ715" & limnion == "Top")
+part_meta_data <- filter(meta_data, fraction %in% c("Particle", "WholePart") & norep_filter_name != "MOTHJ715" & limnion == "Top")
+nosed_meta_data <- filter(meta_data, fraction != "Sediment" & limnion == "Top")
+
+# Only "True Free Living and Particle" From 20um prefiltered samples 
+free_only <- filter(free_meta_data, fraction == "Free")
+part_only <- filter(part_meta_data, fraction == "Particle")
+
+## 2015 specific samples that have NOT been prefiltered (whole water)
+wholefree_only <- filter(free_meta_data, fraction == "WholeFree")
+wholepart_only <- filter(part_meta_data, fraction == "WholePart")
+```
+
+
+#### Rarefy Read Depth Analysis ran on December 16th, 2016
+
+
+# Fraction Diversity-Production Analysis 
+
+```r
+# Load values
+nsamp <- nsamples(otu_merged_musk_pruned_noMOTHJ715_MBRHP715)
+min_lib <- min(sample_sums(otu_merged_musk_pruned_noMOTHJ715_MBRHP715)) - 1
+min_lib
+```
+
+```
+## [1] 2895
+```
+
+```r
+# Read in the files 
+otu_richness <- read.table("../data/metadata/otu_richness100_rarefy2895",  header = TRUE)
+otu_evenness <- read.table("../data/metadata/otu_evenness100_rarefy2895", header = TRUE)
+otu_shannon <- read.table("../data/metadata/otu_shannon100_rarefy2895", header = TRUE)
+
+# Create a new dataframe to hold the means and standard deviations of richness estimates
+norep_filter_name <- row.names(otu_richness)
+mean <- apply(otu_richness, 1, mean)
+sd <- apply(otu_richness, 1, sd)
+measure <- rep("Richness", nsamp)
+otu_rich_stats <- data.frame(norep_filter_name, mean, sd, measure)
+
+# Create a new dataframe to hold the means and standard deviations of evenness estimates
+norep_filter_name <- row.names(otu_evenness)
+mean <- apply(otu_evenness, 1, mean)
+sd <- apply(otu_evenness, 1, sd)
+measure <- rep("Inverse_Simpson", nsamp)
+otu_even_stats <- data.frame(norep_filter_name, mean, sd, measure)
+
+# Create a new dataframe to hold the means and standard deviations of shannon entropy estimates
+norep_filter_name <- row.names(otu_shannon)
+mean <- apply(otu_shannon, 1, mean)
+sd <- apply(otu_shannon, 1, sd)
+measure <- rep("Shannon_Entropy", nsamp)
+otu_shan_stats <- data.frame(norep_filter_name, mean, sd, measure)
+
+# Create a new dataframe to hold the means and standard deviations of simpsons evenness estimates
+norep_filter_name <- row.names(otu_evenness)
+mean <- apply(otu_evenness, 1, mean)
+sd <- apply(otu_evenness, 1, sd)
+measure <- rep("Inverse_Simpson", nsamp)
+otu_simpseven_stats <- data.frame(norep_filter_name, mean, sd, measure)
+
+# Calculate Simpson's Evenness into new df called "simps_evenness"
+otu_simps_evenness <- inner_join(otu_rich_stats, otu_even_stats, by = "norep_filter_name") %>%
+  mutate(mean = mean.y/mean.x,
+         sd = sd(mean),
+         measure = "Simpsons_Evenness") %>%
+  select(norep_filter_name, mean, sd, measure)
+
+# Combine alpha diversity into one dataframe 
+otu_alpha <- rbind(otu_rich_stats, otu_even_stats, otu_simps_evenness, otu_shan_stats)
+s <- data.frame(sample_data(otu_merged_musk_pruned_noMOTHJ715_MBRHP715))
+otu_alphadiv <- merge(otu_alpha, s, by = "norep_filter_name") %>%
+  filter(project == "Muskegon_Lake" & limnion == "Top" & fraction != "Sediment") %>%
+  dplyr::select(-D0, -D0_SD, -D0_chao, -D0_chao_sd, -D1, -D1_sd, -D2, -D2_sd)
+
+# Set the factor levels to be the order we'd like
+otu_alphadiv$fraction <- factor(otu_alphadiv$fraction,  levels = c("WholePart", "Particle", "WholeFree", "Free"))
+otu_alphadiv$lakesite <- factor(otu_alphadiv$lakesite,  levels = c("MOT", "MDP", "MBR", "MIN"))
+otu_alphadiv$measure <- factor(otu_alphadiv$measure,  
+                               levels = c("Richness", "Simpsons_Evenness", "Shannon_Entropy", "Inverse_Simpson"))
+
+
+###############################
+ML_otu_rich_stats <- filter(otu_alphadiv, measure == "Richness" & project == "Muskegon_Lake" & fraction %in% c("WholePart", "WholeFree") & year == "2015")
+
+# Can fractional production be predicted by richness? 
+free_ML_otu_rich_stats <- filter(ML_otu_rich_stats, fraction == "WholeFree")
+freeprod_ML_otu_rich <- lm(frac_bacprod ~ mean, data = free_ML_otu_rich_stats)
+freeprod_ML_otu_rich
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mean, data = free_ML_otu_rich_stats)
+## 
+## Coefficients:
+## (Intercept)         mean  
+##      0.5172       0.0837
+```
+
+```r
+summary(freeprod_ML_otu_rich)
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mean, data = free_ML_otu_rich_stats)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -21.741 -12.261  -1.552   8.540  29.066 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)
+## (Intercept)  0.51721   18.32443   0.028    0.978
+## mean         0.08370    0.06275   1.334    0.212
+## 
+## Residual standard error: 16.94 on 10 degrees of freedom
+## Multiple R-squared:  0.151,	Adjusted R-squared:  0.06612 
+## F-statistic: 1.779 on 1 and 10 DF,  p-value: 0.2119
+```
+
+```r
+part_ML_abs_rich_stats <- filter(ML_otu_rich_stats, fraction == "WholePart")
+partprod_MLotu_rich <- lm(frac_bacprod ~ mean, data = part_ML_abs_rich_stats)
+partprod_MLotu_rich
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mean, data = part_ML_abs_rich_stats)
+## 
+## Coefficients:
+## (Intercept)         mean  
+##    -9.04480      0.04179
+```
+
+```r
+summary(partprod_MLotu_rich)
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mean, data = part_ML_abs_rich_stats)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -6.9920 -3.6940 -0.5982  3.2391 11.3706 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)   
+## (Intercept) -9.04480    5.47348  -1.652  0.12944   
+## mean         0.04179    0.01149   3.638  0.00455 **
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 5.673 on 10 degrees of freedom
+## Multiple R-squared:  0.5696,	Adjusted R-squared:  0.5265 
+## F-statistic: 13.23 on 1 and 10 DF,  p-value: 0.004553
+```
+
+```r
+# Plot 
+otu_rich_vegan <- ggplot(ML_otu_rich_stats, aes(x=mean, y=frac_bacprod, color = fraction)) + 
+  geom_point(size = 3.5) + geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd)) + 
+  ggtitle("OTU: Vegan") +
+  scale_color_manual(values = c("firebrick3","cornflowerblue"), limits = c("WholePart", "WholeFree")) +
+  #scale_x_continuous(expand = c(0,0), limits = c(0,900)) + 
+  #scale_y_continuous(limits = c(0,70),expand = c(0,0)) + 
+  ylab("Production (μgC/L/hr)") + xlab("Observed Richness") +
+  #geom_smooth(data=subset(ML_otu_rich_stats, fraction == "Free"), method='lm') + 
+  geom_smooth(data=subset(ML_otu_rich_stats, fraction == "WholePart"), method='lm') + 
+  theme(legend.position=c(0.15,0.9),        
+        legend.title=element_blank()) +
+  annotate("text", x = 500, y=45, color = "cornflowerblue", fontface = "bold",
+           label = paste("R2 =", round(summary(freeprod_ML_otu_rich)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(freeprod_ML_otu_rich)$coefficients[,4][2]), digits = 4))) + 
+  annotate("text", x = 650, y=5, color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(partprod_MLotu_rich)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(partprod_MLotu_rich)$coefficients[,4][2]), digits = 4)));
+
+
+
+######################################################### SHANNON ENTROPY
+#  Subset a dataframe with the key information
+ML_otu_shannon_stats <- filter(otu_alphadiv, 
+                               measure == "Shannon_Entropy" & 
+                                 project == "Muskegon_Lake" & 
+                                 fraction %in% c("WholePart", "WholeFree") & 
+                                 year == "2015")
+
+# Can fractional production be predicted by simpsevenness? 
+free_ML_otu_shannon_stats <- filter(ML_otu_shannon_stats, fraction == "WholeFree")
+freeprod_ML_otu_shannon <- lm(frac_bacprod ~ mean, data = free_ML_otu_shannon_stats)
+freeprod_ML_otu_shannon
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mean, data = free_ML_otu_shannon_stats)
+## 
+## Coefficients:
+## (Intercept)         mean  
+##      -31.96        13.97
+```
+
+```r
+summary(freeprod_ML_otu_shannon)
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mean, data = free_ML_otu_shannon_stats)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -22.642  -8.587  -3.915   7.135  34.659 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)
+## (Intercept)   -31.96      67.18  -0.476    0.645
+## mean           13.97      16.71   0.836    0.422
+## 
+## Residual standard error: 17.78 on 10 degrees of freedom
+## Multiple R-squared:  0.06538,	Adjusted R-squared:  -0.02808 
+## F-statistic: 0.6995 on 1 and 10 DF,  p-value: 0.4225
+```
+
+```r
+part_ML_abs_shannon_stats <- filter(ML_otu_shannon_stats, fraction == "WholePart")
+partprod_MLotu_shannon <- lm(frac_bacprod ~ mean, data = part_ML_abs_shannon_stats)
+partprod_MLotu_shannon
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mean, data = part_ML_abs_shannon_stats)
+## 
+## Coefficients:
+## (Intercept)         mean  
+##      -38.54        10.64
+```
+
+```r
+summary(partprod_MLotu_shannon)
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mean, data = part_ML_abs_shannon_stats)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -8.0980 -3.2043 -0.3301  1.3486 12.1080 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)   
+## (Intercept)  -38.540     13.486  -2.858  0.01702 * 
+## mean          10.644      2.938   3.623  0.00467 **
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 5.686 on 10 degrees of freedom
+## Multiple R-squared:  0.5676,	Adjusted R-squared:  0.5243 
+## F-statistic: 13.13 on 1 and 10 DF,  p-value: 0.004667
+```
+
+```r
+# Plot 
+otu_shannon_vegan <- ggplot(ML_otu_shannon_stats, aes(x=mean, y=frac_bacprod, color = fraction)) + 
+  geom_point(size = 3.5) + geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd)) + 
+  ggtitle("OTU: Vegan") +
+  scale_color_manual(values = c("firebrick3","cornflowerblue"), limits = c("WholePart", "WholeFree")) +
+  #scale_x_continuous(expand = c(0,0), limits=c(3, 6)) + 
+  #scale_y_continuous(limits = c(0,70),expand = c(0,0)) + 
+  ylab("Production (μgC/L/hr)") + xlab("Shannon Entropy") +
+  #geom_smooth(data=subset(ML_otu_shannon_stats, fraction == "Free"), method='lm') + 
+  geom_smooth(data=subset(ML_otu_shannon_stats, fraction == "WholePart"), method='lm') + 
+  theme(legend.position=c(0.15,0.9),        
+        legend.title=element_blank()) +
+  annotate("text", x = 4.5, y=45, color = "cornflowerblue", fontface = "bold",
+           label = paste("R2 =", round(summary(freeprod_ML_otu_shannon)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(freeprod_ML_otu_shannon)$coefficients[,4][2]), digits = 4))) + 
+  annotate("text", x = 5.35, y=5, color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(partprod_MLotu_shannon)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(partprod_MLotu_shannon)$coefficients[,4][2]), digits = 4))); 
+
+
+
+
+
+######################################################### INVERSE SIMPSON
+#  Subset a dataframe with the key information
+ML_otu_invsimps_stats <- filter(otu_alphadiv, 
+                                measure == "Inverse_Simpson" & 
+                                  project == "Muskegon_Lake" & 
+                                  fraction %in% c("WholePart", "WholeFree") & 
+                                  year == "2015")
+
+# Can fractional production be predicted by invsimpsness? 
+free_ML_otu_invsimps_stats <- filter(ML_otu_invsimps_stats, fraction == "WholeFree")
+freeprod_ML_otu_invsimps <- lm(frac_bacprod ~ mean, data = free_ML_otu_invsimps_stats)
+freeprod_ML_otu_invsimps
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mean, data = free_ML_otu_invsimps_stats)
+## 
+## Coefficients:
+## (Intercept)         mean  
+##      9.8575       0.5718
+```
+
+```r
+summary(freeprod_ML_otu_invsimps)
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mean, data = free_ML_otu_invsimps_stats)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -20.569 -10.734  -4.013   6.290  34.864 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)
+## (Intercept)   9.8575    15.6009   0.632    0.542
+## mean          0.5718     0.5935   0.963    0.358
+## 
+## Residual standard error: 17.59 on 10 degrees of freedom
+## Multiple R-squared:  0.08494,	Adjusted R-squared:  -0.006562 
+## F-statistic: 0.9283 on 1 and 10 DF,  p-value: 0.358
+```
+
+```r
+part_ML_abs_invsimps_stats <- filter(ML_otu_invsimps_stats, fraction == "WholePart")
+partprod_MLotu_invsimps <- lm(frac_bacprod ~ mean, data = part_ML_abs_invsimps_stats)
+partprod_MLotu_invsimps
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mean, data = part_ML_abs_invsimps_stats)
+## 
+## Coefficients:
+## (Intercept)         mean  
+##     -0.1255       0.2687
+```
+
+```r
+summary(partprod_MLotu_invsimps)
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mean, data = part_ML_abs_invsimps_stats)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -7.4169 -2.1453 -0.2015  0.9740  7.8468 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)    
+## (Intercept) -0.12549    2.37217  -0.053 0.958852    
+## mean         0.26871    0.05264   5.105 0.000461 ***
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 4.554 on 10 degrees of freedom
+## Multiple R-squared:  0.7227,	Adjusted R-squared:  0.6949 
+## F-statistic: 26.06 on 1 and 10 DF,  p-value: 0.0004608
+```
+
+```r
+# Plot Simpson's Evenness
+otu_invsimps_vegan <- ggplot(ML_otu_invsimps_stats, aes(x=mean, y=frac_bacprod, color = fraction)) + 
+  geom_point(size = 3.5) + geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd)) + 
+  ggtitle("OTU: Vegan") +
+  scale_color_manual(values = c("firebrick3","cornflowerblue"), limits = c("WholePart", "WholeFree")) +
+  scale_x_continuous(limits = c(0,100), expand = c(0,0)) + 
+  #scale_y_continuous(limits = c(0,70),expand = c(0,0)) + 
+  ylab("Production (μgC/L/hr)") + xlab("Inverse Simpson") +
+  #geom_smooth(data=subset(ML_otu_invsimps_stats, fraction == "Free"), method='lm') + 
+  geom_smooth(data=subset(ML_otu_invsimps_stats, fraction == "WholePart"), method='lm') + 
+  theme(legend.position=c(0.85,0.9),        
+        legend.title=element_blank()) +
+  annotate("text", x = 58, y=35, color = "cornflowerblue", fontface = "bold",
+           label = paste("R2 =", round(summary(freeprod_ML_otu_invsimps)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(freeprod_ML_otu_invsimps)$coefficients[,4][2]), digits = 4))) + 
+  annotate("text", x = 63, y=5, color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(partprod_MLotu_invsimps)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(partprod_MLotu_invsimps)$coefficients[,4][2]), digits = 4))); 
+
+
+
+
+######################################################### SIMPSON'S EVENNESS
+#  Subset a dataframe with the key information
+ML_otu_simpseven_stats <- filter(otu_alphadiv, 
+                                 measure == "Simpsons_Evenness" & 
+                                   project == "Muskegon_Lake" & 
+                                   fraction %in% c("WholePart", "WholeFree") & 
+                                   year == "2015")
+
+# Can fractional production be predicted by simpsevenness? 
+free_ML_otu_simpseven_stats <- filter(ML_otu_simpseven_stats, fraction == "WholeFree")
+freeprod_ML_otu_simpseven <- lm(frac_bacprod ~ mean, data = free_ML_otu_simpseven_stats)
+freeprod_ML_otu_simpseven
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mean, data = free_ML_otu_simpseven_stats)
+## 
+## Coefficients:
+## (Intercept)         mean  
+##       20.41        41.29
+```
+
+```r
+summary(freeprod_ML_otu_simpseven)
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mean, data = free_ML_otu_simpseven_stats)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -19.709 -12.801  -2.287   5.341  39.838 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)
+## (Intercept)    20.41      24.17   0.845    0.418
+## mean           41.29     266.14   0.155    0.880
+## 
+## Residual standard error: 18.37 on 10 degrees of freedom
+## Multiple R-squared:  0.002401,	Adjusted R-squared:  -0.09736 
+## F-statistic: 0.02406 on 1 and 10 DF,  p-value: 0.8798
+```
+
+```r
+part_ML_abs_simpseven_stats <- filter(ML_otu_simpseven_stats, fraction == "WholePart")
+partprod_MLotu_simpseven <- lm(frac_bacprod ~ mean, data = part_ML_abs_simpseven_stats)
+partprod_MLotu_simpseven
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mean, data = part_ML_abs_simpseven_stats)
+## 
+## Coefficients:
+## (Intercept)         mean  
+##       -5.08       199.91
+```
+
+```r
+summary(partprod_MLotu_simpseven)
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mean, data = part_ML_abs_simpseven_stats)
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -10.3301  -1.9616  -0.8216   1.2507  10.5267 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)   
+## (Intercept)   -5.080      4.277  -1.188  0.26236   
+## mean         199.911     52.742   3.790  0.00354 **
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 5.54 on 10 degrees of freedom
+## Multiple R-squared:  0.5896,	Adjusted R-squared:  0.5486 
+## F-statistic: 14.37 on 1 and 10 DF,  p-value: 0.003541
+```
+
+```r
+# Plot 
+otu_simpseven_vegan <- ggplot(ML_otu_simpseven_stats, aes(x=mean, y=frac_bacprod, color = fraction)) + 
+  geom_point(size = 3.5) +
+  ggtitle("OTU: Vegan") +
+  scale_color_manual(values = c("firebrick3","cornflowerblue"), limits = c("WholePart", "WholeFree")) +
+  scale_x_continuous(expand = c(0,0), limits=c(0, 0.15)) + 
+  #scale_y_continuous(limits = c(0,70),expand = c(0,0)) + 
+  ylab("Production (μgC/L/hr)") + xlab("Simpson's Evenness") +
+  #geom_smooth(data=subset(ML_otu_simpseven_stats, fraction == "Free"), method='lm') + 
+  geom_smooth(data=subset(ML_otu_simpseven_stats, fraction == "WholePart"), method='lm') + 
+  theme(legend.position=c(0.15,0.9),        
+        legend.title=element_blank()) +
+  annotate("text", x = 0.03, y=35, color = "cornflowerblue", fontface = "bold",
+           label = paste("R2 =", round(summary(freeprod_ML_otu_simpseven)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(freeprod_ML_otu_simpseven)$coefficients[,4][2]), digits = 4))) + 
+  annotate("text", x = 0.015, y=7, color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(partprod_MLotu_simpseven)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(partprod_MLotu_simpseven)$coefficients[,4][2]), digits = 4))); 
+
+otu_vegan <- plot_grid(otu_rich_vegan, otu_simpseven_vegan, otu_shannon_vegan, otu_invsimps_vegan,
+                       labels = c("A", "B", "C", "D"), 
+                       align = "h", nrow = 2, ncol = 2)
+otu_vegan
+```
+
+![](rarefied_otu_analysis_files/figure-html/WHOLE-vegan-otu-alphadiv-1.png)<!-- -->
+
+```r
+ggsave("../Figures/veganRARE_otu_alpha_vs_prod.png", otu_vegan, dpi = 600, units = "in", width = 10, height = 8)
+```
+
+
+# Prefiltered Fraction Diversity-Production Analysis 
+
+```r
+###############################
+ML_otu_rich_stats_prefilt <- filter(otu_alphadiv, measure == "Richness" & project == "Muskegon_Lake" & fraction %in% c("Particle", "Free") & year == "2015")
+
+# Can fractional production be predicted by richness? 
+freeprod_ML_otu_rich2 <- lm(frac_bacprod ~ mean, 
+                            data = filter(ML_otu_rich_stats_prefilt, fraction == "Free"))
+freeprod_ML_otu_rich2
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mean, data = filter(ML_otu_rich_stats_prefilt, 
+##     fraction == "Free"))
+## 
+## Coefficients:
+## (Intercept)         mean  
+##     -0.2974       0.0838
+```
+
+```r
+summary(freeprod_ML_otu_rich2)
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mean, data = filter(ML_otu_rich_stats_prefilt, 
+##     fraction == "Free"))
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -21.573 -10.576  -1.784   9.847  29.914 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)
+## (Intercept)  -0.2974    20.2112  -0.015    0.989
+## mean          0.0838     0.0674   1.243    0.242
+## 
+## Residual standard error: 17.11 on 10 degrees of freedom
+## Multiple R-squared:  0.1339,	Adjusted R-squared:  0.04728 
+## F-statistic: 1.546 on 1 and 10 DF,  p-value: 0.2421
+```
+
+```r
+partprod_MLotu_rich2 <- lm(frac_bacprod ~ mean, 
+                           data = filter(ML_otu_rich_stats_prefilt, fraction == "Particle"))
+partprod_MLotu_rich2
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mean, data = filter(ML_otu_rich_stats_prefilt, 
+##     fraction == "Particle"))
+## 
+## Coefficients:
+## (Intercept)         mean  
+##   -16.32682      0.05747
+```
+
+```r
+summary(partprod_MLotu_rich2)
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mean, data = filter(ML_otu_rich_stats_prefilt, 
+##     fraction == "Particle"))
+## 
+## Residuals:
+##    Min     1Q Median     3Q    Max 
+## -8.234 -3.040 -1.031  1.073 17.755 
+## 
+## Coefficients:
+##              Estimate Std. Error t value Pr(>|t|)  
+## (Intercept) -16.32682   12.35483  -1.321   0.2158  
+## mean          0.05747    0.02664   2.157   0.0563 .
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 7.143 on 10 degrees of freedom
+## Multiple R-squared:  0.3176,	Adjusted R-squared:  0.2494 
+## F-statistic: 4.655 on 1 and 10 DF,  p-value: 0.05635
+```
+
+```r
+# Plot 
+otu_rich_vegan_prefilt <- ggplot(ML_otu_rich_stats_prefilt, aes(x=mean, y=frac_bacprod, color = fraction)) + 
+  geom_point(size = 3.5) + geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd)) + 
+  ggtitle("Prefiltered: Vegan") +
+  scale_color_manual(values = c("firebrick3","cornflowerblue"), limits = c("Particle", "Free")) +
+  ylab("Production (μgC/L/hr)") + xlab("Observed Richness") +
+  #geom_smooth(data=subset(ML_otu_rich_stats_prefilt, fraction == "Free"), method='lm') + 
+  geom_smooth(data=subset(ML_otu_rich_stats_prefilt, fraction == "Particle"), method='lm') + 
+  theme(legend.position=c(0.15,0.9),        
+        legend.title=element_blank()) +
+  annotate("text", x = 350, y=50, color = "cornflowerblue", fontface = "bold",
+           label = paste("R2 =", round(summary(freeprod_ML_otu_rich2)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(freeprod_ML_otu_rich2)$coefficients[,4][2]), digits = 4))) + 
+  annotate("text", x = 500, y=50, color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(partprod_MLotu_rich2)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(partprod_MLotu_rich2)$coefficients[,4][2]), digits = 4)));
+
+
+
+######################################################### SHANNON ENTROPY
+#  Subset a dataframe with the key information
+ML_otu_shannon_stats_prefilt <- filter(otu_alphadiv, 
+                               measure == "Shannon_Entropy" & 
+                                 project == "Muskegon_Lake" & 
+                                 fraction %in% c("Particle", "Free") & 
+                                 year == "2015")
+
+# Can fractional production be predicted by simpsevenness? 
+
+freeprod_ML_otu_shannon2 <- lm(frac_bacprod ~ mean, 
+                              data = filter(ML_otu_shannon_stats_prefilt, fraction == "Free"))
+freeprod_ML_otu_shannon2
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mean, data = filter(ML_otu_shannon_stats_prefilt, 
+##     fraction == "Free"))
+## 
+## Coefficients:
+## (Intercept)         mean  
+##      -18.67        10.53
+```
+
+```r
+summary(freeprod_ML_otu_shannon2)
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mean, data = filter(ML_otu_shannon_stats_prefilt, 
+##     fraction == "Free"))
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -22.505 -10.944  -1.700   7.218  36.020 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)
+## (Intercept)   -18.67      77.78  -0.240    0.815
+## mean           10.53      19.12   0.551    0.594
+## 
+## Residual standard error: 18.12 on 10 degrees of freedom
+## Multiple R-squared:  0.02944,	Adjusted R-squared:  -0.06761 
+## F-statistic: 0.3034 on 1 and 10 DF,  p-value: 0.5939
+```
+
+```r
+partprod_MLotu_shannon2 <- lm(frac_bacprod ~ mean, 
+                             data = filter(ML_otu_shannon_stats_prefilt, fraction == "Particle"))
+partprod_MLotu_shannon2
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mean, data = filter(ML_otu_shannon_stats_prefilt, 
+##     fraction == "Particle"))
+## 
+## Coefficients:
+## (Intercept)         mean  
+##      -96.27        22.35
+```
+
+```r
+summary(partprod_MLotu_shannon2)
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mean, data = filter(ML_otu_shannon_stats_prefilt, 
+##     fraction == "Particle"))
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -10.3332  -3.6054  -0.9383   1.9080  15.7054 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)  
+## (Intercept)   -96.27      44.91  -2.144   0.0577 .
+## mean           22.35       9.44   2.368   0.0394 *
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 6.922 on 10 degrees of freedom
+## Multiple R-squared:  0.3593,	Adjusted R-squared:  0.2952 
+## F-statistic: 5.607 on 1 and 10 DF,  p-value: 0.03942
+```
+
+```r
+# Plot 
+otu_shannon_vegan_prefilt <- ggplot(ML_otu_shannon_stats_prefilt, aes(x=mean, y=frac_bacprod, color = fraction)) + 
+  geom_point(size = 3.5) + geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd)) + 
+  ggtitle("Prefiltered: Vegan") +
+  scale_color_manual(values = c("firebrick3","cornflowerblue"), limits = c("Particle", "Free")) +
+  #scale_x_continuous(expand = c(0,0), limits=c(3, 6)) + 
+  #scale_y_continuous(limits = c(0,70),expand = c(0,0)) + 
+  ylab("Production (μgC/L/hr)") + xlab("Shannon Entropy") +
+  #geom_smooth(data=subset(ML_otu_shannon_stats_prefilt, fraction == "Free"), method='lm') + 
+  geom_smooth(data=subset(ML_otu_shannon_stats_prefilt, fraction == "Particle"), method='lm') + 
+  theme(legend.position=c(0.15,0.9),        
+        legend.title=element_blank()) +
+  annotate("text", x = 4.5, y=45, color = "cornflowerblue", fontface = "bold",
+           label = paste("R2 =", round(summary(freeprod_ML_otu_shannon2)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(freeprod_ML_otu_shannon2)$coefficients[,4][2]), digits = 4))) + 
+  annotate("text", x = 4.9, y=55, color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(partprod_MLotu_shannon2)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(partprod_MLotu_shannon2)$coefficients[,4][2]), digits = 4))); 
+
+
+
+
+
+######################################################### INVERSE SIMPSON
+#  Subset a dataframe with the key information
+ML_otu_invsimps_stats_prefilt <- filter(otu_alphadiv, 
+                                measure == "Inverse_Simpson" & 
+                                  project == "Muskegon_Lake" & 
+                                  fraction %in% c("Particle", "Free") & 
+                                  year == "2015")
+
+# Can fractional production be predicted by invsimpsness? 
+freeprod_ML_otu_invsimps2 <- lm(frac_bacprod ~ mean, 
+                               data = filter(ML_otu_invsimps_stats_prefilt, fraction == "Free"))
+freeprod_ML_otu_invsimps2
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mean, data = filter(ML_otu_invsimps_stats_prefilt, 
+##     fraction == "Free"))
+## 
+## Coefficients:
+## (Intercept)         mean  
+##     11.7632       0.4755
+```
+
+```r
+summary(freeprod_ML_otu_invsimps2)
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mean, data = filter(ML_otu_invsimps_stats_prefilt, 
+##     fraction == "Free"))
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -22.535 -10.151  -1.939   6.823  35.669 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)
+## (Intercept)  11.7632    21.9294   0.536    0.603
+## mean          0.4755     0.8229   0.578    0.576
+## 
+## Residual standard error: 18.09 on 10 degrees of freedom
+## Multiple R-squared:  0.03231,	Adjusted R-squared:  -0.06446 
+## F-statistic: 0.3339 on 1 and 10 DF,  p-value: 0.5762
+```
+
+```r
+partprod_MLotu_invsimps2 <- lm(frac_bacprod ~ mean, 
+                               data = filter(ML_otu_invsimps_stats_prefilt, fraction == "Particle"))
+partprod_MLotu_invsimps2
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mean, data = filter(ML_otu_invsimps_stats_prefilt, 
+##     fraction == "Particle"))
+## 
+## Coefficients:
+## (Intercept)         mean  
+##    -11.1544       0.5045
+```
+
+```r
+summary(partprod_MLotu_invsimps2)
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mean, data = filter(ML_otu_invsimps_stats_prefilt, 
+##     fraction == "Particle"))
+## 
+## Residuals:
+##    Min     1Q Median     3Q    Max 
+## -8.346 -5.494 -1.725  4.407 14.300 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)  
+## (Intercept) -11.1544     9.5673  -1.166   0.2707  
+## mean          0.5045     0.2234   2.258   0.0475 *
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 7.038 on 10 degrees of freedom
+## Multiple R-squared:  0.3377,	Adjusted R-squared:  0.2714 
+## F-statistic: 5.098 on 1 and 10 DF,  p-value: 0.04754
+```
+
+```r
+# Plot Simpson's Evenness
+otu_invsimps_vegan_prefilt <- ggplot(ML_otu_invsimps_stats_prefilt, aes(x=mean, y=frac_bacprod, color = fraction)) + 
+  geom_point(size = 3.5) + geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd)) + 
+  ggtitle("Prefiltered: Vegan") +
+  scale_color_manual(values = c("firebrick3","cornflowerblue"), limits = c("Particle", "Free")) +
+  scale_x_continuous(limits = c(0,65), expand = c(0,0)) + 
+  #scale_y_continuous(limits = c(0,70),expand = c(0,0)) + 
+  ylab("Production (μgC/L/hr)") + xlab("Inverse Simpson") +
+  #geom_smooth(data=subset(ML_otu_invsimps_stats, fraction == "Free"), method='lm') + 
+  geom_smooth(data=subset(ML_otu_invsimps_stats_prefilt, fraction == "Particle"), method='lm') + 
+  theme(legend.position=c(0.85,0.9),        
+        legend.title=element_blank()) +
+  annotate("text", x = 30, y=55, color = "cornflowerblue", fontface = "bold",
+           label = paste("R2 =", round(summary(freeprod_ML_otu_invsimps2)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(freeprod_ML_otu_invsimps2)$coefficients[,4][2]), digits = 4))) + 
+  annotate("text", x = 21, y=3, color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(partprod_MLotu_invsimps2)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(partprod_MLotu_invsimps2)$coefficients[,4][2]), digits = 4))); 
+
+
+
+
+######################################################### SIMPSON'S EVENNESS
+#  Subset a dataframe with the key information
+ML_otu_simpseven_stats_prefilt <- filter(otu_alphadiv, 
+                                 measure == "Simpsons_Evenness" & 
+                                   project == "Muskegon_Lake" & 
+                                   fraction %in% c("Particle", "Free") & 
+                                   year == "2015")
+
+# Can fractional production be predicted by simpsevenness? 
+freeprod_ML_otu_simpseven2 <- lm(frac_bacprod ~ mean, 
+                                data = filter(ML_otu_simpseven_stats_prefilt, fraction == "Free"))
+freeprod_ML_otu_simpseven2
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mean, data = filter(ML_otu_simpseven_stats_prefilt, 
+##     fraction == "Free"))
+## 
+## Coefficients:
+## (Intercept)         mean  
+##       45.04      -233.11
+```
+
+```r
+summary(freeprod_ML_otu_simpseven2)
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mean, data = filter(ML_otu_simpseven_stats_prefilt, 
+##     fraction == "Free"))
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -21.102 -13.944  -2.919   9.954  38.108 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)
+## (Intercept)    45.04      32.31   1.394    0.193
+## mean         -233.11     354.39  -0.658    0.526
+## 
+## Residual standard error: 18 on 10 degrees of freedom
+## Multiple R-squared:  0.04147,	Adjusted R-squared:  -0.05438 
+## F-statistic: 0.4327 on 1 and 10 DF,  p-value: 0.5255
+```
+
+```r
+partprod_MLotu_simpseven2 <- lm(frac_bacprod ~ mean, 
+                               data = filter(ML_otu_simpseven_stats_prefilt, fraction == "Particle"))
+partprod_MLotu_simpseven2
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mean, data = filter(ML_otu_simpseven_stats_prefilt, 
+##     fraction == "Particle"))
+## 
+## Coefficients:
+## (Intercept)         mean  
+##      -1.907      129.365
+```
+
+```r
+summary(partprod_MLotu_simpseven2)
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mean, data = filter(ML_otu_simpseven_stats_prefilt, 
+##     fraction == "Particle"))
+## 
+## Residuals:
+##    Min     1Q Median     3Q    Max 
+## -7.865 -6.117 -1.685  3.206 18.644 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)
+## (Intercept)   -1.907     17.228  -0.111    0.914
+## mean         129.365    186.004   0.695    0.503
+## 
+## Residual standard error: 8.446 on 10 degrees of freedom
+## Multiple R-squared:  0.04614,	Adjusted R-squared:  -0.04925 
+## F-statistic: 0.4837 on 1 and 10 DF,  p-value: 0.5026
+```
+
+```r
+# Plot 
+otu_simpseven_vegan_prefilt <- ggplot(ML_otu_simpseven_stats_prefilt, aes(x=mean, y=frac_bacprod, color = fraction)) + 
+  geom_point(size = 3.5) +
+  ggtitle("Prefiltered: Vegan") +
+  scale_color_manual(values = c("firebrick3","cornflowerblue"), limits = c("Particle", "Free")) +
+
+  ylab("Production (μgC/L/hr)") + xlab("Simpson's Evenness") +
+  #geom_smooth(data=subset(ML_otu_simpseven_stats_prefilt, fraction == "Free"), method='lm') + 
+  #geom_smooth(data=subset(ML_otu_simpseven_stats_prefilt, fraction == "Particle"), method='lm') + 
+  theme(legend.position=c(0.15,0.9),        
+        legend.title=element_blank()) +
+  annotate("text", x = 0.09, y=45, color = "cornflowerblue", fontface = "bold",
+           label = paste("R2 =", round(summary(freeprod_ML_otu_simpseven2)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(freeprod_ML_otu_simpseven2)$coefficients[,4][2]), digits = 4))) + 
+  annotate("text", x = 0.11, y=45, color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(partprod_MLotu_simpseven2)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(partprod_MLotu_simpseven2)$coefficients[,4][2]), digits = 4))); 
+
+otu_veganprefilt <- plot_grid(otu_rich_vegan_prefilt, otu_simpseven_vegan_prefilt,
+                              otu_shannon_vegan_prefilt, otu_invsimps_vegan_prefilt,
+                       labels = c("A", "B", "C", "D"), 
+                       align = "h", nrow = 2, ncol = 2)
+otu_veganprefilt
+```
+
+![](rarefied_otu_analysis_files/figure-html/PREFILTERED-otu-alphadiv-1.png)<!-- -->
+
+
+
+
+#  How linked are the diversities of the fractions?
+## Free Living Sample Diversity Comparison  
+
+```r
+otu_alphadiv <- select(otu_alphadiv, 1:10, 63:65)
+
+# Plot diversity based only on fraction 
+ggplot(filter(otu_alphadiv, fraction %in% c("Free","WholeFree")),
+       aes(x = fraction, y = mean)) + 
+  geom_jitter(aes(color = fraction), size = 3, width = 0.2) + 
+  geom_boxplot(aes(fill = fraction), alpha =0.5) +
+  scale_color_manual(values = fraction_colors) + 
+  scale_fill_manual(values = fraction_colors) + 
+  facet_wrap(~measure, scales = "free_y") +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
+        legend.position = c(0.07, 0.93), 
+        strip.background = element_rect(fill = NA), 
+        strip.text.x = element_text(face = "bold")) + 
+  ggtitle("Rarefied at 2,895") 
+```
+
+![](rarefied_otu_analysis_files/figure-html/free_vs_wholefree_diversity-1.png)<!-- -->
+
+```r
+# Plot diversity based on lakesite lumped together
+ggplot(filter(otu_alphadiv, fraction %in% c("Free","WholeFree")),
+       aes(x = lakesite, y = mean)) + 
+  geom_jitter(aes(color = lakesite), size = 3, width = 0.2) + 
+  geom_boxplot(aes(fill = lakesite), alpha =0.5) +
+  scale_color_manual(values = lakesite_colors) + 
+  scale_fill_manual(values = lakesite_colors) + 
+  facet_wrap(~measure, scales = "free_y") +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
+        legend.position = c(0.07, 0.93), 
+        strip.background = element_rect(fill = NA), 
+        strip.text.x = element_text(face = "bold")) + 
+  ggtitle("Rarefied at 2,895")
+```
+
+![](rarefied_otu_analysis_files/figure-html/free_vs_wholefree_diversity-2.png)<!-- -->
+
+```r
+# Value of Diversity estimate on y-axis and site vs fraction on x-axis
+ggplot(filter(otu_alphadiv, fraction %in% c("Free","WholeFree")),
+       aes(x = lakesite, y = mean)) + 
+  geom_jitter(aes(color = fraction), size = 3, position = position_dodge(width = 0.8)) + 
+  geom_boxplot(aes(fill = fraction), alpha =0.5) +
+  scale_color_manual(values = fraction_colors) + 
+  scale_fill_manual(values = fraction_colors) + 
+  facet_wrap(~measure, scales = "free_y") +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
+        legend.position = c(0.07, 0.93), 
+        strip.background = element_rect(fill = NA), 
+        strip.text.x = element_text(face = "bold")) + 
+  ggtitle("Rarefied at 2,895")
+```
+
+![](rarefied_otu_analysis_files/figure-html/free_vs_wholefree_diversity-3.png)<!-- -->
+
+```r
+###  ARE THERE DIFFERENCES BETWEEN FRACTION AND LAKESITE WITHIN THE FREE LIVING?
+free_fraction_divs <- filter(otu_alphadiv, fraction %in% c("Free","WholeFree"))
+#### Significant difference between Richness lakesite and fraction?
+summary(aov(mean ~ fraction*lakesite,  
+            data = filter(free_fraction_divs, measure == "Richness")))
+```
+
+```
+##                   Df Sum Sq Mean Sq F value   Pr(>F)    
+## fraction           1   5006    5006   1.595    0.217    
+## lakesite           3 149340   49780  15.860 3.83e-06 ***
+## fraction:lakesite  3    161      54   0.017    0.997    
+## Residuals         27  84748    3139                     
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+```
+
+```r
+#### Significant difference between Simpsons_Evenness lakesite and fraction?
+summary(aov(mean ~ fraction*lakesite,  
+            data = filter(free_fraction_divs, measure == "Simpsons_Evenness")))
+```
+
+```
+##                   Df   Sum Sq   Mean Sq F value Pr(>F)  
+## fraction           1 0.000484 0.0004843   1.313 0.2619  
+## lakesite           3 0.003225 0.0010750   2.914 0.0525 .
+## fraction:lakesite  3 0.000088 0.0000294   0.080 0.9705  
+## Residuals         27 0.009961 0.0003689                 
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+```
+
+```r
+#### Significant difference between Shannon_Entropy lakesite and fraction?
+summary(aov(mean ~ fraction*lakesite,  
+            data = filter(free_fraction_divs, measure == "Shannon_Entropy")))
+```
+
+```
+##                   Df Sum Sq Mean Sq F value  Pr(>F)   
+## fraction           1 0.2234  0.2234   3.508 0.07195 . 
+## lakesite           3 1.1516  0.3839   6.027 0.00279 **
+## fraction:lakesite  3 0.0145  0.0048   0.076 0.97238   
+## Residuals         27 1.7196  0.0637                   
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+```
+
+```r
+#### Significant difference between Inverse_Simpson lakesite and fraction?
+summary(aov(mean ~ fraction*lakesite,  
+            data = filter(free_fraction_divs, measure == "Inverse_Simpson")))
+```
+
+```
+##                   Df Sum Sq Mean Sq F value  Pr(>F)   
+## fraction           1  143.1  143.05   2.815 0.10491   
+## lakesite           3  702.6  234.21   4.609 0.00992 **
+## fraction:lakesite  3   28.6    9.55   0.188 0.90374   
+## Residuals         27 1372.0   50.81                   
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+```
+
+```r
+# Prepare data frames for plotting diversity of wholefree vs free 
+free_samps_alpha <- filter(otu_alphadiv, fraction == "Free" & year == "2015") %>% 
+  dplyr::select(norep_filter_name, mean, measure, fraction) %>%
+  spread(measure, mean) %>%
+  # Make a new column called "measure" that includes the hill diversity metric
+  gather("div_metric", "value", Richness, Shannon_Entropy, Inverse_Simpson, Simpsons_Evenness) %>%
+  # Combine the diversity metric and fraction into one column called frac_div_metric
+  unite("frac_div_metric", fraction, div_metric, sep = "_") %>%
+  # Spread frac_div_metric into 4 columns for each hill div metric
+  spread(frac_div_metric, value) %>%
+  mutate(norep_water_name = paste(substr(norep_filter_name,1,4), substr(norep_filter_name, 6, 8), sep = "")) %>%
+  dplyr::select(-norep_filter_name) 
+
+# Prepare data frames for plotting diversity of wholefree vs free 
+wholefree_samps_alpha <- filter(otu_alphadiv, fraction == "WholeFree" & year == "2015") %>% 
+  dplyr::select(norep_filter_name, mean, measure, fraction, season, lakesite,year, limnion) %>%
+  spread(measure, mean) %>%
+  # Make a new column called "div_metric" that includes the hill diversity metric
+  gather(div_metric, value, Richness, Shannon_Entropy, Inverse_Simpson, Simpsons_Evenness) %>%
+  # Combine the diversity metric and fraction into one column called frac_div_metric
+  unite(frac_div_metric, fraction, div_metric, sep = "_") %>%
+  # Spread frac_div_metric into 4 columns for each hill div metric
+  spread(frac_div_metric, value) %>%
+  mutate(norep_water_name = paste(substr(norep_filter_name,1,4), substr(norep_filter_name, 6, 8), sep = "")) %>%
+  dplyr::select(-norep_filter_name)
+
+# join the data frames together 
+FL_alpha <- left_join(free_samps_alpha, wholefree_samps_alpha, by = "norep_water_name")
+
+
+# Is there a linear relationship between free and whole free D0 diversity?
+lm_FL_Richness <- lm(Free_Richness ~ WholeFree_Richness, data = FL_alpha)
+# Plot linear relationship between free and whole free D0 diversity
+free_fraction_Richness <- ggplot(FL_alpha, aes(x = WholeFree_Richness, y = Free_Richness)) + 
+  geom_point(size = 3) + geom_smooth(method = "lm") +
+  #xlim(300, 2000) + ylim(300, 2000) + 
+  geom_abline(slope = 1, intercept = 0) +
+  annotate("text", x = 400, y=250, color = "black", fontface = "bold",
+           label = paste("R2 =", round(summary(lm_FL_Richness)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lm_FL_Richness)$coefficients[,4][2]), digits = 8))) + 
+  ggtitle("Rarefied at 2,895")
+
+
+# Is there a linear relationship between free and whole free D0_chao diversity?
+lm_FL_simps_simpseven <- lm(Free_Simpsons_Evenness ~ WholeFree_Simpsons_Evenness, data = FL_alpha)
+# Plot linear relationship between free and whole free D0 diversity
+free_fraction_simpseven <- ggplot(FL_alpha, aes(x = WholeFree_Simpsons_Evenness, y = Free_Simpsons_Evenness)) + 
+  geom_point(size = 3) + geom_smooth(method = "lm") +
+  #xlim(300, 3600) + ylim(300, 3600) +
+  geom_abline(slope = 1, intercept = 0) +
+  annotate("text", x = 0.125, y=0.08, color = "black", fontface = "bold",
+           label = paste("R2 =", round(summary(lm_FL_simps_simpseven)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lm_FL_simps_simpseven)$coefficients[,4][2]), digits = 5))) + 
+  ggtitle("Rarefied at 2,895")
+
+
+# Is there a linear relationship between free and whole free D1 diversity?
+lm_FL_shannon <- lm(Free_Shannon_Entropy ~ WholeFree_Shannon_Entropy, data = FL_alpha)
+# Plot linear relationship between free and whole free D1 diversity
+free_fraction_shannon <- ggplot(FL_alpha, aes(x = WholeFree_Shannon_Entropy, y = Free_Shannon_Entropy)) + 
+  geom_point(size = 3) + geom_smooth(method = "lm") +
+  #xlim(0, 175) + ylim(0,175) + 
+  geom_abline(slope = 1, intercept = 0) +
+  annotate("text", x = 4.25, y=3.5, color = "black", fontface = "bold",
+           label = paste("R2 =", round(summary(lm_FL_shannon)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lm_FL_shannon)$coefficients[,4][2]), digits = 12))) + 
+  ggtitle("Rarefied at 2,895")
+
+# Is there a linear relationship between free and whole free D2 diversity?
+lm_FL_invsimps <- lm(Free_Inverse_Simpson ~ WholeFree_Inverse_Simpson, data = FL_alpha)
+# Plot linear relationship between free and whole free D2 diversity
+free_fraction_invsimps <- ggplot(FL_alpha, aes(x = WholeFree_Inverse_Simpson, y = Free_Inverse_Simpson)) + 
+  geom_point(size = 3) + geom_smooth(method = "lm") +
+  xlim(10, 55) + ylim(10, 55) +
+  geom_abline(slope = 1, intercept = 0) +
+  annotate("text", x = 35, y=17, color = "black", fontface = "bold",
+           label = paste("R2 =", round(summary(lm_FL_invsimps)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lm_FL_invsimps)$coefficients[,4][2]), digits = 8))) + 
+  ggtitle("Rarefied at 2,895")
+  
+free_vs_freepart_div_plots <- plot_grid(free_fraction_Richness, free_fraction_simpseven, free_fraction_shannon, free_fraction_invsimps, 
+          labels = c("A", "B", "C", "D"), ncol = 2, nrow = 2)
+
+free_vs_freepart_div_plots
+```
+
+![](rarefied_otu_analysis_files/figure-html/free_vs_wholefree_diversity-4.png)<!-- -->
+
+```r
+#ggsave("../Figures/free_vs_wholefree_div_plots.png", plot = free_vs_freepart_div_plots, dpi = 600, width = 10, height = 8)
+```
+
+##  Particle-Associated Diversity Comparison 
+
+```r
+# Plot diversity based only on fraction 
+ggplot(filter(otu_alphadiv, fraction %in% c("Particle","WholePart")),
+       aes(x = fraction, y = mean)) + 
+  geom_jitter(aes(color = fraction), size = 3, width = 0.2) + 
+  geom_boxplot(aes(fill = fraction), alpha =0.5) +
+  scale_color_manual(values = fraction_colors) + 
+  scale_fill_manual(values = fraction_colors) + 
+  facet_wrap(~measure, scales = "free_y") +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
+        legend.position = c(0.07, 0.93), 
+        strip.background = element_rect(fill = NA), 
+        strip.text.x = element_text(face = "bold")) + 
+  ggtitle("Rarefied at 2,895")
+```
+
+![](rarefied_otu_analysis_files/figure-html/part_vs_wholepart_diversity-1.png)<!-- -->
+
+```r
+# Plot based on lakesite lumped together
+ggplot(filter(otu_alphadiv, fraction %in% c("Particle","WholePart")),
+       aes(x = lakesite, y = mean)) + 
+  geom_jitter(aes(color = lakesite), size = 3, width = 0.2) + 
+  geom_boxplot(aes(fill = lakesite), alpha =0.5) +
+  scale_color_manual(values = lakesite_colors) + 
+  scale_fill_manual(values = lakesite_colors) + 
+  facet_wrap(~measure, scales = "free_y") +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
+        legend.position = c(0.07, 0.93), 
+        strip.background = element_rect(fill = NA), 
+        strip.text.x = element_text(face = "bold")) + 
+  ggtitle("Rarefied at 2,895")
+```
+
+![](rarefied_otu_analysis_files/figure-html/part_vs_wholepart_diversity-2.png)<!-- -->
+
+```r
+# Value of Diversity estimate on y-axis and site vs fraction on x-axis
+ggplot(filter(otu_alphadiv, fraction %in% c("Particle","WholePart")),
+       aes(x = lakesite, y = mean)) + 
+  geom_jitter(aes(color = fraction), size = 3, position = position_dodge(width = 0.8)) + 
+  geom_boxplot(aes(fill = fraction), alpha =0.5) +
+  scale_color_manual(values = fraction_colors) + 
+  scale_fill_manual(values = fraction_colors) + 
+  facet_wrap(~measure, scales = "free_y") +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
+        legend.position = c(0.07, 0.93), 
+        strip.background = element_rect(fill = NA), 
+        strip.text.x = element_text(face = "bold")) + 
+  ggtitle("Rarefied at 2,895")
+```
+
+![](rarefied_otu_analysis_files/figure-html/part_vs_wholepart_diversity-3.png)<!-- -->
+
+```r
+###  ARE THERE DIFFERENCES BETWEEN FRACTION AND LAKESITE WITHIN PARTICLE ASSOCIATION?
+part_fraction_divs <- filter(otu_alphadiv, fraction %in% c("Particle","WholePart"))
+
+#### Significant difference between Richness lakesite and fraction?
+summary(aov(mean ~ fraction*lakesite,  
+            data = filter(part_fraction_divs, measure == "Richness")))
+```
+
+```
+##                   Df Sum Sq Mean Sq F value  Pr(>F)   
+## fraction           1     13      13   0.002 0.96934   
+## lakesite           3 148419   49473   5.920 0.00306 **
+## fraction:lakesite  3  21812    7271   0.870 0.46870   
+## Residuals         27 225625    8356                   
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+```
+
+```r
+#### Significant difference between Simpsons_Evenness lakesite and fraction?
+summary(aov(mean ~ fraction*lakesite,  
+            data = filter(part_fraction_divs, measure == "Simpsons_Evenness")))
+```
+
+```
+##                   Df   Sum Sq   Mean Sq F value Pr(>F)  
+## fraction           1 0.002549 0.0025494   3.611 0.0681 .
+## lakesite           3 0.004967 0.0016555   2.345 0.0952 .
+## fraction:lakesite  3 0.001112 0.0003708   0.525 0.6687  
+## Residuals         27 0.019063 0.0007060                 
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+```
+
+```r
+#### Significant difference between Shannon_Entropy lakesite and fraction?
+summary(aov(mean ~ fraction*lakesite,  
+            data = filter(part_fraction_divs, measure == "Shannon_Entropy")))
+```
+
+```
+##                   Df Sum Sq Mean Sq F value  Pr(>F)   
+## fraction           1 0.3295  0.3295   3.402 0.07611 . 
+## lakesite           3 1.7063  0.5688   5.874 0.00319 **
+## fraction:lakesite  3 0.2963  0.0988   1.020 0.39926   
+## Residuals         27 2.6145  0.0968                   
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+```
+
+```r
+#### Significant difference between Inverse_Simpson lakesite and fraction?
+summary(aov(mean ~ fraction*lakesite,  
+            data = filter(part_fraction_divs, measure == "Inverse_Simpson")))
+```
+
+```
+##                   Df Sum Sq Mean Sq F value  Pr(>F)   
+## fraction           1    139   138.7   0.668 0.42076   
+## lakesite           3   4310  1436.7   6.925 0.00132 **
+## fraction:lakesite  3    540   179.8   0.867 0.47033   
+## Residuals         27   5602   207.5                   
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+```
+
+```r
+# Prepare data frames for plotting diversity of wholepart vs particle 
+part_samps_alpha <- filter(otu_alphadiv, fraction == "Particle" & year == "2015") %>% # & norep_filter_name != "MBRHJ515"
+  dplyr::select(norep_filter_name, mean, measure, fraction) %>%
+  spread(measure, mean) %>%
+  gather(measure, value, Richness, Shannon_Entropy, Inverse_Simpson, Simpsons_Evenness) %>%
+  unite("frac_div_metric", fraction, measure, sep = "_") %>%
+  spread(frac_div_metric, value) %>%
+  mutate(norep_water_name = paste(substr(norep_filter_name,1,4), substr(norep_filter_name, 6, 8), sep = "")) %>%
+  select(-norep_filter_name)
+
+# Prepare data frames for plotting diversity of wholepart vs particle 
+wholepart_samps_alpha <- filter(otu_alphadiv, fraction == "WholePart" & year == "2015") %>% # & norep_filter_name != "MBRHJ515"
+  dplyr::select(norep_filter_name, mean, measure, fraction, season, lakesite,year, limnion) %>%
+  spread(measure, mean) %>%
+  gather(measure, value, Richness, Shannon_Entropy, Inverse_Simpson, Simpsons_Evenness) %>%
+  unite(frac_div_metric, fraction, measure, sep = "_") %>%
+  spread(frac_div_metric, value) %>%
+  mutate(norep_water_name = paste(substr(norep_filter_name,1,4), substr(norep_filter_name, 6, 8), sep = "")) %>%
+  select(-norep_filter_name)
+
+# Combine the data frames into one
+PA_alpha <- left_join(part_samps_alpha, wholepart_samps_alpha, by = "norep_water_name")
+
+# Is there a linear relationship between particle and WholePart D0 diversity?
+lm_PA_richness <- lm(Particle_Richness ~ WholePart_Richness, data = PA_alpha)
+# Plot the linear relationship between particle and WholePart D0 diversity
+PA_fraction_richness <- ggplot(PA_alpha, aes(x = WholePart_Richness, y = Particle_Richness)) + 
+  geom_point(size = 3) + geom_smooth(method = "lm", se = TRUE) +
+  geom_abline(slope = 1, intercept = 0) +
+  annotate("text", x = 650, y=350, color = "black", fontface = "bold",
+           label = paste("R2 =", round(summary(lm_PA_richness)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lm_PA_richness)$coefficients[,4][2]), digits = 8))) + 
+  ggtitle("Rarefied at 2,895")
+
+
+# Is there a linear relationship between particle and WholePart D0_chao diversity?
+lm_PA_simpseven <- lm(Particle_Simpsons_Evenness ~ WholePart_Simpsons_Evenness, 
+                                           data = filter(PA_alpha, norep_water_name != "MBRH515"))
+# Plot the linear relationship between particle and WholePart D0_chao diversity
+PA_fraction_simpseven <- ggplot(filter(PA_alpha, norep_water_name != "MBRH515"),
+                                aes(x = WholePart_Simpsons_Evenness, y = Particle_Simpsons_Evenness)) + 
+  geom_point(size = 3) + geom_smooth(method = "lm", se = FALSE) +
+  geom_abline(slope = 1, intercept = 0) +
+  annotate("text", x = 0.12, y=0.05, color = "black", fontface = "bold",
+           label = paste("R2 =", round(summary(lm_PA_simpseven)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lm_PA_simpseven)$coefficients[,4][2]), digits = 4))) + 
+  ggtitle("Rarefied at 2,895 \n (removed MBRH515)")
+
+
+# Is there a linear relationship between particle and WholePart D1 diversity?
+lm_PA_shannon <- lm(Particle_Shannon_Entropy ~ WholePart_Shannon_Entropy, data = PA_alpha)
+# Plot the linear relationship between particle and WholePart D1 diversity
+PA_fraction_shannon <- ggplot(PA_alpha, aes(x = WholePart_Shannon_Entropy, y = Particle_Shannon_Entropy)) + 
+  geom_point(size = 3) + geom_smooth(method = "lm") + 
+  geom_abline(slope = 1, intercept = 0) +
+  annotate("text", y = 4.5, x=5.5, color = "black", fontface = "bold",
+           label = paste("R2 =", round(summary(lm_PA_shannon)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lm_PA_shannon)$coefficients[,4][2]), digits = 5))) + 
+  ggtitle("Rarefied at 2,895")
+
+# Is there a linear relationship between particle and WholePart D2 diversity?
+lm_PA_invsimps <- lm(Particle_Inverse_Simpson ~ WholePart_Inverse_Simpson, 
+                     data = filter(PA_alpha, WholePart_Inverse_Simpson < 219))
+# Plot the linear relationship between particle and WholePart D2 diversity
+PA_fraction_invsimps <- ggplot(PA_alpha, aes(x = WholePart_Inverse_Simpson, y = Particle_Inverse_Simpson)) + 
+  geom_point(size = 3) + geom_smooth(method = "lm") +
+  xlim(0, 100) + ylim(0, 100) +
+  geom_abline(slope = 1, intercept = 0) +
+  annotate("text", x = 75, y=25, color = "black", fontface = "bold",
+           label = paste("R2 =", round(summary(lm_PA_invsimps)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lm_PA_invsimps)$coefficients[,4][2]), digits = 5))) + 
+  ggtitle("Rarefied at 2,895 \n(removed MBRH515)")
+
+  
+part_vs_wholepart_div_plots <- plot_grid(PA_fraction_richness, PA_fraction_simpseven,
+                                         PA_fraction_shannon, PA_fraction_invsimps, 
+          labels = c("A", "B", "C", "D"), ncol = 2, nrow = 2)
+
+part_vs_wholepart_div_plots
+```
+
+![](rarefied_otu_analysis_files/figure-html/part_vs_wholepart_diversity-4.png)<!-- -->
+
+```r
+#ggsave("../Figures/part_vs_wholepart_div_plots.png", plot = part_vs_wholepart_div_plots, dpi = 600, width = 10, height = 8)
+```
+
+
+# Is there a significant relationship between sequencing depth and diversity?
+
+```r
+## Is there a significant relationship between sequencing depth and D0?
+#summary(lm(mean ~ Sample_TotalSeqs,data = filter(otu_alphadiv, measure == "Richness" & fraction == "Free"))) # NS
+#summary(lm(mean ~ Sample_TotalSeqs,data = filter(otu_alphadiv, measure == "Richness" & fraction == "WholeFree"))) # NS
+#summary(lm(mean ~ Sample_TotalSeqs,data = filter(otu_alphadiv, measure == "Richness" & fraction == "Particle"))) # NS
+#summary(lm(mean ~ Sample_TotalSeqs,data = filter(otu_alphadiv, measure == "Richness" & fraction == "WholePart"))) # NS
+
+# Plot Sequencing depth vs Richness
+ggplot(filter(otu_alphadiv, measure == "Richness"), 
+       aes(x = Sample_TotalSeqs, y = mean)) + 
+  geom_point(size = 3) + 
+  facet_grid(.~fraction, scale = "free_x") + 
+  ggtitle("Observed Richness") + 
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
+        legend.position = c(0.1, 0.9), 
+        strip.background = element_rect(fill = NA), 
+        strip.text.x = element_text(face = "bold"))
+```
+
+![](rarefied_otu_analysis_files/figure-html/div_vs_seqdepth-1.png)<!-- -->
+
+```r
+## Is there a significant relationship between sequencing depth and Simpsons_Evenness?
+#summary(lm(mean ~ Sample_TotalSeqs,data = filter(otu_alphadiv, measure == "Simpsons_Evenness" & fraction == "Free"))) # NS
+#summary(lm(mean ~ Sample_TotalSeqs,data = filter(otu_alphadiv, measure == "Simpsons_Evenness" & fraction == "WholeFree"))) # NS
+#summary(lm(mean ~ Sample_TotalSeqs,data = filter(otu_alphadiv, measure == "Simpsons_Evenness" & fraction == "Particle"))) # NS
+#summary(lm(mean ~ Sample_TotalSeqs,data = filter(otu_alphadiv, measure == "Simpsons_Evenness" & fraction == "WholePart"))) # NS
+
+# Plot the relationship between Simpsons_Evenness and sequencing depth 
+ggplot(filter(otu_alphadiv, measure == "Simpsons_Evenness"), 
+       aes(x = Sample_TotalSeqs, y = mean)) + 
+  geom_point(size = 3) + 
+  facet_grid(.~fraction, scale = "free_x") + 
+  ggtitle("Simpsons_Evenness") + 
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
+        legend.position = c(0.1, 0.9), 
+        strip.background = element_rect(fill = NA), 
+        strip.text.x = element_text(face = "bold"))
+```
+
+![](rarefied_otu_analysis_files/figure-html/div_vs_seqdepth-2.png)<!-- -->
+
+```r
+## Is there a significant relationship between sequencing depth and Shannon_Entropy?
+#summary(lm(mean ~ Sample_TotalSeqs,data = filter(otu_alphadiv, measure == "Shannon_Entropy" & fraction == "Free"))) # NS
+#summary(lm(mean ~ Sample_TotalSeqs,data = filter(otu_alphadiv, measure == "Shannon_Entropy" & fraction == "WholeFree"))) # NS 
+#summary(lm(mean ~ Sample_TotalSeqs,data = filter(otu_alphadiv, measure == "Shannon_Entropy" & fraction == "Particle"))) # NS
+#summary(lm(mean ~ Sample_TotalSeqs,data = filter(otu_alphadiv, measure == "Shannon_Entropy" & fraction == "WholePart"))) # NS
+
+# Plot the relationship between D1 and sequencing depth 
+ggplot(filter(otu_alphadiv, measure == "Shannon_Entropy"), 
+       aes(x = Sample_TotalSeqs, y = mean)) + 
+  geom_point(size = 3) + 
+  facet_grid(.~fraction, scale = "free_x") + 
+  ggtitle("Shannon Entropy") + 
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
+        legend.position = c(0.1, 0.9), 
+        strip.background = element_rect(fill = NA), 
+        strip.text.x = element_text(face = "bold"))
+```
+
+![](rarefied_otu_analysis_files/figure-html/div_vs_seqdepth-3.png)<!-- -->
+
+```r
+## Is there a significant relationship between sequencing depth and D2?
+#summary(lm(mean ~ Sample_TotalSeqs,data = filter(otu_alphadiv, measure == "Inverse_Simpson" & fraction == "Free"))) # NS
+#summary(lm(mean ~ Sample_TotalSeqs,data = filter(otu_alphadiv, measure == "Inverse_Simpson" & fraction == "WholeFree"))) # NS 
+#summary(lm(mean ~ Sample_TotalSeqs,data = filter(otu_alphadiv, measure == "Inverse_Simpson" & fraction == "Particle"))) # NS
+#summary(lm(mean ~ Sample_TotalSeqs,data = filter(otu_alphadiv, measure == "Inverse_Simpson" & fraction == "WholePart"))) # NS
+
+# Plot the relationship between D2 and sequencing depth 
+ggplot(filter(otu_alphadiv, measure == "Inverse_Simpson"), 
+       aes(x = Sample_TotalSeqs, y = mean)) + 
+  geom_point(size = 3) + 
+  facet_grid(.~fraction, scale = "free_x") + 
+  ggtitle("Inverse Simpson") + 
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
+        legend.position = c(0.1, 0.9), 
+        strip.background = element_rect(fill = NA), 
+        strip.text.x = element_text(face = "bold"))
+```
+
+![](rarefied_otu_analysis_files/figure-html/div_vs_seqdepth-4.png)<!-- -->
+
+# Does DNA extraction concentration influcence diversity?
+
+```r
+### Prepare the data frame 
+DNA_comparison <- nosed_meta_data %>%
+  dplyr::select(norep_filter_name, dnaconcrep1, dnaconcrep2, cells_per_uL, lakesite) %>%
+  mutate(dnaconcrep1 = as.numeric(dnaconcrep1),
+         dnaconcrep2 = as.numeric(dnaconcrep2),
+         mean_dna = (dnaconcrep1+dnaconcrep2)/2)
+
+# Calculate the linear models 
+lm_dna_conc <- lm(dnaconcrep1 ~ dnaconcrep2,  data = DNA_comparison)
+lm_cells_vs_meanDNA <- lm(mean_dna ~ cells_per_uL,  data = DNA_comparison)
+
+# Plot the trends 
+plot_grid(ggplot(DNA_comparison, aes(x = dnaconcrep1, y = dnaconcrep2)) + # First plot 
+            geom_point(size = 3) + geom_smooth(method = "lm") +
+            annotate("text",  x = 17, y = 3,
+              color = "black", fontface = "bold",
+               label = paste("R2 =", round(summary(lm_dna_conc)$adj.r.squared, digits = 4), "\n", 
+                             "p =", round(unname(summary(lm_dna_conc)$coefficients[,4][2]), digits = 8)))+
+            ggtitle("DNA Concentration Between Replicates"), 
+          ggplot(DNA_comparison, aes(x = mean_dna, y = cells_per_uL)) + # Second plot 
+            geom_point(size = 3) + geom_smooth(method = "lm") +
+            annotate("text",  x = 12, y = 4800,
+              color = "black", fontface = "bold",
+               label = paste("R2 =", round(summary(lm_cells_vs_meanDNA)$adj.r.squared, digits = 4), "\n", 
+                             "p =", round(unname(summary(lm_cells_vs_meanDNA)$coefficients[,4][2]), digits = 4)))+
+            ggtitle("Mean DNA Concentration vs Cell Numbers"),
+          labels = c("A", "B"), ncol = 2)
+```
+
+```
+## Warning: Removed 30 rows containing non-finite values (stat_smooth).
+```
+
+```
+## Warning: Removed 30 rows containing missing values (geom_point).
+```
+
+```
+## Warning: Removed 50 rows containing non-finite values (stat_smooth).
+```
+
+```
+## Warning: Removed 50 rows containing missing values (geom_point).
+```
+
+![](rarefied_otu_analysis_files/figure-html/dnaconc_vs_diversity-1.png)<!-- -->
+
+

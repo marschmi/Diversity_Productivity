@@ -387,75 +387,103 @@ ggplot(comm_sesmpd, aes(x = mpd.obs, y = mpd.rand.mean, color = fraction)) +
 
 # Rarefied analysis for phylogenetic tree 
 ```{r rarefied_phylotree}
-load("../data/otu_merged_musk_pruned.RData")
+#load("../data/otu_merged_musk_pruned.RData")
 
 # Remove sediment samples and samples with low sequencing depth 
-nosed_otu_merged_musk_pruned1 <- subset_samples(otu_merged_musk_pruned, fraction != "Sediment")
-nosed_otu_merged_musk_pruned2 <- subset_samples(nosed_otu_merged_musk_pruned1, 
-                                                norep_filter_name != "MOTHJ715" & norep_filter_name != "MBRHP715")
-nosed_otu_merged_musk_pruned3 <- subset_samples(nosed_otu_merged_musk_pruned2, limnion == "Top")
-nosed_otu_merged_musk_pruned <- prune_taxa(taxa_sums(nosed_otu_merged_musk_pruned3) > 0, nosed_otu_merged_musk_pruned3) 
-nosed_otu_merged_musk_pruned
+#nosed_otu_merged_musk_pruned1 <- subset_samples(otu_merged_musk_pruned, fraction != "Sediment")
+#nosed_otu_merged_musk_pruned2 <- subset_samples(nosed_otu_merged_musk_pruned1, 
+#                                                norep_filter_name != "MOTHJ715" & norep_filter_name != "MBRHP715")
+#nosed_otu_merged_musk_pruned3 <- subset_samples(nosed_otu_merged_musk_pruned2, limnion == "Top")
+#nosed_otu_merged_musk_pruned <- prune_taxa(taxa_sums(nosed_otu_merged_musk_pruned3) > 0, nosed_otu_merged_musk_pruned3) 
+#nosed_otu_merged_musk_pruned
 
-sums_otu <- data.frame(rowSums(otu_table(nosed_otu_merged_musk_pruned)))
-colnames(sums_otu) <- "Sample_TotalSeqs"
-sums_otu$names <- row.names(sums_otu)
-sums_otu <- arrange(sums_otu, Sample_TotalSeqs) 
-sums_otu <- make_metadata_norep(sums_otu)
+#sums_otu <- data.frame(rowSums(otu_table(nosed_otu_merged_musk_pruned)))
+#colnames(sums_otu) <- "Sample_TotalSeqs"
+#sums_otu$names <- row.names(sums_otu)
+#sums_otu <- arrange(sums_otu, Sample_TotalSeqs) 
+#sums_otu <- make_metadata_norep(sums_otu)
 
-plot_sample_sums(dataframe = sums_otu, x_total_seqs = "Sample_TotalSeqs", fill_variable = "fraction")
+#plot_sample_sums(dataframe = sums_otu, x_total_seqs = "Sample_TotalSeqs", fill_variable = "fraction")
 
 # Since we are going to create a tree, we first need to rarefy the samples
-min_lib <- min(sample_sums(nosed_otu_merged_musk_pruned)) - 1
-min_lib
+#min_lib <- min(sample_sums(nosed_otu_merged_musk_pruned)) - 1
+#min_lib
 
 # Set the seed for the randomization of rarefy-ing
-set.seed(777)
+#set.seed(777)
 
-nosed_otu_merged_musk_RAREFIED <- rarefy_even_depth(nosed_otu_merged_musk_pruned, sample.size = min_lib,
-                                                    verbose = FALSE, replace = TRUE)
-
+#nosed_otu_merged_musk_RAREFIED <- rarefy_even_depth(nosed_otu_merged_musk_pruned, sample.size = min_lib,
+#                                                    verbose = FALSE, replace = TRUE)
+#meta_data_RAREFIED <- sample_data(nosed_otu_merged_musk_RAREFIED)
 # To calculate the sum of the phylogenetic branch length for samples, use the pd {picante} function
 # First force the OTU 
-otu_musk_RAREIFIED <- matrix(otu_table(nosed_otu_merged_musk_RAREFIED), nrow = nrow(otu_table(nosed_otu_merged_musk_RAREFIED)))
-rownames(otu_musk_RAREIFIED) <- sample_names(nosed_otu_merged_musk_RAREFIED)
-colnames(otu_musk_RAREIFIED) <- taxa_names(nosed_otu_merged_musk_RAREFIED)
+#otu_musk_RAREIFIED <- matrix(otu_table(nosed_otu_merged_musk_RAREFIED), nrow = nrow(otu_table(nosed_otu_merged_musk_RAREFIED)))
+#rownames(otu_musk_RAREIFIED) <- sample_names(nosed_otu_merged_musk_RAREFIED)
+#colnames(otu_musk_RAREIFIED) <- taxa_names(nosed_otu_merged_musk_RAREFIED)
 
 # Convert the count data to relative abundance by dividing each value by sample
 # total abundance with the vegan function `decostand` 
-relabund_otu_RAREFIED <- decostand(otu_musk_RAREIFIED, method = "total")
+#relabund_otu_RAREFIED <- decostand(otu_musk_RAREIFIED, method = "total")
 # check total abundance in each sample
-apply(relabund_otu_RAREFIED, 1, sum)
+#apply(relabund_otu_RAREFIED, 1, sum)
 
 # Bring the tree out of the phyloseq object 
-tree_musk_RAREFIED <- phy_tree(nosed_otu_merged_musk_RAREFIED)
+#tree_musk_RAREFIED <- phy_tree(nosed_otu_merged_musk_RAREFIED)
 
 # metadata 
-metadata_RAREFIED <- data.frame(sample_data(nosed_otu_merged_musk_RAREFIED))
+#metadata_RAREFIED <- data.frame(sample_data(nosed_otu_merged_musk_RAREFIED))
 
 # check for mismatches/missing species between community data and phylo tree
-combined_RAREFIED <- match.phylo.comm(tree_musk_RAREFIED, relabund_otu_RAREFIED)
+#combined_RAREFIED <- match.phylo.comm(tree_musk_RAREFIED, relabund_otu_RAREFIED)
 # the resulting object is a list with $phy and $comm elements.  replace our
 # original data with the sorted/matched data
-phy_RAREFIED <- combined_RAREFIED$phy
-comm_RAREFIED <- combined_RAREFIED$comm
+#phy_RAREFIED <- combined_RAREFIED$phy
+#comm_RAREFIED <- combined_RAREFIED$comm
+
+#write.nexus(phy_RAREFIED, file = "../data/PD_rarefied_2895/phy_RAREFIED.csv", translate = TRUE)
+#write.csv(comm_RAREFIED, file = "../data/PD_rarefied_2895/comm_RAREFIED.csv", row.names = TRUE)
+
+
 
 ## Calculate Faith's PD and species richness for sample 
-faiths_pd_RAREFIED <- pd(relabund_otu_RAREFIED, tree_musk_RAREFIED, include.root = FALSE)
-faiths_pd_RAREFIED$norep_filter_name <- row.names(faiths_pd_RAREFIED)
+#faiths_pd_RAREFIED <- pd(relabund_otu_RAREFIED, tree_musk_RAREFIED, include.root = FALSE)
+#faiths_pd_RAREFIED$norep_filter_name <- row.names(faiths_pd_RAREFIED)
   
-write.csv(faiths_pd_RAREFIED, file = "../data/PD_rarefied_2895/faithsPD_rarefy.csv", row.names = FALSE)
-#faiths_pd <- read.csv("../data/FaithsPD_relprop/faithsPD_rarefy.csv", header = TRUE)
+#write.csv(faiths_pd_RAREFIED, file = "../data/PD_rarefied_2895/faithsPD_rarefy.csv", row.names = FALSE)
+faiths_pd_RAREFIED <- read.csv("../data/PD_rarefied_2895/faithsPD_rarefy.csv", header = TRUE)
+
+
 
 # Remove the tree from the phyloseq object to prevent heavy computation in the future
 otu_merged_musk_pruned <- merge_phyloseq(tax_table(otu_merged_musk_pruned), sample_data(otu_merged_musk_pruned), otu_table(otu_merged_musk_pruned))
 otu_merged_musk_pruned
 
+# Join Faith's PD with the rest of the metadata 
+meta_dataPD_RAREFIED <- left_join(faiths_pd_RAREFIED, meta_data_RAREFIED, by = "norep_filter_name")
 
 
+### Is there a correlation between species richness and faith's PD?
+lm_PD_vs_SR_RARE <- lm(PD ~ SR, data = meta_dataPD_RAREFIED)
+ggplot(meta_dataPD_RAREFIED, aes(y = PD, x = SR)) + 
+  geom_point(size = 3) + xlab("Faith's PD") + 
+  xlab("Species richness") +
+  geom_smooth(method = "lm") +
+    annotate("text", x = 600, y=45, color = "black", fontface = "bold",
+           label = paste("R2 =", round(summary(lm_PD_vs_SR_RARE)$adj.r.squared, digits = 3), "\n", 
+                         "p =", round(unname(summary(lm_PD_vs_SR_RARE)$coefficients[,4][2]), digits = 52)))
 
 
+#phy_dist_RAREFIED <- cophenetic(phy_RAREFIED)
 
+# calculate standardized effect size mean pairwise distance (ses.mpd)
+#comm_sesmpd_taxalab <- ses.mpd(comm_RAREFIED, phy_dist_RAREFIED, null.model = "taxa.labels", 
+#                               abundance.weighted = TRUE, runs = 999)
+
+#write.csv(comm_sesmpd, file = "../data/PD_rarefied_2895/sesMPD_rarefy.csv", row.names = TRUE)
+
+# calculate ses.mntd
+#comm_sesmntd <- ses.mntd(comm, phy_dist, null.model = "richness", 
+#                         abundance.weighted = FALSE, runs = 999)
 
 
 
