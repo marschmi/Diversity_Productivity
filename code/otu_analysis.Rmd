@@ -386,35 +386,35 @@ ggplot(comm_sesmpd, aes(x = mpd.obs, y = mpd.rand.mean, color = fraction)) +
 `MPD` is generally thought to be more sensitive to tree-wide patterns of phylogenetic clustering and eveness, while `MNTD` is more sensitive to patterns of evenness and clustering closer to the tips of the phylogeny.
 
 # Rarefied analysis for phylogenetic tree 
-```{r rarefied_phylotree}
-#load("../data/otu_merged_musk_pruned.RData")
+```{r rarefied_phylotree2}
+load("../data/otu_merged_musk_pruned.RData")
 
 # Remove sediment samples and samples with low sequencing depth 
-#nosed_otu_merged_musk_pruned1 <- subset_samples(otu_merged_musk_pruned, fraction != "Sediment")
-#nosed_otu_merged_musk_pruned2 <- subset_samples(nosed_otu_merged_musk_pruned1, 
-#                                                norep_filter_name != "MOTHJ715" & norep_filter_name != "MBRHP715")
-#nosed_otu_merged_musk_pruned3 <- subset_samples(nosed_otu_merged_musk_pruned2, limnion == "Top")
-#nosed_otu_merged_musk_pruned <- prune_taxa(taxa_sums(nosed_otu_merged_musk_pruned3) > 0, nosed_otu_merged_musk_pruned3) 
-#nosed_otu_merged_musk_pruned
+nosed_otu_merged_musk_pruned1 <- subset_samples(otu_merged_musk_pruned, fraction != "Sediment")
+nosed_otu_merged_musk_pruned2 <- subset_samples(nosed_otu_merged_musk_pruned1, 
+                                                norep_filter_name != "MOTHJ715" & norep_filter_name != "MBRHP715")
+nosed_otu_merged_musk_pruned3 <- subset_samples(nosed_otu_merged_musk_pruned2, limnion == "Top")
+nosed_otu_merged_musk_pruned <- prune_taxa(taxa_sums(nosed_otu_merged_musk_pruned3) > 0, nosed_otu_merged_musk_pruned3) 
+nosed_otu_merged_musk_pruned
 
-#sums_otu <- data.frame(rowSums(otu_table(nosed_otu_merged_musk_pruned)))
-#colnames(sums_otu) <- "Sample_TotalSeqs"
-#sums_otu$names <- row.names(sums_otu)
-#sums_otu <- arrange(sums_otu, Sample_TotalSeqs) 
-#sums_otu <- make_metadata_norep(sums_otu)
+sums_otu <- data.frame(rowSums(otu_table(nosed_otu_merged_musk_pruned)))
+colnames(sums_otu) <- "Sample_TotalSeqs"
+sums_otu$names <- row.names(sums_otu)
+sums_otu <- arrange(sums_otu, Sample_TotalSeqs) 
+sums_otu <- make_metadata_norep(sums_otu)
 
 #plot_sample_sums(dataframe = sums_otu, x_total_seqs = "Sample_TotalSeqs", fill_variable = "fraction")
 
 # Since we are going to create a tree, we first need to rarefy the samples
-#min_lib <- min(sample_sums(nosed_otu_merged_musk_pruned)) - 1
-#min_lib
+min_lib <- min(sample_sums(nosed_otu_merged_musk_pruned)) - 1
+min_lib
 
 # Set the seed for the randomization of rarefy-ing
-#set.seed(777)
+set.seed(777)
 
-#nosed_otu_merged_musk_RAREFIED <- rarefy_even_depth(nosed_otu_merged_musk_pruned, sample.size = min_lib,
-#                                                    verbose = FALSE, replace = TRUE)
-#meta_data_RAREFIED <- sample_data(nosed_otu_merged_musk_RAREFIED)
+nosed_otu_merged_musk_RAREFIED <- rarefy_even_depth(nosed_otu_merged_musk_pruned, sample.size = min_lib,
+                                                    verbose = FALSE, replace = TRUE)
+meta_data_RAREFIED <- sample_data(nosed_otu_merged_musk_RAREFIED)
 # To calculate the sum of the phylogenetic branch length for samples, use the pd {picante} function
 # First force the OTU 
 #otu_musk_RAREIFIED <- matrix(otu_table(nosed_otu_merged_musk_RAREFIED), nrow = nrow(otu_table(nosed_otu_merged_musk_RAREFIED)))
@@ -450,13 +450,15 @@ ggplot(comm_sesmpd, aes(x = mpd.obs, y = mpd.rand.mean, color = fraction)) +
 #faiths_pd_RAREFIED$norep_filter_name <- row.names(faiths_pd_RAREFIED)
   
 #write.csv(faiths_pd_RAREFIED, file = "../data/PD_rarefied_2895/faithsPD_rarefy.csv", row.names = FALSE)
-faiths_pd_RAREFIED <- read.csv("../data/PD_rarefied_2895/faithsPD_rarefy.csv", header = TRUE)
-
-
 
 # Remove the tree from the phyloseq object to prevent heavy computation in the future
 otu_merged_musk_pruned <- merge_phyloseq(tax_table(otu_merged_musk_pruned), sample_data(otu_merged_musk_pruned), otu_table(otu_merged_musk_pruned))
 otu_merged_musk_pruned
+```
+
+
+```{r rarefied_phylotree2}
+faiths_pd_RAREFIED <- read.csv("../data/PD_rarefied_2895/faithsPD_rarefy.csv", header = TRUE)
 
 # Join Faith's PD with the rest of the metadata 
 meta_dataPD_RAREFIED <- left_join(faiths_pd_RAREFIED, meta_data_RAREFIED, by = "norep_filter_name")
@@ -485,8 +487,137 @@ ggplot(meta_dataPD_RAREFIED, aes(y = PD, x = SR)) +
 #comm_sesmntd <- ses.mntd(comm, phy_dist, null.model = "richness", 
 #                         abundance.weighted = FALSE, runs = 999)
 
+# CALCULATE THE MPD
+#comm_sesmpd_taxalab_weighted <- ses.mpd(comm_RAREFIED, phy_dist_RAREFIED, null.model = "taxa.labels", 
+#                              abundance.weighted = TRUE, runs = 999)
+
+#write.csv(comm_sesmpd_taxalab_weighted, file = "/scratch/lsa_fluxm/marschmi/git_repos/Diversity_Productivity/data/PD_rarefied_2895/comm_sesmpd_taxalab_weighted.csv", 
+#          row.names = TRUE)
+
+comm_sesmpd_taxlab <- read.csv("../data/PD_rarefied_2895/comm_sesmpd_taxalab_weighted.csv", header = TRUE) %>%
+  dplyr::rename(names = X) %>%
+  make_metadata_norep()
+# Set the factor levels to be the order we'd like
+comm_sesmpd_taxlab$fraction <- factor(comm_sesmpd_taxlab$fraction,  levels = c("WholePart", "Particle", "WholeFree", "Free"))
+comm_sesmpd_taxlab$lakesite <- factor(comm_sesmpd_taxlab$lakesite,  levels = c("MOT", "MDP", "MBR", "MIN"))
 
 
+
+
+# compare ses.mpd between fractions
+comm_sesmpd_taxlab_plot1 <- 
+  ggplot(comm_sesmpd_taxlab, aes(x = fraction, y = mpd.obs.z, color = season, fill = season)) + 
+  geom_point(size = 3, position = position_jitterdodge()) + 
+  ggtitle("Weighted") +
+  ylab("Mean Pairwise Distance \n(ses.mpd)") + 
+  geom_boxplot(alpha = 0.5) +
+  scale_color_manual(values = season_colors) + 
+  scale_fill_manual(values = season_colors) + 
+  geom_hline(yintercept = 0) +
+  facet_grid(.~fraction, scale = "free_x")
+
+# compare ses.mpd between fractions
+comm_sesmpd_taxlab_plot2 <- 
+  ggplot(comm_sesmpd_taxlab, aes(x = fraction, y = mpd.obs.p, color = season, fill = season)) + 
+  geom_point(size = 3, position = position_jitterdodge()) + 
+  ylab("p-value") +
+  geom_boxplot(alpha = 0.5) +
+  scale_color_manual(values = season_colors) + 
+  scale_fill_manual(values = season_colors) + 
+  geom_hline(yintercept = 0.05) +
+  geom_hline(yintercept = 0.95, color = "red") +
+  facet_grid(.~fraction, scale = "free_x") 
+
+weighted_plots <- plot_grid(comm_sesmpd_taxlab_plot1, comm_sesmpd_taxlab_plot2, 
+          labels = c("A", "B"), 
+          nrow = 2)
+
+library(RColorBrewer)
+myPalette <- colorRampPalette(rev(brewer.pal(11, "Spectral")))
+
+ggplot(comm_sesmpd_taxlab, aes(x = fraction, y = mpd.obs.z, color = mpd.obs.p, shape = lakesite)) + 
+  geom_point(size = 3, position = position_jitterdodge()) + 
+  ylab("Weighted Mean Pairwise Distance") + 
+  geom_hline(yintercept = 0.05) +
+  scale_colour_gradientn(colours = myPalette(100), limits=c(0.001, 1), name="p-value") +
+  #scale_colour_gradient2(low="red", high = "cornflowerblue", mid = "black", midpoint = 0.05) +
+  facet_grid(.~fraction, scale = "free_x") 
+
+weighted_season_plot <- ggplot(comm_sesmpd_taxlab, aes(x = fraction, y = mpd.obs.z, color = mpd.obs.p, shape = season)) + 
+  geom_point(size = 3, position = position_jitterdodge()) + 
+  ylab("Weighted Mean Pairwise Distance \n(ses.mpd)") + 
+  geom_hline(yintercept = 0.05) +
+  scale_colour_gradientn(colours = myPalette(100), limits=c(0.001, 1), name="p-value") +
+  #scale_colour_gradient2(low="red", high = "cornflowerblue", mid = "black", midpoint = 0.05) +
+  facet_grid(.~fraction, scale = "free_x") 
+
+
+
+#########
+unweighted_sesmpd_taxlab <- read.csv("../data/PD_rarefied_2895/comm_sesmpd_taxalab_UNweight.csv", 
+                                        header = TRUE) %>%
+  dplyr::rename(norep_filter_name = X)
+
+unweighted_mpd_taxlab <- left_join(unweighted_sesmpd_taxlab, meta_data_RAREFIED, by = "norep_filter_name")
+# Set the factor levels to be the order we'd like
+unweighted_mpd_taxlab$fraction <- factor(unweighted_mpd_taxlab$fraction,  levels = c("WholePart", "Particle", "WholeFree", "Free"))
+unweighted_mpd_taxlab$lakesite <- factor(unweighted_mpd_taxlab$lakesite,  levels = c("MOT", "MDP", "MBR", "MIN"))
+
+
+# compare ses.mpd between fractions
+unweighted_sesmpd_taxlab_plot1 <- 
+  ggplot(unweighted_mpd_taxlab, aes(x = fraction, y = mpd.obs.z, color = season, fill = season)) + 
+  ggtitle("Unweighted") +
+  geom_point(size = 3, position = position_jitterdodge()) + 
+  ylab("Mean Pairwise Distance") + 
+  geom_boxplot(alpha = 0.5) +
+  scale_color_manual(values = season_colors) + 
+  scale_fill_manual(values = season_colors) + 
+  geom_hline(yintercept = 0) +
+  facet_grid(.~fraction, scale = "free_x") 
+
+# compare ses.mpd between fractions
+unweighted_sesmpd_taxlab_plot2 <- 
+  ggplot(unweighted_mpd_taxlab, aes(x = fraction, y = mpd.obs.p, color = season, fill = season)) + 
+  geom_point(size = 3, position = position_jitterdodge()) + 
+  ylab("p-value") +
+  geom_boxplot(alpha = 0.5) +
+  scale_color_manual(values = season_colors) + 
+  scale_fill_manual(values = season_colors) + 
+  geom_hline(yintercept = 0.05) +
+  geom_hline(yintercept = 0.95, color = "red") +
+  facet_grid(.~fraction, scale = "free_x") 
+
+unweighted_plots <- plot_grid(unweighted_sesmpd_taxlab_plot1, unweighted_sesmpd_taxlab_plot2, 
+          labels = c("A", "B"), 
+          nrow = 2)
+
+
+unweighted_season_plot <- ggplot(unweighted_mpd_taxlab, aes(x = fraction, y = mpd.obs.z, color = mpd.obs.p, shape = season)) + 
+  geom_point(size = 3, position = position_jitterdodge()) +
+  ylab("Unweighted Mean Pairwise Distance \n(ses.mpd)") + 
+  geom_hline(yintercept = 0.05) +
+  scale_colour_gradientn(colours = myPalette(100), limits=c(0.001, 1), name="p-value") +
+  #scale_colour_gradient2(low="red", high = "cornflowerblue", mid = "black", midpoint = 0.05) +
+  facet_grid(.~fraction, scale = "free_x") 
+
+
+unweighted_plots
+weighted_plots
+
+plot_grid(unweighted_plots, weighted_plots, 
+          labels = c("1", "2"), 
+          ncol = 2)
+
+
+
+
+
+
+plot_grid(unweighted_season_plot + ggtitle("Unweighted"),
+          weighted_season_plot+ ggtitle("Weighted"), 
+          labels = c("1", "2"), 
+          ncol = 2)
 
 ```
 
