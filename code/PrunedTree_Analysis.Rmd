@@ -1,0 +1,146 @@
+---
+title: "Pruned Tree Analysis"
+author: "Marian L. Schmidt"
+date: "February 16, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(eval = TRUE, 
+                      echo = FALSE, 
+                      cache = TRUE,
+                      include = TRUE,
+                      warning = FALSE,
+                      collapse = FALSE,
+                      dependson = NULL,
+                      message = FALSE,
+                      engine = "R", # Chunks will always have R code, unless noted
+                      error = TRUE,
+                      fig.path="Figures/cached/",  # Set the figure options
+                      fig.align = "center", 
+                      fig.width = 7,
+                      fig.height = 7)
+```
+
+
+```{r load-libraries}
+library(ggplot2)
+library(devtools)
+library(phyloseq)
+library(tidyr)
+library(dplyr)
+library(cowplot)
+library(picante) # Will also include ape and vegan 
+source("Muskegon_functions.R")
+source("set_colors.R")
+```
+
+```{r cars}
+# Loads a phyloseq object named otu_merged_musk_pruned)
+#load("../data/otu_merged_musk_pruned.RData")
+# The name of the phyloseq object is: 
+#otu_merged_musk_pruned 
+
+# Remove tree because it's too computationally intensive
+#otu_merged_musk_pruned <- merge_phyloseq(tax_table(otu_merged_musk_pruned), sample_data(otu_merged_musk_pruned), #otu_table(otu_merged_musk_pruned))
+#otu_merged_musk_pruned
+
+# Remove sediment samples and samples with low sequencing depth 
+#nosed_otu_merged_musk_pruned1 <- subset_samples(otu_merged_musk_pruned, fraction != "Sediment")
+#nosed_otu_merged_musk_pruned2 <- subset_samples(nosed_otu_merged_musk_pruned1, 
+#                                                norep_filter_name != "MOTHJ715" & norep_filter_name != "MBRHP715")
+#nosed_otu_merged_musk_pruned3 <- subset_samples(nosed_otu_merged_musk_pruned2, limnion == "Top")
+#nosed_otu_merged_musk_pruned <- prune_taxa(taxa_sums(nosed_otu_merged_musk_pruned3) > 0, nosed_otu_merged_musk_pruned3) 
+#nosed_otu_merged_musk_pruned
+
+#sums_otu <- data.frame(rowSums(otu_table(nosed_otu_merged_musk_pruned)))
+#colnames(sums_otu) <- "Sample_TotalSeqs"
+#sums_otu$names <- row.names(sums_otu)
+#sums_otu <- arrange(sums_otu, Sample_TotalSeqs) 
+#sums_otu <- make_metadata_norep(sums_otu)
+
+#plot_sample_sums(dataframe = sums_otu, x_total_seqs = "Sample_TotalSeqs", fill_variable = "fraction")
+
+# Since we are going to create a tree, we first need to rarefy the samples
+#min_lib <- min(sample_sums(nosed_otu_merged_musk_pruned)) - 1
+#min_lib
+
+# Set the seed for the randomization of rarefy-ing
+#set.seed(777)
+
+#nosed_merged_RAREFIED <- rarefy_even_depth(nosed_otu_merged_musk_pruned, sample.size = min_lib,
+#                                                    verbose = FALSE, replace = TRUE)
+
+###  REMOVE ALL OTUS THAT HAVE LESS THAN 10 ACROSS THE ENTIRE DATASET
+#nosed_merged_RAREFIED_rm10 <- prune_taxa(taxa_sums(nosed_merged_RAREFIED) > 10, nosed_merged_RAREFIED) 
+
+# Create a new file called "nosed_merged_RAREFIED_rm10.RData" that has the phyloseq object
+#save("nosed_merged_RAREFIED_rm10", file=paste0("PrunedTree/nosed_merged_RAREFIED_rm10.RData")) 
+
+#tax <- data.frame(tax_table(nosed_merged_RAREFIED_rm10))
+#vector_of_otus <- as.vector(tax$OTU)
+
+#write(vector_of_otus, file = "PrunedTree/OTUnames_rarefied_rm10.txt",
+#      ncolumns = 1,
+#      append = FALSE, sep = "\n")
+```
+
+
+
+```{r}
+# Load in rarefied and 10 seqs removed phyloseq object named nosed_merged_RAREFIED_rm10
+load("PrunedTree/nosed_merged_RAREFIED_rm10.RData")
+nosed_merged_RAREFIED_rm10
+
+tree <- read.tree(file = "PrunedTree/newick_tree_rmN_to_dash.tre")
+
+rarefied_rm10_physeq <- merge_phyloseq(nosed_merged_RAREFIED_rm10, tree)
+rarefied_rm10_physeq
+
+
+```
+
+It's time to make a tree.  Check out a helpful stack exchange page:
+[http://unix.stackexchange.com/questions/253499/extracting-subset-from-fasta-file](http://unix.stackexchange.com/questions/253499/extracting-subset-from-fasta-file)
+
+
+
+```{r}
+# To calculate the sum of the phylogenetic branch length for samples, use the pd {picante} function
+# First force the OTU 
+rarefied_rm10_otu <- matrix(otu_table(rarefied_rm10_physeq), nrow = nrow(otu_table(rarefied_rm10_physeq)))
+rownames(rarefied_rm10_otu) <- sample_names(rarefied_rm10_physeq)
+colnames(rarefied_rm10_otu) <- taxa_names(rarefied_rm10_physeq)
+
+# Convert the count data to relative abundance by dividing each value by sample
+# total abundance with the vegan function `decostand` 
+relabund_otu_RAREFIED <- decostand(rarefied_rm10_otu, method = "total")
+# check total abundance in each sample
+#apply(relabund_otu_RAREFIED, 1, sum)
+
+# Bring the tree out of the phyloseq object 
+tree_RAREFIED_rm10 <- phy_tree(rarefied_rm10_physeq)
+
+# metadata 
+meta_data_rarefied_rm10_physeq <- data.frame(sample_data(rarefied_rm10_physeq))
+
+# check for mismatches/missing species between community data and phylo tree
+combined_RAREFIED_rm10 <- match.phylo.comm(tree_RAREFIED_rm10, relabund_otu_RAREFIED)
+# the resulting object is a list with $phy and $comm elements.  replace our
+# original data with the sorted/matched data
+phy_RAREFIED_rm10 <- combined_RAREFIED_rm10$phy
+comm_RAREFIED_rm10 <- combined_RAREFIED_rm10$comm
+
+#write.nexus(phy_RAREFIED_rm10, file = "PrunedTree/phy_RAREFIED_rm10.csv", translate = TRUE)
+#write.csv(comm_RAREFIED_rm10, file = "PrunedTree/comm_RAREFIED_rm10.csv", row.names = TRUE)
+
+
+
+## Calculate Faith's PD and species richness for sample 
+#faiths_pd_RAREFIED <- pd(relabund_otu_RAREFIED, tree_musk_RAREFIED, include.root = FALSE)
+#faiths_pd_RAREFIED$norep_filter_name <- row.names(faiths_pd_RAREFIED)
+  
+#write.csv(faiths_pd_RAREFIED, file = "../data/PD_rarefied_2895/faithsPD_rarefy.csv", row.names = FALSE)
+
+
+```
