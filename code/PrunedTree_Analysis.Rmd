@@ -6,7 +6,7 @@ output:
   html_document:
     code_folding: show
     highlight: haddock
-    keep_md: yes
+    keep_md: no
     theme: united
     toc: yes
     toc_float:
