@@ -414,6 +414,14 @@ set.seed(777)
 
 nosed_otu_merged_musk_RAREFIED <- rarefy_even_depth(nosed_otu_merged_musk_pruned, sample.size = min_lib,
                                                     verbose = FALSE, replace = TRUE)
+
+
+
+#prune_taxa(taxa_sums(nosed_otu_merged_musk_RAREFIED) > 2, nosed_otu_merged_musk_RAREFIED) 
+
+#prune_taxa(taxa_sums(nosed_otu_merged_musk_RAREFIED) > 100, nosed_otu_merged_musk_RAREFIED) 
+
+
 meta_data_RAREFIED <- sample_data(nosed_otu_merged_musk_RAREFIED)
 # To calculate the sum of the phylogenetic branch length for samples, use the pd {picante} function
 # First force the OTU 
@@ -494,19 +502,22 @@ ggplot(meta_dataPD_RAREFIED, aes(y = PD, x = SR)) +
 #write.csv(comm_sesmpd_taxalab_weighted, file = "/scratch/lsa_fluxm/marschmi/git_repos/Diversity_Productivity/data/PD_rarefied_2895/comm_sesmpd_taxalab_weighted.csv", 
 #          row.names = TRUE)
 
-comm_sesmpd_taxlab <- read.csv("../data/PD_rarefied_2895/comm_sesmpd_taxalab_weighted.csv", header = TRUE) %>%
-  dplyr::rename(names = X) %>%
-  make_metadata_norep()
+WEIGHTED_mpd_taxlab <- read.csv("../data/PD_rarefied_2895/comm_sesmpd_taxalab_weighted.csv", header = TRUE) %>%
+  dplyr::rename(norep_filter_name = X) 
+
+WEIGHTED_mpd_taxlab <- left_join(WEIGHTED_mpd_taxlab, meta_data_RAREFIED, by = "norep_filter_name")
+
+
 # Set the factor levels to be the order we'd like
-comm_sesmpd_taxlab$fraction <- factor(comm_sesmpd_taxlab$fraction,  levels = c("WholePart", "Particle", "WholeFree", "Free"))
-comm_sesmpd_taxlab$lakesite <- factor(comm_sesmpd_taxlab$lakesite,  levels = c("MOT", "MDP", "MBR", "MIN"))
+WEIGHTED_mpd_taxlab$fraction <- factor(WEIGHTED_mpd_taxlab$fraction,  levels = c("WholePart", "Particle", "WholeFree", "Free"))
+WEIGHTED_mpd_taxlab$lakesite <- factor(WEIGHTED_mpd_taxlab$lakesite,  levels = c("MOT", "MDP", "MBR", "MIN"))
 
 
 
 
 # compare ses.mpd between fractions
 comm_sesmpd_taxlab_plot1 <- 
-  ggplot(comm_sesmpd_taxlab, aes(x = fraction, y = mpd.obs.z, color = season, fill = season)) + 
+  ggplot(WEIGHTED_mpd_taxlab, aes(x = fraction, y = mpd.obs.z, color = season, fill = season)) + 
   geom_point(size = 3, position = position_jitterdodge()) + 
   ggtitle("Weighted") +
   ylab("Mean Pairwise Distance \n(ses.mpd)") + 
@@ -518,7 +529,7 @@ comm_sesmpd_taxlab_plot1 <-
 
 # compare ses.mpd between fractions
 comm_sesmpd_taxlab_plot2 <- 
-  ggplot(comm_sesmpd_taxlab, aes(x = fraction, y = mpd.obs.p, color = season, fill = season)) + 
+  ggplot(WEIGHTED_mpd_taxlab, aes(x = fraction, y = mpd.obs.p, color = season, fill = season)) + 
   geom_point(size = 3, position = position_jitterdodge()) + 
   ylab("p-value") +
   geom_boxplot(alpha = 0.5) +
@@ -535,7 +546,7 @@ weighted_plots <- plot_grid(comm_sesmpd_taxlab_plot1, comm_sesmpd_taxlab_plot2,
 library(RColorBrewer)
 myPalette <- colorRampPalette(rev(brewer.pal(11, "Spectral")))
 
-ggplot(comm_sesmpd_taxlab, aes(x = fraction, y = mpd.obs.z, color = mpd.obs.p, shape = lakesite)) + 
+ggplot(WEIGHTED_mpd_taxlab, aes(x = fraction, y = mpd.obs.z, color = mpd.obs.p, shape = lakesite)) + 
   geom_point(size = 3, position = position_jitterdodge()) + 
   ylab("Weighted Mean Pairwise Distance") + 
   geom_hline(yintercept = 0.05) +
@@ -543,7 +554,7 @@ ggplot(comm_sesmpd_taxlab, aes(x = fraction, y = mpd.obs.z, color = mpd.obs.p, s
   #scale_colour_gradient2(low="red", high = "cornflowerblue", mid = "black", midpoint = 0.05) +
   facet_grid(.~fraction, scale = "free_x") 
 
-weighted_season_plot <- ggplot(comm_sesmpd_taxlab, aes(x = fraction, y = mpd.obs.z, color = mpd.obs.p, shape = season)) + 
+weighted_season_plot <- ggplot(WEIGHTED_mpd_taxlab, aes(x = fraction, y = mpd.obs.z, color = mpd.obs.p, shape = season)) + 
   geom_point(size = 3, position = position_jitterdodge()) + 
   ylab("Weighted Mean Pairwise Distance \n(ses.mpd)") + 
   geom_hline(yintercept = 0.05) +
@@ -602,21 +613,82 @@ unweighted_season_plot <- ggplot(unweighted_mpd_taxlab, aes(x = fraction, y = mp
   facet_grid(.~fraction, scale = "free_x") 
 
 
-unweighted_plots
-weighted_plots
+
 
 plot_grid(unweighted_plots, weighted_plots, 
           labels = c("1", "2"), 
           ncol = 2)
 
-
-
-
-
-
 plot_grid(unweighted_season_plot + ggtitle("Unweighted"),
           weighted_season_plot+ ggtitle("Weighted"), 
           labels = c("1", "2"), 
+          ncol = 2)
+```
+
+
+```{r mpd_vs_fracprod}
+##########  UNWEIGHTED ANALYSIS 
+lmFL_mpd_unweighted_vs_fracprod <- lm(frac_bacprod ~ mpd.obs.z, 
+                                      data = filter(unweighted_mpd_taxlab, fraction == "WholeFree"))
+summary(lmFL_mpd_unweighted_vs_fracprod)
+lmPA_mpd_unweighted_vs_fracprod <- lm(frac_bacprod ~ mpd.obs.z, 
+                                      data = filter(unweighted_mpd_taxlab, fraction == "WholePart" &
+                                                      norep_filter_name != "MINEJ515"))
+summary(lmPA_mpd_unweighted_vs_fracprod)
+
+unweightedMPD_vs_fracprod <- ggplot(filter(unweighted_mpd_taxlab, fraction %in% c("WholePart", "WholeFree")), 
+       aes(x = mpd.obs.z, y = frac_bacprod, color = fraction)) + 
+  geom_point(size = 3) +
+  xlab("Unweighted Mean Pairwise Distance") + 
+  ylab("Heterotrophic Production") +
+  ggtitle("Unweighted") + 
+  scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
+  geom_smooth(method = "lm", data = filter(unweighted_mpd_taxlab, fraction == "WholePart" &
+                                                      norep_filter_name != "MINEJ515")) +
+  theme(legend.position = c(0.2, 0.87)) +
+    annotate("text", x = -3.5, y=20, 
+           color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(lmPA_mpd_unweighted_vs_fracprod)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lmPA_mpd_unweighted_vs_fracprod)$coefficients[,4][2]), digits = 4))) +
+  annotate("text", x = 0, y=60, 
+         color = "cornflowerblue", fontface = "bold",
+         label = paste("R2 =", round(summary(lmFL_mpd_unweighted_vs_fracprod)$adj.r.squared, digits = 4), "\n", 
+                       "p =", round(unname(summary(lmFL_mpd_unweighted_vs_fracprod)$coefficients[,4][2]), digits = 4))) 
+
+
+
+
+####### WEIGHTED ANALYSIS
+
+lmFL_mpd_WEIGHTED_vs_fracprod <- lm(frac_bacprod ~ mpd.obs.z, 
+                                      data = filter(WEIGHTED_mpd_taxlab, fraction == "WholeFree"))
+summary(lmFL_mpd_WEIGHTED_vs_fracprod)
+lmPA_mpd_WEIGHTED_vs_fracprod <- lm(frac_bacprod ~ mpd.obs.z, 
+                                      data = filter(WEIGHTED_mpd_taxlab, fraction == "WholePart")) #&
+                                                      #norep_filter_name != "MINEJ515"))
+summary(lmPA_mpd_WEIGHTED_vs_fracprod)
+
+weightedMPD_vs_fracprod <- ggplot(filter(WEIGHTED_mpd_taxlab, fraction %in% c("WholePart", "WholeFree")), 
+       aes(x = mpd.obs.z, y = frac_bacprod, color = fraction)) + 
+  geom_point(size = 3) +
+  xlab("Weighted Mean Pairwise Distance") + 
+  ylab("Heterotrophic Production") +
+  ggtitle("Weighted") + 
+  scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
+  geom_smooth(method = "lm", data = filter(WEIGHTED_mpd_taxlab, fraction == "WholePart")) +
+  theme(legend.position = c(0.2, 0.87)) +
+    annotate("text", x = 0, y=20, 
+           color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(lmPA_mpd_WEIGHTED_vs_fracprod)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lmPA_mpd_WEIGHTED_vs_fracprod)$coefficients[,4][2]), digits = 4))) +
+  annotate("text", x = -2, y=40, 
+         color = "cornflowerblue", fontface = "bold",
+         label = paste("R2 =", round(summary(lmFL_mpd_WEIGHTED_vs_fracprod)$adj.r.squared, digits = 4), "\n", 
+                       "p =", round(unname(summary(lmFL_mpd_WEIGHTED_vs_fracprod)$coefficients[,4][2]), digits = 4))) 
+
+
+plot_grid(unweightedMPD_vs_fracprod, weightedMPD_vs_fracprod,
+          labels = c("A", "B"), 
           ncol = 2)
 
 ```
