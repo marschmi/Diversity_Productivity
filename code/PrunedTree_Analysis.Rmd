@@ -2,7 +2,17 @@
 title: "Pruned Tree Analysis"
 author: "Marian L. Schmidt"
 date: "February 16, 2017"
-output: html_document
+output:
+  html_document:
+    code_folding: show
+    highlight: haddock
+    keep_md: yes
+    theme: united
+    toc: yes
+    toc_float:
+      collapsed: no
+      smooth_scroll: yes
+      toc_depth: 3
 ---
 
 ```{r setup, include=FALSE}
@@ -18,8 +28,8 @@ knitr::opts_chunk$set(eval = TRUE,
                       error = TRUE,
                       fig.path="Figures/cached/",  # Set the figure options
                       fig.align = "center", 
-                      fig.width = 7,
-                      fig.height = 7)
+                      fig.width = 4,
+                      fig.height = 4)
 ```
 
 
@@ -35,7 +45,7 @@ source("Muskegon_functions.R")
 source("set_colors.R")
 ```
 
-```{r cars}
+```{r prepare_tree}
 # Loads a phyloseq object named otu_merged_musk_pruned)
 #load("../data/otu_merged_musk_pruned.RData")
 # The name of the phyloseq object is: 
@@ -87,7 +97,7 @@ source("set_colors.R")
 
 
 
-```{r}
+```{r load-data}
 # Load in rarefied and 10 seqs removed phyloseq object named nosed_merged_RAREFIED_rm10
 load("PrunedTree/nosed_merged_RAREFIED_rm10.RData")
 nosed_merged_RAREFIED_rm10
@@ -96,8 +106,6 @@ tree <- read.tree(file = "PrunedTree/newick_tree_rmN_to_dash.tre")
 
 rarefied_rm10_physeq <- merge_phyloseq(nosed_merged_RAREFIED_rm10, tree)
 rarefied_rm10_physeq
-
-
 ```
 
 It's time to make a tree.  Check out a helpful stack exchange page:
@@ -105,7 +113,7 @@ It's time to make a tree.  Check out a helpful stack exchange page:
 
 
 
-```{r}
+```{r metadata}
 # To calculate the sum of the phylogenetic branch length for samples, use the pd {picante} function
 # First force the OTU 
 rarefied_rm10_otu <- matrix(otu_table(rarefied_rm10_physeq), nrow = nrow(otu_table(rarefied_rm10_physeq)))
@@ -114,33 +122,900 @@ colnames(rarefied_rm10_otu) <- taxa_names(rarefied_rm10_physeq)
 
 # Convert the count data to relative abundance by dividing each value by sample
 # total abundance with the vegan function `decostand` 
-relabund_otu_RAREFIED <- decostand(rarefied_rm10_otu, method = "total")
+#relabund_otu_RAREFIED <- decostand(rarefied_rm10_otu, method = "total")
 # check total abundance in each sample
 #apply(relabund_otu_RAREFIED, 1, sum)
 
 # Bring the tree out of the phyloseq object 
-tree_RAREFIED_rm10 <- phy_tree(rarefied_rm10_physeq)
+#tree_RAREFIED_rm10 <- phy_tree(rarefied_rm10_physeq)
 
 # metadata 
 meta_data_rarefied_rm10_physeq <- data.frame(sample_data(rarefied_rm10_physeq))
 
 # check for mismatches/missing species between community data and phylo tree
-combined_RAREFIED_rm10 <- match.phylo.comm(tree_RAREFIED_rm10, relabund_otu_RAREFIED)
+#combined_RAREFIED_rm10 <- match.phylo.comm(tree_RAREFIED_rm10, relabund_otu_RAREFIED)
 # the resulting object is a list with $phy and $comm elements.  replace our
 # original data with the sorted/matched data
-phy_RAREFIED_rm10 <- combined_RAREFIED_rm10$phy
-comm_RAREFIED_rm10 <- combined_RAREFIED_rm10$comm
+#phy_RAREFIED_rm10 <- combined_RAREFIED_rm10$phy
+#comm_RAREFIED_rm10 <- combined_RAREFIED_rm10$comm
 
 #write.nexus(phy_RAREFIED_rm10, file = "PrunedTree/phy_RAREFIED_rm10.csv", translate = TRUE)
 #write.csv(comm_RAREFIED_rm10, file = "PrunedTree/comm_RAREFIED_rm10.csv", row.names = TRUE)
+```
 
 
-
+# Faiths PD
+```{r faiths-pd}
 ## Calculate Faith's PD and species richness for sample 
-#faiths_pd_RAREFIED <- pd(relabund_otu_RAREFIED, tree_musk_RAREFIED, include.root = FALSE)
+#faiths_pd_RAREFIED <- pd(relabund_otu_RAREFIED, tree_RAREFIED_rm10, include.root = FALSE)
 #faiths_pd_RAREFIED$norep_filter_name <- row.names(faiths_pd_RAREFIED)
   
-#write.csv(faiths_pd_RAREFIED, file = "../data/PD_rarefied_2895/faithsPD_rarefy.csv", row.names = FALSE)
+#write.csv(faiths_pd_RAREFIED, file = "PrunedTree/mpd_mntd/faithsPD_rarefy_rm10.csv", row.names = FALSE)
+faiths_pd_RAREFIED_rm10 <- read.csv("PrunedTree/mpd_mntd/faithsPD_rarefy_rm10.csv", header = TRUE)
+
+# Join Faith's PD with the rest of the metadata 
+meta_data_PD <- left_join(faiths_pd_RAREFIED_rm10, meta_data_rarefied_rm10_physeq, by = "norep_filter_name")
 
 
+### Is there a correlation between species richness and faith's PD?
+lm_PD_vs_SR <- lm(PD ~ SR, data = meta_data_PD)
+ggplot(meta_data_PD, aes(y = PD, x = SR)) + 
+  geom_point(size = 3) + xlab("Faith's PD") + 
+  xlab("Species richness") +
+  geom_smooth(method = "lm") +
+    annotate("text", x = 300, y=15, color = "black", fontface = "bold",
+           label = paste("R2 =", round(summary(lm_PD_vs_SR)$adj.r.squared, digits = 3), "\n", 
+                         "p =", round(unname(summary(lm_PD_vs_SR)$coefficients[,4][2]), digits = 30))) 
 ```
+
+
+
+
+# Taxa.Labels
+```{r taxa-labels,  fig.width= 14, fig.height = 7}
+### UNWEIGHTED
+unweighted_sesMPD_taxalab <- read.csv("PrunedTree/mpd_mntd/unweighted_sesMPD_taxalab.csv", header = TRUE) %>%
+  dplyr::rename(norep_filter_name = X) %>%
+  left_join(meta_data_rarefied_rm10_physeq, by = "norep_filter_name") %>%
+  # Create discrete pvalues and reorder factors for fraction and lakesite
+  mutate(pval = ifelse(mpd.obs.p > 0.9499, "high_pval",
+                       ifelse(mpd.obs.p < 0.0511, "low_pval",
+                              "insignificant")),
+         fraction = factor(fraction, levels = c("WholePart", "Particle", "WholeFree", "Free")),
+         lakesite = factor(lakesite, levels =c("MOT", "MDP", "MBR", "MIN")))
+
+
+### WEIGHTED
+WEIGHTED_sesMPD_taxalab <- read.csv("PrunedTree/mpd_mntd/weighted_sesMPD_taxalab.csv", header = TRUE) %>%
+  dplyr::rename(norep_filter_name = X) %>%
+  left_join(meta_data_rarefied_rm10_physeq, by = "norep_filter_name") %>%
+  # Create discrete pvalues and reorder factors for fraction and lakesite
+  mutate(pval = ifelse(mpd.obs.p > 0.9499, "high_pval",
+                       ifelse(mpd.obs.p < 0.0511, "low_pval",
+                              "insignificant")),
+         fraction = factor(fraction, levels = c("WholePart", "Particle", "WholeFree", "Free")),
+         lakesite = factor(lakesite, levels =c("MOT", "MDP", "MBR", "MIN")))
+
+p1 <- ggplot(unweighted_sesMPD_taxalab, 
+             aes(x = lakesite, y = mpd.obs.z, color = pval, fill = fraction)) + 
+  geom_point(size = 3, position = position_jitterdodge()) + 
+  ggtitle("Unweighted MPD") +
+  ylab("Mean Pairwise Distance \n (ses.mpd)") +
+  geom_boxplot(alpha = 0.5, color = "black") +
+  scale_color_manual(values = pd_colors) + 
+  scale_fill_manual(values = fraction_colors) +
+  facet_grid(.~fraction, scale = "free_x") +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
+
+p2 <- ggplot(WEIGHTED_sesMPD_taxalab, 
+             aes(x = lakesite, y = mpd.obs.z, color = pval, fill = fraction)) + 
+  geom_point(size = 3, position = position_jitterdodge()) + 
+  ggtitle("Weighted MPD") +
+  ylab("Mean Pairwise Distance \n (ses.mpd)") +
+  geom_boxplot(alpha = 0.5, color = "black") +
+  scale_color_manual(values = pd_colors) + 
+  scale_fill_manual(values = fraction_colors) +
+  facet_grid(.~fraction, scale = "free_x") +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
+
+
+### UNWEIGHTED
+unweighted_sesMNTD_taxalab <- read.csv("PrunedTree/mpd_mntd/unweighted_sesMNTD_taxalab.csv", header = TRUE) %>%
+  dplyr::rename(norep_filter_name = X) %>%
+  left_join(meta_data_rarefied_rm10_physeq, by = "norep_filter_name") %>%
+  # Create discrete pvalues and reorder factors for fraction and lakesite
+  mutate(pval = ifelse(mntd.obs.p > 0.9499, "high_pval",
+                       ifelse(mntd.obs.p < 0.0511, "low_pval",
+                              "insignificant")),
+         fraction = factor(fraction, levels = c("WholePart", "Particle", "WholeFree", "Free")),
+         lakesite = factor(lakesite, levels =c("MOT", "MDP", "MBR", "MIN")))
+
+
+### WEIGHTED
+WEIGHTED_sesMNTD_taxalab <- read.csv("PrunedTree/mpd_mntd/weighted_sesMNTD_taxalab.csv", header = TRUE) %>%
+  dplyr::rename(norep_filter_name = X) %>%
+  left_join(meta_data_rarefied_rm10_physeq, by = "norep_filter_name") %>%
+  # Create discrete pvalues and reorder factors for fraction and lakesite
+  mutate(pval = ifelse(mntd.obs.p > 0.9499, "high_pval",
+                       ifelse(mntd.obs.p < 0.0511, "low_pval",
+                              "insignificant")),
+         fraction = factor(fraction, levels = c("WholePart", "Particle", "WholeFree", "Free")),
+         lakesite = factor(lakesite, levels =c("MOT", "MDP", "MBR", "MIN")))
+
+p3 <- ggplot(unweighted_sesMNTD_taxalab, 
+             aes(x = lakesite, y = mntd.obs.z, color = pval, fill = fraction)) + 
+  geom_point(size = 3, position = position_jitterdodge()) + 
+  ggtitle("Unweighted MNTD") +
+  ylab("Mean Nearest Taxon Distance \n (ses.mntd)") +
+  geom_boxplot(alpha = 0.5, color = "black") +
+  scale_color_manual(values = pd_colors) + 
+  scale_fill_manual(values = fraction_colors) +
+  facet_grid(.~fraction, scale = "free_x") +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
+
+p4 <- ggplot(WEIGHTED_sesMNTD_taxalab, 
+             aes(x = lakesite, y = mntd.obs.z, color = pval, fill = fraction)) + 
+  geom_point(size = 3, position = position_jitterdodge()) + 
+  ggtitle("Weighted MNTD") +
+  ylab("Mean Nearest Taxon Distance \n (ses.mntd)") +
+  geom_boxplot(alpha = 0.5, color = "black") +
+  scale_color_manual(values = pd_colors) + 
+  scale_fill_manual(values = fraction_colors) +
+  facet_grid(.~fraction, scale = "free_x") +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
+
+# Put all of it together into one plot
+plot_grid(p1, p2, p3, p4,
+          labels = c("A", "B", "C", "D"), 
+          ncol = 2, nrow = 2)
+```
+
+
+```{r taxalab-vs-fracprod, fig.width= 10, fig.height = 10}
+##########  MPD ANALYSIS 
+lmFL_unweightedMPD_taxalab <- lm(frac_bacprod ~ mpd.obs.z, 
+                                      data = filter(unweighted_sesMPD_taxalab, fraction == "WholeFree"))
+lmPA_unweightedMPD_taxalab <- lm(frac_bacprod ~ mpd.obs.z, 
+                                      data = filter(unweighted_sesMPD_taxalab, fraction == "WholePart"))
+
+unweightedMPD_vs_fracprod_taxlab <- ggplot(filter(unweighted_sesMPD_taxalab, fraction %in% c("WholePart", "WholeFree")), 
+       aes(x = mpd.obs.z, y = frac_bacprod, color = fraction)) + 
+  geom_point(size = 3) +
+  xlab("Unweighted Mean Pairwise Distance \n (ses.mpd)") + 
+  ylab("Heterotrophic Production") +
+  ggtitle("Unweighted MPD: Taxa Labels") + 
+  scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
+  geom_smooth(method = "lm") +
+  theme(legend.position = c(0.2, 0.87)) +
+    annotate("text", x = -0, y=-2, 
+           color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(lmPA_unweightedMPD_taxalab)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lmPA_unweightedMPD_taxalab)$coefficients[,4][2]), digits = 4))) +
+  annotate("text", x = 2, y=60, 
+         color = "cornflowerblue", fontface = "bold",
+         label = paste("R2 =", round(summary(lmFL_unweightedMPD_taxalab)$adj.r.squared, digits = 4), "\n", 
+                       "p =", round(unname(summary(lmFL_unweightedMPD_taxalab)$coefficients[,4][2]), digits = 4))) 
+
+
+####### WEIGHTED MPD ANALYSIS
+lmFL_weightedMPD_taxalab <- lm(frac_bacprod ~ mpd.obs.z, 
+                                      data = filter(WEIGHTED_sesMPD_taxalab, fraction == "WholeFree"))
+lmPA_weightedMPD_taxalab <- lm(frac_bacprod ~ mpd.obs.z, 
+                                      data = filter(WEIGHTED_sesMPD_taxalab, fraction == "WholePart"))
+
+weightedMPD_vs_fracprod_taxlab <- ggplot(filter(WEIGHTED_sesMPD_taxalab, fraction %in% c("WholePart", "WholeFree")), 
+       aes(x = mpd.obs.z, y = frac_bacprod, color = fraction)) + 
+  geom_point(size = 3) +
+  xlab("Weighted Mean Pairwise Distance  \n (ses.mpd)") + 
+  ylab("Heterotrophic Production") +
+  ggtitle("Weighted MPD: Taxa Labels") + 
+  scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
+  #geom_smooth(method = "lm", data = filter(WEIGHTED_sesMPD_taxalab, fraction == "WholePart")) +
+  theme(legend.position = c(0.2, 0.87)) +
+    annotate("text", x = 1, y=25, 
+           color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(lmPA_weightedMPD_taxalab)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lmPA_weightedMPD_taxalab)$coefficients[,4][2]), digits = 4))) +
+  annotate("text", x = 0, y=45, 
+         color = "cornflowerblue", fontface = "bold",
+         label = paste("R2 =", round(summary(lmFL_weightedMPD_taxalab)$adj.r.squared, digits = 4), "\n", 
+                       "p =", round(unname(summary(lmFL_weightedMPD_taxalab)$coefficients[,4][2]), digits = 4))) 
+
+
+####### UNWEIGHTED MPD ANALYSIS
+lmFL_unweightedMNTD_taxalab <- lm(frac_bacprod ~ mntd.obs.z, 
+                                      data = filter(unweighted_sesMNTD_taxalab, fraction == "WholeFree"))
+lmPA_unweightedMNTD_taxalab <- lm(frac_bacprod ~ mntd.obs.z, 
+                                      data = filter(unweighted_sesMNTD_taxalab, fraction == "WholePart"))
+
+unweightedMNTD_vs_fracprod_taxlab <- ggplot(filter(unweighted_sesMNTD_taxalab, fraction %in% c("WholePart", "WholeFree")), 
+       aes(x = mntd.obs.z, y = frac_bacprod, color = fraction)) + 
+  geom_point(size = 3) +
+  xlab("Unweighted Mean Pairwise Distance  \n (ses.mntd)") + 
+  ylab("Heterotrophic Production") +
+  ggtitle("Unweighted MNTD: Taxa Labels") + 
+  scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
+  geom_smooth(method = "lm", data = filter(unweighted_sesMNTD_taxalab, fraction == "WholePart")) +
+  theme(legend.position = c(0.87, 0.87)) +
+    annotate("text", x = -1.25, y=25, 
+           color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(lmPA_unweightedMNTD_taxalab)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lmPA_unweightedMNTD_taxalab)$coefficients[,4][2]), digits = 4))) +
+  annotate("text", x = -1.25, y=40, 
+         color = "cornflowerblue", fontface = "bold",
+         label = paste("R2 =", round(summary(lmFL_unweightedMNTD_taxalab)$adj.r.squared, digits = 4), "\n", 
+                       "p =", round(unname(summary(lmFL_unweightedMNTD_taxalab)$coefficients[,4][2]), digits = 4))) 
+
+
+####### WEIGHTED MPD ANALYSIS
+lmFL_weightedMNTD_taxalab <- lm(frac_bacprod ~ mntd.obs.z, 
+                                      data = filter(WEIGHTED_sesMNTD_taxalab, fraction == "WholeFree"))
+lmPA_weightedMNTD_taxalab <- lm(frac_bacprod ~ mntd.obs.z, 
+                                      data = filter(WEIGHTED_sesMNTD_taxalab, fraction == "WholePart"))
+
+weightedMNTD_vs_fracprod_taxlab <- ggplot(filter(WEIGHTED_sesMNTD_taxalab, fraction %in% c("WholePart", "WholeFree")), 
+       aes(x = mntd.obs.z, y = frac_bacprod, color = fraction)) + 
+  geom_point(size = 3) +
+  xlab("Weighted Mean Pairwise Distance  \n (ses.mntd)") + 
+  ylab("Heterotrophic Production") +
+  ggtitle("Weighted MNTD: Taxa Labels") + 
+  scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
+  #geom_smooth(method = "lm", data = filter(WEIGHTED_sesMNTD_taxalab, fraction == "WholePart")) +
+  theme(legend.position = c(0.87, 0.87)) +
+    annotate("text", x = -1.25, y=25, 
+           color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(lmPA_weightedMNTD_taxalab)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lmPA_weightedMNTD_taxalab)$coefficients[,4][2]), digits = 4))) +
+  annotate("text", x = -1.25, y=45, 
+         color = "cornflowerblue", fontface = "bold",
+         label = paste("R2 =", round(summary(lmFL_weightedMNTD_taxalab)$adj.r.squared, digits = 4), "\n", 
+                       "p =", round(unname(summary(lmFL_weightedMNTD_taxalab)$coefficients[,4][2]), digits = 4))) 
+
+# Plot it altogether 
+plot_grid(unweightedMPD_vs_fracprod_taxlab, weightedMPD_vs_fracprod_taxlab,
+          unweightedMNTD_vs_fracprod_taxlab, weightedMNTD_vs_fracprod_taxlab,
+          labels = c("A", "B", "C", "D"), 
+          ncol = 2, nrow = 2)
+```
+
+
+
+# Richness
+```{r richness, fig.width= 14, fig.height = 7}
+### UNWEIGHTED
+unweighted_sesMPD_richness <- read.csv("PrunedTree/mpd_mntd/unweighted_sesMPD_rich.csv", header = TRUE) %>%
+  dplyr::rename(norep_filter_name = X) %>%
+  left_join(meta_data_rarefied_rm10_physeq, by = "norep_filter_name") %>%
+  # Create discrete pvalues and reorder factors for fraction and lakesite
+  mutate(pval = ifelse(mpd.obs.p > 0.9499, "high_pval",
+                       ifelse(mpd.obs.p < 0.0511, "low_pval",
+                              "insignificant")),
+         fraction = factor(fraction, levels = c("WholePart", "Particle", "WholeFree", "Free")),
+         lakesite = factor(lakesite, levels =c("MOT", "MDP", "MBR", "MIN")))
+
+
+### WEIGHTED
+WEIGHTED_sesMPD_richness <- read.csv("PrunedTree/mpd_mntd/weighted_sesMPD_rich.csv", header = TRUE) %>%
+  dplyr::rename(norep_filter_name = X) %>%
+  left_join(meta_data_rarefied_rm10_physeq, by = "norep_filter_name") %>%
+  # Create discrete pvalues and reorder factors for fraction and lakesite
+  mutate(pval = ifelse(mpd.obs.p > 0.9499, "high_pval",
+                       ifelse(mpd.obs.p < 0.0511, "low_pval",
+                              "insignificant")),
+         fraction = factor(fraction, levels = c("WholePart", "Particle", "WholeFree", "Free")),
+         lakesite = factor(lakesite, levels =c("MOT", "MDP", "MBR", "MIN")))
+
+p1r <- ggplot(unweighted_sesMPD_richness, 
+             aes(x = lakesite, y = mpd.obs.z, color = pval, fill = fraction)) + 
+  geom_point(size = 3, position = position_jitterdodge()) + 
+  ggtitle("Unweighted MPD") +
+  ylab("Mean Pairwise Distance \n (ses.mpd)") +
+  geom_boxplot(alpha = 0.5, color = "black") +
+  scale_color_manual(values = pd_colors) + 
+  scale_fill_manual(values = fraction_colors) +
+  facet_grid(.~fraction, scale = "free_x") +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
+
+p2r <- ggplot(WEIGHTED_sesMPD_richness, 
+             aes(x = lakesite, y = mpd.obs.z, color = pval, fill = fraction)) + 
+  geom_point(size = 3, position = position_jitterdodge()) + 
+  ggtitle("Weighted MPD") +
+  ylab("Mean Pairwise Distance \n (ses.mpd)") +
+  geom_boxplot(alpha = 0.5, color = "black") +
+  scale_color_manual(values = pd_colors) + 
+  scale_fill_manual(values = fraction_colors) +
+  facet_grid(.~fraction, scale = "free_x") +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
+
+
+### UNWEIGHTED
+unweighted_sesMNTD_richness <- read.csv("PrunedTree/mpd_mntd/unweighted_sesMNTD_rich.csv", header = TRUE) %>%
+  dplyr::rename(norep_filter_name = X) %>%
+  left_join(meta_data_rarefied_rm10_physeq, by = "norep_filter_name") %>%
+  # Create discrete pvalues and reorder factors for fraction and lakesite
+  mutate(pval = ifelse(mntd.obs.p > 0.9499, "high_pval",
+                       ifelse(mntd.obs.p < 0.0511, "low_pval",
+                              "insignificant")),
+         fraction = factor(fraction, levels = c("WholePart", "Particle", "WholeFree", "Free")),
+         lakesite = factor(lakesite, levels =c("MOT", "MDP", "MBR", "MIN")))
+
+
+### WEIGHTED
+WEIGHTED_sesMNTD_richness <- read.csv("PrunedTree/mpd_mntd/weighted_sesMNTD_rich.csv", header = TRUE) %>%
+  dplyr::rename(norep_filter_name = X) %>%
+  left_join(meta_data_rarefied_rm10_physeq, by = "norep_filter_name") %>%
+  # Create discrete pvalues and reorder factors for fraction and lakesite
+  mutate(pval = ifelse(mntd.obs.p > 0.9499, "high_pval",
+                       ifelse(mntd.obs.p < 0.0511, "low_pval",
+                              "insignificant")),
+         fraction = factor(fraction, levels = c("WholePart", "Particle", "WholeFree", "Free")),
+         lakesite = factor(lakesite, levels =c("MOT", "MDP", "MBR", "MIN")))
+
+p3r <- ggplot(unweighted_sesMNTD_richness, 
+             aes(x = lakesite, y = mntd.obs.z, color = pval, fill = fraction)) + 
+  geom_point(size = 3, position = position_jitterdodge()) + 
+  ggtitle("Unweighted MNTD") +
+  ylab("Mean Nearest Taxon Distance \n (ses.mntd)") +
+  geom_boxplot(alpha = 0.5, color = "black") +
+  scale_color_manual(values = pd_colors) + 
+  scale_fill_manual(values = fraction_colors) +
+  facet_grid(.~fraction, scale = "free_x") +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
+
+p4r <- ggplot(WEIGHTED_sesMNTD_richness, 
+             aes(x = lakesite, y = mntd.obs.z, color = pval, fill = fraction)) + 
+  geom_point(size = 3, position = position_jitterdodge()) + 
+  ggtitle("Weighted MNTD") +
+  ylab("Mean Nearest Taxon Distance \n (ses.mntd)") +
+  geom_boxplot(alpha = 0.5, color = "black") +
+  scale_color_manual(values = pd_colors) + 
+  scale_fill_manual(values = fraction_colors) +
+  facet_grid(.~fraction, scale = "free_x") +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
+
+
+#  Put it all together 
+plot_grid(p1r, p2r, p3r, p4r,
+          labels = c("A", "B", "C", "D"), 
+          ncol = 2, nrow = 2)
+```
+
+```{r richness-vs-fracprod, fig.width= 10, fig.height = 10}
+##########  MPD ANALYSIS 
+lmFL_unweightedMPD_richness <- lm(frac_bacprod ~ mpd.obs.z, 
+                                      data = filter(unweighted_sesMPD_richness, fraction == "WholeFree"))
+lmPA_unweightedMPD_richness <- lm(frac_bacprod ~ mpd.obs.z, 
+                                      data = filter(unweighted_sesMPD_richness, fraction == "WholePart"))
+
+unweightedMPD_vs_fracprod_richness <- ggplot(filter(unweighted_sesMPD_richness, fraction %in% c("WholePart", "WholeFree")), 
+       aes(x = mpd.obs.z, y = frac_bacprod, color = fraction)) + 
+  geom_point(size = 3) +  
+  xlab("Unweighted Mean Pairwise Distance \n (ses.mpd)") + 
+  ylab("Heterotrophic Production") +
+  ggtitle("Unweighted MPD: Richness") + 
+  scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
+  geom_smooth(method = "lm") +
+  theme(legend.position = c(0.87, 0.87)) +
+    annotate("text", x = -0.75, y=40, 
+           color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(lmPA_unweightedMPD_richness)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lmPA_unweightedMPD_richness)$coefficients[,4][2]), digits = 4))) +
+  annotate("text", x = -0.75, y=60, 
+         color = "cornflowerblue", fontface = "bold",
+         label = paste("R2 =", round(summary(lmFL_unweightedMPD_richness)$adj.r.squared, digits = 4), "\n", 
+                       "p =", round(unname(summary(lmFL_unweightedMPD_richness)$coefficients[,4][2]), digits = 4))) 
+
+
+####### WEIGHTED MPD ANALYSIS
+lmFL_weightedMPD_richness <- lm(frac_bacprod ~ mpd.obs.z, 
+                                      data = filter(WEIGHTED_sesMPD_richness, fraction == "WholeFree"))
+lmPA_weightedMPD_richness <- lm(frac_bacprod ~ mpd.obs.z, 
+                                      data = filter(WEIGHTED_sesMPD_richness, fraction == "WholePart"))
+
+weightedMPD_vs_fracprod_richness <- ggplot(filter(WEIGHTED_sesMPD_richness, fraction %in% c("WholePart", "WholeFree")), 
+       aes(x = mpd.obs.z, y = frac_bacprod, color = fraction)) + 
+  geom_point(size = 3) +  
+  xlab("Weighted Mean Pairwise Distance  \n (ses.mpd)") + 
+  ylab("Heterotrophic Production") +
+  ggtitle("Weighted MPD: Richness") + 
+  scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
+  #geom_smooth(method = "lm", data = filter(WEIGHTED_sesMPD_richness, fraction == "WholePart")) +
+  theme(legend.position = c(0.87, 0.87)) +
+    annotate("text", x = 1, y=25, 
+           color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(lmPA_weightedMPD_richness)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lmPA_weightedMPD_richness)$coefficients[,4][2]), digits = 4))) +
+  annotate("text", x = -0.75, y=40, 
+         color = "cornflowerblue", fontface = "bold",
+         label = paste("R2 =", round(summary(lmFL_weightedMPD_richness)$adj.r.squared, digits = 4), "\n", 
+                       "p =", round(unname(summary(lmFL_weightedMPD_richness)$coefficients[,4][2]), digits = 4))) 
+
+
+####### UNWEIGHTED MPD ANALYSIS
+lmFL_unweightedMNTD_richness <- lm(frac_bacprod ~ mntd.obs.z, 
+                                      data = filter(unweighted_sesMNTD_richness, fraction == "WholeFree"))
+lmPA_unweightedMNTD_richness <- lm(frac_bacprod ~ mntd.obs.z, 
+                                      data = filter(unweighted_sesMNTD_richness, fraction == "WholePart"))
+
+unweightedMNTD_vs_fracprod_richness <- ggplot(filter(unweighted_sesMNTD_richness, fraction %in% c("WholePart", "WholeFree")), 
+       aes(x = mntd.obs.z, y = frac_bacprod, color = fraction)) + 
+  geom_point(size = 3) +  
+  xlab("Unweighted Mean Pairwise Distance  \n (ses.mntd)") + 
+  ylab("Heterotrophic Production") +
+  ggtitle("Unweighted MNTD: Richness") + 
+  geom_smooth(method = "lm", data = filter(unweighted_sesMNTD_richness, fraction == "WholePart")) +
+  scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
+  theme(legend.position = c(0.87, 0.87)) +
+    annotate("text", x = -1, y=20, 
+           color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(lmPA_unweightedMNTD_richness)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lmPA_unweightedMNTD_richness)$coefficients[,4][2]), digits = 4))) +
+  annotate("text", x = -1, y=40, 
+         color = "cornflowerblue", fontface = "bold",
+         label = paste("R2 =", round(summary(lmFL_unweightedMNTD_richness)$adj.r.squared, digits = 4), "\n", 
+                       "p =", round(unname(summary(lmFL_unweightedMNTD_richness)$coefficients[,4][2]), digits = 4))) 
+
+
+####### WEIGHTED MPD ANALYSIS
+lmFL_weightedMNTD_richness <- lm(frac_bacprod ~ mntd.obs.z, 
+                                      data = filter(WEIGHTED_sesMNTD_richness, fraction == "WholeFree"))
+lmPA_weightedMNTD_richness <- lm(frac_bacprod ~ mntd.obs.z, 
+                                      data = filter(WEIGHTED_sesMNTD_richness, fraction == "WholePart"))
+
+weightedMNTD_vs_fracprod_richness <- ggplot(filter(WEIGHTED_sesMNTD_richness, fraction %in% c("WholePart", "WholeFree")), 
+       aes(x = mntd.obs.z, y = frac_bacprod, color = fraction)) + 
+  geom_point(size = 3) +  
+  xlab("Weighted Mean Pairwise Distance  \n (ses.mntd)") + 
+  ylab("Heterotrophic Production") +
+  ggtitle("Weighted MNTD: Richness") + 
+  scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
+  #geom_smooth(method = "lm", data = filter(WEIGHTED_sesMNTD_richness, fraction == "WholePart")) +
+  theme(legend.position = c(0.87, 0.87)) +
+    annotate("text", x = -1, y=20, 
+           color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(lmPA_weightedMNTD_richness)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lmPA_weightedMNTD_richness)$coefficients[,4][2]), digits = 4))) +
+  annotate("text", x = -1, y=40, 
+         color = "cornflowerblue", fontface = "bold",
+         label = paste("R2 =", round(summary(lmFL_weightedMNTD_richness)$adj.r.squared, digits = 4), "\n", 
+                       "p =", round(unname(summary(lmFL_weightedMNTD_richness)$coefficients[,4][2]), digits = 4))) 
+
+# Plot it altogether 
+plot_grid(unweightedMPD_vs_fracprod_richness, weightedMPD_vs_fracprod_richness,
+          unweightedMNTD_vs_fracprod_richness, weightedMNTD_vs_fracprod_richness,
+          labels = c("A", "B", "C", "D"), 
+          ncol = 2, nrow = 2)
+```
+
+# Frequency
+```{r frequency, fig.width= 14, fig.height = 7}
+### UNWEIGHTED
+unweighted_sesMPD_freq <- read.csv("PrunedTree/mpd_mntd/unweighted_sesMPD_freq.csv", header = TRUE) %>%
+  dplyr::rename(norep_filter_name = X) %>%
+  left_join(meta_data_rarefied_rm10_physeq, by = "norep_filter_name") %>%
+  # Create discrete pvalues and reorder factors for fraction and lakesite
+  mutate(pval = ifelse(mpd.obs.p > 0.9499, "high_pval",
+                       ifelse(mpd.obs.p < 0.0511, "low_pval",
+                              "insignificant")),
+         fraction = factor(fraction, levels = c("WholePart", "Particle", "WholeFree", "Free")),
+         lakesite = factor(lakesite, levels =c("MOT", "MDP", "MBR", "MIN")))
+
+
+### WEIGHTED
+WEIGHTED_sesMPD_freq <- read.csv("PrunedTree/mpd_mntd/weighted_sesMPD_freq.csv", header = TRUE) %>%
+  dplyr::rename(norep_filter_name = X) %>%
+  left_join(meta_data_rarefied_rm10_physeq, by = "norep_filter_name") %>%
+  # Create discrete pvalues and reorder factors for fraction and lakesite
+  mutate(pval = ifelse(mpd.obs.p > 0.9499, "high_pval",
+                       ifelse(mpd.obs.p < 0.0511, "low_pval",
+                              "insignificant")),
+         fraction = factor(fraction, levels = c("WholePart", "Particle", "WholeFree", "Free")),
+         lakesite = factor(lakesite, levels =c("MOT", "MDP", "MBR", "MIN")))
+
+p1f <- ggplot(unweighted_sesMPD_freq, 
+             aes(x = lakesite, y = mpd.obs.z, color = pval, fill = fraction)) + 
+  geom_point(size = 3, position = position_jitterdodge()) + 
+  ggtitle("Unweighted MPD") +
+  ylab("Mean Pairwise Distance \n (ses.mpd)") +
+  geom_boxplot(alpha = 0.5, color = "black") +
+  scale_color_manual(values = pd_colors) + 
+  scale_fill_manual(values = fraction_colors) +
+  facet_grid(.~fraction, scale = "free_x") +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
+
+p2f <- ggplot(WEIGHTED_sesMPD_freq, 
+             aes(x = lakesite, y = mpd.obs.z, color = pval, fill = fraction)) + 
+  geom_point(size = 3, position = position_jitterdodge()) + 
+  ggtitle("Weighted MPD") +
+  ylab("Mean Pairwise Distance \n (ses.mpd)") +
+  geom_boxplot(alpha = 0.5, color = "black") +
+  scale_color_manual(values = pd_colors) + 
+  scale_fill_manual(values = fraction_colors) +
+  facet_grid(.~fraction, scale = "free_x") +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
+
+
+### UNWEIGHTED
+unweighted_sesMNTD_freq <- read.csv("PrunedTree/mpd_mntd/unweighted_sesMNTD_freq.csv", header = TRUE) %>%
+  dplyr::rename(norep_filter_name = X) %>%
+  left_join(meta_data_rarefied_rm10_physeq, by = "norep_filter_name") %>%
+  # Create discrete pvalues and reorder factors for fraction and lakesite
+  mutate(pval = ifelse(mntd.obs.p > 0.9499, "high_pval",
+                       ifelse(mntd.obs.p < 0.0511, "low_pval",
+                              "insignificant")),
+         fraction = factor(fraction, levels = c("WholePart", "Particle", "WholeFree", "Free")),
+         lakesite = factor(lakesite, levels =c("MOT", "MDP", "MBR", "MIN")))
+
+
+### WEIGHTED
+WEIGHTED_sesMNTD_freq <- read.csv("PrunedTree/mpd_mntd/weighted_sesMNTD_freq.csv", header = TRUE) %>%
+  dplyr::rename(norep_filter_name = X) %>%
+  left_join(meta_data_rarefied_rm10_physeq, by = "norep_filter_name") %>%
+  # Create discrete pvalues and reorder factors for fraction and lakesite
+  mutate(pval = ifelse(mntd.obs.p > 0.9499, "high_pval",
+                       ifelse(mntd.obs.p < 0.0511, "low_pval",
+                              "insignificant")),
+         fraction = factor(fraction, levels = c("WholePart", "Particle", "WholeFree", "Free")),
+         lakesite = factor(lakesite, levels =c("MOT", "MDP", "MBR", "MIN")))
+
+p3f <- ggplot(unweighted_sesMNTD_freq, 
+             aes(x = lakesite, y = mntd.obs.z, color = pval, fill = fraction)) + 
+  geom_point(size = 3, position = position_jitterdodge()) + 
+  ggtitle("Unweighted MNTD") +
+  ylab("Mean Nearest Taxon Distance \n (ses.mntd)") +
+  geom_boxplot(alpha = 0.5, color = "black") +
+  scale_color_manual(values = pd_colors) + 
+  scale_fill_manual(values = fraction_colors) +
+  facet_grid(.~fraction, scale = "free_x") +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
+
+p4f <- ggplot(WEIGHTED_sesMNTD_freq, 
+             aes(x = lakesite, y = mntd.obs.z, color = pval, fill = fraction)) + 
+  geom_point(size = 3, position = position_jitterdodge()) + 
+  ggtitle("Weighted MNTD") +
+  ylab("Mean Nearest Taxon Distance \n (ses.mntd)") +
+  geom_boxplot(alpha = 0.5, color = "black") +
+  scale_color_manual(values = pd_colors) + 
+  scale_fill_manual(values = fraction_colors) +
+  facet_grid(.~fraction, scale = "free_x") +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
+
+
+#  Put it all together 
+plot_grid(p1f, p2f, p3f, p4f,
+          labels = c("A", "B", "C", "D"), 
+          ncol = 2, nrow = 2)
+```
+
+```{r frequency-vs-fracprod, fig.width= 10, fig.height = 10}
+##########  MPD ANALYSIS 
+lmFL_unweightedMPD_freq <- lm(frac_bacprod ~ mpd.obs.z, 
+                                      data = filter(unweighted_sesMPD_freq, fraction == "WholeFree"))
+lmPA_unweightedMPD_freq <- lm(frac_bacprod ~ mpd.obs.z, 
+                                      data = filter(unweighted_sesMPD_freq, fraction == "WholePart"))
+
+unweightedMPD_vs_fracprod_freq <- ggplot(filter(unweighted_sesMPD_freq, fraction %in% c("WholePart", "WholeFree")), 
+       aes(x = mpd.obs.z, y = frac_bacprod, color = fraction)) + 
+  geom_point(size = 3) +  
+  xlab("Unweighted Mean Pairwise Distance \n (ses.mpd)") + 
+  ylab("Heterotrophic Production") +
+  ggtitle("Unweighted MPD: Frequency") + 
+  scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
+  geom_smooth(method = "lm") +
+  theme(legend.position = c(0.87, 0.87)) +
+    annotate("text", x = -0.75, y=-1, 
+           color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(lmPA_unweightedMPD_freq)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lmPA_unweightedMPD_freq)$coefficients[,4][2]), digits = 4))) +
+  annotate("text", x = 0.5, y=60, 
+         color = "cornflowerblue", fontface = "bold",
+         label = paste("R2 =", round(summary(lmFL_unweightedMPD_freq)$adj.r.squared, digits = 4), "\n", 
+                       "p =", round(unname(summary(lmFL_unweightedMPD_freq)$coefficients[,4][2]), digits = 4))) 
+
+
+####### WEIGHTED MPD ANALYSIS
+lmFL_weightedMPD_freq <- lm(frac_bacprod ~ mpd.obs.z, 
+                                      data = filter(WEIGHTED_sesMPD_freq, fraction == "WholeFree"))
+lmPA_weightedMPD_freq <- lm(frac_bacprod ~ mpd.obs.z, 
+                                      data = filter(WEIGHTED_sesMPD_freq, fraction == "WholePart"))
+
+weightedMPD_vs_fracprod_freq <- ggplot(filter(WEIGHTED_sesMPD_freq, fraction %in% c("WholePart", "WholeFree")), 
+       aes(x = mpd.obs.z, y = frac_bacprod, color = fraction)) + 
+  geom_point(size = 3) +  
+  xlab("Weighted Mean Pairwise Distance  \n (ses.mpd)") + 
+  ylab("Heterotrophic Production") +
+  ggtitle("Weighted MPD: Frequency") + 
+  scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
+  #geom_smooth(method = "lm", data = filter(WEIGHTED_sesMPD_freq, fraction == "WholePart")) +
+  theme(legend.position = c(0.87, 0.87)) +
+    annotate("text", x = 0.75, y=25, 
+           color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(lmPA_weightedMPD_freq)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lmPA_weightedMPD_freq)$coefficients[,4][2]), digits = 4))) +
+  annotate("text", x = -6, y=60, 
+         color = "cornflowerblue", fontface = "bold",
+         label = paste("R2 =", round(summary(lmFL_weightedMPD_freq)$adj.r.squared, digits = 4), "\n", 
+                       "p =", round(unname(summary(lmFL_weightedMPD_freq)$coefficients[,4][2]), digits = 4))) 
+
+
+####### UNWEIGHTED MPD ANALYSIS
+lmFL_unweightedMNTD_freq <- lm(frac_bacprod ~ mntd.obs.z, 
+                                      data = filter(unweighted_sesMNTD_freq, fraction == "WholeFree"))
+lmPA_unweightedMNTD_freq <- lm(frac_bacprod ~ mntd.obs.z, 
+                                      data = filter(unweighted_sesMNTD_freq, fraction == "WholePart"))
+
+unweightedMNTD_vs_fracprod_freq <- ggplot(filter(unweighted_sesMNTD_freq, fraction %in% c("WholePart", "WholeFree")), 
+       aes(x = mntd.obs.z, y = frac_bacprod, color = fraction)) + 
+  geom_point(size = 3) +  
+  xlab("Unweighted Mean Pairwise Distance  \n (ses.mntd)") + 
+  ylab("Heterotrophic Production") +
+  ggtitle("Unweighted MNTD: Frequency") + 
+  geom_smooth(method = "lm", data = filter(unweighted_sesMNTD_freq, fraction == "WholePart")) +
+  scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
+  theme(legend.position = c(0.87, 0.87)) +
+    annotate("text", x = -2, y=30, 
+           color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(lmPA_unweightedMNTD_freq)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lmPA_unweightedMNTD_freq)$coefficients[,4][2]), digits = 4))) +
+  annotate("text", x = -2, y=50, 
+         color = "cornflowerblue", fontface = "bold",
+         label = paste("R2 =", round(summary(lmFL_unweightedMNTD_freq)$adj.r.squared, digits = 4), "\n", 
+                       "p =", round(unname(summary(lmFL_unweightedMNTD_freq)$coefficients[,4][2]), digits = 4))) 
+
+
+####### WEIGHTED MPD ANALYSIS
+lmFL_weightedMNTD_freq <- lm(frac_bacprod ~ mntd.obs.z, 
+                                      data = filter(WEIGHTED_sesMNTD_freq, fraction == "WholeFree"))
+lmPA_weightedMNTD_freq <- lm(frac_bacprod ~ mntd.obs.z, 
+                                      data = filter(WEIGHTED_sesMNTD_freq, fraction == "WholePart"))
+
+weightedMNTD_vs_fracprod_freq <- ggplot(filter(WEIGHTED_sesMNTD_freq, fraction %in% c("WholePart", "WholeFree")), 
+       aes(x = mntd.obs.z, y = frac_bacprod, color = fraction)) + 
+  geom_point(size = 3) +  
+  xlab("Weighted Mean Pairwise Distance  \n (ses.mntd)") + 
+  ylab("Heterotrophic Production") +
+  ggtitle("Weighted MNTD: Frequency") + 
+  scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
+  #geom_smooth(method = "lm", data = filter(WEIGHTED_sesMNTD_freq, fraction == "WholePart")) +
+  theme(legend.position = c(0.87, 0.87)) +
+    annotate("text", x = -0.25, y=20, 
+           color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(lmPA_weightedMNTD_freq)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lmPA_weightedMNTD_freq)$coefficients[,4][2]), digits = 4))) +
+  annotate("text", x = -0.25, y=40, 
+         color = "cornflowerblue", fontface = "bold",
+         label = paste("R2 =", round(summary(lmFL_weightedMNTD_freq)$adj.r.squared, digits = 4), "\n", 
+                       "p =", round(unname(summary(lmFL_weightedMNTD_freq)$coefficients[,4][2]), digits = 4))) 
+
+# Plot it altogether 
+plot_grid(unweightedMPD_vs_fracprod_freq, weightedMPD_vs_fracprod_freq,
+          unweightedMNTD_vs_fracprod_freq, weightedMNTD_vs_fracprod_freq,
+          labels = c("A", "B", "C", "D"), 
+          ncol = 2, nrow = 2)
+```
+
+
+
+
+# Independent Swap
+```{r indepswap, fig.width= 14, fig.height = 7}
+### UNWEIGHTED
+unweighted_sesMPD_indepswap <- read.csv("PrunedTree/mpd_mntd/unweighted_sesMPD_indepswap.csv", header = TRUE) %>%
+  dplyr::rename(norep_filter_name = X) %>%
+  left_join(meta_data_rarefied_rm10_physeq, by = "norep_filter_name") %>%
+  # Create discrete pvalues and reorder factors for fraction and lakesite
+  mutate(pval = ifelse(mpd.obs.p > 0.9499, "high_pval",
+                       ifelse(mpd.obs.p < 0.0511, "low_pval",
+                              "insignificant")),
+         fraction = factor(fraction, levels = c("WholePart", "Particle", "WholeFree", "Free")),
+         lakesite = factor(lakesite, levels =c("MOT", "MDP", "MBR", "MIN")))
+
+
+### WEIGHTED
+WEIGHTED_sesMPD_indepswap <- read.csv("PrunedTree/mpd_mntd/weighted_sesMPD_indepswap.csv", header = TRUE) %>%
+  dplyr::rename(norep_filter_name = X) %>%
+  left_join(meta_data_rarefied_rm10_physeq, by = "norep_filter_name") %>%
+  # Create discrete pvalues and reorder factors for fraction and lakesite
+  mutate(pval = ifelse(mpd.obs.p > 0.9499, "high_pval",
+                       ifelse(mpd.obs.p < 0.0511, "low_pval",
+                              "insignificant")),
+         fraction = factor(fraction, levels = c("WholePart", "Particle", "WholeFree", "Free")),
+         lakesite = factor(lakesite, levels =c("MOT", "MDP", "MBR", "MIN")))
+
+p1i <- ggplot(unweighted_sesMPD_indepswap, 
+             aes(x = lakesite, y = mpd.obs.z, color = pval, fill = fraction)) + 
+  geom_point(size = 3, position = position_jitterdodge()) + 
+  ggtitle("Unweighted MPD") +
+  ylab("Mean Pairwise Distance \n (ses.mpd)") +
+  geom_boxplot(alpha = 0.5, color = "black") +
+  scale_color_manual(values = pd_colors) + 
+  scale_fill_manual(values = fraction_colors) +
+  facet_grid(.~fraction, scale = "free_x") +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
+
+p2i <- ggplot(WEIGHTED_sesMPD_indepswap, 
+             aes(x = lakesite, y = mpd.obs.z, color = pval, fill = fraction)) + 
+  geom_point(size = 3, position = position_jitterdodge()) + 
+  ggtitle("Weighted MPD") +
+  ylab("Mean Pairwise Distance \n (ses.mpd)") +
+  geom_boxplot(alpha = 0.5, color = "black") +
+  scale_color_manual(values = pd_colors) + 
+  scale_fill_manual(values = fraction_colors) +
+  facet_grid(.~fraction, scale = "free_x") +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
+
+
+### UNWEIGHTED
+unweighted_sesMNTD_indepswap <- read.csv("PrunedTree/mpd_mntd/unweighted_sesMNTD_indepswap.csv", header = TRUE) %>%
+  dplyr::rename(norep_filter_name = X) %>%
+  left_join(meta_data_rarefied_rm10_physeq, by = "norep_filter_name") %>%
+  # Create discrete pvalues and reorder factors for fraction and lakesite
+  mutate(pval = ifelse(mntd.obs.p > 0.9499, "high_pval",
+                       ifelse(mntd.obs.p < 0.0511, "low_pval",
+                              "insignificant")),
+         fraction = factor(fraction, levels = c("WholePart", "Particle", "WholeFree", "Free")),
+         lakesite = factor(lakesite, levels =c("MOT", "MDP", "MBR", "MIN")))
+
+
+### WEIGHTED
+WEIGHTED_sesMNTD_indepswap <- read.csv("PrunedTree/mpd_mntd/weighted_sesMNTD_indepswap.csv", header = TRUE) %>%
+  dplyr::rename(norep_filter_name = X) %>%
+  left_join(meta_data_rarefied_rm10_physeq, by = "norep_filter_name") %>%
+  # Create discrete pvalues and reorder factors for fraction and lakesite
+  mutate(pval = ifelse(mntd.obs.p > 0.9499, "high_pval",
+                       ifelse(mntd.obs.p < 0.0511, "low_pval",
+                              "insignificant")),
+         fraction = factor(fraction, levels = c("WholePart", "Particle", "WholeFree", "Free")),
+         lakesite = factor(lakesite, levels =c("MOT", "MDP", "MBR", "MIN")))
+
+p3i <- ggplot(unweighted_sesMNTD_indepswap, 
+             aes(x = lakesite, y = mntd.obs.z, color = pval, fill = fraction)) + 
+  geom_point(size = 3, position = position_jitterdodge()) + 
+  ggtitle("Unweighted MNTD") +
+  ylab("Mean Nearest Taxon Distance \n (ses.mntd)") +
+  geom_boxplot(alpha = 0.5, color = "black") +
+  scale_color_manual(values = pd_colors) + 
+  scale_fill_manual(values = fraction_colors) +
+  facet_grid(.~fraction, scale = "free_x") +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
+
+p4i <- ggplot(WEIGHTED_sesMNTD_indepswap, 
+             aes(x = lakesite, y = mntd.obs.z, color = pval, fill = fraction)) + 
+  geom_point(size = 3, position = position_jitterdodge()) + 
+  ggtitle("Weighted MNTD") +
+  ylab("Mean Nearest Taxon Distance \n (ses.mntd)") +
+  geom_boxplot(alpha = 0.5, color = "black") +
+  scale_color_manual(values = pd_colors) + 
+  scale_fill_manual(values = fraction_colors) +
+  facet_grid(.~fraction, scale = "free_x") +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
+
+
+#  Put it all together 
+plot_grid(p1i, p2i, p3i, p4i,
+          labels = c("A", "B", "C", "D"), 
+          ncol = 2, nrow = 2)
+```
+
+```{r indepswap-vs-fracprod, fig.width= 10, fig.height = 10}
+##########  MPD ANALYSIS 
+lmFL_unweightedMPD_indepswap <- lm(frac_bacprod ~ mpd.obs.z, 
+                                      data = filter(unweighted_sesMPD_indepswap, fraction == "WholeFree"))
+lmPA_unweightedMPD_indepswap <- lm(frac_bacprod ~ mpd.obs.z, 
+                                      data = filter(unweighted_sesMPD_indepswap, fraction == "WholePart"))
+
+unweightedMPD_vs_fracprod_indepswap <- ggplot(filter(unweighted_sesMPD_indepswap, fraction %in% c("WholePart", "WholeFree")), 
+       aes(x = mpd.obs.z, y = frac_bacprod, color = fraction)) + 
+  geom_point(size = 3) +  xlim(c(-1,1)) + 
+  xlab("Unweighted Mean Pairwise Distance \n (ses.mpd)") + 
+  ylab("Heterotrophic Production") +
+  ggtitle("Unweighted MPD: Indep Swap") + 
+  scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
+  geom_smooth(method = "lm") +
+  theme(legend.position = c(0.87, 0.87)) +
+    annotate("text", x = -0.75, y=40, 
+           color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(lmPA_unweightedMPD_indepswap)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lmPA_unweightedMPD_indepswap)$coefficients[,4][2]), digits = 4))) +
+  annotate("text", x = -0.75, y=60, 
+         color = "cornflowerblue", fontface = "bold",
+         label = paste("R2 =", round(summary(lmFL_unweightedMPD_indepswap)$adj.r.squared, digits = 4), "\n", 
+                       "p =", round(unname(summary(lmFL_unweightedMPD_indepswap)$coefficients[,4][2]), digits = 4))) 
+
+
+####### WEIGHTED MPD ANALYSIS
+lmFL_weightedMPD_indepswap <- lm(frac_bacprod ~ mpd.obs.z, 
+                                      data = filter(WEIGHTED_sesMPD_indepswap, fraction == "WholeFree"))
+lmPA_weightedMPD_indepswap <- lm(frac_bacprod ~ mpd.obs.z, 
+                                      data = filter(WEIGHTED_sesMPD_indepswap, fraction == "WholePart"))
+
+weightedMPD_vs_fracprod_indepswap <- ggplot(filter(WEIGHTED_sesMPD_indepswap, fraction %in% c("WholePart", "WholeFree")), 
+       aes(x = mpd.obs.z, y = frac_bacprod, color = fraction)) + 
+  geom_point(size = 3) +  xlim(c(-1,1)) + 
+  xlab("Weighted Mean Pairwise Distance  \n (ses.mpd)") + 
+  ylab("Heterotrophic Production") +
+  ggtitle("Weighted MPD: Indep Swap") + 
+  scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
+  #geom_smooth(method = "lm", data = filter(WEIGHTED_sesMPD_indepswap, fraction == "WholePart")) +
+  theme(legend.position = c(0.87, 0.87)) +
+    annotate("text", x = 0.75, y=25, 
+           color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(lmPA_weightedMPD_indepswap)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lmPA_weightedMPD_indepswap)$coefficients[,4][2]), digits = 4))) +
+  annotate("text", x = 0.75, y=40, 
+         color = "cornflowerblue", fontface = "bold",
+         label = paste("R2 =", round(summary(lmFL_weightedMPD_indepswap)$adj.r.squared, digits = 4), "\n", 
+                       "p =", round(unname(summary(lmFL_weightedMPD_indepswap)$coefficients[,4][2]), digits = 4))) 
+
+
+####### UNWEIGHTED MPD ANALYSIS
+lmFL_unweightedMNTD_indepswap <- lm(frac_bacprod ~ mntd.obs.z, 
+                                      data = filter(unweighted_sesMNTD_indepswap, fraction == "WholeFree"))
+lmPA_unweightedMNTD_indepswap <- lm(frac_bacprod ~ mntd.obs.z, 
+                                      data = filter(unweighted_sesMNTD_indepswap, fraction == "WholePart"))
+
+unweightedMNTD_vs_fracprod_indepswap <- ggplot(filter(unweighted_sesMNTD_indepswap, fraction %in% c("WholePart", "WholeFree")), 
+       aes(x = mntd.obs.z, y = frac_bacprod, color = fraction)) + 
+  geom_point(size = 3) +  #xlim(c(-1,1)) + 
+  xlab("Unweighted Mean Pairwise Distance  \n (ses.mntd)") + 
+  ylab("Heterotrophic Production") +
+  ggtitle("Unweighted MNTD: Indep Swap") + 
+  scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
+  theme(legend.position = c(0.87, 0.87)) +
+    annotate("text", x = -1, y=40, 
+           color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(lmPA_unweightedMNTD_indepswap)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lmPA_unweightedMNTD_indepswap)$coefficients[,4][2]), digits = 4))) +
+  annotate("text", x = -1, y=60, 
+         color = "cornflowerblue", fontface = "bold",
+         label = paste("R2 =", round(summary(lmFL_unweightedMNTD_indepswap)$adj.r.squared, digits = 4), "\n", 
+                       "p =", round(unname(summary(lmFL_unweightedMNTD_indepswap)$coefficients[,4][2]), digits = 4))) 
+
+
+####### WEIGHTED MPD ANALYSIS
+lmFL_weightedMNTD_indepswap <- lm(frac_bacprod ~ mntd.obs.z, 
+                                      data = filter(WEIGHTED_sesMNTD_indepswap, fraction == "WholeFree"))
+lmPA_weightedMNTD_indepswap <- lm(frac_bacprod ~ mntd.obs.z, 
+                                      data = filter(WEIGHTED_sesMNTD_indepswap, fraction == "WholePart"))
+
+weightedMNTD_vs_fracprod_indepswap <- ggplot(filter(WEIGHTED_sesMNTD_indepswap, fraction %in% c("WholePart", "WholeFree")), 
+       aes(x = mntd.obs.z, y = frac_bacprod, color = fraction)) + 
+  geom_point(size = 3) +  xlim(c(-1,1)) + 
+  xlab("Weighted Mean Pairwise Distance  \n (ses.mntd)") + 
+  ylab("Heterotrophic Production") +
+  ggtitle("Weighted MNTD: Indep Swap") + 
+  scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
+  #geom_smooth(method = "lm", data = filter(WEIGHTED_sesMNTD_indepswap, fraction == "WholePart")) +
+  theme(legend.position = c(0.87, 0.87)) +
+    annotate("text", x = 0.75, y=20, 
+           color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(lmPA_weightedMNTD_indepswap)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lmPA_weightedMNTD_indepswap)$coefficients[,4][2]), digits = 4))) +
+  annotate("text", x = 0.75, y=40, 
+         color = "cornflowerblue", fontface = "bold",
+         label = paste("R2 =", round(summary(lmFL_weightedMNTD_indepswap)$adj.r.squared, digits = 4), "\n", 
+                       "p =", round(unname(summary(lmFL_weightedMNTD_indepswap)$coefficients[,4][2]), digits = 4))) 
+
+# Plot it altogether 
+plot_grid(unweightedMPD_vs_fracprod_indepswap, weightedMPD_vs_fracprod_indepswap,
+          unweightedMNTD_vs_fracprod_indepswap, weightedMNTD_vs_fracprod_indepswap,
+          labels = c("A", "B", "C", "D"), 
+          ncol = 2, nrow = 2)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -69,3 +69,13 @@ season_colors <- c(
 year_colors <- c(
   "2014" = "#F8BB0A", 
   "2015" = "#FF4E50")
+
+# Set global colors for the pvalue for MPD and MNTD analyses
+pd_colors <- c(
+  "high_pval" = "red", 
+  "insignificant" = "grey",
+  "low_pval" = "blue")
+
+
+
+

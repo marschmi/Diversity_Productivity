@@ -1,0 +1,13 @@
+base
+ggplot2
+devtools
+phyloseq
+tidyr
+dplyr
+cowplot
+ape
+permute
+lattice
+vegan
+nlme
+picante
