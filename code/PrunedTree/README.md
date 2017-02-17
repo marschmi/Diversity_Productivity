@@ -16,5 +16,8 @@ In this directory, I have:
 sed 's/N/-/g' subset_rarefied_rm10.fasta > rmN_to_dash.fasta
 
 7. Use the `rmN_to_dash.fasta` file to run fasttree on flux.  
+8. Ran "calculate_pruned_tree.R" on flux RStudio and put output files in folder named "mpd_mntd".  
+9. Read output files from "calculate_pruned_tree.R" into PrunedTree_Analysis.Rmd.  
+
 
 *End*
