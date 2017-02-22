@@ -85,7 +85,7 @@ wholepart_only <- filter(part_meta_data, fraction == "WholePart")
 ```
 
 
-#### Rarefy Read Depth Analysis ran on December 16th, 2016
+#### Rarefy Read Depth Analysis ran on February 14th, 2016
 ```{r calculate-alphadiv, eval = FALSE, echo = FALSE}
  # Initialize matrices to store richness and evenness estimates
 # nsamp <- nsamples(otu_merged_musk_pruned_noMOTHJ715_MBRHP715)
@@ -178,13 +178,14 @@ otu_alpha <- rbind(otu_rich_stats, otu_even_stats, otu_simps_evenness, otu_shan_
 s <- data.frame(sample_data(otu_merged_musk_pruned_noMOTHJ715_MBRHP715))
 otu_alphadiv <- merge(otu_alpha, s, by = "norep_filter_name") %>%
   filter(project == "Muskegon_Lake" & limnion == "Top" & fraction != "Sediment") %>%
-  dplyr::select(-D0, -D0_SD, -D0_chao, -D0_chao_sd, -D1, -D1_sd, -D2, -D2_sd)
-
-# Set the factor levels to be the order we'd like
-otu_alphadiv$fraction <- factor(otu_alphadiv$fraction,  levels = c("WholePart", "Particle", "WholeFree", "Free"))
-otu_alphadiv$lakesite <- factor(otu_alphadiv$lakesite,  levels = c("MOT", "MDP", "MBR", "MIN"))
-otu_alphadiv$measure <- factor(otu_alphadiv$measure,  
-                               levels = c("Richness", "Simpsons_Evenness", "Shannon_Entropy", "Inverse_Simpson"))
+  dplyr::select(-D0, -D0_SD, -D0_chao, -D0_chao_sd, -D1, -D1_sd, -D2, -D2_sd) %>%
+  mutate(fraction = factor(fraction, levels = c("WholePart", "Particle", "WholeFree", "Free")),
+         lakesite = factor(lakesite,  levels = c("MOT", "MDP", "MBR", "MIN")),
+         measure = factor(measure, levels = c("Richness", "Simpsons_Evenness", "Shannon_Entropy", "Inverse_Simpson"))) %>%
+  # Calculate the per cell production rates 
+  mutate(fraction_bac_abund = as.numeric(fraction_bac_abund),
+         fracprod_per_cell = frac_bacprod/(1000*fraction_bac_abund),
+         fracprod_per_cell_noinf = ifelse(fracprod_per_cell == Inf, NA, fracprod_per_cell))
 
 
 ###############################
@@ -350,6 +351,127 @@ otu_vegan
 
 ggsave("../Figures/veganRARE_otu_alpha_vs_prod.png", otu_vegan, dpi = 600, units = "in", width = 10, height = 8)
 ```
+
+
+## PER CELL
+```{r per-cell, eval = TRUE, fig.width = 10, fig.height = 4, warning = FALSE}
+poster_a <- ggplot(filter(otu_alphadiv, 
+                          fraction %in% c("WholePart", "WholeFree") & measure == "Richness"), 
+       aes(y = log10(as.numeric(fraction_bac_abund)), x = fraction, color = fraction, fill = fraction)) +
+  scale_color_manual(values = fraction_colors) + 
+  scale_fill_manual(values = fraction_colors) +
+  geom_point(size = 3, position = position_jitterdodge()) + 
+  geom_boxplot(alpha = 0.5) +
+  ylab("Log10(Bacterial Abundance per mL)") +
+  theme(legend.position = "none")
+
+poster_b <- ggplot(filter(otu_alphadiv, 
+                          fraction %in% c("WholePart", "WholeFree") & measure == "Richness"), 
+       aes(y = frac_bacprod, x = fraction, color = fraction, fill = fraction)) +
+  scale_color_manual(values = fraction_colors) + 
+  scale_fill_manual(values = fraction_colors) +
+  geom_point(size = 3, position = position_jitterdodge()) + 
+  geom_boxplot(alpha = 0.5) +
+  ylab("Total Fraction production\n (ug C/L/hr)") +
+  theme(legend.position = "none")
+
+poster_c <- ggplot(filter(otu_alphadiv, 
+                          fraction %in% c("WholePart", "WholeFree") & 
+                            measure == "Richness" &
+                            norep_filter_name != "MOTEJ515" & norep_filter_name != "MOTEP515"), 
+       aes(y = log10(fracprod_per_cell), x = fraction, color = fraction, fill = fraction)) +
+  scale_color_manual(values = fraction_colors) + 
+  scale_fill_manual(values = fraction_colors) +
+  geom_point(size = 3, position = position_jitterdodge()) + 
+  geom_boxplot(alpha = 0.5) +
+  ylim(c(-8.5, -5)) +
+  ylab("log10(Fraction Production per Cell) \n(ug C/cell/hr)") +
+  theme(legend.position = "none")
+
+plot_grid(poster_a, poster_b, poster_c,
+          labels = c("A", "B", "C"),
+          ncol = 3)
+```
+
+
+
+```{r fracprod_percell-vs-div, eval = TRUE, fig.width = 10, fig.height = 5, warning = FALSE}
+# Can fractional production be predicted by richness? 
+freeprod_percell_ML_otu_rich <- lm(log10(fracprod_per_cell) ~ mean, data = free_ML_otu_rich_stats)
+freeprod_percell_ML_otu_rich
+summary(freeprod_percell_ML_otu_rich)
+
+# PARTICLE
+partprod_percell_MLotu_rich <- lm(log10(fracprod_per_cell) ~ mean, 
+                                  data = filter(part_ML_abs_rich_stats, fracprod_per_cell != Inf))
+partprod_percell_MLotu_rich
+summary(partprod_percell_MLotu_rich)
+
+# Plot 
+rich_vs_fracprod_percell <- ggplot(filter(ML_otu_rich_stats, fracprod_per_cell != Inf),
+       aes(x=mean, y=log10(fracprod_per_cell), color = fraction)) + 
+  geom_point(size = 3.5) + geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd)) + 
+  ggtitle("OTU: Vegan") +
+  scale_color_manual(values = c("firebrick3","cornflowerblue"), limits = c("WholePart", "WholeFree")) +
+  ylab("log10(Fraction Production per Cell) \n(ug C/cell/hr)") +
+  xlab("Observed Richness") +
+  #geom_smooth(data=subset(ML_otu_rich_stats, fraction == "Free"), method='lm') + 
+  geom_smooth(data=subset(ML_otu_rich_stats, fraction == "WholePart"), method='lm') + 
+  theme(legend.position=c(0.15,0.9),        
+        legend.title=element_blank()) +
+  annotate("text", x = 500, y=-8, color = "cornflowerblue", fontface = "bold",
+           label = paste("R2 =", round(summary(freeprod_percell_ML_otu_rich)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(freeprod_percell_ML_otu_rich)$coefficients[,4][2]), digits = 4))) + 
+  annotate("text", x = 650, y=-7, color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(partprod_percell_MLotu_rich)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(partprod_percell_MLotu_rich)$coefficients[,4][2]), digits = 4)));
+
+
+
+
+###### INVERSE SIMPSON
+# Can fractional production be predicted by invsimpsness? 
+freeprod_percell_ML_otu_invsimps <- lm(log10(fracprod_per_cell) ~ mean, 
+                                       data = filter(ML_otu_invsimps_stats, fraction == "WholeFree"))
+freeprod_percell_ML_otu_invsimps
+summary(freeprod_percell_ML_otu_invsimps)
+
+## PARTICLE
+partprod_percell_MLotu_invsimps <- lm(log10(fracprod_per_cell)  ~ mean, 
+                              data = filter(ML_otu_invsimps_stats, fraction == "WholePart" & 
+                                              fracprod_per_cell != Inf))
+partprod_percell_MLotu_invsimps
+summary(partprod_percell_MLotu_invsimps)
+
+# Plot Simpson's Evenness
+invsimps_vs_fracprod_percell <- ggplot(filter(ML_otu_invsimps_stats, fracprod_per_cell != Inf),
+       aes(x=mean, y=log10(fracprod_per_cell) , color = fraction)) + 
+  geom_point(size = 3.5) + geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd)) + 
+  ggtitle("OTU: Vegan") +
+  scale_color_manual(values = c("firebrick3","cornflowerblue"), limits = c("WholePart", "WholeFree")) +
+  scale_x_continuous(limits = c(0,100), expand = c(0,0)) + 
+  ylab("log10(Fraction Production per Cell) \n(ug C/cell/hr)") + 
+  xlab("Inverse Simpson") +
+  geom_smooth(data=subset(ML_otu_invsimps_stats, fraction == "WholePart"), method='lm') + 
+  theme(legend.position=c(0.2,0.9),        
+        legend.title=element_blank()) +
+  annotate("text", x = 40, y=-8, color = "cornflowerblue", fontface = "bold",
+           label = paste("R2 =", round(summary(freeprod_percell_ML_otu_invsimps)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(freeprod_percell_ML_otu_invsimps)$coefficients[,4][2]), digits = 4))) + 
+  annotate("text", x = 75, y=-7, color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(partprod_percell_MLotu_invsimps)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(partprod_percell_MLotu_invsimps)$coefficients[,4][2]), digits = 4))); 
+
+
+plot_grid(rich_vs_fracprod_percell, invsimps_vs_fracprod_percell,
+          labels = c("A", "B"), 
+          ncol = 2)
+```
+
+
+
+
+
 
 
 # Prefiltered Fraction Diversity-Production Analysis 
@@ -822,7 +944,7 @@ part_vs_wholepart_div_plots
 
 
 # Is there a significant relationship between sequencing depth and diversity?
-```{r div_vs_seqdepth, fig.width=10, fig.height = 4, echo = TRUE}
+```{r div_vs_seqdepth, fig.width=10, fig.height = 4, eval = FALSE}
 ## Is there a significant relationship between sequencing depth and D0?
 #summary(lm(mean ~ Sample_TotalSeqs,data = filter(otu_alphadiv, measure == "Richness" & fraction == "Free"))) # NS
 #summary(lm(mean ~ Sample_TotalSeqs,data = filter(otu_alphadiv, measure == "Richness" & fraction == "WholeFree"))) # NS

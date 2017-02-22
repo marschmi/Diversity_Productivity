@@ -1674,7 +1674,28 @@ plot_grid(unweightedMPD_vs_fracprod_trialswap, weightedMPD_vs_fracprod_trialswap
 ```
 
 
+```{r tree, eval = TRUE}
+# Load in community relative abundance matrix 
+comm_RAREFIED_rm10 <- read.csv("PrunedTree/comm_RAREFIED_rm10.csv", header = TRUE)
+row.names(comm_RAREFIED_rm10) <- comm_RAREFIED_rm10$X
+comm_RAREFIED_rm10$X = NULL
+comm_RAREFIED_rm10 <- as.matrix(comm_RAREFIED_rm10)
 
+# Load in Tree
+phy_RAREFIED_rm10 <- read.nexus("PrunedTree/phy_RAREFIED_rm10.csv")
+
+plot(specaccum(comm_RAREFIED_rm10), 
+     xlab = "# of samples", ylab = "# of species")
+
+#par(mfrow = c(1, 2))
+#plot(phy_RAREFIED_rm10, show.tip.label = FALSE, main = "MBREK515")
+
+#tiplabels(tip = which(phy_RAREFIED_rm10$tip.label %in% colnames(comm_RAREFIED_rm10)[comm_RAREFIED_rm10["MBREK515", ] > 0]), pch = 19)
+
+#plot(phy_RAREFIED_rm10, show.tip.label = FALSE, main = "MBREJ515")
+
+#tiplabels(tip = which(phy_RAREFIED_rm10$tip.label %in% colnames(comm_RAREFIED_rm10)[comm_RAREFIED_rm10["MBREJ515", ] > 0]), pch = 19)
+```
 
 
 
