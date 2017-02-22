@@ -5,6 +5,8 @@
 # Set up file
 library(phyloseq)
 library(dplyr)
+library(tidyr)
+library(picante)
 source("Muskegon_functions.R")
 
 
@@ -95,7 +97,7 @@ bopi_data <- read.csv("../data/metadata/production_data.csv") %>%
   select(-c(X, limnion, fraction, month, year, season))
 
 ## Merge two metadata files together!
-df1 <- full_join(merged_complete_meta_df, bopi_data) %>%
+df1 <- full_join(merged_complete_meta_df, bopi_data, by = "norep_filter_name") %>%
   select(-c(Depth, month)) 
 
 # provide row.names to match sample
@@ -252,7 +254,27 @@ row.names(final_meta_dataframe_alpha_DNA) <- final_meta_dataframe_alpha_DNA$nore
 ############################################################################################################################################
 ###################################################################### FINALIZE THE PHYLOSEQ OBJECT
 ## Finally, add the big metadata frame to the sample_data of otu_merged_musk_pruned
-sample_data(otu_merged_musk_pruned) <- final_meta_dataframe_alpha_DNA
+bac_abunds <- final_meta_dataframe_alpha_DNA %>%
+  select(norep_filter_name, year, limnion, lakesite, fraction, total_bac_abund, attached_bac) %>%
+  mutate(temp_free_bac_abund = total_bac_abund - attached_bac, 
+         attached_bac_abund = ifelse(fraction %in% c("WholeFree", "Free"), NA, attached_bac),
+         free_bac_abund = ifelse(fraction %in% c("WholePart", "Particle"), NA,temp_free_bac_abund)) %>%
+  select(norep_filter_name, attached_bac_abund, free_bac_abund)
+
+bac_abunds$attached_bac_abund[is.na(bac_abunds$attached_bac_abund)] = ""
+bac_abunds$free_bac_abund[is.na(bac_abunds$free_bac_abund)] = ""
+bac_abunds <- unite(bac_abunds, fraction_bac_abund, attached_bac_abund:free_bac_abund, sep='')
+bac_abunds$fraction_bac_abund[bac_abunds$fraction_bac_abund == ""] = NA
+
+final_DF <- full_join(final_meta_dataframe_alpha_DNA, bac_abunds, by = "norep_filter_name")
+row.names(final_DF) <- final_DF$norep_filter_name
+
+
+############################################################################################################################################
+############################################################################################################################################
+###################################################################### FINALIZE THE PHYLOSEQ OBJECT
+## Finally, add the big metadata frame to the sample_data of otu_merged_musk_pruned
+sample_data(otu_merged_musk_pruned) <- final_DF
 
 # Create a new file called "Phyloseq.RData" that has the phyloseq object
 save(list="otu_merged_musk_pruned", file=paste0("../data/otu_merged_musk_pruned.RData")) 
