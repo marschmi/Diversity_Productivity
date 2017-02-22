@@ -1207,7 +1207,7 @@ plot_grid(unweightedMPD_vs_fracprod_phylo_pool, weightedMPD_vs_fracprod_phylo_po
           ncol = 2, nrow = 2)
 ```
 
-```{r}
+```{r lakesite-phylo-pool, fig.width= 7, fig.height = 7}
 unweighted_sesMNTD_phylo_pool_renamed <- unweighted_sesMNTD_phylo_pool %>%
   select(1:12) %>%
   mutate(test = "Unweighted_sesMNTD") %>%
@@ -1241,7 +1241,7 @@ phylo_pool <- rbind(unweighted_sesMNTD_phylo_pool_renamed, unweighted_sesMPD_phy
   mutate(test = factor(test, levels = c("Unweighted_sesMPD", "Unweighted_sesMNTD", 
                                         "Weighted_sesMPD", "Weighted_sesMNTD")))
   
-# Put it all together 
+# 
 ggplot(filter(phylo_pool, fraction %in% c("WholePart", "WholeFree")), 
        aes(x = fraction, y = mpd.obs.z, color = lakesite)) + 
   geom_point(size = 3, position = position_jitterdodge(jitter.width = 0.2)) +  
@@ -1249,7 +1249,7 @@ ggplot(filter(phylo_pool, fraction %in% c("WholePart", "WholeFree")),
   scale_color_manual(values = lakesite_colors) +
   scale_fill_manual(values = lakesite_colors) +
   ggtitle("Phylogeny Pool") + 
-  ylab("Distance") + xlab() +
+  ylab("Distance") + xlab("") +
   facet_wrap(~test) + 
   theme(legend.position = "right") 
 ```
