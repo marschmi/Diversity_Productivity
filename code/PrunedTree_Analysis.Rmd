@@ -270,7 +270,6 @@ plot_grid(p1, p2, p3, p4,
           ncol = 2, nrow = 2)
 ```
 
-
 ```{r taxalab-vs-fracprod, fig.width= 10, fig.height = 10}
 ##########  MPD ANALYSIS 
 lmFL_unweightedMPD_taxalab <- lm(frac_bacprod ~ mpd.obs.z, 
@@ -331,7 +330,7 @@ lmPA_unweightedMNTD_taxalab <- lm(frac_bacprod ~ mntd.obs.z,
 unweightedMNTD_vs_fracprod_taxlab <- ggplot(filter(unweighted_sesMNTD_taxalab, fraction %in% c("WholePart", "WholeFree")), 
        aes(x = mntd.obs.z, y = frac_bacprod, color = fraction)) + 
   geom_point(size = 3) +
-  xlab("Unweighted Mean Pairwise Distance  \n (ses.mntd)") + 
+  xlab("Unweighted Mean Nearest Taxon Distance  \n (ses.mntd)") + 
   ylab("Heterotrophic Production") +
   ggtitle("Unweighted MNTD: Taxa Labels") + 
   scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
@@ -356,7 +355,7 @@ lmPA_weightedMNTD_taxalab <- lm(frac_bacprod ~ mntd.obs.z,
 weightedMNTD_vs_fracprod_taxlab <- ggplot(filter(WEIGHTED_sesMNTD_taxalab, fraction %in% c("WholePart", "WholeFree")), 
        aes(x = mntd.obs.z, y = frac_bacprod, color = fraction)) + 
   geom_point(size = 3) +
-  xlab("Weighted Mean Pairwise Distance  \n (ses.mntd)") + 
+  xlab("Weighted Mean Nearest Taxon Distance  \n (ses.mntd)") + 
   ylab("Heterotrophic Production") +
   ggtitle("Weighted MNTD: Taxa Labels") + 
   scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
@@ -540,7 +539,7 @@ lmPA_unweightedMNTD_richness <- lm(frac_bacprod ~ mntd.obs.z,
 unweightedMNTD_vs_fracprod_richness <- ggplot(filter(unweighted_sesMNTD_richness, fraction %in% c("WholePart", "WholeFree")), 
        aes(x = mntd.obs.z, y = frac_bacprod, color = fraction)) + 
   geom_point(size = 3) +  
-  xlab("Unweighted Mean Pairwise Distance  \n (ses.mntd)") + 
+  xlab("Unweighted Mean Nearest Taxon Distance  \n (ses.mntd)") + 
   ylab("Heterotrophic Production") +
   ggtitle("Unweighted MNTD: Richness") + 
   geom_smooth(method = "lm", data = filter(unweighted_sesMNTD_richness, fraction == "WholePart")) +
@@ -565,7 +564,7 @@ lmPA_weightedMNTD_richness <- lm(frac_bacprod ~ mntd.obs.z,
 weightedMNTD_vs_fracprod_richness <- ggplot(filter(WEIGHTED_sesMNTD_richness, fraction %in% c("WholePart", "WholeFree")), 
        aes(x = mntd.obs.z, y = frac_bacprod, color = fraction)) + 
   geom_point(size = 3) +  
-  xlab("Weighted Mean Pairwise Distance  \n (ses.mntd)") + 
+  xlab("Weighted Mean Nearest Taxon Distance  \n (ses.mntd)") + 
   ylab("Heterotrophic Production") +
   ggtitle("Weighted MNTD: Richness") + 
   scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
@@ -738,7 +737,7 @@ weightedMPD_vs_fracprod_freq <- ggplot(filter(WEIGHTED_sesMPD_freq, fraction %in
                        "p =", round(unname(summary(lmFL_weightedMPD_freq)$coefficients[,4][2]), digits = 4))) 
 
 
-####### UNWEIGHTED MPD ANALYSIS
+####### UNWEIGHTED MNTD ANALYSIS
 lmFL_unweightedMNTD_freq <- lm(frac_bacprod ~ mntd.obs.z, 
                                       data = filter(unweighted_sesMNTD_freq, fraction == "WholeFree"))
 lmPA_unweightedMNTD_freq <- lm(frac_bacprod ~ mntd.obs.z, 
@@ -747,7 +746,7 @@ lmPA_unweightedMNTD_freq <- lm(frac_bacprod ~ mntd.obs.z,
 unweightedMNTD_vs_fracprod_freq <- ggplot(filter(unweighted_sesMNTD_freq, fraction %in% c("WholePart", "WholeFree")), 
        aes(x = mntd.obs.z, y = frac_bacprod, color = fraction)) + 
   geom_point(size = 3) +  
-  xlab("Unweighted Mean Pairwise Distance  \n (ses.mntd)") + 
+  xlab("Unweighted Mean Nearest Taxon Distance  \n (ses.mntd)") + 
   ylab("Heterotrophic Production") +
   ggtitle("Unweighted MNTD: Frequency") + 
   geom_smooth(method = "lm", data = filter(unweighted_sesMNTD_freq, fraction == "WholePart")) +
@@ -763,7 +762,7 @@ unweightedMNTD_vs_fracprod_freq <- ggplot(filter(unweighted_sesMNTD_freq, fracti
                        "p =", round(unname(summary(lmFL_unweightedMNTD_freq)$coefficients[,4][2]), digits = 4))) 
 
 
-####### WEIGHTED MPD ANALYSIS
+####### WEIGHTED MNTD ANALYSIS
 lmFL_weightedMNTD_freq <- lm(frac_bacprod ~ mntd.obs.z, 
                                       data = filter(WEIGHTED_sesMNTD_freq, fraction == "WholeFree"))
 lmPA_weightedMNTD_freq <- lm(frac_bacprod ~ mntd.obs.z, 
@@ -772,7 +771,7 @@ lmPA_weightedMNTD_freq <- lm(frac_bacprod ~ mntd.obs.z,
 weightedMNTD_vs_fracprod_freq <- ggplot(filter(WEIGHTED_sesMNTD_freq, fraction %in% c("WholePart", "WholeFree")), 
        aes(x = mntd.obs.z, y = frac_bacprod, color = fraction)) + 
   geom_point(size = 3) +  
-  xlab("Weighted Mean Pairwise Distance  \n (ses.mntd)") + 
+  xlab("Weighted Mean Nearest Taxon Distance  \n (ses.mntd)") + 
   ylab("Heterotrophic Production") +
   ggtitle("Weighted MNTD: Frequency") + 
   scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
@@ -948,7 +947,7 @@ weightedMPD_vs_fracprod_indepswap <- ggplot(filter(WEIGHTED_sesMPD_indepswap, fr
                        "p =", round(unname(summary(lmFL_weightedMPD_indepswap)$coefficients[,4][2]), digits = 4))) 
 
 
-####### UNWEIGHTED MPD ANALYSIS
+####### UNWEIGHTED MNTD ANALYSIS
 lmFL_unweightedMNTD_indepswap <- lm(frac_bacprod ~ mntd.obs.z, 
                                       data = filter(unweighted_sesMNTD_indepswap, fraction == "WholeFree"))
 lmPA_unweightedMNTD_indepswap <- lm(frac_bacprod ~ mntd.obs.z, 
@@ -972,7 +971,7 @@ unweightedMNTD_vs_fracprod_indepswap <- ggplot(filter(unweighted_sesMNTD_indepsw
                        "p =", round(unname(summary(lmFL_unweightedMNTD_indepswap)$coefficients[,4][2]), digits = 4))) 
 
 
-####### WEIGHTED MPD ANALYSIS
+####### WEIGHTED MNTD ANALYSIS
 lmFL_weightedMNTD_indepswap <- lm(frac_bacprod ~ mntd.obs.z, 
                                       data = filter(WEIGHTED_sesMNTD_indepswap, fraction == "WholeFree"))
 lmPA_weightedMNTD_indepswap <- lm(frac_bacprod ~ mntd.obs.z, 
@@ -981,7 +980,7 @@ lmPA_weightedMNTD_indepswap <- lm(frac_bacprod ~ mntd.obs.z,
 weightedMNTD_vs_fracprod_indepswap <- ggplot(filter(WEIGHTED_sesMNTD_indepswap, fraction %in% c("WholePart", "WholeFree")), 
        aes(x = mntd.obs.z, y = frac_bacprod, color = fraction)) + 
   geom_point(size = 3) +  xlim(c(-1,1)) + 
-  xlab("Weighted Mean Pairwise Distance  \n (ses.mntd)") + 
+  xlab("Weighted Mean Nearest Taxon Distance  \n (ses.mntd)") + 
   ylab("Heterotrophic Production") +
   ggtitle("Weighted MNTD: Indep Swap") + 
   scale_color_manual(values = c("firebrick3", "cornflowerblue")) +

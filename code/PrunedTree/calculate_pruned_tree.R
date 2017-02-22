@@ -1,5 +1,6 @@
 # Thursday, Feb. 16th, 2017
 
+setwd("~/git_repos/Diversity_Productivity/code/PrunedTree")
 
 library(ggplot2)
 library(devtools)
@@ -8,8 +9,10 @@ library(tidyr)
 library(dplyr)
 library(cowplot)
 library(picante) # Will also include ape and vegan 
-source("Muskegon_functions.R")
-source("set_colors.R")
+source("../Muskegon_functions.R")
+source("../set_colors.R")
+
+
 
 
 # Load in community relative abundance matrix 
@@ -161,3 +164,113 @@ weighted_sesMNTD_freq <- ses.mntd(comm_RAREFIED_rm10, phy_dist_RAREFIED_rm10, nu
                                   abundance.weighted = TRUE, runs = 999)
 # Write the file 
 write.csv(weighted_sesMNTD_freq, file = "mpd_mntd/weighted_sesMNTD_freq.csv", row.names = TRUE)
+
+
+
+
+####################################################################################################
+######################################## SAMPLE POOL ###############################################
+####################################################################################################
+
+# calculate standardized effect size mean pairwise distance (ses.mpd)
+unweighted_sesMPD_samp_pool <- ses.mpd(comm_RAREFIED_rm10, phy_dist_RAREFIED_rm10, null.model = "sample.pool", 
+                                  abundance.weighted = FALSE, runs = 999)
+# Write the file
+write.csv(unweighted_sesMPD_samp_pool, file = "mpd_mntd/unweighted_sesMPD_samp_pool.csv", row.names = TRUE)
+
+
+# CALCULATE THE WEIGHTED  MPD
+weighted_sesMPD_samp_pool <- ses.mpd(comm_RAREFIED_rm10, phy_dist_RAREFIED_rm10, null.model = "sample.pool", 
+                                abundance.weighted = TRUE, runs = 999)
+# Write the file 
+write.csv(weighted_sesMPD_samp_pool, file = "mpd_mntd/weighted_sesMPD_samp_pool.csv", row.names = TRUE)
+
+
+
+######################  MEAN NEAREST TAXON DISTANCE
+# calculate UNWEIGHTED ses.mntd
+unweighted_sesMNTD_samp_pool <- ses.mntd(comm_RAREFIED_rm10, phy_dist_RAREFIED_rm10, null.model = "sample.pool", 
+                                    abundance.weighted = FALSE, runs = 999)
+# Write the file 
+write.csv(unweighted_sesMNTD_samp_pool, file = "mpd_mntd/unweighted_sesMNTD_samp_pool.csv", row.names = TRUE)
+
+
+# calculate WEIGHTED ses.mntd
+weighted_sesMNTD_samp_pool <- ses.mntd(comm_RAREFIED_rm10, phy_dist_RAREFIED_rm10, null.model = "sample.pool", 
+                                  abundance.weighted = TRUE, runs = 999)
+# Write the file 
+write.csv(weighted_sesMNTD_samp_pool, file = "mpd_mntd/weighted_sesMNTD_samp_pool.csv", row.names = TRUE)
+
+
+
+
+####################################################################################################
+####################################### PHYLOGENY POOL #############################################
+####################################################################################################
+
+# calculate standardized effect size mean pairwise distance (ses.mpd)
+unweighted_sesMPD_phylo_pool <- ses.mpd(comm_RAREFIED_rm10, phy_dist_RAREFIED_rm10, null.model = "phylogeny.pool", 
+                                       abundance.weighted = FALSE, runs = 999)
+# Write the file
+write.csv(unweighted_sesMPD_phylo_pool, file = "mpd_mntd/unweighted_sesMPD_phylo_pool.csv", row.names = TRUE)
+
+
+# CALCULATE THE WEIGHTED  MPD
+weighted_sesMPD_phylo_pool <- ses.mpd(comm_RAREFIED_rm10, phy_dist_RAREFIED_rm10, null.model = "phylogeny.pool", 
+                                     abundance.weighted = TRUE, runs = 999)
+# Write the file 
+write.csv(weighted_sesMPD_phylo_pool, file = "mpd_mntd/weighted_sesMPD_phylo_pool.csv", row.names = TRUE)
+
+
+
+######################  MEAN NEAREST TAXON DISTANCE
+# calculate UNWEIGHTED ses.mntd
+unweighted_sesMNTD_phylo_pool <- ses.mntd(comm_RAREFIED_rm10, phy_dist_RAREFIED_rm10, null.model = "phylogeny.pool", 
+                                         abundance.weighted = FALSE, runs = 999)
+# Write the file 
+write.csv(unweighted_sesMNTD_phylo_pool, file = "mpd_mntd/unweighted_sesMNTD_phylo_pool.csv", row.names = TRUE)
+
+
+# calculate WEIGHTED ses.mntd
+weighted_sesMNTD_phylo_pool <- ses.mntd(comm_RAREFIED_rm10, phy_dist_RAREFIED_rm10, null.model = "phylogeny.pool", 
+                                       abundance.weighted = TRUE, runs = 999)
+# Write the file 
+write.csv(weighted_sesMNTD_phylo_pool, file = "mpd_mntd/weighted_sesMNTD_phylo_pool.csv", row.names = TRUE)
+
+
+
+####################################################################################################
+######################################### TRIAL SWAP ###############################################
+####################################################################################################
+
+# calculate standardized effect size mean pairwise distance (ses.mpd)
+unweighted_sesMPD_trialswap <- ses.mpd(comm_RAREFIED_rm10, phy_dist_RAREFIED_rm10, null.model = "trialswap", 
+                                        abundance.weighted = FALSE, runs = 999)
+# Write the file
+write.csv(unweighted_sesMPD_trialswap, file = "mpd_mntd/unweighted_sesMPD_trialswap.csv", row.names = TRUE)
+
+
+# CALCULATE THE WEIGHTED  MPD
+weighted_sesMPD_trialswap <- ses.mpd(comm_RAREFIED_rm10, phy_dist_RAREFIED_rm10, null.model = "trialswap", 
+                                      abundance.weighted = TRUE, runs = 999)
+# Write the file 
+write.csv(weighted_sesMPD_trialswap, file = "mpd_mntd/weighted_sesMPD_trialswap.csv", row.names = TRUE)
+
+
+
+######################  MEAN NEAREST TAXON DISTANCE
+# calculate UNWEIGHTED ses.mntd
+unweighted_sesMNTD_trialswap <- ses.mntd(comm_RAREFIED_rm10, phy_dist_RAREFIED_rm10, null.model = "trialswap", 
+                                          abundance.weighted = FALSE, runs = 999)
+# Write the file 
+write.csv(unweighted_sesMNTD_trialswap, file = "mpd_mntd/unweighted_sesMNTD_trialswap.csv", row.names = TRUE)
+
+
+# calculate WEIGHTED ses.mntd
+weighted_sesMNTD_trialswap <- ses.mntd(comm_RAREFIED_rm10, phy_dist_RAREFIED_rm10, null.model = "trialswap", 
+                                        abundance.weighted = TRUE, runs = 999)
+# Write the file 
+write.csv(weighted_sesMNTD_trialswap, file = "mpd_mntd/weighted_sesMNTD_trialswap.csv", row.names = TRUE)
+
+
+
