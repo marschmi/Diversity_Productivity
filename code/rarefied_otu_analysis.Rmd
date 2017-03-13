@@ -28,7 +28,7 @@ pre code, pre, code {
 options(width=250)
 
 knitr::opts_chunk$set(eval = TRUE, 
-                      echo = FALSE, 
+                      echo = TRUE, 
                       cache = TRUE,
                       include = TRUE,
                       warning = FALSE,
@@ -250,6 +250,104 @@ ML_otu_simpseven_stats <- filter(otu_alphadiv,
 ```
 
 
+# Diversity Comparison
+```{r direct-comparison, fig.width = 10, fig.height = 4, }
+######################################################### RICHNESS 
+rich_wilcox <- wilcox.test(mean ~ fraction, 
+             data = filter(otu_alphadiv, fraction %in% c("WholePart", "WholeFree") & measure == "Richness"))
+
+filter(otu_alphadiv, fraction %in% c("WholePart", "WholeFree") & measure == "Richness") %>%
+  group_by(fraction) %>%
+  summarize(mean(mean),  median(mean))
+
+# Make a data frame to draw significance line in boxplot (visually calculated)
+nums1 <- data.frame(a = c(1.15,1.15,1.85,1.85), b = c(790,800,800,790)) # WholePart vs WholeFree
+
+poster_rich1 <- ggplot(filter(otu_alphadiv, 
+                          fraction %in% c("WholePart", "WholeFree") & measure == "Richness"), 
+       aes(y = mean, x = fraction)) +
+  scale_color_manual(values = fraction_colors) + 
+  scale_fill_manual(values = fraction_colors) +
+  geom_jitter(size = 3, aes(color = fraction, fill = fraction)) + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(color = fraction, fill = fraction)) +
+  xlab("") + ylab("Observed Richness") +  theme(legend.position = "none") +
+  geom_path(data = nums1, aes(x = a, y = b), linetype = 1, color = "gray40") 
+
+poster_rich <- poster_rich1 + 
+  annotate("text", x=1.5, y=800, fontface = "bold",  size = 3.5, color = "gray40",
+           label= paste("***\np =", round(rich_wilcox$p.value, digits = 3))) 
+
+
+
+######################################################### SHANNON ENTROPY  
+shannon_wilcox <- wilcox.test(mean ~ fraction, 
+             data = filter(otu_alphadiv, fraction %in% c("WholePart", "WholeFree") & measure == "Shannon_Entropy"))
+
+filter(otu_alphadiv, fraction %in% c("WholePart", "WholeFree") & measure == "Shannon_Entropy") %>%
+  group_by(fraction) %>%
+  summarize(mean(mean),  median(mean))
+
+# Make a data frame to draw significance line in boxplot (visually calculated)
+nums2 <- data.frame(a = c(1.15,1.15,1.85,1.85), b = c(5.75,5.8,5.8,5.75)) # WholePart vs WholeFree
+
+poster_shannon1 <- ggplot(filter(otu_alphadiv, 
+                          fraction %in% c("WholePart", "WholeFree") & measure == "Shannon_Entropy"), 
+       aes(y = mean, x = fraction)) +
+  scale_color_manual(values = fraction_colors) + 
+  scale_fill_manual(values = fraction_colors) +
+  ylab("Shannon Entropy") + xlab("") +
+  geom_jitter(size = 3, aes(color = fraction, fill = fraction)) + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(color = fraction, fill = fraction))  +
+  theme(legend.position = "none") + 
+  geom_path(data = nums2, aes(x = a, y = b), linetype = 1, color = "gray40") 
+
+poster_shannon <- poster_shannon1 + 
+  annotate("text", x=1.5, y=5.8, fontface = "bold",  size = 3.5, color = "gray40",
+           label= paste("***\np =", round(shannon_wilcox$p.value, digits = 3))) 
+
+
+#########################################################  INVERSE SIMPSON 
+simpson_wilcox <- wilcox.test(mean ~ fraction, 
+             data = filter(otu_alphadiv, 
+                          fraction %in% c("WholePart", "WholeFree") & 
+                            measure == "Inverse_Simpson" &
+                            norep_filter_name != "MOTEJ515" & norep_filter_name != "MOTEP515"))
+simpson_wilcox
+
+filter(otu_alphadiv, fraction %in% c("WholePart", "WholeFree") & measure == "Inverse_Simpson" &
+       norep_filter_name != "MOTEJ515" & norep_filter_name != "MOTEP515") %>%
+  group_by(fraction) %>%
+  summarize(mean(mean), median(mean))
+
+nums3 <- data.frame(a = c(1.15,1.15,1.85,1.85), b = c(88,89, 89, 88)) # WholePart vs WholeFree
+
+
+poster_invsimps1 <-   ggplot(filter(otu_alphadiv, 
+                          fraction %in% c("WholePart", "WholeFree") & 
+                            measure == "Inverse_Simpson" &
+                            norep_filter_name != "MOTEJ515" & norep_filter_name != "MOTEP515"), 
+       aes(y = mean, x = fraction)) +
+  scale_color_manual(values = fraction_colors) + 
+  scale_fill_manual(values = fraction_colors) +
+  ylab("Inverse Simpson") + xlab("") +
+  geom_jitter(size = 3, aes(color = fraction, fill = fraction)) + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(color = fraction, fill = fraction)) +
+  geom_path(data = nums3, aes(x = a, y = b), linetype = "dotted", color = "gray40") 
+
+
+  
+poster_invsimps <- poster_invsimps1 +
+  annotate("text", x=1.5, y=90, fontface = "bold",  size = 3.5, color = "gray40",
+           label= paste("NS\np =", round(simpson_wilcox$p.value, digits = 3))) +
+  theme(legend.position = "none")
+
+plot_grid(poster_rich, poster_shannon, poster_invsimps,
+          labels = c("A", "B", "C"),
+          ncol = 3)
+
+```
+
+
 # Diversity vs Fraction Production 
 ```{r plot-vegan-fracprod, dependson = "subset-diversity", fig.width = 10, fig.height = 10, warnings = FALSE}
 ######################################################### RICHNESS
@@ -367,6 +465,31 @@ otu_vegan
 ```
 
 
+
+```{r warning=FALSE}
+plot_grid(poster_rich1 + xlab("Fraction") +theme(legend.position = c(0.85, 0.85), 
+                              axis.text.y = element_blank(), 
+                              legend.title = element_blank()) +coord_flip() +
+                annotate("text", x=1.5, y=700, fontface = "bold",  size = 3.5, color = "gray40",
+                          label= paste("***\np =", round(rich_wilcox$p.value, digits = 3))), 
+          poster_shannon1 + xlab("Fraction") + theme(legend.position = c(0.85, 0.85), 
+                              axis.text.y = element_blank(), 
+                              legend.title = element_blank()) +coord_flip() +
+                annotate("text", x=1.5, y=5.5, fontface = "bold",  size = 3.5, color = "gray40",
+                          label= paste("***\np =", round(shannon_wilcox$p.value, digits = 3))),  
+          poster_invsimps1 + xlab("Fraction") + theme(legend.position = c(0.85, 0.85), 
+                              axis.text.y = element_blank(), 
+                              legend.title = element_blank()) +coord_flip() +
+                annotate("text", x=1.5, y=80, fontface = "bold",  size = 3.5, color = "gray40",
+                          label= paste("NS\np =", round(simpson_wilcox$p.value, digits = 3))), 
+          otu_rich_vegan, otu_shannon_vegan, otu_invsimps_vegan,
+          labels = c("A", "B", "C", "D", "E", "F"),
+          ncol = 3, nrow = 2)
+```
+
+
+
+
 # Cell Count and Production Rates 
 ```{r per-cell, eval = TRUE, fig.width = 10, fig.height = 4, warning = FALSE, dependson="subset-diversity"}
 ######################################################### Fraction ABUNDANCe 
@@ -388,7 +511,7 @@ poster_a <- ggplot(filter(otu_alphadiv, fraction %in% c("WholePart", "WholeFree"
   scale_fill_manual(values = fraction_colors) +
   geom_jitter(size = 3, aes(color = fraction, fill = fraction)) + 
   geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(color = fraction, fill = fraction)) +
-  ylab("Log10(Bacterial Abundance per mL)") +
+  ylab("Log10(Bacterial Cells/mL)") +
   #####  WHOLE PARTICLE VS WHOLE FREE CELL ABUNDANCES
   geom_path(data = dat1, aes(x = a, y = b), linetype = 1, color = "gray40") +
   annotate("text", x=1.5, y=6.5, fontface = "bold",  size = 3.5, color = "gray40",
@@ -520,72 +643,7 @@ ggplot(ML_otu_simpseven_stats, aes(x = mean, y = tot_bacprod)) +
 ```
 
 
-```{r direct-comparison}
-
-wilcox.test(mean ~ fraction, 
-             data = filter(otu_alphadiv, fraction %in% c("WholePart", "WholeFree") & measure == "Richness"))
-
-filter(otu_alphadiv, fraction %in% c("WholePart", "WholeFree") & measure == "Richness") %>%
-  group_by(fraction) %>%
-  summarize(mean(mean),  median(mean))
-
-poster_rich <- ggplot(filter(otu_alphadiv, 
-                          fraction %in% c("WholePart", "WholeFree") & measure == "Richness"), 
-       aes(y = log10(mean), x = fraction, color = fraction, fill = fraction)) +
-  scale_color_manual(values = fraction_colors) + 
-  scale_fill_manual(values = fraction_colors) +
-  geom_point(size = 3, position = position_jitterdodge()) + 
-  geom_boxplot(alpha = 0.5) + xlab("") + 
-  ylab("Richness") +
-  theme(legend.position = "none")
-
-
-wilcox.test(mean ~ fraction, 
-             data = filter(otu_alphadiv, fraction %in% c("WholePart", "WholeFree") & measure == "Shannon_Entropy"))
-
-filter(otu_alphadiv, fraction %in% c("WholePart", "WholeFree") & measure == "Shannon_Entropy") %>%
-  group_by(fraction) %>%
-  summarize(mean(mean),  median(mean))
-
-poster_shannon <- ggplot(filter(otu_alphadiv, 
-                          fraction %in% c("WholePart", "WholeFree") & measure == "Shannon_Entropy"), 
-       aes(y = mean, x = fraction, color = fraction, fill = fraction)) +
-  scale_color_manual(values = fraction_colors) + 
-  scale_fill_manual(values = fraction_colors) +
-  geom_point(size = 3, position = position_jitterdodge()) + 
-  geom_boxplot(alpha = 0.5) +xlab("") + 
-  ylab("Shannon Entropy") +
-  theme(legend.position = "none")
-
-wilcox.test(mean ~ fraction, 
-             data = filter(otu_alphadiv, 
-                          fraction %in% c("WholePart", "WholeFree") & 
-                            measure == "Inverse_Simpson" &
-                            norep_filter_name != "MOTEJ515" & norep_filter_name != "MOTEP515"))
-
-filter(otu_alphadiv, fraction %in% c("WholePart", "WholeFree") & measure == "Inverse_Simpson" &
-       norep_filter_name != "MOTEJ515" & norep_filter_name != "MOTEP515") %>%
-  group_by(fraction) %>%
-  summarize(mean(mean), median(mean))
-
-poster_invsimps <- ggplot(filter(otu_alphadiv, 
-                          fraction %in% c("WholePart", "WholeFree") & 
-                            measure == "Inverse_Simpson" &
-                            norep_filter_name != "MOTEJ515" & norep_filter_name != "MOTEP515"), 
-       aes(y = mean, x = fraction, color = fraction, fill = fraction)) +
-  scale_color_manual(values = fraction_colors) + 
-  scale_fill_manual(values = fraction_colors) +
-  geom_point(size = 3, position = position_jitterdodge()) + 
-  geom_boxplot(alpha = 0.5) +
-  ylab("Inverse Simpson") + xlab("") + 
-  theme(legend.position = "none")
-
-plot_grid(poster_rich, poster_shannon, poster_invsimps,
-          labels = c("A", "B", "C"),
-          ncol = 3)
-
-```
-
+# Per cell Fraction Production vs Diversity
 ```{r fracprod_percell-vs-div, eval = TRUE, fig.width = 10, fig.height = 4, warning = FALSE, dependson="subset-diversity"}
 # Can fractional production be predicted by richness? 
 freeprod_percell_ML_otu_rich <- lm(log10(fracprod_per_cell) ~ mean, data = filter(ML_otu_rich_stats, fraction == "WholeFree"))
@@ -601,7 +659,7 @@ rich_vs_fracprod_percell <- ggplot(filter(ML_otu_rich_stats, fracprod_per_cell !
   geom_point(size = 3.5) + geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd)) + 
   ggtitle("OTU: Vegan") +
   scale_color_manual(values = c("firebrick3","cornflowerblue"), limits = c("WholePart", "WholeFree")) +
-  ylab("log10(Fraction Production per Cell) \n(ug C/cell/hr)") +
+  ylab("log10(Fraction Production per Cell) \n(μg C/cell/hr)") +
   xlab("Observed Richness") +
   geom_smooth(data=subset(ML_otu_rich_stats, fraction == "WholePart"), method='lm') + 
   theme(legend.position=c(0.15,0.9),        
@@ -632,7 +690,7 @@ invsimps_vs_fracprod_percell <- ggplot(filter(ML_otu_invsimps_stats, fracprod_pe
   ggtitle("OTU: Vegan") +
   scale_color_manual(values = c("firebrick3","cornflowerblue"), limits = c("WholePart", "WholeFree")) +
   scale_x_continuous(limits = c(0,100), expand = c(0,0)) + 
-  ylab("log10(Fraction Production per Cell) \n(ug C/cell/hr)") + 
+  ylab("log10(Fraction Production per Cell) \n(μg C/cell/hr)") + 
   xlab("Inverse Simpson") +
   geom_smooth(data=subset(ML_otu_invsimps_stats, fraction == "WholePart"), method='lm') + 
   theme(legend.position=c(0.2,0.9),        
