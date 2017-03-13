@@ -41,10 +41,10 @@ phylum_colors <- c(
 
 # Set global colors for the filter fraction sizes 
 fraction_colors <- c(
-  Particle = "firebrick3",
-  Free = "cornflowerblue",
-  WholePart = "#FF6600", 
-  WholeFree = "skyblue",
+  Particle = "#FF6600",
+  Free = "skyblue",
+  WholePart =  "firebrick3", 
+  WholeFree = "cornflowerblue",
   Sediment = "#8A2667")
 
 # Set global colors for the depth of the sample

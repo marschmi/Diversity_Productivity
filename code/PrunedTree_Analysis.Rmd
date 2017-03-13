@@ -397,7 +397,7 @@ wilcox.test(mpd.obs.z ~ fraction,
 
 filter(WEIGHTED_sesMPD_taxalab, fraction %in% c("WholePart", "WholeFree")) %>%
   group_by(fraction) %>%
-  summarize(mean(mpd.obs.z),  median(mpd.obs.z))
+  summarize(mean(mpd.obs.z),  median(mpd.obs.z), sd(mpd.obs.z))
 
 taxlab_weight_mpd <- ggplot(filter(WEIGHTED_sesMPD_taxalab, fraction %in% c("WholePart", "WholeFree")), 
        aes(y = mpd.obs.z, x = fraction, color = fraction, fill = fraction)) +
@@ -428,7 +428,7 @@ wilcox.test(mntd.obs.z ~ fraction,
 
 filter(WEIGHTED_sesMNTD_taxalab, fraction %in% c("WholePart", "WholeFree")) %>%
   group_by(fraction) %>%
-  summarize(mean(mntd.obs.z),  median(mpd.obs.z))
+  summarize(mean(mntd.obs.z),  median(mntd.obs.z))
 
 taxlab_weight_mntd <- ggplot(filter(WEIGHTED_sesMNTD_taxalab, fraction %in% c("WholePart", "WholeFree")), 
        aes(y = mntd.obs.z, x = fraction, color = fraction, fill = fraction)) +
