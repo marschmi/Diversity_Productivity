@@ -219,6 +219,182 @@ ML_otu_simpseven_stats <- filter(otu_alphadiv,
 ```
 
 
+
+# Cell Count and Production Rates 
+
+```r
+######################################################### Fraction ABUNDANCe 
+frac_abund_wilcox <- wilcox.test(log10(as.numeric(fraction_bac_abund)) ~ fraction, 
+             data = filter(otu_alphadiv, fraction %in% c("WholePart", "WholeFree") & measure == "Richness"))
+frac_abund_wilcox
+```
+
+```
+## 
+## 	Wilcoxon rank sum test
+## 
+## data:  log10(as.numeric(fraction_bac_abund)) by fraction
+## W = 0, p-value = 1.479e-06
+## alternative hypothesis: true location shift is not equal to 0
+```
+
+```r
+filter(otu_alphadiv, fraction %in% c("WholePart", "WholeFree") & measure == "Richness") %>%
+  group_by(fraction) %>%
+  summarize(mean(as.numeric(fraction_bac_abund)))
+```
+
+```
+## # A tibble: 2 × 2
+##    fraction `mean(as.numeric(fraction_bac_abund))`
+##      <fctr>                                  <dbl>
+## 1 WholePart                               41168.88
+## 2 WholeFree                              734522.25
+```
+
+```r
+# Make a data frame to draw significance line in boxplot (visually calculated)
+dat1 <- data.frame(a = c(1.15,1.15,1.85,1.85), b = c(6.45,6.5,6.5,6.45)) # WholePart vs WholeFree
+
+poster_a <- ggplot(filter(otu_alphadiv, fraction %in% c("WholePart", "WholeFree") & 
+                            measure == "Richness" & norep_filter_name != "MOTEJ515"), 
+       aes(y = log10(as.numeric(fraction_bac_abund)), x = fraction)) +
+  scale_color_manual(values = fraction_colors) + 
+  scale_fill_manual(values = fraction_colors) +
+  geom_jitter(size = 3, aes(color = fraction, fill = fraction), width = 0.2) + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(color = fraction, fill = fraction)) +
+  ylab("Log10(Bacterial Cells/mL)") +
+  scale_x_discrete(breaks=c("WholePart", "WholeFree"),
+                      labels=c("Particle-\nAssociated", "Free-\nLiving")) + 
+  #####  WHOLE PARTICLE VS WHOLE FREE CELL ABUNDANCES
+  geom_path(data = dat1, aes(x = a, y = b), linetype = 1, color = "gray40") +
+  annotate("text", x=1.5, y=6.5, fontface = "bold",  size = 3.5, color = "gray40",
+           label= paste("***\np =", round(frac_abund_wilcox$p.value, digits = 6))) +
+  theme(legend.position = "none",
+        axis.title.x = element_blank())
+
+
+
+######################################################### TOTAL PRODUCTION 
+totprod_wilcox <- wilcox.test(frac_bacprod ~ fraction, 
+             data = filter(otu_alphadiv, fraction %in% c("WholePart", "WholeFree") & measure == "Richness"))
+totprod_wilcox
+```
+
+```
+## 
+## 	Wilcoxon rank sum test
+## 
+## data:  frac_bacprod by fraction
+## W = 33, p-value = 0.02418
+## alternative hypothesis: true location shift is not equal to 0
+```
+
+```r
+filter(otu_alphadiv, fraction %in% c("WholePart", "WholeFree") & measure == "Richness") %>%
+  group_by(fraction) %>%
+  summarize(mean(frac_bacprod))
+```
+
+```
+## # A tibble: 2 × 2
+##    fraction `mean(frac_bacprod)`
+##      <fctr>                <dbl>
+## 1 WholePart              9.95449
+## 2 WholeFree             24.07018
+```
+
+```r
+# Make a data frame to draw significance line in boxplot (visually calculated)
+dat2 <- data.frame(a = c(1.15,1.15,1.85,1.85), b = c(67,68,68,67)) # WholePart vs WholeFree
+
+
+poster_b <- ggplot(filter(otu_alphadiv, 
+                          fraction %in% c("WholePart", "WholeFree") & measure == "Richness"), 
+       aes(y = frac_bacprod, x = fraction)) + 
+  scale_color_manual(values = fraction_colors) + 
+  scale_fill_manual(values = fraction_colors) +
+  geom_jitter(size = 3, aes(color = fraction, fill = fraction), width = 0.2) + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(color = fraction, fill = fraction)) +
+  ylab("Secondary Production (μgC/L/hr)") +
+  scale_x_discrete(breaks=c("WholePart", "WholeFree"),
+                    labels=c("Particle-\nAssociated", "Free-\nLiving")) + 
+  #####  WHOLE PARTICLE VS WHOLE FREE TOTAL PRODUCTION 
+  geom_path(data = dat2, aes(x = a, y = b), linetype = 1, color = "gray40") +
+  annotate("text", x=1.5, y=68, fontface = "bold",  size = 3.5, color = "gray40",
+           label= paste("***\np =", round(totprod_wilcox$p.value, digits = 3))) +
+  theme(legend.position = "none",
+        axis.title.x = element_blank())
+
+
+
+######################################################### TOTAL PRODUCTION 
+percellprod_wilcox <- wilcox.test(log10(fracprod_per_cell) ~ fraction, 
+             data = filter(otu_alphadiv, 
+                          fraction %in% c("WholePart", "WholeFree") & 
+                            measure == "Richness" &
+                            norep_filter_name != "MOTEJ515"))
+percellprod_wilcox
+```
+
+```
+## 
+## 	Wilcoxon rank sum test
+## 
+## data:  log10(fracprod_per_cell) by fraction
+## W = 125, p-value = 6.656e-05
+## alternative hypothesis: true location shift is not equal to 0
+```
+
+```r
+filter(otu_alphadiv, fraction %in% c("WholePart", "WholeFree") & measure == "Richness" &
+       norep_filter_name != "MOTEJ515" & norep_filter_name != "MOTEP515") %>%
+  group_by(fraction) %>%
+  summarize(mean(fracprod_per_cell))
+```
+
+```
+## # A tibble: 2 × 2
+##    fraction `mean(fracprod_per_cell)`
+##      <fctr>                     <dbl>
+## 1 WholePart              4.818158e-07
+## 2 WholeFree              3.869446e-08
+```
+
+```r
+# Make a data frame to draw significance line in boxplot (visually calculated)
+dat3 <- data.frame(a = c(1.15,1.15,1.85,1.85), b = c(-5.05,-5,-5,-5.05)) # WholePart vs WholeFree
+
+
+poster_c <- ggplot(filter(otu_alphadiv, 
+                          fraction %in% c("WholePart", "WholeFree") & 
+                            measure == "Richness" &
+                            norep_filter_name != "MOTEJ515" & norep_filter_name != "MOTEP515"), 
+       aes(y = log10(fracprod_per_cell), x = fraction)) +
+  scale_color_manual(values = fraction_colors) + 
+  scale_fill_manual(values = fraction_colors) +
+  geom_jitter(size = 3, aes(color = fraction, fill = fraction), width = 0.2) + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(color = fraction, fill = fraction)) +
+  ylim(c(-8.5, -5)) + 
+  ylab("log10(Production/cell) (μgC/cell/hr)") +
+  scale_x_discrete(breaks=c("WholePart", "WholeFree"),
+                    labels=c("Particle-\nAssociated", "Free-\nLiving")) + 
+  #####  WHOLE PARTICLE VS WHOLE FREE PER CELL PRODUCTION 
+  geom_path(data = dat3, aes(x = a, y = b), linetype = 1, color = "gray40") +
+  annotate("text", x=1.5, y=-5, fontface = "bold",  size = 3.5, color = "gray40",
+           label= paste("***\np =", round(percellprod_wilcox$p.value, digits = 5))) +
+  theme(legend.position = "none",
+        axis.title.x = element_blank())
+
+plot_grid(poster_a, poster_b, poster_c,
+          labels = c("A", "B", "C"),
+          ncol = 3)
+```
+
+<img src="Rarefied_Figures/boxplot-cellcount-prod-1.png" style="display: block; margin: auto;" />
+
+
+
 # Diversity Comparison
 
 ```r
@@ -246,16 +422,24 @@ nums1 <- data.frame(a = c(1.15,1.15,1.85,1.85), b = c(790,800,800,790)) # WholeP
 poster_rich1 <- ggplot(filter(otu_alphadiv, 
                           fraction %in% c("WholePart", "WholeFree") & measure == "Richness"), 
        aes(y = mean, x = fraction)) +
-  scale_color_manual(values = fraction_colors) + 
-  scale_fill_manual(values = fraction_colors) +
-  geom_jitter(size = 3, aes(color = fraction, fill = fraction)) + 
+  ylab("Observed Richness") + 
+  geom_jitter(size = 3, aes(color = fraction, fill = fraction), width = 0.2) + 
   geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(color = fraction, fill = fraction)) +
-  xlab("") + ylab("Observed Richness") +  theme(legend.position = "none") +
-  geom_path(data = nums1, aes(x = a, y = b), linetype = 1, color = "gray40") 
-
+  scale_fill_manual(values = fraction_colors, 
+                    breaks=c("WholeFree", "WholePart"), 
+                    labels=c("Free-Living", "Particle-Associated")) +
+  scale_color_manual(values = fraction_colors,
+                 breaks=c("WholeFree", "WholePart"), 
+                 labels=c("Free-Living", "Particle-Associated")) + 
+  geom_path(data = nums1, aes(x = a, y = b), linetype = 1, color = "gray40") +
+  theme(legend.position = "none") +
+  scale_y_continuous(limits = c(180, 810), breaks = c(200, 400, 600, 800)) 
+     
+     
 poster_rich <- poster_rich1 + 
   annotate("text", x=1.5, y=800, fontface = "bold",  size = 3.5, color = "gray40",
-           label= paste("***\np =", round(rich_wilcox$p.value, digits = 3))) 
+           label= paste("***\np =", round(rich_wilcox$p.value, digits = 3))) +
+  theme(legend.position = "none", axis.title.x = element_blank())
 
 
 
@@ -282,18 +466,26 @@ nums2 <- data.frame(a = c(1.15,1.15,1.85,1.85), b = c(5.75,5.8,5.8,5.75)) # Whol
 
 poster_shannon1 <- ggplot(filter(otu_alphadiv, 
                           fraction %in% c("WholePart", "WholeFree") & measure == "Shannon_Entropy"), 
-       aes(y = mean, x = fraction)) +
-  scale_color_manual(values = fraction_colors) + 
-  scale_fill_manual(values = fraction_colors) +
-  ylab("Shannon Entropy") + xlab("") +
-  geom_jitter(size = 3, aes(color = fraction, fill = fraction)) + 
-  geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(color = fraction, fill = fraction))  +
-  theme(legend.position = "none") + 
-  geom_path(data = nums2, aes(x = a, y = b), linetype = 1, color = "gray40") 
+       aes(y = mean, x = fraction)) +  
+  ylab("Shannon Entropy") +   
+  geom_jitter(size = 3, aes(color = fraction, fill = fraction), width = 0.2) + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(color = fraction, fill = fraction)) +
+  scale_fill_manual(values = fraction_colors, 
+                    breaks=c("WholeFree", "WholePart"), 
+                    labels=c("Free-Living", "Particle-Associated")) +
+  scale_color_manual(values = fraction_colors,
+                 breaks=c("WholeFree", "WholePart"), 
+                 labels=c("Free-Living", "Particle-Associated")) + 
+  geom_path(data = nums2, aes(x = a, y = b), linetype = 1, color = "gray40") +
+  theme(legend.position = "none") +
+  scale_y_continuous(limits = c(3.4, 5.85), breaks = c(3.5, 4, 4.5, 5, 5.5))  
 
+  
+  
 poster_shannon <- poster_shannon1 + 
   annotate("text", x=1.5, y=5.8, fontface = "bold",  size = 3.5, color = "gray40",
-           label= paste("***\np =", round(shannon_wilcox$p.value, digits = 3))) 
+           label= paste("***\np =", round(shannon_wilcox$p.value, digits = 3))) +
+  theme(legend.position = "none", axis.title.x = element_blank())
 
 
 #########################################################  INVERSE SIMPSON 
@@ -338,26 +530,92 @@ poster_invsimps1 <-   ggplot(filter(otu_alphadiv,
                             measure == "Inverse_Simpson" &
                             norep_filter_name != "MOTEJ515" & norep_filter_name != "MOTEP515"), 
        aes(y = mean, x = fraction)) +
-  scale_color_manual(values = fraction_colors) + 
-  scale_fill_manual(values = fraction_colors) +
-  ylab("Inverse Simpson") + xlab("") +
-  geom_jitter(size = 3, aes(color = fraction, fill = fraction)) + 
+  ylab("Inverse Simpson") +   
+  geom_jitter(size = 3, aes(color = fraction, fill = fraction), width = 0.2) + 
   geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(color = fraction, fill = fraction)) +
-  geom_path(data = nums3, aes(x = a, y = b), linetype = "dotted", color = "gray40") 
+  scale_fill_manual(values = fraction_colors, 
+                    breaks=c("WholeFree", "WholePart"), 
+                    labels=c("Free-Living", "Particle-Associated")) +
+  scale_color_manual(values = fraction_colors,
+                 breaks=c("WholeFree", "WholePart"), 
+                 labels=c("Free-Living", "Particle-Associated")) + 
+  geom_path(data = nums3, aes(x = a, y = b), linetype = "dotted", color = "gray40") +
+  theme(legend.position = "none") +
+  scale_y_continuous(limits = c(0,95), breaks = c(0, 20, 40, 60, 80), expand = c(0,0))  
 
 
-  
 poster_invsimps <- poster_invsimps1 +
-  annotate("text", x=1.5, y=90, fontface = "bold",  size = 3.5, color = "gray40",
-           label= paste("NS\np =", round(simpson_wilcox$p.value, digits = 3))) +
-  theme(legend.position = "none")
+  annotate("text", x=1.5, y=89, fontface = "bold",  size = 3.5, color = "gray40",
+           label= paste("NS\np =", round(simpson_wilcox$p.value, digits = 2))) +
+  theme(legend.position = "none", axis.title.x = element_blank())
 
-plot_grid(poster_rich, poster_shannon, poster_invsimps,
-          labels = c("A", "B", "C"),
-          ncol = 3)
+#########################################################  SIMPSON'S EVENNESS
+simpseven_wilcox <- wilcox.test(mean ~ fraction, 
+             data = filter(otu_alphadiv, 
+                          fraction %in% c("WholePart", "WholeFree") & 
+                            measure == "Simpsons_Evenness" &
+                            norep_filter_name != "MOTEJ515" & norep_filter_name != "MOTEP515"))
+simpseven_wilcox
 ```
 
-<img src="Rarefied_Figures/direct-comparison-1.png" style="display: block; margin: auto;" />
+```
+## 
+## 	Wilcoxon rank sum test
+## 
+## data:  mean by fraction
+## W = 48, p-value = 0.2875
+## alternative hypothesis: true location shift is not equal to 0
+```
+
+```r
+filter(otu_alphadiv, fraction %in% c("WholePart", "WholeFree") & measure == "Simpsons_Evenness" &
+       norep_filter_name != "MOTEJ515" & norep_filter_name != "MOTEP515") %>%
+  group_by(fraction) %>%
+  summarize(mean(mean), median(mean))
+```
+
+```
+## # A tibble: 2 × 3
+##    fraction `mean(mean)` `median(mean)`
+##      <fctr>        <dbl>          <dbl>
+## 1 WholePart   0.07295660     0.05540021
+## 2 WholeFree   0.08859526     0.08346213
+```
+
+```r
+nums3 <- data.frame(a = c(1.15,1.15,1.85,1.85), b = c(0.145, 0.15, 0.15, 0.145)) # WholePart vs WholeFree
+
+
+poster_simpseven1 <-   ggplot(filter(otu_alphadiv, 
+                          fraction %in% c("WholePart", "WholeFree") & 
+                            measure == "Simpsons_Evenness" &
+                            norep_filter_name != "MOTEJ515" & norep_filter_name != "MOTEP515"), 
+       aes(y = mean, x = fraction)) +
+  ylab("Simpson's Evenness") +   
+  geom_jitter(size = 3, aes(color = fraction, fill = fraction), width = 0.2) + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(color = fraction, fill = fraction)) +
+  scale_fill_manual(values = fraction_colors, 
+                    breaks=c("WholeFree", "WholePart"), 
+                    labels=c("Free-Living", "Particle-Associated")) +
+  scale_color_manual(values = fraction_colors,
+                 breaks=c("WholeFree", "WholePart"), 
+                 labels=c("Free-Living", "Particle-Associated")) + 
+  geom_path(data = nums3, aes(x = a, y = b), linetype = "dotted", color = "gray40") +
+  theme(legend.position = "none") +
+  scale_y_continuous(limits = c(0.03,0.151), breaks = c(0.05, 0.1, 0.15))  
+
+  
+poster_simpseven <- poster_simpseven1 +
+  annotate("text", x=1.5, y=0.15, fontface = "bold",  size = 3.5, color = "gray40",
+           label= paste("NS\np =", round(simpseven_wilcox$p.value, digits = 2))) +
+  theme(legend.position = "none", axis.title.x = element_blank())
+
+plot_grid(poster_rich, poster_shannon, poster_invsimps, poster_simpseven,
+          labels = c("A", "B", "C", "D"),
+          ncol = 4)
+```
+
+<img src="Rarefied_Figures/boxplot-diversity-comparison-1.png" style="display: block; margin: auto;" />
 
 
 # Diversity vs Fraction Production 
@@ -421,16 +679,20 @@ summary(partprod_MLotu_rich)
 # Plot 
 otu_rich_vegan <-  ggplot(ML_otu_rich_stats, aes(x=mean, y=frac_bacprod, color = fraction)) + 
   geom_point(size = 3.5) + geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd)) + 
-  scale_color_manual(values = c("firebrick3","cornflowerblue"), limits = c("WholePart", "WholeFree")) +
-  ylab("Production (μgC/L/hr)") + xlab("Observed Richness") +
+  scale_color_manual(values = c("firebrick3","cornflowerblue"), 
+                     limits = c("WholePart", "WholeFree"),
+                     breaks=c("WholePart", "WholeFree"),
+                     labels=c("Particle", "Free")) + 
+  ylab("Secondary Production (μgC/L/hr)") + xlab("Observed Richness") +
   geom_smooth(data=subset(ML_otu_rich_stats, fraction == "WholePart"), method='lm') + 
+  scale_x_continuous(limits = c(180, 810), breaks = c(200, 400, 600, 800)) + 
   theme(legend.position=c(0.15,0.9),        
         legend.title=element_blank()) +
-  annotate("text", x = 500, y=45, color = "cornflowerblue", fontface = "bold",
-           label = paste("R2 =", round(summary(freeprod_ML_otu_rich)$adj.r.squared, digits = 4), "\n", 
-                         "p =", round(unname(summary(freeprod_ML_otu_rich)$coefficients[,4][2]), digits = 4))) + 
-  annotate("text", x = 650, y=5, color = "firebrick3", fontface = "bold",
-           label = paste("R2 =", round(summary(partprod_MLotu_rich)$adj.r.squared, digits = 4), "\n", 
+  annotate("text", x = 250, y=55, color = "cornflowerblue", fontface = "bold",
+           label = paste("R2 =", round(summary(freeprod_ML_otu_rich)$adj.r.squared, digits = 2), "\n", 
+                         "p =", round(unname(summary(freeprod_ML_otu_rich)$coefficients[,4][2]), digits = 2))) + 
+  annotate("text", x = 650, y=3, color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(partprod_MLotu_rich)$adj.r.squared, digits = 2), "\n", 
                          "p =", round(unname(summary(partprod_MLotu_rich)$coefficients[,4][2]), digits = 4)));
 
 
@@ -492,16 +754,20 @@ summary(partprod_MLotu_shannon)
 # Plot 
 otu_shannon_vegan <- ggplot(ML_otu_shannon_stats, aes(x=mean, y=frac_bacprod, color = fraction)) + 
   geom_point(size = 3.5) + geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd)) + 
-  scale_color_manual(values = c("firebrick3","cornflowerblue"), limits = c("WholePart", "WholeFree")) +
-  ylab("Production (μgC/L/hr)") + xlab("Shannon Entropy") +
+  scale_color_manual(values = c("firebrick3","cornflowerblue"), 
+                     limits = c("WholePart", "WholeFree"),
+                     breaks=c("WholePart", "WholeFree"),
+                     labels=c("Particle", "Free")) + 
+  ylab("Secondary Production (μgC/L/hr)") + xlab("Shannon Entropy") +
+  scale_x_continuous(limits = c(3.4, 5.85), breaks = c(3.5, 4, 4.5, 5, 5.5)) + 
   geom_smooth(data=subset(ML_otu_shannon_stats, fraction == "WholePart"), method='lm') + 
   theme(legend.position=c(0.15,0.9),        
         legend.title=element_blank()) +
-  annotate("text", x = 4.5, y=45, color = "cornflowerblue", fontface = "bold",
-           label = paste("R2 =", round(summary(freeprod_ML_otu_shannon)$adj.r.squared, digits = 4), "\n", 
-                         "p =", round(unname(summary(freeprod_ML_otu_shannon)$coefficients[,4][2]), digits = 4))) + 
-  annotate("text", x = 5.35, y=5, color = "firebrick3", fontface = "bold",
-           label = paste("R2 =", round(summary(partprod_MLotu_shannon)$adj.r.squared, digits = 4), "\n", 
+  annotate("text", x = 3.75, y=55, color = "cornflowerblue", fontface = "bold",
+           label = paste("R2 =", round(summary(freeprod_ML_otu_shannon)$adj.r.squared, digits = 2), "\n", 
+                         "p =", round(unname(summary(freeprod_ML_otu_shannon)$coefficients[,4][2]), digits = 2))) + 
+  annotate("text", x = 5.35, y=3, color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(partprod_MLotu_shannon)$adj.r.squared, digits = 2), "\n", 
                          "p =", round(unname(summary(partprod_MLotu_shannon)$coefficients[,4][2]), digits = 4))); 
 
 
@@ -563,19 +829,20 @@ summary(partprod_MLotu_invsimps)
 # Plot Simpson's Evenness
 otu_invsimps_vegan <- ggplot(ML_otu_invsimps_stats, aes(x=mean, y=frac_bacprod, color = fraction)) + 
   geom_point(size = 3.5) + geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd)) + 
-  scale_color_manual(values = c("firebrick3","cornflowerblue"), limits = c("WholePart", "WholeFree")) +
-  scale_x_continuous(limits = c(0,100), expand = c(0,0)) + 
-  #scale_y_continuous(limits = c(0,70),expand = c(0,0)) + 
-  ylab("Production (μgC/L/hr)") + xlab("Inverse Simpson") +
-  #geom_smooth(data=subset(ML_otu_invsimps_stats, fraction == "Free"), method='lm') + 
+  scale_color_manual(values = c("firebrick3","cornflowerblue"), 
+                     limits = c("WholePart", "WholeFree"),
+                     breaks=c("WholeFree", "WholePart"),
+                     labels=c("Free-Living", "Particle-Associated")) + 
+  scale_x_continuous(limits = c(0,95), breaks = c(0, 20, 40, 60, 80), expand = c(0,0)) + 
+  ylab("Secondary Production (μgC/L/hr)") + xlab("Inverse Simpson") +
   geom_smooth(data=subset(ML_otu_invsimps_stats, fraction == "WholePart"), method='lm') + 
   theme(legend.position=c(0.85,0.9),        
         legend.title=element_blank()) +
-  annotate("text", x = 58, y=35, color = "cornflowerblue", fontface = "bold",
-           label = paste("R2 =", round(summary(freeprod_ML_otu_invsimps)$adj.r.squared, digits = 4), "\n", 
-                         "p =", round(unname(summary(freeprod_ML_otu_invsimps)$coefficients[,4][2]), digits = 4))) + 
-  annotate("text", x = 63, y=5, color = "firebrick3", fontface = "bold",
-           label = paste("R2 =", round(summary(partprod_MLotu_invsimps)$adj.r.squared, digits = 4), "\n", 
+  annotate("text", x = 15, y=55, color = "cornflowerblue", fontface = "bold",
+           label = paste("R2 =", round(summary(freeprod_ML_otu_invsimps)$adj.r.squared, digits = 2), "\n", 
+                         "p =", round(unname(summary(freeprod_ML_otu_invsimps)$coefficients[,4][2]), digits = 2))) + 
+  annotate("text", x = 63, y=3, color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(partprod_MLotu_invsimps)$adj.r.squared, digits = 2), "\n", 
                          "p =", round(unname(summary(partprod_MLotu_invsimps)$coefficients[,4][2]), digits = 4))); 
 
 
@@ -638,485 +905,68 @@ summary(partprod_MLotu_simpseven)
 # Plot 
 otu_simpseven_vegan <- ggplot(ML_otu_simpseven_stats, aes(x=mean, y=frac_bacprod, color = fraction)) + 
   geom_point(size = 3.5) +
-  ggtitle("OTU: Vegan") +
-  scale_color_manual(values = c("firebrick3","cornflowerblue"), limits = c("WholePart", "WholeFree")) +
-  scale_x_continuous(expand = c(0,0), limits=c(0, 0.15)) + 
-  ylab("Production (μgC/L/hr)") + xlab("Simpson's Evenness") +
+  scale_color_manual(values = c("firebrick3","cornflowerblue"), 
+                     limits = c("WholePart", "WholeFree"),
+                     breaks=c("WholeFree", "WholePart"),
+                     labels=c("Free-Living", "Particle-Associated")) + 
+  scale_x_continuous(limits = c(0.03,0.151), breaks = c(0.05, 0.1, 0.15))  +
+  ylab("Secondary Production (μgC/L/hr)") + xlab("Simpson's Evenness") +
   geom_smooth(data=subset(ML_otu_simpseven_stats, fraction == "WholePart"), method='lm') + 
   theme(legend.position=c(0.15,0.9),        
         legend.title=element_blank()) +
-  annotate("text", x = 0.03, y=35, color = "cornflowerblue", fontface = "bold",
-           label = paste("R2 =", round(summary(freeprod_ML_otu_simpseven)$adj.r.squared, digits = 4), "\n", 
-                         "p =", round(unname(summary(freeprod_ML_otu_simpseven)$coefficients[,4][2]), digits = 4))) + 
-  annotate("text", x = 0.015, y=7, color = "firebrick3", fontface = "bold",
-           label = paste("R2 =", round(summary(partprod_MLotu_simpseven)$adj.r.squared, digits = 4), "\n", 
+  annotate("text", x = 0.05, y=55, color = "cornflowerblue", fontface = "bold",
+           label = paste("R2 =", round(summary(freeprod_ML_otu_simpseven)$adj.r.squared, digits = 2), "\n", 
+                         "p =", round(unname(summary(freeprod_ML_otu_simpseven)$coefficients[,4][2]), digits = 2))) + 
+  annotate("text", x = 0.125, y=3, color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(partprod_MLotu_simpseven)$adj.r.squared, digits = 2), "\n", 
                          "p =", round(unname(summary(partprod_MLotu_simpseven)$coefficients[,4][2]), digits = 4))); 
 
-otu_vegan <- plot_grid(otu_rich_vegan, otu_simpseven_vegan, otu_shannon_vegan, otu_invsimps_vegan,
-                       labels = c("A", "B", "C", "D"), 
-                       align = "h", nrow = 2, ncol = 2)
-otu_vegan
-```
-
-<img src="Rarefied_Figures/plot-vegan-fracprod-1.png" style="display: block; margin: auto;" />
-
-```r
-#ggsave("../Figures/veganRARE_otu_alpha_vs_prod.png", otu_vegan, dpi = 600, units = "in", width = 10, height = 8)
+#otu_vegan <- plot_grid(otu_rich_vegan, otu_simpseven_vegan, otu_shannon_vegan, otu_invsimps_vegan,
+#                       labels = c("A", "B", "C", "D"), 
+#                       align = "h", nrow = 2, ncol = 2)
+#otu_vegan
 ```
 
 
 
 
 ```r
-plot_grid(poster_rich1 + xlab("Fraction") +theme(legend.position = c(0.85, 0.85), 
-                              axis.text.y = element_blank(), 
-                              legend.title = element_blank()) +coord_flip() +
-                annotate("text", x=1.5, y=700, fontface = "bold",  size = 3.5, color = "gray40",
+plot_grid(poster_rich1 + xlab("Fraction \n") + ylab("Observed Richness") + 
+                theme(legend.position = "none", axis.text.y = element_blank()) +coord_flip() +
+                annotate("text", x=1.5, y=700, fontface = "bold",  size = 4, color = "gray40",
                           label= paste("***\np =", round(rich_wilcox$p.value, digits = 3))), 
-          poster_shannon1 + xlab("Fraction") + theme(legend.position = c(0.85, 0.85), 
-                              axis.text.y = element_blank(), 
-                              legend.title = element_blank()) +coord_flip() +
-                annotate("text", x=1.5, y=5.5, fontface = "bold",  size = 3.5, color = "gray40",
-                          label= paste("***\np =", round(shannon_wilcox$p.value, digits = 3))),  
-          poster_invsimps1 + xlab("Fraction") + theme(legend.position = c(0.85, 0.85), 
-                              axis.text.y = element_blank(), 
-                              legend.title = element_blank()) +coord_flip() +
-                annotate("text", x=1.5, y=80, fontface = "bold",  size = 3.5, color = "gray40",
-                          label= paste("NS\np =", round(simpson_wilcox$p.value, digits = 3))), 
-          otu_rich_vegan, otu_shannon_vegan, otu_invsimps_vegan,
-          labels = c("A", "B", "C", "D", "E", "F"),
-          ncol = 3, nrow = 2)
+          poster_shannon1 + xlab("Fraction  \n") + ylab("Shannon Entropy") + 
+                theme(legend.position = "none", axis.text.y = element_blank()) +
+                coord_flip() +
+                annotate("text", x=1.5, y=5.45, fontface = "bold",  size = 4, color = "gray40",
+                          label= paste("**\np =", round(shannon_wilcox$p.value, digits = 3))),  
+          poster_invsimps1 + xlab("Fraction \n") + ylab("Inverse Simpson") + 
+                theme(legend.position = c(0.78, 0.90), axis.text.y = element_blank(), legend.title = element_blank()) +
+                coord_flip() +
+                annotate("text", x=1.5, y=78, fontface = "bold",  size = 4, color = "gray40",
+                          label= paste("NS\np =", round(simpson_wilcox$p.value, digits = 2))), 
+          poster_simpseven1 + xlab("Fraction \n") + ylab("Simpson's Evenness") + 
+                theme(legend.position = "none", axis.text.y = element_blank()) +
+                coord_flip() +
+                annotate("text", x=1.5, y=0.135, fontface = "bold",  size = 4, color = "gray40",
+                          label= paste("NS\np =", round(simpseven_wilcox$p.value, digits = 2))), 
+          otu_rich_vegan + theme(legend.position = "none"), 
+          otu_shannon_vegan + theme(legend.position = "none"), 
+          otu_invsimps_vegan + theme(legend.position = c(0.7, 0.80)), 
+          otu_simpseven_vegan + theme(legend.position = "none"), 
+          labels = c("A", "B", "C", "D", "E", "F", "G", "H"),
+          ncol = 4, nrow = 2)
 ```
 
-<img src="Rarefied_Figures/unnamed-chunk-1-1.png" style="display: block; margin: auto;" />
+<img src="Rarefied_Figures/richness-div-boxplot-BEF-1.png" style="display: block; margin: auto;" />
 
-
-
-
-# Cell Count and Production Rates 
-
-```r
-######################################################### Fraction ABUNDANCe 
-frac_abund_wilcox <- wilcox.test(log10(as.numeric(fraction_bac_abund)) ~ fraction, 
-             data = filter(otu_alphadiv, fraction %in% c("WholePart", "WholeFree") & measure == "Richness"))
-frac_abund_wilcox
-```
-
-```
-## 
-## 	Wilcoxon rank sum test
-## 
-## data:  log10(as.numeric(fraction_bac_abund)) by fraction
-## W = 0, p-value = 1.479e-06
-## alternative hypothesis: true location shift is not equal to 0
-```
-
-```r
-filter(otu_alphadiv, fraction %in% c("WholePart", "WholeFree") & measure == "Richness") %>%
-  group_by(fraction) %>%
-  summarize(mean(as.numeric(fraction_bac_abund)))
-```
-
-```
-## # A tibble: 2 × 2
-##    fraction `mean(as.numeric(fraction_bac_abund))`
-##      <fctr>                                  <dbl>
-## 1 WholePart                               41168.88
-## 2 WholeFree                              734522.25
-```
-
-```r
-# Make a data frame to draw significance line in boxplot (visually calculated)
-dat1 <- data.frame(a = c(1.15,1.15,1.85,1.85), b = c(6.45,6.5,6.5,6.45)) # WholePart vs WholeFree
-
-poster_a <- ggplot(filter(otu_alphadiv, fraction %in% c("WholePart", "WholeFree") & 
-                            measure == "Richness" & norep_filter_name != "MOTEJ515"), 
-       aes(y = log10(as.numeric(fraction_bac_abund)), x = fraction)) +
-  scale_color_manual(values = fraction_colors) + xlab("") +
-  scale_fill_manual(values = fraction_colors) +
-  geom_jitter(size = 3, aes(color = fraction, fill = fraction)) + 
-  geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(color = fraction, fill = fraction)) +
-  ylab("Log10(Bacterial Cells/mL)") +
-  #####  WHOLE PARTICLE VS WHOLE FREE CELL ABUNDANCES
-  geom_path(data = dat1, aes(x = a, y = b), linetype = 1, color = "gray40") +
-  annotate("text", x=1.5, y=6.5, fontface = "bold",  size = 3.5, color = "gray40",
-           label= paste("***\np =", round(frac_abund_wilcox$p.value, digits = 7))) +
-  theme(legend.position = "none")
-
-
-
-######################################################### TOTAL PRODUCTION 
-totprod_wilcox <- wilcox.test(frac_bacprod ~ fraction, 
-             data = filter(otu_alphadiv, fraction %in% c("WholePart", "WholeFree") & measure == "Richness"))
-totprod_wilcox
-```
-
-```
-## 
-## 	Wilcoxon rank sum test
-## 
-## data:  frac_bacprod by fraction
-## W = 33, p-value = 0.02418
-## alternative hypothesis: true location shift is not equal to 0
-```
-
-```r
-filter(otu_alphadiv, fraction %in% c("WholePart", "WholeFree") & measure == "Richness") %>%
-  group_by(fraction) %>%
-  summarize(mean(frac_bacprod))
-```
-
-```
-## # A tibble: 2 × 2
-##    fraction `mean(frac_bacprod)`
-##      <fctr>                <dbl>
-## 1 WholePart              9.95449
-## 2 WholeFree             24.07018
-```
-
-```r
-# Make a data frame to draw significance line in boxplot (visually calculated)
-dat2 <- data.frame(a = c(1.15,1.15,1.85,1.85), b = c(67,68,68,67)) # WholePart vs WholeFree
-
-
-poster_b <- ggplot(filter(otu_alphadiv, 
-                          fraction %in% c("WholePart", "WholeFree") & measure == "Richness"), 
-       aes(y = frac_bacprod, x = fraction)) + xlab("") +
-  scale_color_manual(values = fraction_colors) + 
-  scale_fill_manual(values = fraction_colors) +
-  geom_jitter(size = 3, aes(color = fraction, fill = fraction)) + 
-  geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(color = fraction, fill = fraction)) +
-  ylab("Total Fraction production\n (ug C/L/hr)") +
-  #####  WHOLE PARTICLE VS WHOLE FREE TOTAL PRODUCTION 
-  geom_path(data = dat2, aes(x = a, y = b), linetype = 1, color = "gray40") +
-  annotate("text", x=1.5, y=68, fontface = "bold",  size = 3.5, color = "gray40",
-           label= paste("***\np =", round(totprod_wilcox$p.value, digits = 3))) +
-  theme(legend.position = "none")
-
-
-
-######################################################### TOTAL PRODUCTION 
-percellprod_wilcox <- wilcox.test(log10(fracprod_per_cell) ~ fraction, 
-             data = filter(otu_alphadiv, 
-                          fraction %in% c("WholePart", "WholeFree") & 
-                            measure == "Richness" &
-                            norep_filter_name != "MOTEJ515"))
-percellprod_wilcox
-```
-
-```
-## 
-## 	Wilcoxon rank sum test
-## 
-## data:  log10(fracprod_per_cell) by fraction
-## W = 125, p-value = 6.656e-05
-## alternative hypothesis: true location shift is not equal to 0
-```
-
-```r
-filter(otu_alphadiv, fraction %in% c("WholePart", "WholeFree") & measure == "Richness" &
-       norep_filter_name != "MOTEJ515" & norep_filter_name != "MOTEP515") %>%
-  group_by(fraction) %>%
-  summarize(mean(fracprod_per_cell))
-```
-
-```
-## # A tibble: 2 × 2
-##    fraction `mean(fracprod_per_cell)`
-##      <fctr>                     <dbl>
-## 1 WholePart              4.818158e-07
-## 2 WholeFree              3.869446e-08
-```
-
-```r
-# Make a data frame to draw significance line in boxplot (visually calculated)
-dat3 <- data.frame(a = c(1.15,1.15,1.85,1.85), b = c(-5.05,-5,-5,-5.05)) # WholePart vs WholeFree
-
-
-poster_c <- ggplot(filter(otu_alphadiv, 
-                          fraction %in% c("WholePart", "WholeFree") & 
-                            measure == "Richness" &
-                            norep_filter_name != "MOTEJ515" & norep_filter_name != "MOTEP515"), 
-       aes(y = log10(fracprod_per_cell), x = fraction)) +
-  scale_color_manual(values = fraction_colors) + 
-  scale_fill_manual(values = fraction_colors) +
-  geom_jitter(size = 3, aes(color = fraction, fill = fraction)) + 
-  geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(color = fraction, fill = fraction)) +
-  ylim(c(-8.5, -5)) + xlab("") +
-  ylab("log10(Fraction Production per Cell) \n(ug C/cell/hr)") +
-  #####  WHOLE PARTICLE VS WHOLE FREE PER CELL PRODUCTION 
-  geom_path(data = dat3, aes(x = a, y = b), linetype = 1, color = "gray40") +
-  annotate("text", x=1.5, y=-5, fontface = "bold",  size = 3.5, color = "gray40",
-           label= paste("***\np =", round(percellprod_wilcox$p.value, digits = 5))) +
-  theme(legend.position = "none")
-
-plot_grid(poster_a, poster_b, poster_c,
-          labels = c("A", "B", "C"),
-          ncol = 3)
-```
-
-<img src="Rarefied_Figures/per-cell-1.png" style="display: block; margin: auto;" />
-
-
-# Diversity vs Total Production 
-
-```r
-######################################################### RICHNESS
-# Total Bacterial Production vs Free-Living Richness 
-summary(lm(tot_bacprod ~ mean, data = filter(ML_otu_rich_stats, fraction == "WholeFree")))
-```
-
-```
-## 
-## Call:
-## lm(formula = tot_bacprod ~ mean, data = filter(ML_otu_rich_stats, 
-##     fraction == "WholeFree"))
-## 
-## Residuals:
-##     Min      1Q  Median      3Q     Max 
-## -28.114 -12.944   0.594   8.159  41.427 
-## 
-## Coefficients:
-##             Estimate Std. Error t value Pr(>|t|)  
-## (Intercept) -9.95411   23.04539  -0.432    0.675  
-## mean         0.15434    0.07892   1.956    0.079 .
-## ---
-## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-## 
-## Residual standard error: 21.31 on 10 degrees of freedom
-## Multiple R-squared:  0.2766,	Adjusted R-squared:  0.2043 
-## F-statistic: 3.824 on 1 and 10 DF,  p-value: 0.07901
-```
-
-```r
-# Total Bacterial Production vs Particle-Associated Richness 
-summary(lm(tot_bacprod ~ mean, data = filter(ML_otu_rich_stats, fraction == "WholePart")))
-```
-
-```
-## 
-## Call:
-## lm(formula = tot_bacprod ~ mean, data = filter(ML_otu_rich_stats, 
-##     fraction == "WholePart"))
-## 
-## Residuals:
-##     Min      1Q  Median      3Q     Max 
-## -31.914 -15.358  -0.829   7.469  41.379 
-## 
-## Coefficients:
-##             Estimate Std. Error t value Pr(>|t|)  
-## (Intercept) -6.13872   20.29427  -0.302    0.768  
-## mean         0.08714    0.04259   2.046    0.068 .
-## ---
-## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-## 
-## Residual standard error: 21.03 on 10 degrees of freedom
-## Multiple R-squared:  0.2951,	Adjusted R-squared:  0.2246 
-## F-statistic: 4.186 on 1 and 10 DF,  p-value: 0.06797
-```
-
-```r
-# Plot it 
-ggplot(ML_otu_rich_stats, aes(x = mean, y = tot_bacprod)) + 
-  geom_point(size = 3) + xlab("Richness") +
-  facet_grid(.~fraction)
-```
-
-<img src="Rarefied_Figures/diversity-totalprod-1.png" style="display: block; margin: auto;" />
-
-```r
-######################################################### SHANNON ENTROPY
-# Total Bacterial Production vs Free-Living Shannon 
-summary(lm(tot_bacprod ~ mean, data = filter(ML_otu_shannon_stats, fraction == "WholeFree")))
-```
-
-```
-## 
-## Call:
-## lm(formula = tot_bacprod ~ mean, data = filter(ML_otu_shannon_stats, 
-##     fraction == "WholeFree"))
-## 
-## Residuals:
-##     Min      1Q  Median      3Q     Max 
-## -30.573 -11.102  -2.162   7.367  50.363 
-## 
-## Coefficients:
-##             Estimate Std. Error t value Pr(>|t|)
-## (Intercept)   -85.67      86.81  -0.987    0.347
-## mean           29.72      21.59   1.376    0.199
-## 
-## Residual standard error: 22.97 on 10 degrees of freedom
-## Multiple R-squared:  0.1593,	Adjusted R-squared:  0.07521 
-## F-statistic: 1.895 on 1 and 10 DF,  p-value: 0.1987
-```
-
-```r
-# Total Bacterial Production vs Particle-Associated Shannon 
-summary(lm(tot_bacprod ~ mean, data = filter(ML_otu_shannon_stats, fraction == "WholePart")))
-```
-
-```
-## 
-## Call:
-## lm(formula = tot_bacprod ~ mean, data = filter(ML_otu_shannon_stats, 
-##     fraction == "WholePart"))
-## 
-## Residuals:
-##     Min      1Q  Median      3Q     Max 
-## -29.412 -15.260   0.078   5.226  42.319 
-## 
-## Coefficients:
-##             Estimate Std. Error t value Pr(>|t|)  
-## (Intercept)   -71.03      49.21  -1.443   0.1795  
-## mean           22.94      10.72   2.140   0.0581 .
-## ---
-## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-## 
-## Residual standard error: 20.75 on 10 degrees of freedom
-## Multiple R-squared:  0.3141,	Adjusted R-squared:  0.2455 
-## F-statistic: 4.578 on 1 and 10 DF,  p-value: 0.05806
-```
-
-```r
-# Plot it 
-ggplot(ML_otu_shannon_stats, aes(x = mean, y = tot_bacprod)) + 
-  geom_point(size = 3) + xlab("Shannon Entropy") +
-  geom_smooth(method = "lm", se = FALSE, data = filter(ML_otu_shannon_stats, fraction == "WholePart")) +
-  facet_grid(.~fraction)
-```
-
-<img src="Rarefied_Figures/diversity-totalprod-2.png" style="display: block; margin: auto;" />
-
-```r
-######################################################### INVERSE SIMPSON
-# Total Bacterial Production vs Free-Living Inverse Simpson  
-summary(lm(tot_bacprod ~ mean, data = filter(ML_otu_invsimps_stats, fraction == "WholeFree"))) 
-```
-
-```
-## 
-## Call:
-## lm(formula = tot_bacprod ~ mean, data = filter(ML_otu_invsimps_stats, 
-##     fraction == "WholeFree"))
-## 
-## Residuals:
-##     Min      1Q  Median      3Q     Max 
-## -26.050 -11.343  -4.267   4.427  51.512 
-## 
-## Coefficients:
-##             Estimate Std. Error t value Pr(>|t|)
-## (Intercept)   5.4207    20.1418   0.269    0.793
-## mean          1.1289     0.7662   1.473    0.171
-## 
-## Residual standard error: 22.71 on 10 degrees of freedom
-## Multiple R-squared:  0.1783,	Adjusted R-squared:  0.09618 
-## F-statistic: 2.171 on 1 and 10 DF,  p-value: 0.1714
-```
-
-```r
-# Total Bacterial Production vs Particle-Associated Inverse Simpson 
-summary(lm(tot_bacprod ~ mean, data = filter(ML_otu_invsimps_stats, fraction == "WholePart")))
-```
-
-```
-## 
-## Call:
-## lm(formula = tot_bacprod ~ mean, data = filter(ML_otu_invsimps_stats, 
-##     fraction == "WholePart"))
-## 
-## Residuals:
-##     Min      1Q  Median      3Q     Max 
-## -31.643  -9.674  -2.796   5.421  30.770 
-## 
-## Coefficients:
-##             Estimate Std. Error t value Pr(>|t|)  
-## (Intercept)   9.8929     9.4884   1.043   0.3217  
-## mean          0.6288     0.2105   2.986   0.0137 *
-## ---
-## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-## 
-## Residual standard error: 18.21 on 10 degrees of freedom
-## Multiple R-squared:  0.4714,	Adjusted R-squared:  0.4185 
-## F-statistic: 8.918 on 1 and 10 DF,  p-value: 0.01366
-```
-
-```r
-ggplot(ML_otu_invsimps_stats, aes(x = mean, y = tot_bacprod)) + 
-  geom_point(size = 3) + xlab("Inverse Simpson") +
-  geom_smooth(method = "lm", data = filter(ML_otu_invsimps_stats, fraction == "WholePart")) +
-  facet_grid(.~fraction)
-```
-
-<img src="Rarefied_Figures/diversity-totalprod-3.png" style="display: block; margin: auto;" />
-
-```r
-######################################################### SIMPSONS EVENNESS
-# Total Bacterial Production vs Free-Living Simpsons Evenness 
-summary(lm(tot_bacprod ~ mean, data = filter(ML_otu_simpseven_stats, fraction == "WholeFree")))
-```
-
-```
-## 
-## Call:
-## lm(formula = tot_bacprod ~ mean, data = filter(ML_otu_simpseven_stats, 
-##     fraction == "WholeFree"))
-## 
-## Residuals:
-##     Min      1Q  Median      3Q     Max 
-## -24.340 -16.571  -5.009   9.425  61.363 
-## 
-## Coefficients:
-##             Estimate Std. Error t value Pr(>|t|)
-## (Intercept)    25.85      32.87   0.786    0.450
-## mean           86.07     362.02   0.238    0.817
-## 
-## Residual standard error: 24.98 on 10 degrees of freedom
-## Multiple R-squared:  0.00562,	Adjusted R-squared:  -0.09382 
-## F-statistic: 0.05652 on 1 and 10 DF,  p-value: 0.8169
-```
-
-```r
-# Total Bacterial Production vs Particle-Associated Simpsons Evenness  
-summary(lm(tot_bacprod ~ mean, data = filter(ML_otu_simpseven_stats, fraction == "WholePart")))
-```
-
-```
-## 
-## Call:
-## lm(formula = tot_bacprod ~ mean, data = filter(ML_otu_simpseven_stats, 
-##     fraction == "WholePart"))
-## 
-## Residuals:
-##     Min      1Q  Median      3Q     Max 
-## -19.776 -11.062  -4.714   6.358  34.205 
-## 
-## Coefficients:
-##             Estimate Std. Error t value Pr(>|t|)  
-## (Intercept)    -5.91      13.92  -0.425   0.6801  
-## mean          523.76     171.64   3.051   0.0122 *
-## ---
-## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-## 
-## Residual standard error: 18.03 on 10 degrees of freedom
-## Multiple R-squared:  0.4822,	Adjusted R-squared:  0.4304 
-## F-statistic: 9.311 on 1 and 10 DF,  p-value: 0.01222
-```
-
-```r
-# Plot it 
-ggplot(ML_otu_simpseven_stats, aes(x = mean, y = tot_bacprod)) + 
-  geom_point(size = 3) + xlab("Simpson's Evenness") +
-  geom_smooth(method = "lm", data = filter(ML_otu_simpseven_stats, fraction == "WholePart")) +
-  facet_grid(.~fraction)
-```
-
-<img src="Rarefied_Figures/diversity-totalprod-4.png" style="display: block; margin: auto;" />
 
 
 # Per cell Fraction Production vs Diversity
 
 ```r
-# Can fractional production be predicted by richness? 
+#########################################################  RICHNESS 
+# Free-Living Richness vs fractional production per cell 
 freeprod_percell_ML_otu_rich <- lm(log10(fracprod_per_cell) ~ mean, data = filter(ML_otu_rich_stats, fraction == "WholeFree"))
 summary(freeprod_percell_ML_otu_rich)
 ```
@@ -1144,7 +994,7 @@ summary(freeprod_percell_ML_otu_rich)
 ```
 
 ```r
-# PARTICLE
+# Particle-Associated Richness vs fractional production per cell 
 partprod_percell_MLotu_rich <- lm(log10(fracprod_per_cell) ~ mean, data = filter(filter(ML_otu_rich_stats, fraction == "WholePart" & fracprod_per_cell != Inf)))
 summary(partprod_percell_MLotu_rich)
 ```
@@ -1176,23 +1026,100 @@ summary(partprod_percell_MLotu_rich)
 rich_vs_fracprod_percell <- ggplot(filter(ML_otu_rich_stats, fracprod_per_cell != Inf),
        aes(x=mean, y=log10(fracprod_per_cell), color = fraction)) + 
   geom_point(size = 3.5) + geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd)) + 
-  ggtitle("OTU: Vegan") +
+  scale_x_continuous(limits = c(180, 810), breaks = c(200, 400, 600, 800)) + 
   scale_color_manual(values = c("firebrick3","cornflowerblue"), limits = c("WholePart", "WholeFree")) +
-  ylab("log10(Fraction Production per Cell) \n(μg C/cell/hr)") +
+  ylab("log10(Fraction Production/Cell)\n (μgC/cell/hr)") + 
   xlab("Observed Richness") +
   geom_smooth(data=subset(ML_otu_rich_stats, fraction == "WholePart"), method='lm') + 
-  theme(legend.position=c(0.15,0.9),        
+  theme(legend.position=c(0.2,0.9),        
         legend.title=element_blank()) +
   annotate("text", x = 500, y=-8, color = "cornflowerblue", fontface = "bold",
-           label = paste("R2 =", round(summary(freeprod_percell_ML_otu_rich)$adj.r.squared, digits = 4), "\n", 
-                         "p =", round(unname(summary(freeprod_percell_ML_otu_rich)$coefficients[,4][2]), digits = 4))) + 
+           label = paste("R2 =", round(summary(freeprod_percell_ML_otu_rich)$adj.r.squared, digits = 2), "\n", 
+                         "p =", round(unname(summary(freeprod_percell_ML_otu_rich)$coefficients[,4][2]), digits = 2))) + 
   annotate("text", x = 650, y=-7, color = "firebrick3", fontface = "bold",
-           label = paste("R2 =", round(summary(partprod_percell_MLotu_rich)$adj.r.squared, digits = 4), "\n", 
-                         "p =", round(unname(summary(partprod_percell_MLotu_rich)$coefficients[,4][2]), digits = 4)));
+           label = paste("R2 =", round(summary(partprod_percell_MLotu_rich)$adj.r.squared, digits = 2), "\n", 
+                         "p =", round(unname(summary(partprod_percell_MLotu_rich)$coefficients[,4][2]), digits = 3)));
 
 
-###### INVERSE SIMPSON
-# Can fractional production be predicted by invsimpsness? 
+#########################################################  SHANNON
+# Free-Living Shannon vs fractional production per cell 
+freeprod_percell_ML_otu_shannon <- lm(log10(fracprod_per_cell) ~ mean, data = filter(ML_otu_shannon_stats, fraction == "WholeFree"))
+summary(freeprod_percell_ML_otu_shannon)
+```
+
+```
+## 
+## Call:
+## lm(formula = log10(fracprod_per_cell) ~ mean, data = filter(ML_otu_shannon_stats, 
+##     fraction == "WholeFree"))
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -0.73908 -0.12432  0.06301  0.16396  0.60637 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)  -9.3026     1.4662  -6.345 8.41e-05 ***
+## mean          0.4309     0.3646   1.182    0.265    
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 0.388 on 10 degrees of freedom
+## Multiple R-squared:  0.1226,	Adjusted R-squared:  0.03482 
+## F-statistic: 1.397 on 1 and 10 DF,  p-value: 0.2646
+```
+
+```r
+# Particle-Associated Shannon vs fractional production per cell 
+partprod_percell_MLotu_shannon <- lm(log10(fracprod_per_cell) ~ mean, 
+                                     data = filter(filter(ML_otu_shannon_stats, fraction == "WholePart" & fracprod_per_cell != Inf)))
+summary(partprod_percell_MLotu_shannon)
+```
+
+```
+## 
+## Call:
+## lm(formula = log10(fracprod_per_cell) ~ mean, data = filter(filter(ML_otu_shannon_stats, 
+##     fraction == "WholePart" & fracprod_per_cell != Inf)))
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -0.34887 -0.25847 -0.00133  0.03518  0.71166 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)  -9.7582     0.8571 -11.386  1.2e-06 ***
+## mean          0.6666     0.1869   3.567  0.00605 ** 
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 0.3614 on 9 degrees of freedom
+## Multiple R-squared:  0.5857,	Adjusted R-squared:  0.5397 
+## F-statistic: 12.72 on 1 and 9 DF,  p-value: 0.006052
+```
+
+```r
+# Plot 
+shannon_vs_fracprod_percell <- ggplot(filter(ML_otu_shannon_stats, fracprod_per_cell != Inf),
+       aes(x=mean, y=log10(fracprod_per_cell), color = fraction)) + 
+  geom_point(size = 3.5) + geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd)) + 
+  scale_color_manual(values = c("firebrick3","cornflowerblue"), limits = c("WholePart", "WholeFree")) +
+  ylab("log10(Fraction Production/Cell)\n (μgC/cell/hr)") + 
+  xlab("Shannon Entropy") +
+  scale_x_continuous(limits = c(3.4, 5.85), breaks = c(3.5, 4, 4.5, 5, 5.5)) + 
+  geom_smooth(data=subset(ML_otu_shannon_stats, fraction == "WholePart"), method='lm') + 
+  theme(legend.position=c(0.2,0.9),        
+        legend.title=element_blank()) +
+  annotate("text", x = 4.75, y=-8, color = "cornflowerblue", fontface = "bold",
+           label = paste("R2 =", round(summary(freeprod_percell_ML_otu_shannon)$adj.r.squared, digits = 2), "\n", 
+                         "p =", round(unname(summary(freeprod_percell_ML_otu_shannon)$coefficients[,4][2]), digits = 2))) + 
+  annotate("text", x = 5.5, y=-7, color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(partprod_percell_MLotu_shannon)$adj.r.squared, digits = 2), "\n", 
+                         "p =", round(unname(summary(partprod_percell_MLotu_shannon)$coefficients[,4][2]), digits = 3)));
+
+
+#########################################################  INVERSE SIMPSON 
+# Free-Living Inverse Simpson vs fractional production per cell 
 freeprod_percell_ML_otu_invsimps <- lm(log10(fracprod_per_cell) ~ mean, 
                                        data = filter(ML_otu_invsimps_stats, fraction == "WholeFree"))
 summary(freeprod_percell_ML_otu_invsimps)
@@ -1221,7 +1148,7 @@ summary(freeprod_percell_ML_otu_invsimps)
 ```
 
 ```r
-## PARTICLE
+# Particle-Associated Inverse Simpson vs fractional production per cell 
 partprod_percell_MLotu_invsimps <- lm(log10(fracprod_per_cell)  ~ mean, 
                               data = filter(ML_otu_invsimps_stats, fraction == "WholePart" & fracprod_per_cell != Inf))
 summary(partprod_percell_MLotu_invsimps)
@@ -1254,38 +1181,573 @@ summary(partprod_percell_MLotu_invsimps)
 invsimps_vs_fracprod_percell <- ggplot(filter(ML_otu_invsimps_stats, fracprod_per_cell != Inf),
        aes(x=mean, y=log10(fracprod_per_cell) , color = fraction)) + 
   geom_point(size = 3.5) + geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd)) + 
-  ggtitle("OTU: Vegan") +
   scale_color_manual(values = c("firebrick3","cornflowerblue"), limits = c("WholePart", "WholeFree")) +
-  scale_x_continuous(limits = c(0,100), expand = c(0,0)) + 
-  ylab("log10(Fraction Production per Cell) \n(μg C/cell/hr)") + 
+  scale_x_continuous(limits = c(0,95), breaks = c(0, 20, 40, 60, 80), expand = c(0,0)) + 
+  ylab("log10(Fraction Production/Cell)\n (μgC/cell/hr)") + 
   xlab("Inverse Simpson") +
   geom_smooth(data=subset(ML_otu_invsimps_stats, fraction == "WholePart"), method='lm') + 
   theme(legend.position=c(0.2,0.9),        
         legend.title=element_blank()) +
-  annotate("text", x = 40, y=-8, color = "cornflowerblue", fontface = "bold",
-           label = paste("R2 =", round(summary(freeprod_percell_ML_otu_invsimps)$adj.r.squared, digits = 4), "\n", 
-                         "p =", round(unname(summary(freeprod_percell_ML_otu_invsimps)$coefficients[,4][2]), digits = 4))) + 
+  annotate("text", x = 50, y=-8, color = "cornflowerblue", fontface = "bold",
+           label = paste("R2 =", round(summary(freeprod_percell_ML_otu_invsimps)$adj.r.squared, digits = 2), "\n", 
+                         "p =", round(unname(summary(freeprod_percell_ML_otu_invsimps)$coefficients[,4][2]), digits = 2))) + 
   annotate("text", x = 75, y=-7, color = "firebrick3", fontface = "bold",
-           label = paste("R2 =", round(summary(partprod_percell_MLotu_invsimps)$adj.r.squared, digits = 4), "\n", 
-                         "p =", round(unname(summary(partprod_percell_MLotu_invsimps)$coefficients[,4][2]), digits = 4))); 
+           label = paste("R2 =", round(summary(partprod_percell_MLotu_invsimps)$adj.r.squared, digits = 2), "\n", 
+                         "p =", round(unname(summary(partprod_percell_MLotu_invsimps)$coefficients[,4][2]), digits = 3))); 
 
 
-plot_grid(rich_vs_fracprod_percell, invsimps_vs_fracprod_percell,
-          labels = c("A", "B"), 
-          ncol = 2)
+
+#########################################################  SIMPSON'S EVENNESS
+# Free-Living Inverse Simpson vs fractional production per cell 
+freeprod_percell_ML_otu_simpseven <- lm(log10(fracprod_per_cell) ~ mean, 
+                                       data = filter(ML_otu_simpseven_stats, fraction == "WholeFree"))
+summary(freeprod_percell_ML_otu_simpseven)
+```
+
+```
+## 
+## Call:
+## lm(formula = log10(fracprod_per_cell) ~ mean, data = filter(ML_otu_simpseven_stats, 
+##     fraction == "WholeFree"))
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -0.6446 -0.2578  0.0211  0.1669  0.7773 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)   -7.823      0.539 -14.513  4.8e-08 ***
+## mean           2.801      5.936   0.472    0.647    
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 0.4096 on 10 degrees of freedom
+## Multiple R-squared:  0.02178,	Adjusted R-squared:  -0.07604 
+## F-statistic: 0.2227 on 1 and 10 DF,  p-value: 0.6471
+```
+
+```r
+# Particle-Associated Inverse Simpson vs fractional production per cell 
+partprod_percell_MLotu_simpseven <- lm(log10(fracprod_per_cell)  ~ mean, 
+                              data = filter(ML_otu_simpseven_stats, fraction == "WholePart" & fracprod_per_cell != Inf))
+summary(partprod_percell_MLotu_simpseven)
+```
+
+```
+## 
+## Call:
+## lm(formula = log10(fracprod_per_cell) ~ mean, data = filter(ML_otu_simpseven_stats, 
+##     fraction == "WholePart" & fracprod_per_cell != Inf))
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -0.45099 -0.20370 -0.08701  0.11225  0.58419 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)  -7.6709     0.2715 -28.253 4.24e-10 ***
+## mean         12.9548     3.4302   3.777  0.00437 ** 
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 0.3492 on 9 degrees of freedom
+## Multiple R-squared:  0.6131,	Adjusted R-squared:  0.5701 
+## F-statistic: 14.26 on 1 and 9 DF,  p-value: 0.004371
+```
+
+```r
+# Plot Simpson's Evenness
+simpseven_vs_fracprod_percell <- ggplot(filter(ML_otu_simpseven_stats, fracprod_per_cell != Inf),
+       aes(x=mean, y=log10(fracprod_per_cell) , color = fraction)) + 
+  geom_point(size = 3.5) + geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd)) + 
+  scale_color_manual(values = c("firebrick3","cornflowerblue"), 
+                     limits = c("WholePart", "WholeFree"),
+                     breaks=c("WholePart", "WholeFree"),
+                     labels=c("Particle-Associated", "Free-Living")) + 
+  scale_x_continuous(limits = c(0.03,0.151), breaks = c(0.05, 0.1, 0.15))  +
+  ylab("log10(Fraction Production/Cell)\n (μgC/cell/hr)") + 
+  xlab("Simpson's Evenness") +
+  geom_smooth(data=subset(ML_otu_simpseven_stats, fraction == "WholePart"), method='lm') + 
+  theme(legend.position=c(0.2,0.9),        
+        legend.title=element_blank()) +
+  annotate("text", x = 0.11, y=-8, color = "cornflowerblue", fontface = "bold",
+           label = paste("R2 =", round(summary(freeprod_percell_ML_otu_simpseven)$adj.r.squared, digits = 2), "\n", 
+                         "p =", round(unname(summary(freeprod_percell_ML_otu_simpseven)$coefficients[,4][2]), digits = 2))) + 
+  annotate("text", x =0.13, y=-7, color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(partprod_percell_MLotu_simpseven)$adj.r.squared, digits = 2), "\n", 
+                         "p =", round(unname(summary(partprod_percell_MLotu_simpseven)$coefficients[,4][2]), digits = 3))); 
+
+
+
+
+plot_grid(rich_vs_fracprod_percell + theme(legend.position= "none"), 
+          shannon_vs_fracprod_percell + theme(legend.position= "none"),  
+          invsimps_vs_fracprod_percell + theme(legend.position= "none"),
+          simpseven_vs_fracprod_percell + theme(legend.position= c(0.35,0.9)),
+          labels = c("A", "B", "C", "D"), 
+          ncol = 4)
 ```
 
 <img src="Rarefied_Figures/fracprod_percell-vs-div-1.png" style="display: block; margin: auto;" />
 
 
 
+# Fraction Production Altogether
 
-# Prefiltered Fraction Diversity-Production Analysis 
+```r
+#########################################################  RICHNESS 
+# Free-Living Richness vs fractional production per cell 
+total_prodpercell_rich <- lm(log10(fracprod_per_cell) ~ mean, data = filter(filter(ML_otu_rich_stats, fracprod_per_cell != Inf)))
+summary(total_prodpercell_rich)
+```
+
+```
+## 
+## Call:
+## lm(formula = log10(fracprod_per_cell) ~ mean, data = filter(filter(ML_otu_rich_stats, 
+##     fracprod_per_cell != Inf)))
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -0.8487 -0.2245  0.0577  0.2207  0.7277 
+## 
+## Coefficients:
+##               Estimate Std. Error t value Pr(>|t|)    
+## (Intercept) -8.4027594  0.2145671 -39.161  < 2e-16 ***
+## mean         0.0033662  0.0005434   6.195 3.81e-06 ***
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 0.3826 on 21 degrees of freedom
+## Multiple R-squared:  0.6463,	Adjusted R-squared:  0.6295 
+## F-statistic: 38.38 on 1 and 21 DF,  p-value: 3.808e-06
+```
+
+```r
+# Plot 
+combined_richness <- ggplot(filter(ML_otu_rich_stats, fracprod_per_cell != Inf), aes(x=mean, y=log10(fracprod_per_cell))) + 
+  geom_point(size = 3.5) + geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd)) + 
+  ylab("log10(Fraction Production/Cell)\n (μgC/cell/hr)") + 
+  xlab("Observed Richness") +
+  geom_smooth(data= ML_otu_rich_stats, method='lm', color = "black") + 
+  theme(legend.position=c(0.2,0.9),        
+        legend.title=element_blank()) +
+  annotate("text", x = 500, y=-8, color = "black", fontface = "bold",
+           label = paste("R2 =", round(summary(total_prodpercell_rich)$adj.r.squared, digits = 2), "\n", 
+                         "p =", round(unname(summary(total_prodpercell_rich)$coefficients[,4][2]), digits = 6)))
+
+
+
+#########################################################  SHANNON
+total_prodpercell_shannon <- lm(log10(fracprod_per_cell) ~ mean, data = filter(filter(ML_otu_shannon_stats,fracprod_per_cell != Inf)))
+summary(total_prodpercell_shannon)
+```
+
+```
+## 
+## Call:
+## lm(formula = log10(fracprod_per_cell) ~ mean, data = filter(filter(ML_otu_shannon_stats, 
+##     fracprod_per_cell != Inf)))
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -1.01023 -0.15351 -0.02587  0.23804  0.84872 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)    
+## (Intercept) -10.8281     0.7229 -14.979 1.11e-12 ***
+## mean          0.8575     0.1681   5.101 4.72e-05 ***
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 0.4299 on 21 degrees of freedom
+## Multiple R-squared:  0.5534,	Adjusted R-squared:  0.5322 
+## F-statistic: 26.02 on 1 and 21 DF,  p-value: 4.719e-05
+```
+
+```r
+# Plot 
+combined_shannon <- ggplot(filter(ML_otu_shannon_stats, fracprod_per_cell != Inf),
+       aes(x=mean, y=log10(fracprod_per_cell))) + 
+  geom_point(size = 3.5) + geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd)) + 
+  ylab("log10(Fraction Production/Cell)\n (μgC/cell/hr)") + 
+  xlab("Shannon Entropy") +
+  geom_smooth(data= ML_otu_shannon_stats, method='lm', color = "black") + 
+  theme(legend.position=c(0.2,0.9),        
+        legend.title=element_blank()) +
+  annotate("text", x = 4.75, y=-8, color = "black", fontface = "bold",
+           label = paste("R2 =", round(summary(total_prodpercell_shannon)$adj.r.squared, digits = 2), "\n", 
+                         "p =", round(unname(summary(total_prodpercell_shannon)$coefficients[,4][2]), digits = 6)));
+
+
+#########################################################  INVERSE SIMPSON 
+total_prodpercell_simpson <- lm(log10(fracprod_per_cell)  ~ mean, data = filter(ML_otu_invsimps_stats, fracprod_per_cell != Inf))
+summary(total_prodpercell_simpson)
+```
+
+```
+## 
+## Call:
+## lm(formula = log10(fracprod_per_cell) ~ mean, data = filter(ML_otu_invsimps_stats, 
+##     fracprod_per_cell != Inf))
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -0.95760 -0.26625 -0.04747  0.30807  0.98598 
+## 
+## Coefficients:
+##              Estimate Std. Error t value Pr(>|t|)    
+## (Intercept) -7.837452   0.173634 -45.138  < 2e-16 ***
+## mean         0.021713   0.004725   4.595 0.000157 ***
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 0.4542 on 21 degrees of freedom
+## Multiple R-squared:  0.5014,	Adjusted R-squared:  0.4776 
+## F-statistic: 21.11 on 1 and 21 DF,  p-value: 0.0001567
+```
+
+```r
+# Plot Simpson's Evenness
+combined_invsimps <- ggplot(filter(ML_otu_invsimps_stats, fracprod_per_cell != Inf),
+       aes(x=mean, y=log10(fracprod_per_cell))) + 
+  geom_point(size = 3.5) + geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd)) + 
+  scale_color_manual(values = c("firebrick3","cornflowerblue"), limits = c("WholePart", "WholeFree")) +
+  scale_x_continuous(limits = c(0,100), expand = c(0,0)) + 
+  ylab("log10(Fraction Production/Cell)\n (μgC/cell/hr)") + 
+  xlab("Inverse Simpson") +
+  geom_smooth(data = ML_otu_invsimps_stats, method='lm', color = "black") + 
+  theme(legend.position=c(0.2,0.9),        
+        legend.title=element_blank()) +
+  annotate("text", x = 50, y=-8, color = "black", fontface = "bold",
+           label = paste("R2 =", round(summary(total_prodpercell_simpson)$adj.r.squared, digits = 2), "\n", 
+                         "p =", round(unname(summary(total_prodpercell_simpson)$coefficients[,4][2]), digits = 5))) 
+
+
+#########################################################  SIMPSON'S EVENNESS
+total_prodpercell_simpseven <- lm(log10(fracprod_per_cell) ~ mean, 
+                                       data = filter(ML_otu_simpseven_stats, fracprod_per_cell != Inf))
+summary(total_prodpercell_simpseven)
+```
+
+```
+## 
+## Call:
+## lm(formula = log10(fracprod_per_cell) ~ mean, data = filter(ML_otu_simpseven_stats, 
+##     fracprod_per_cell != Inf))
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -1.07904 -0.43066  0.07355  0.35519  1.50111 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)  -7.5192     0.4198 -17.912 3.36e-14 ***
+## mean          4.3198     4.9137   0.879    0.389    
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 0.6318 on 21 degrees of freedom
+## Multiple R-squared:  0.0355,	Adjusted R-squared:  -0.01043 
+## F-statistic: 0.7729 on 1 and 21 DF,  p-value: 0.3893
+```
+
+```r
+# Plot Simpson's Evenness
+combined_simpseven <- ggplot(filter(ML_otu_simpseven_stats, fracprod_per_cell != Inf),
+       aes(x=mean, y=log10(fracprod_per_cell))) + 
+  geom_point(size = 3.5) + geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd)) + 
+  scale_x_continuous(limits = c(0.03,0.151), breaks = c(0.05, 0.1, 0.15))  +
+  ylab("log10(Fraction Production/Cell)\n (μgC/cell/hr)") + 
+  xlab("Simpson's Evenness") +
+  geom_smooth(data = ML_otu_simpseven_stats, method='lm', color = "black") + 
+  theme(legend.position=c(0.2,0.9),        
+        legend.title=element_blank()) +
+  annotate("text", x = 0.11, y=-8, color = "black", fontface = "bold",
+           label = paste("R2 =", round(summary(total_prodpercell_simpseven)$adj.r.squared, digits = 2), "\n", 
+                         "p =", round(unname(summary(total_prodpercell_simpseven)$coefficients[,4][2]), digits = 2)))
+
+
+
+plot_grid(rich_vs_fracprod_percell + ylab("log10(Fraction Production/Cell)\n (μgC/cell/hr)") + theme(legend.position = "none"), 
+          shannon_vs_fracprod_percell + ylab("log10(Fraction Production/Cell)\n (μgC/cell/hr)")+ theme(legend.position = "none"), 
+          invsimps_vs_fracprod_percell + ylab("log10(Fraction Production/Cell)\n (μgC/cell/hr)")+ theme(legend.position = "none"), 
+          simpseven_vs_fracprod_percell + ylab("log10(Fraction Production/Cell)\n (μgC/cell/hr)") +
+                    theme(legend.position = c(0.35,0.9)), 
+          combined_richness, combined_shannon, combined_invsimps,combined_simpseven, 
+          labels = c("A", "B", "C", "D","E", "F", "G", "H"), 
+          ncol = 4, nrow = 2)
+```
+
+<img src="Rarefied_Figures/fracprod-together-vs-div-1.png" style="display: block; margin: auto;" />
+
+
+
+# Exponential Shannon
+
+```r
+#########################################################  EXPONENTIALSHANNON
+# Free-Living EXPONENTIAL Shannon vs fractional production per cell 
+freeprod_expshannon <- lm(frac_bacprod ~ exp(mean), data = filter(ML_otu_shannon_stats, fraction == "WholeFree"))
+summary(freeprod_expshannon)
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ exp(mean), data = filter(ML_otu_shannon_stats, 
+##     fraction == "WholeFree"))
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -21.831 -10.032  -4.348   7.285  35.288 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)
+## (Intercept)  11.9560    16.6699   0.717    0.490
+## exp(mean)     0.2094     0.2740   0.764    0.462
+## 
+## Residual standard error: 17.87 on 10 degrees of freedom
+## Multiple R-squared:  0.05518,	Adjusted R-squared:  -0.0393 
+## F-statistic: 0.5841 on 1 and 10 DF,  p-value: 0.4624
+```
+
+```r
+# Particle-Associated EXPONENTIAL Shannon vs fractional production per cell 
+partprod_expshannon <- lm(frac_bacprod ~ exp(mean),
+                                        data = filter(filter(ML_otu_shannon_stats, fraction == "WholePart" & fracprod_per_cell != Inf)))
+summary(partprod_expshannon)
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ exp(mean), data = filter(filter(ML_otu_shannon_stats, 
+##     fraction == "WholePart" & fracprod_per_cell != Inf)))
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -7.6328 -2.7344 -0.9818  1.9563 12.3093 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)   
+## (Intercept)  0.16204    3.29910   0.049  0.96190   
+## exp(mean)    0.08538    0.02449   3.486  0.00687 **
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 5.936 on 9 degrees of freedom
+## Multiple R-squared:  0.5746,	Adjusted R-squared:  0.5273 
+## F-statistic: 12.16 on 1 and 9 DF,  p-value: 0.006869
+```
+
+```r
+# Plot 
+expshannon_fracprod <- ggplot(filter(ML_otu_shannon_stats, fracprod_per_cell != Inf),
+       aes(x= exp(mean), y=frac_bacprod, color = fraction)) + 
+  geom_point(size = 3.5) + #geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd)) + 
+  scale_color_manual(values = c("firebrick3","cornflowerblue"), limits = c("WholePart", "WholeFree")) +
+  ylab("Fraction Production (μgC/L/hr)") + 
+  xlab("Exponential Shannon") +
+  #scale_x_continuous(limits = c(3.4, 5.85), breaks = c(3.5, 4, 4.5, 5, 5.5)) + 
+  geom_smooth(data=subset(ML_otu_shannon_stats, fraction == "WholePart"), method='lm') + 
+  theme(legend.position=c(0.2,0.9),        
+        legend.title=element_blank()) +
+  annotate("text", x = 150, y=35, color = "cornflowerblue", fontface = "bold",
+           label = paste("R2 =", round(summary(freeprod_expshannon)$adj.r.squared, digits = 2), "\n", 
+                         "p =", round(unname(summary(freeprod_expshannon)$coefficients[,4][2]), digits = 2))) + 
+  annotate("text", x = 200, y=7, color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(partprod_expshannon)$adj.r.squared, digits = 2), "\n", 
+                         "p =", round(unname(summary(partprod_expshannon)$coefficients[,4][2]), digits = 3)));
 
 
 
 
-# Does DNA extraction concentration influcence diversity?
+#########################################################  EXPONENTIALSHANNON
+# Free-Living EXPONENTIAL Shannon vs fractional production per cell 
+freeprod_percell_ML_otu_expshannon <- lm(log10(fracprod_per_cell) ~ exp(mean), data = filter(ML_otu_shannon_stats, fraction == "WholeFree"))
+summary(freeprod_percell_ML_otu_expshannon)
+```
+
+```
+## 
+## Call:
+## lm(formula = log10(fracprod_per_cell) ~ exp(mean), data = filter(ML_otu_shannon_stats, 
+##     fraction == "WholeFree"))
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -0.71802 -0.15455  0.07673  0.16850  0.61743 
+## 
+## Coefficients:
+##              Estimate Std. Error t value Pr(>|t|)    
+## (Intercept) -7.972211   0.362962 -21.964 8.57e-10 ***
+## exp(mean)    0.006868   0.005965   1.151    0.276    
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 0.3892 on 10 degrees of freedom
+## Multiple R-squared:  0.117,	Adjusted R-squared:  0.02875 
+## F-statistic: 1.326 on 1 and 10 DF,  p-value: 0.2764
+```
+
+```r
+# Particle-Associated EXPONENTIAL Shannon vs fractional production per cell 
+partprod_percell_MLotu_expshannon <- lm(log10(fracprod_per_cell) ~ exp(mean), 
+                                     data = filter(filter(ML_otu_shannon_stats, fraction == "WholePart" & fracprod_per_cell != Inf)))
+summary(partprod_percell_MLotu_expshannon)
+```
+
+```
+## 
+## Call:
+## lm(formula = log10(fracprod_per_cell) ~ exp(mean), data = filter(filter(ML_otu_shannon_stats, 
+##     fraction == "WholePart" & fracprod_per_cell != Inf)))
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -0.37450 -0.20313 -0.12798  0.08723  0.71521 
+## 
+## Coefficients:
+##              Estimate Std. Error t value Pr(>|t|)    
+## (Intercept) -7.337215   0.196190  -37.40 3.47e-11 ***
+## exp(mean)    0.005403   0.001456    3.71  0.00484 ** 
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 0.353 on 9 degrees of freedom
+## Multiple R-squared:  0.6047,	Adjusted R-squared:  0.5607 
+## F-statistic: 13.77 on 1 and 9 DF,  p-value: 0.004844
+```
+
+```r
+# Plot 
+expshannon_fracprod_percell <- ggplot(filter(ML_otu_shannon_stats, fracprod_per_cell != Inf),
+       aes(x= exp(mean), y=log10(fracprod_per_cell), color = fraction)) + 
+  geom_point(size = 3.5) + #geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd)) + 
+  scale_color_manual(values = c("firebrick3","cornflowerblue"), limits = c("WholePart", "WholeFree")) +
+  ylab("log10(Fraction Production/Cell)\n (μgC/cell/hr)") + 
+  xlab("Exponential Shannon") +
+  #scale_x_continuous(limits = c(3.4, 5.85), breaks = c(3.5, 4, 4.5, 5, 5.5)) + 
+  geom_smooth(data=subset(ML_otu_shannon_stats, fraction == "WholePart"), method='lm') + 
+  theme(legend.position=c(0.2,0.9),        
+        legend.title=element_blank()) +
+  annotate("text", x = 150, y=-8, color = "cornflowerblue", fontface = "bold",
+           label = paste("R2 =", round(summary(freeprod_percell_ML_otu_expshannon)$adj.r.squared, digits = 2), "\n", 
+                         "p =", round(unname(summary(freeprod_percell_ML_otu_expshannon)$coefficients[,4][2]), digits = 2))) + 
+  annotate("text", x = 200, y=-7, color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(partprod_percell_MLotu_expshannon)$adj.r.squared, digits = 2), "\n", 
+                         "p =", round(unname(summary(partprod_percell_MLotu_expshannon)$coefficients[,4][2]), digits = 3)));
+
+
+#########################################################  EXPONENTIALSHANNON
+combined_expshannon_percell <- lm(log10(fracprod_per_cell) ~ exp(mean), data = filter(filter(ML_otu_shannon_stats, fracprod_per_cell != Inf)))
+summary(combined_expshannon_percell)
+```
+
+```
+## 
+## Call:
+## lm(formula = log10(fracprod_per_cell) ~ exp(mean), data = filter(filter(ML_otu_shannon_stats, 
+##     fracprod_per_cell != Inf)))
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -0.92928 -0.21787  0.01261  0.28579  0.84384 
+## 
+## Coefficients:
+##              Estimate Std. Error t value Pr(>|t|)    
+## (Intercept) -7.813569   0.157920 -49.478  < 2e-16 ***
+## exp(mean)    0.007648   0.001533   4.989 6.15e-05 ***
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 0.4352 on 21 degrees of freedom
+## Multiple R-squared:  0.5424,	Adjusted R-squared:  0.5206 
+## F-statistic: 24.89 on 1 and 21 DF,  p-value: 6.153e-05
+```
+
+```r
+# Plot 
+expshannon_combined <- ggplot(filter(ML_otu_shannon_stats, fracprod_per_cell != Inf),
+       aes(x= exp(mean), y=log10(fracprod_per_cell))) + 
+  geom_point(size = 3.5) + 
+  ylab("log10(Fraction Production/Cell)\n (μgC/cell/hr)") + 
+  xlab("Exponential Shannon") +
+  #scale_x_continuous(limits = c(3.4, 5.85), breaks = c(3.5, 4, 4.5, 5, 5.5)) + 
+  geom_smooth(data= ML_otu_shannon_stats, method='lm', color = "black") + 
+  theme(legend.position=c(0.2,0.9),        
+        legend.title=element_blank()) +
+  annotate("text", x = 150, y=-8, color = "black", fontface = "bold",
+           label = paste("R2 =", round(summary(combined_expshannon_percell)$adj.r.squared, digits = 2), "\n", 
+                         "p =", round(unname(summary(combined_expshannon_percell)$coefficients[,4][2]), digits = 5))) 
+
+plot_grid(expshannon_fracprod, expshannon_fracprod_percell, expshannon_combined,
+          labels = c("A", "B", "C"), ncol = 3)
+```
+
+<img src="Rarefied_Figures/exp-shannon-1.png" style="display: block; margin: auto;" />
+
+## Congruency between fractions 
+
+```r
+rich_df <- ML_otu_rich_stats %>%
+  dplyr::select(norep_filter_name, mean, sd, measure, fraction) %>%
+  mutate(norep_water_name = paste(substr(norep_filter_name, 1,4), substr(norep_filter_name, 6,9), sep = "")) %>%
+  spread(fraction, mean) 
+
+rich_part_df <- dplyr::select(rich_df, norep_water_name, WholePart) %>%
+  distinct() %>%  filter(!is.na(WholePart))
+
+rich_free_df <- dplyr::select(rich_df, norep_water_name, WholeFree) %>%
+  distinct() %>%  filter(!is.na(WholeFree))
+
+combined_rich_df <- left_join(rich_free_df, rich_part_df, by = "norep_water_name") %>%
+  rename(names = norep_water_name) %>%
+  make_metadata_norep() %>%
+  dplyr::select(-c(year, fraction, month, season, nuc_acid_type, project))
+
+
+summary(lm(WholePart ~ WholeFree, data = combined_rich_df))
+```
+
+```
+## 
+## Call:
+## lm(formula = WholePart ~ WholeFree, data = combined_rich_df)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -122.70 -106.94  -29.13   45.48  355.39 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)
+## (Intercept) 271.8734   157.9006   1.722    0.116
+## WholeFree     0.6495     0.5407   1.201    0.257
+## 
+## Residual standard error: 146 on 10 degrees of freedom
+## Multiple R-squared:  0.1261,	Adjusted R-squared:  0.03868 
+## F-statistic: 1.443 on 1 and 10 DF,  p-value: 0.2574
+```
+
+```r
+ggplot(combined_rich_df, aes(x=WholePart, y=WholeFree)) + 
+  geom_point(size = 3.5) +
+  geom_abline(intercept = 0, slope = 1)
+```
+
+<img src="Rarefied_Figures/frac-congruency-1.png" style="display: block; margin: auto;" />
+
+
+<!-- # Total Production  --> 
+
+
+
+<!-- # Prefiltered Fraction Diversity-Production Analysis --> 
+
+
+
+<!-- # Does DNA extraction concentration influcence diversity? --> 
 
 
 
