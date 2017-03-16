@@ -419,10 +419,11 @@ filter(otu_alphadiv, fraction %in% c("WholePart", "WholeFree") & measure == "Ric
 # Make a data frame to draw significance line in boxplot (visually calculated)
 nums1 <- data.frame(a = c(1.15,1.15,1.85,1.85), b = c(790,800,800,790)) # WholePart vs WholeFree
 
-poster_rich1 <- ggplot(filter(otu_alphadiv, 
+poster_rich1 <-  ggplot(filter(otu_alphadiv, 
                           fraction %in% c("WholePart", "WholeFree") & measure == "Richness"), 
        aes(y = mean, x = fraction)) +
   ylab("Observed Richness") + 
+  #geom_errorbar(aes(ymin = mean - sd, ymax = mean + sd, color = fraction), alpha = 0.7) + # X-axis errorbars
   geom_jitter(size = 3, aes(color = fraction, fill = fraction), width = 0.2) + 
   geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(color = fraction, fill = fraction)) +
   scale_fill_manual(values = fraction_colors, 
@@ -439,7 +440,20 @@ poster_rich1 <- ggplot(filter(otu_alphadiv,
 poster_rich <- poster_rich1 + 
   annotate("text", x=1.5, y=800, fontface = "bold",  size = 3.5, color = "gray40",
            label= paste("***\np =", round(rich_wilcox$p.value, digits = 3))) +
-  theme(legend.position = "none", axis.title.x = element_blank())
+  theme(legend.position = c(0.7, 0.75), 
+        axis.title.x = element_blank(),
+        legend.title = element_blank(),
+        legend.spacing.y = unit(-0.5, "cm"),
+        legend.spacing.x = unit(-0.3, "cm"),
+        legend.box = "horizontal") +
+  scale_fill_manual(values = fraction_colors, 
+                    breaks=c("WholeFree", "WholePart"), 
+                    labels=c("Free", "Particle")) +
+  scale_color_manual(values = fraction_colors,
+                 breaks=c("WholeFree", "WholePart"), 
+                 labels=c("Free", "Particle")) +
+  geom_jitter(size = 3, aes(color = fraction, fill = fraction, shape = lakesite), width = 0.2) + 
+  scale_shape_discrete(guide = guide_legend(reverse=TRUE))
 
 
 
@@ -468,6 +482,7 @@ poster_shannon1 <- ggplot(filter(otu_alphadiv,
                           fraction %in% c("WholePart", "WholeFree") & measure == "Shannon_Entropy"), 
        aes(y = mean, x = fraction)) +  
   ylab("Shannon Entropy") +   
+  #geom_errorbar(aes(ymin = mean - sd, ymax = mean + sd), alpha = 0.7) + # X-axis errorbars
   geom_jitter(size = 3, aes(color = fraction, fill = fraction), width = 0.2) + 
   geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(color = fraction, fill = fraction)) +
   scale_fill_manual(values = fraction_colors, 
@@ -531,6 +546,7 @@ poster_invsimps1 <-   ggplot(filter(otu_alphadiv,
                             norep_filter_name != "MOTEJ515" & norep_filter_name != "MOTEP515"), 
        aes(y = mean, x = fraction)) +
   ylab("Inverse Simpson") +   
+  #geom_errorbar(aes(ymin = mean - sd, ymax = mean + sd), alpha = 0.7) + # X-axis errorbars
   geom_jitter(size = 3, aes(color = fraction, fill = fraction), width = 0.2) + 
   geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(color = fraction, fill = fraction)) +
   scale_fill_manual(values = fraction_colors, 
@@ -592,6 +608,7 @@ poster_simpseven1 <-   ggplot(filter(otu_alphadiv,
                             norep_filter_name != "MOTEJ515" & norep_filter_name != "MOTEP515"), 
        aes(y = mean, x = fraction)) +
   ylab("Simpson's Evenness") +   
+  #geom_errorbar(aes(ymin = mean - sd, ymax = mean + sd), alpha = 0.7) + # X-axis errorbars
   geom_jitter(size = 3, aes(color = fraction, fill = fraction), width = 0.2) + 
   geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(color = fraction, fill = fraction)) +
   scale_fill_manual(values = fraction_colors, 
@@ -678,7 +695,10 @@ summary(partprod_MLotu_rich)
 ```r
 # Plot 
 otu_rich_vegan <-  ggplot(ML_otu_rich_stats, aes(x=mean, y=frac_bacprod, color = fraction)) + 
-  geom_point(size = 3.5) + geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd)) + 
+  geom_point(size = 3.5) + 
+  geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd), alpha = 0.7) + # X-axis errorbars
+  # Y-axis errorbars
+  geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod),  alpha = 0.5) + 
   scale_color_manual(values = c("firebrick3","cornflowerblue"), 
                      limits = c("WholePart", "WholeFree"),
                      breaks=c("WholePart", "WholeFree"),
@@ -753,7 +773,10 @@ summary(partprod_MLotu_shannon)
 ```r
 # Plot 
 otu_shannon_vegan <- ggplot(ML_otu_shannon_stats, aes(x=mean, y=frac_bacprod, color = fraction)) + 
-  geom_point(size = 3.5) + geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd)) + 
+  geom_point(size = 3.5) + 
+  geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd), alpha = 0.7) + # X-axis errorbars
+  # Y-axis errorbars
+  geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod),  alpha = 0.5) + 
   scale_color_manual(values = c("firebrick3","cornflowerblue"), 
                      limits = c("WholePart", "WholeFree"),
                      breaks=c("WholePart", "WholeFree"),
@@ -828,7 +851,10 @@ summary(partprod_MLotu_invsimps)
 ```r
 # Plot Simpson's Evenness
 otu_invsimps_vegan <- ggplot(ML_otu_invsimps_stats, aes(x=mean, y=frac_bacprod, color = fraction)) + 
-  geom_point(size = 3.5) + geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd)) + 
+  geom_point(size = 3.5) +  
+  geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd), alpha = 0.7) + # X-axis errorbars
+  # Y-axis errorbars
+  geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod),  alpha = 0.5) + 
   scale_color_manual(values = c("firebrick3","cornflowerblue"), 
                      limits = c("WholePart", "WholeFree"),
                      breaks=c("WholeFree", "WholePart"),
@@ -904,7 +930,10 @@ summary(partprod_MLotu_simpseven)
 ```r
 # Plot 
 otu_simpseven_vegan <- ggplot(ML_otu_simpseven_stats, aes(x=mean, y=frac_bacprod, color = fraction)) + 
-  geom_point(size = 3.5) +
+  geom_point(size = 3.5) +  
+  geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd), alpha = 0.7) + # X-axis errorbars
+  # Y-axis errorbars
+  geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod),  alpha = 0.5) + 
   scale_color_manual(values = c("firebrick3","cornflowerblue"), 
                      limits = c("WholePart", "WholeFree"),
                      breaks=c("WholeFree", "WholePart"),
