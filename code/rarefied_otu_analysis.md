@@ -22,6 +22,7 @@ library(tidyr)
 library(dplyr)
 library(cowplot)
 library(picante) # Will also include ape and vegan 
+library(car) # For residual analysis
 source("Muskegon_functions.R")
 source("set_colors.R")
 ```
@@ -955,6 +956,155 @@ otu_simpseven_vegan <- ggplot(ML_otu_simpseven_stats, aes(x=mean, y=frac_bacprod
 #                       align = "h", nrow = 2, ncol = 2)
 #otu_vegan
 ```
+
+
+## Residual Analysis 
+
+```r
+##########################################################################
+#############################   RESIDUALS   ##############################
+##########################################################################
+
+######################################################### RICHNESS
+# Residual analysis of the RICHNESS Models
+plot_residuals(lm_model = partprod_MLotu_rich, 
+               lm_observed_y = filter(ML_otu_rich_stats, fraction == "WholePart")$frac_bacprod)
+```
+
+<img src="Rarefied_Figures/check-lm-residuals-1.png" style="display: block; margin: auto;" />
+
+```r
+######################################################### SHANNON ENTROPY
+# Residual analysis of the SHANNON ENTROPY Models
+plot_residuals(lm_model = partprod_MLotu_shannon, 
+               lm_observed_y = filter(ML_otu_shannon_stats, fraction == "WholePart")$frac_bacprod)
+```
+
+<img src="Rarefied_Figures/check-lm-residuals-2.png" style="display: block; margin: auto;" />
+
+```r
+######################################################### INVERSE SIMPSON
+# Residual analysis of the INVERSE SIMPSON Models
+plot_residuals(lm_model = partprod_MLotu_invsimps, 
+               lm_observed_y = filter(ML_otu_invsimps_stats, fraction == "WholePart")$frac_bacprod)
+```
+
+<img src="Rarefied_Figures/check-lm-residuals-3.png" style="display: block; margin: auto;" />
+
+```r
+######################################################### SIMPSONS EVENNESS
+# Residual analysis of the INVERSE SIMPSON Models
+plot_residuals(lm_model = partprod_MLotu_simpseven, 
+               lm_observed_y = filter(ML_otu_simpseven_stats, fraction == "WholePart")$frac_bacprod)
+```
+
+<img src="Rarefied_Figures/check-lm-residuals-4.png" style="display: block; margin: auto;" />
+
+
+## Correlations 
+
+
+```r
+##########################################################################
+###########################   CORRELATIONS   #############################
+##########################################################################
+# RICHNESS vs SHANNON
+cor(filter(ML_otu_rich_stats, fraction == "WholePart")$mean,
+    filter(ML_otu_shannon_stats, fraction == "WholePart")$mean) # YES
+```
+
+```
+## [1] 0.961703
+```
+
+```r
+# SHANNON VS INVERSE SIMPSON
+cor(filter(ML_otu_shannon_stats, fraction == "WholePart")$mean,
+    filter(ML_otu_invsimps_stats, fraction == "WholePart")$mean) # YES
+```
+
+```
+## [1] 0.9682435
+```
+
+```r
+# INVERSE SIMPSON VS SIMPSONS EVENNESS
+cor(filter(ML_otu_invsimps_stats, fraction == "WholePart")$mean,
+    filter(ML_otu_simpseven_stats, fraction == "WholePart")$mean) # YES
+```
+
+```
+## [1] 0.9284642
+```
+
+```r
+# SIMPSONS EVENNESS VS RICHNESS
+cor(filter(ML_otu_simpseven_stats, fraction == "WholePart")$mean,
+    filter(ML_otu_rich_stats, fraction == "WholePart")$mean) # YES
+```
+
+```
+## [1] 0.7683792
+```
+
+
+## Post-hoc analysis 
+
+```r
+# Are the fractions different from each other in predicting fraction production?
+lm_by_divmeasure <- lm(frac_bacprod ~ mean/measure, data=otu_alphadiv)
+summary(lm_by_divmeasure)
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mean/measure, data = otu_alphadiv)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -15.504 -11.818  -5.381   9.078  46.809 
+## 
+## Coefficients:
+##                                Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)                   14.786690   3.548610   4.167 4.71e-05 ***
+## mean                           0.004952   0.010170   0.487    0.627    
+## mean:measureSimpsons_Evenness 32.272480  45.724725   0.706    0.481    
+## mean:measureShannon_Entropy    0.470810   0.940750   0.500    0.617    
+## mean:measureInverse_Simpson    0.063010   0.099439   0.634    0.527    
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 15.07 on 187 degrees of freedom
+##   (88 observations deleted due to missingness)
+## Multiple R-squared:  0.00297,	Adjusted R-squared:  -0.01836 
+## F-statistic: 0.1393 on 4 and 187 DF,  p-value: 0.9675
+```
+
+```r
+# Run a post-hoc test
+library(multcomp)
+post_hoc_measure <- glht(lm_by_divmeasure, linfct = mcp(measure = "Tukey", interaction_average=TRUE),
+                vcov=vcovHC(lm_by_divmeasure, type = "HC0"))
+```
+
+```
+## Error in glht.mcp(lm_by_divmeasure, linfct = mcp(measure = "Tukey", interaction_average = TRUE), : could not find function "vcovHC"
+```
+
+```r
+summary(post_hoc_measure)
+```
+
+```
+## Error in summary(post_hoc_measure): object 'post_hoc_measure' not found
+```
+
+```r
+detach("package:multcomp", unload=TRUE) # This package masks the dplyr select function = :(
+```
+
+
 
 
 

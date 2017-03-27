@@ -52,6 +52,7 @@ library(tidyr)
 library(dplyr)
 library(cowplot)
 library(picante) # Will also include ape and vegan 
+library(car) # For residual analysis
 source("Muskegon_functions.R")
 source("set_colors.R")
 ```
@@ -673,6 +674,79 @@ otu_simpseven_vegan <- ggplot(ML_otu_simpseven_stats, aes(x=mean, y=frac_bacprod
 #                       align = "h", nrow = 2, ncol = 2)
 #otu_vegan
 ```
+
+
+## Residual Analysis 
+```{r check-lm-residuals, fig.width = 12, fig.height = 4, dependson = "plot-vegan-fracprod"}
+##########################################################################
+#############################   RESIDUALS   ##############################
+##########################################################################
+
+######################################################### RICHNESS
+# Residual analysis of the RICHNESS Models
+plot_residuals(lm_model = partprod_MLotu_rich, 
+               lm_observed_y = filter(ML_otu_rich_stats, fraction == "WholePart")$frac_bacprod)
+
+
+######################################################### SHANNON ENTROPY
+# Residual analysis of the SHANNON ENTROPY Models
+plot_residuals(lm_model = partprod_MLotu_shannon, 
+               lm_observed_y = filter(ML_otu_shannon_stats, fraction == "WholePart")$frac_bacprod)
+
+
+######################################################### INVERSE SIMPSON
+# Residual analysis of the INVERSE SIMPSON Models
+plot_residuals(lm_model = partprod_MLotu_invsimps, 
+               lm_observed_y = filter(ML_otu_invsimps_stats, fraction == "WholePart")$frac_bacprod)
+
+
+######################################################### SIMPSONS EVENNESS
+# Residual analysis of the INVERSE SIMPSON Models
+plot_residuals(lm_model = partprod_MLotu_simpseven, 
+               lm_observed_y = filter(ML_otu_simpseven_stats, fraction == "WholePart")$frac_bacprod)
+```
+
+
+## Correlations 
+
+```{r correlations, dependson = "plot-vegan-fracprod"}
+##########################################################################
+###########################   CORRELATIONS   #############################
+##########################################################################
+# RICHNESS vs SHANNON
+cor(filter(ML_otu_rich_stats, fraction == "WholePart")$mean,
+    filter(ML_otu_shannon_stats, fraction == "WholePart")$mean) # YES
+
+# SHANNON VS INVERSE SIMPSON
+cor(filter(ML_otu_shannon_stats, fraction == "WholePart")$mean,
+    filter(ML_otu_invsimps_stats, fraction == "WholePart")$mean) # YES
+
+# INVERSE SIMPSON VS SIMPSONS EVENNESS
+cor(filter(ML_otu_invsimps_stats, fraction == "WholePart")$mean,
+    filter(ML_otu_simpseven_stats, fraction == "WholePart")$mean) # YES
+
+# SIMPSONS EVENNESS VS RICHNESS
+cor(filter(ML_otu_simpseven_stats, fraction == "WholePart")$mean,
+    filter(ML_otu_rich_stats, fraction == "WholePart")$mean) # YES
+
+```
+
+
+## Post-hoc analysis 
+```{r post-hoc, dependson="vean-otu-alphadiv-calc"}
+# Are the fractions different from each other in predicting fraction production?
+lm_by_divmeasure <- lm(frac_bacprod ~ mean/measure, data=otu_alphadiv)
+summary(lm_by_divmeasure)
+
+# Run a post-hoc test
+library(multcomp)
+post_hoc_measure <- glht(lm_by_divmeasure, linfct = mcp(measure = "Tukey", interaction_average=TRUE),
+                vcov=vcovHC(lm_by_divmeasure, type = "HC0"))
+summary(post_hoc_measure)
+detach("package:multcomp", unload=TRUE) # This package masks the dplyr select function = :(
+```
+
+
 
 
 

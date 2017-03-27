@@ -391,3 +391,53 @@ show_otu <- function(dataframe, nrow = 10, ncol = 10){
 #################################################################################### 7
 #################################################################################### 7
 
+
+#################################################################################### 8
+#################################################################################### 8
+# This function was originally written by Ruben Props and further modified by marian
+
+# This function takes in a linear model output and a dataframe to do an analysis of 
+# the residual and predicted values.
+      # INPUT
+      # 1. Linear model object from lm() 
+      # 2. vector of observed values (y-variable)
+
+plot_residuals <- function(lm_model, lm_observed_y){
+  
+  # set seed
+  set.seed(777)
+  
+  # Make a 3 paneled plot
+  par(mfrow=c(1,3))
+  
+  # 1st plot:  A qqplot
+  qqPlot(lm_model, col="blue", reps=10000, 
+         ylab="Studentized residuals", 
+         xlab="Theoretical quantiles (t-distribution)",
+         cex=1.5, las=1)
+  
+  # 2nd plot: Predicted values vs pearson residuals
+  plot(y=residuals(lm_model,"pearson"), x=predict(lm_model), col="blue",
+       las=1,ylab="Pearson residuals", xlab="Predicted values", cex=1.5)
+  # Draw a line at y=0
+  lines(x=c(0,25), y=c(0,0), lty=2)
+  
+  # 3rd plot: Predicted values vs. Observed Variables
+  plot(y=lm_observed_y, x=predict(lm_model), col="blue",
+       ylab="Observed values",
+       xlab="Predicted values", cex=1.5,
+       las=1)
+  # draw a 1:1 line
+  abline(a = 0, b = 1, lty=2)
+
+ }
+
+
+#################################################################################### 8
+#################################################################################### 8
+
+
+
+
+
+
