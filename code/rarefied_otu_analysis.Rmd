@@ -588,8 +588,8 @@ otu_shannon_vegan <- ggplot(ML_otu_shannon_stats, aes(x=mean, y=frac_bacprod, co
   geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod),  alpha = 0.5) + 
   scale_color_manual(values = c("firebrick3","cornflowerblue"), 
                      limits = c("WholePart", "WholeFree"),
-                     breaks=c("WholePart", "WholeFree"),
-                     labels=c("Particle", "Free")) + 
+                     breaks=c("WholeFree", "WholePart"),
+                     labels=c("Free-Living", "Particle-Associated")) + 
   ylab("Secondary Production (μgC/L/hr)") + xlab("Shannon Entropy") +
   scale_x_continuous(limits = c(3.4, 5.85), breaks = c(3.5, 4, 4.5, 5, 5.5)) + 
   geom_smooth(data=subset(ML_otu_shannon_stats, fraction == "WholePart"), method='lm') + 
@@ -702,6 +702,47 @@ plot_grid(poster_rich1 + xlab("Fraction \n") + ylab("Observed Richness") +
           otu_simpseven_vegan + theme(legend.position = "none"), 
           labels = c("A", "B", "C", "D", "E", "F", "G", "H"),
           ncol = 4, nrow = 2)
+```
+
+
+
+```{r rich-and-invsimps, warning=FALSE, fig.width = 8, fig.height = 7, dependson= c("boxplot-diversity-comparison","plot-vegan-fracprod")}
+plot_grid(poster_rich1 + xlab("\n Fraction \n") + ylab("Observed Richness") + 
+                theme(legend.position = "none", axis.text.y = element_blank()) +coord_flip() +
+                annotate("text", x=1.5, y=700, fontface = "bold",  size = 4, color = "gray40",
+                          label= paste("***\np =", round(rich_wilcox$p.value, digits = 3))), 
+          poster_invsimps1 + xlab("\n Fraction \n") + ylab("Inverse Simpson") + 
+                theme(legend.position = c(0.78, 0.90), 
+                      axis.text.y = element_blank(), 
+                      legend.title = element_blank()) +
+                coord_flip() +
+                annotate("text", x=1.5, y=78, fontface = "bold",  size = 4, color = "gray40",
+                          label= paste("NS\np =", round(simpson_wilcox$p.value, digits = 2))), 
+          otu_rich_vegan +  ylab("Heterotrophic Production \n(μgC/L/hr)") + 
+                theme(legend.position = "none"), 
+          otu_invsimps_vegan + ylab("Heterotrophic Production \n(μgC/L/hr)") +
+                theme(legend.position = c(0.7, 0.80)), 
+          labels = c("A", "B", "C", "D"),
+          ncol = 2, nrow = 2)
+```
+
+```{r shannon-and-simpseven, warning=FALSE, fig.width = 8, fig.height = 7, dependson= c("boxplot-diversity-comparison","plot-vegan-fracprod")}
+plot_grid(poster_shannon1 + xlab("\n Fraction  \n") + ylab("Shannon Entropy") + 
+                theme(legend.position = c(0.78, 0.90), axis.text.y = element_blank()) +
+                coord_flip() +
+                annotate("text", x=1.5, y=5.45, fontface = "bold",  size = 4, color = "gray40",
+                          label= paste("**\np =", round(shannon_wilcox$p.value, digits = 3))),  
+          poster_simpseven1 + xlab("\n Fraction \n") + ylab("Simpson's Evenness") + 
+                theme(legend.position = "none", axis.text.y = element_blank()) +
+                coord_flip() +
+                annotate("text", x=1.5, y=0.135, fontface = "bold",  size = 4, color = "gray40",
+                          label= paste("NS\np =", round(simpseven_wilcox$p.value, digits = 2))), 
+          otu_shannon_vegan + ylab("Heterotrophic Production \n(μgC/L/hr)") + 
+                theme(legend.position = c(0.7, 0.75)), 
+          otu_simpseven_vegan + ylab("Heterotrophic Production \n(μgC/L/hr)") + 
+                theme(legend.position = "none"), 
+          labels = c("A", "B", "C", "D"),
+          ncol = 2, nrow = 2)
 ```
 
 
@@ -1024,6 +1065,8 @@ plot_grid(expshannon_fracprod, expshannon_fracprod_percell, expshannon_combined,
 
 
 ```
+
+
 
 ## Congruency between fractions 
 ```{r frac-congruency, fig.width=4, fig.height=4, dependson="subset-diversity"}
