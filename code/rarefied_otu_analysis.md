@@ -2176,7 +2176,9 @@ stopifnot(nrow(dplyr::filter(bray, samp1 == samp2)) == 0)
 ##  Add productivity data to bray dataframe
 prod_data <- sample_data(productivity_scale) %>%
   dplyr::select(norep_filter_name, frac_bacprod) %>%
-  mutate(frac_bacprod = round(frac_bacprod, digits = 1))
+  mutate(frac_bacprod = round(frac_bacprod, digits = 1),
+         samp1 = norep_filter_name) %>%
+  dplyr::select(-norep_filter_name)
 ```
 
 ```
@@ -2184,23 +2186,240 @@ prod_data <- sample_data(productivity_scale) %>%
 ```
 
 ```r
-bray %>%
-  mutate(frac_prod1 = ifelse(samp1 == prod_data, NA, fracprod_per_cell))
+# Add fraction production for sample1
+bray_frac1 <- right_join(bray, prod_data, by = "samp1") %>%
+  rename(frac_prod1 = frac_bacprod)
 ```
 
 ```
-## Warning in ifelse(structure(c(2L, 3L, 4L, 5L, 6L, 7L, 8L, 9L, 10L, 11L, : Incompatible methods ("Ops.factor", "Ops.data.frame") for "=="
+## Warning in right_join_impl(x, y, by$x, by$y, suffix$x, suffix$y): joining factor and character vector, coercing into character vector
+```
+
+```r
+# Add fraction production for sample2
+bray_final <- right_join(bray_frac1, rename(prod_data, samp2 = samp1), by = "samp2") %>%
+  rename(frac_prod2 = frac_bacprod) %>%
+  mutate(delta_frac_bacprod = abs(frac_prod1 - frac_prod2),
+         filter_match = ifelse(filter1 == filter2, filter1, "diff_filter"))
 ```
 
 ```
-## Error in eval(expr, envir, enclos): comparison of these types is not implemented
+## Warning in right_join_impl(x, y, by$x, by$y, suffix$x, suffix$y): joining factor and character vector, coercing into character vector
+```
+
+```r
+ggplot(bray_final, aes(x = value, y = delta_frac_bacprod, color = filter_match)) +
+  geom_point() +
+  facet_grid(.~filter_match) + 
+  xlab("Bray-Curtis Dissimilarity") + ylab("Difference Fraction Productvity") +
+  geom_smooth() +
+  theme(legend.position = c(0.9, 0.85),legend.title = element_blank())
+```
+
+<img src="Rarefied_Figures/calculate-bray-curtis-1.png" style="display: block; margin: auto;" />
+
+```r
+#### Difference between filter comparisons?
+bray_kruskal <- kruskal.test(value ~ as.factor(filter_match), data = bray_final)
+bray_kruskal
+```
+
+```
+## 
+## 	Kruskal-Wallis rank sum test
+## 
+## data:  value by as.factor(filter_match)
+## Kruskal-Wallis chi-squared = 208.69, df = 2, p-value < 2.2e-16
+```
+
+```r
+library(pgirmess)
+library(multcompView)
+
+bray_kruskal_MC <- kruskalmc(bray_final$value ~ bray_final$filter_match)  ## Defaults to P < 0.05
+#print(bray_prod_KW_MC)
+### Time to figure out letters to represent significance in a plot
+bray_test <- bray_kruskal_MC$dif.com$difference # select logical vector
+names(bray_test) <- row.names(bray_kruskal_MC$dif.com) # add comparison names
+# create a list with "homogenous groups" coded by letter
+bray_letters <- multcompLetters(bray_test, compare="<", threshold=0.05, 
+                                 Letters=c(letters, LETTERS, "."), reversed = FALSE)
+###  Extract the values from the multcompLetters object
+bray_sigs_dataframe <-  data.frame(as.vector(names(bray_letters$Letters)), as.vector(bray_letters$Letters))
+colnames(bray_sigs_dataframe) <- c("filter_match", "siglabel")
+bray_try <- left_join(bray_final, bray_sigs_dataframe, by = "filter_match")
+```
+
+```
+## Warning in left_join_impl(x, y, by$x, by$y, suffix$x, suffix$y): joining factor and character vector, coercing into character vector
+```
+
+```r
+bray_sigs <- bray_try %>%
+  dplyr::select(filter_match, siglabel) %>%
+  distinct()
+
+bray_box <- ggplot(bray_try, aes(y = value, x = filter_match, color = filter_match, fill = filter_match)) +
+  geom_boxplot(alpha = 0.3) + geom_jitter(size = 3) + 
+  scale_y_continuous(limits = c(0.1, 0.95), breaks = c(0.1, 0.3, 0.5, 0.7, 0.9)) +
+  geom_text(data = bray_sigs, aes(label = siglabel, x = filter_match, y = 0.95), size =5, color = "black") +
+  ylab("Bray-Curtis Dissimilarity") + xlab("Filter Comparison") +
+  ggtitle("Bray-Curtis") + 
+  theme(legend.position = "none")
 ```
 
 
 
 
+```r
+soren_productivity_otu <- vegdist(data.frame(otu_table(productivity_scale)), method = "bray", binary = TRUE)
+
+# Melt the soren curtis distance to a dataframe
+soren <- reshape2::melt(as.matrix(soren_productivity_otu), varnames = c("samp1", "samp2"))
+soren <- subset(soren, value > 0) # Remove the samples compared to themselves
 
 
+soren$lakesite1 <- substr(soren$samp1,2,3) # Create a new column called lakenames1 with first 3 letters of string
+soren$lakesite2 <- substr(soren$samp2,2,3) # Create a new column called lakenames2 with first 3 letters of string
+soren$limnion1 <- substr(soren$samp1, 4, 4) # Create a column called limnon1 with hypo or epi
+soren$limnion2 <- substr(soren$samp2, 4, 4) # Create a column called limnon2 with hypo or epi
+soren$filter1 <- substr(soren$samp1, 5, 5)  # Create a column called filter1 with PA or FL
+soren$filter2 <- substr(soren$samp2, 5, 5) # Create a column called filter2 with PA or FL
+soren$month1 <- substr(soren$samp1, 6, 6)  # Create a column called month1 with may, july, or september
+soren$month2 <- substr(soren$samp2, 6, 6) # Create a column called month2 with may, july, or september
+soren$year1 <- substr(soren$samp1, 7, 9) # Create a column called year1 with 2014 or 2015
+soren$year2 <- substr(soren$samp2, 7, 9) # Create a column called year2 with 2014 or 2015
+
+
+  # Depth in water column
+soren$limnion1 <- ifelse(soren$limnion1 == "E", "Top", NA)
+soren$limnion2 <- ifelse(soren$limnion2 == "E", "Top", NA)
+  
+# fraction Fraction
+soren$filter1 <- ifelse(soren$filter1 == "F", "Free", 
+                             ifelse(soren$filter1 == "P", "Particle",
+                                    ifelse(soren$filter1 == "J","WholePart",
+                                           ifelse(soren$filter1 == "K","WholeFree", NA))))
+soren$filter2 <- ifelse(soren$filter2 == "F", "Free", 
+                             ifelse(soren$filter2 == "P", "Particle",
+                                    ifelse(soren$filter2 == "J","WholePart",
+                                           ifelse(soren$filter2 == "K","WholeFree", NA))))
+
+
+# Stop calculations if sample1 is equal to sample2
+stopifnot(nrow(dplyr::filter(soren, samp1 == samp2)) == 0)
+
+
+##  Add productivity data to soren dataframe
+prod_data <- sample_data(productivity_scale) %>%
+  dplyr::select(norep_filter_name, frac_bacprod) %>%
+  mutate(frac_bacprod = round(frac_bacprod, digits = 1),
+         samp1 = norep_filter_name) %>%
+  dplyr::select(-norep_filter_name)
+```
+
+```
+## Warning in class(x) <- c("tbl_df", "tbl", "data.frame"): Setting class(x) to multiple strings ("tbl_df", "tbl", ...); result will no longer be an S4 object
+```
+
+```r
+# Add fraction production for sample1
+soren_frac1 <- right_join(soren, prod_data, by = "samp1") %>%
+  rename(frac_prod1 = frac_bacprod)
+```
+
+```
+## Warning in right_join_impl(x, y, by$x, by$y, suffix$x, suffix$y): joining factor and character vector, coercing into character vector
+```
+
+```r
+# Add fraction production for sample2
+soren_final <- right_join(soren_frac1, rename(prod_data, samp2 = samp1), by = "samp2") %>%
+  rename(frac_prod2 = frac_bacprod) %>%
+  mutate(delta_frac_bacprod = abs(frac_prod1 - frac_prod2),
+         filter_match = ifelse(filter1 == filter2, filter1, "diff_filter"))
+```
+
+```
+## Warning in right_join_impl(x, y, by$x, by$y, suffix$x, suffix$y): joining factor and character vector, coercing into character vector
+```
+
+```r
+ggplot(soren_final, aes(x = value, y = delta_frac_bacprod, color = filter_match)) +
+  geom_point() +
+  facet_grid(.~filter_match) + 
+  xlab("Sørensen Dissimilarity") + ylab("Difference Fraction Productvity") +
+  geom_smooth() +
+  theme(legend.position = c(0.9, 0.85),legend.title = element_blank())
+```
+
+<img src="Rarefied_Figures/soren-prod-1.png" style="display: block; margin: auto;" />
+
+```r
+###  Is there a difference in Sorensen Values between the different filter comparisons?
+soren_kruskal <- kruskal.test(value ~ as.factor(filter_match), data = soren_final)
+soren_kruskal
+```
+
+```
+## 
+## 	Kruskal-Wallis rank sum test
+## 
+## data:  value by as.factor(filter_match)
+## Kruskal-Wallis chi-squared = 99.955, df = 2, p-value < 2.2e-16
+```
+
+```r
+soren_kruskal_MC <- kruskalmc(soren_final$value ~ soren_final$filter_match)  ## Defaults to P < 0.05
+#print(soren_prod_KW_MC)
+### Time to figure out letters to represent significance in a plot
+soren_test <- soren_kruskal_MC$dif.com$difference # select logical vector
+names(soren_test) <- row.names(soren_kruskal_MC$dif.com) # add comparison names
+# create a list with "homogenous groups" coded by letter
+soren_letters <- multcompLetters(soren_test, compare="<", threshold=0.05, 
+                                 Letters=c(letters, LETTERS, "."), reversed = FALSE)
+###  Extract the values from the multcompLetters object
+soren_sigs_dataframe <-  data.frame(as.vector(names(soren_letters$Letters)), as.vector(soren_letters$Letters))
+colnames(soren_sigs_dataframe) <- c("filter_match", "siglabel")
+soren_try <- left_join(soren_final, soren_sigs_dataframe, by = "filter_match")
+```
+
+```
+## Warning in left_join_impl(x, y, by$x, by$y, suffix$x, suffix$y): joining factor and character vector, coercing into character vector
+```
+
+```r
+soren_sigs <- soren_try %>%
+  dplyr::select(filter_match, siglabel) %>%
+  distinct()
+
+soren_box <- ggplot(soren_try, aes(y = value, x = filter_match, color = filter_match, fill = filter_match)) +
+  geom_boxplot(alpha = 0.3) + geom_jitter(size = 3) + 
+  scale_y_continuous(limits = c(0.1, 0.95), breaks = c(0.1, 0.3, 0.5, 0.7, 0.9)) +
+  geom_text(data = soren_sigs, aes(label = siglabel, x = filter_match, y = 0.85), size =5, color = "black") +
+  ylab("Sørensen Dissimilarity") + xlab("Filter Comparison") +
+  ggtitle("Sørensen") + 
+  theme(legend.position = "none"); 
+
+
+
+soren_box <- ggplot(soren_try, aes(y = value, x = filter_match, color = filter_match, fill = filter_match)) +
+  geom_boxplot(alpha = 0.3) + geom_jitter(size = 3) + 
+  scale_y_continuous(limits = c(0.1, 0.95), breaks = c(0.1, 0.3, 0.5, 0.7, 0.9)) +
+  geom_text(data = soren_sigs, aes(label = siglabel, x = filter_match, y = 0.85), size =5, color = "black") +
+  ylab("Sørensen Dissimilarity") + xlab("Filter Comparison") +
+  ggtitle("Sørensen") + 
+  theme(legend.position = "none")
+```
+
+
+
+
+```r
+plot_grid(soren_box, bray_box, labels = c("A", "B"), ncol = 2)
+```
+
+<img src="Rarefied_Figures/beta-box-1.png" style="display: block; margin: auto;" />
 
 <!-- # Prefiltered Fraction Diversity-Production Analysis --> 
 
