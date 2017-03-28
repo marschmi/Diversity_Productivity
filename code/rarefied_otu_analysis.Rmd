@@ -78,7 +78,7 @@ row.names(df1) = df1$norep_filter_name
 
 # Remove tree because it's too computationally intensive
 otu_merged_musk_pruned <- merge_phyloseq(tax_table(otu_merged_musk_pruned), 
-                                         sample_data(otu_merged_musk_pruned), 
+                                         sample_data(df1), 
                                          otu_table(otu_merged_musk_pruned))
 otu_merged_musk_pruned
 
@@ -230,7 +230,7 @@ otu_alphadiv <- merge(otu_alpha, s, by = "norep_filter_name") %>%
 
 
 ## Subset Diversity Data 
-```{r subset-diversity, dependson = "vean-otu-alphadiv-calc"}
+```{r subset-diversity, dependson = c("load-data","vean-otu-alphadiv-calc")}
 ######################################################### RICHNESS
 # Subset only richness data 
 ML_otu_rich_stats <- filter(otu_alphadiv, measure == "Richness" & 
@@ -747,12 +747,10 @@ cor(filter(ML_otu_simpseven_stats, fraction == "WholePart")$mean,
 ## Post-hoc analysis 
 ```{r post-hoc, dependson="vean-otu-alphadiv-calc"}
 # Are the fractions different from each other in predicting fraction production?
-
 prod_fracprod_values <- subset(otu_alphadiv, limnion == "Top" & year == "2015" & 
-                          fraction %in% c("WholePart", "WholeFree") &
+                          fraction == "WholePart" &
                           measure == "Richness") %>%
-  dplyr::select(norep_filter_name, frac_bacprod) %>%
-  mutate(frac_bacprod = round(frac_bacprod, digits = 1))
+  dplyr::select(norep_filter_name, frac_bacprod) 
 
 # Create a matrix with the 4 different diversity values 
 prod_alpha <- subset(otu_alphadiv, limnion == "Top" & year == "2015" & 
@@ -776,7 +774,7 @@ gather_prod_alpha <- as.data.frame(scale_prod_alphadiv) %>%   # Make scaled valu
   gather(measure, mean, 2:5)                                  # Gather 4 columns and put values into 2
   
 # Put it all together into one dataframe with 4 columns: sample_name, measure, mean, frac_bacprod 
-prod_alpha_fracprod <- inner_join(gather_prod_alpha, prod_fracprod_values, by = "norep_filter_name")
+prod_alpha_fracprod <- inner_join(gather_prod_alpha, prod_fracprod_values, by = "norep_filter_name") 
 
 # Double check values from above models
 lm_by_divmeasure <- lm(frac_bacprod ~ mean/measure, data = prod_alpha_fracprod)
@@ -789,8 +787,6 @@ post_hoc_measure <- glht(lm_by_divmeasure, linfct = mcp(measure = "Tukey", inter
 summary(post_hoc_measure)
 detach("package:multcomp", unload=TRUE) # This package masks the dplyr select function = :(
 ```
-
-
 
 
 

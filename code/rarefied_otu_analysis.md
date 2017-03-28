@@ -66,7 +66,7 @@ row.names(df1) = df1$norep_filter_name
 
 # Remove tree because it's too computationally intensive
 otu_merged_musk_pruned <- merge_phyloseq(tax_table(otu_merged_musk_pruned), 
-                                         sample_data(otu_merged_musk_pruned), 
+                                         sample_data(df1), 
                                          otu_table(otu_merged_musk_pruned))
 otu_merged_musk_pruned
 ```
@@ -327,8 +327,8 @@ filter(otu_alphadiv, fraction %in% c("WholePart", "WholeFree") & measure == "Ric
 ## # A tibble: 2 × 2
 ##    fraction `mean(frac_bacprod)`
 ##      <fctr>                <dbl>
-## 1 WholePart              9.95449
-## 2 WholeFree             24.07018
+## 1 WholePart             9.958333
+## 2 WholeFree            24.058333
 ```
 
 ```r
@@ -384,8 +384,8 @@ filter(otu_alphadiv, fraction %in% c("WholePart", "WholeFree") & measure == "Ric
 ## # A tibble: 2 × 2
 ##    fraction `mean(fracprod_per_cell)`
 ##      <fctr>                     <dbl>
-## 1 WholePart              4.818158e-07
-## 2 WholeFree              3.869446e-08
+## 1 WholePart              4.816116e-07
+## 2 WholeFree              3.866798e-08
 ```
 
 ```r
@@ -679,16 +679,16 @@ summary(freeprod_ML_otu_rich)
 ## 
 ## Residuals:
 ##     Min      1Q  Median      3Q     Max 
-## -21.741 -12.261  -1.552   8.540  29.066 
+## -21.680 -12.277  -1.541   8.520  29.088 
 ## 
 ## Coefficients:
 ##             Estimate Std. Error t value Pr(>|t|)
-## (Intercept)  0.51721   18.32443   0.028    0.978
-## mean         0.08370    0.06275   1.334    0.212
+## (Intercept)  0.53767   18.32782   0.029    0.977
+## mean         0.08358    0.06277   1.332    0.213
 ## 
-## Residual standard error: 16.94 on 10 degrees of freedom
-## Multiple R-squared:  0.151,	Adjusted R-squared:  0.06612 
-## F-statistic: 1.779 on 1 and 10 DF,  p-value: 0.2119
+## Residual standard error: 16.95 on 10 degrees of freedom
+## Multiple R-squared:  0.1506,	Adjusted R-squared:  0.06568 
+## F-statistic: 1.773 on 1 and 10 DF,  p-value: 0.2125
 ```
 
 ```r
@@ -705,18 +705,18 @@ summary(partprod_MLotu_rich)
 ## 
 ## Residuals:
 ##     Min      1Q  Median      3Q     Max 
-## -6.9920 -3.6940 -0.5982  3.2391 11.3706 
+## -7.0263 -3.7207 -0.5858  3.2397 11.3728 
 ## 
 ## Coefficients:
 ##             Estimate Std. Error t value Pr(>|t|)   
-## (Intercept) -9.04480    5.47348  -1.652  0.12944   
-## mean         0.04179    0.01149   3.638  0.00455 **
+## (Intercept) -9.01778    5.47953  -1.646  0.13084   
+## mean         0.04174    0.01150   3.629  0.00462 **
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
-## Residual standard error: 5.673 on 10 degrees of freedom
-## Multiple R-squared:  0.5696,	Adjusted R-squared:  0.5265 
-## F-statistic: 13.23 on 1 and 10 DF,  p-value: 0.004553
+## Residual standard error: 5.679 on 10 degrees of freedom
+## Multiple R-squared:  0.5684,	Adjusted R-squared:  0.5253 
+## F-statistic: 13.17 on 1 and 10 DF,  p-value: 0.004617
 ```
 
 ```r
@@ -757,16 +757,16 @@ summary(freeprod_ML_otu_shannon)
 ## 
 ## Residuals:
 ##     Min      1Q  Median      3Q     Max 
-## -22.642  -8.587  -3.915   7.135  34.659 
+## -22.579  -8.609  -3.901   7.158  34.673 
 ## 
 ## Coefficients:
 ##             Estimate Std. Error t value Pr(>|t|)
-## (Intercept)   -31.96      67.18  -0.476    0.645
-## mean           13.97      16.71   0.836    0.422
+## (Intercept)   -31.90      67.19  -0.475    0.645
+## mean           13.95      16.71   0.835    0.423
 ## 
 ## Residual standard error: 17.78 on 10 degrees of freedom
-## Multiple R-squared:  0.06538,	Adjusted R-squared:  -0.02808 
-## F-statistic: 0.6995 on 1 and 10 DF,  p-value: 0.4225
+## Multiple R-squared:  0.06522,	Adjusted R-squared:  -0.02826 
+## F-statistic: 0.6977 on 1 and 10 DF,  p-value: 0.4231
 ```
 
 ```r
@@ -783,18 +783,18 @@ summary(partprod_MLotu_shannon)
 ## 
 ## Residuals:
 ##     Min      1Q  Median      3Q     Max 
-## -8.0980 -3.2043 -0.3301  1.3486 12.1080 
+## -8.1443 -3.2240 -0.3064  1.3478 12.1092 
 ## 
 ## Coefficients:
 ##             Estimate Std. Error t value Pr(>|t|)   
-## (Intercept)  -38.540     13.486  -2.858  0.01702 * 
-## mean          10.644      2.938   3.623  0.00467 **
+## (Intercept)  -38.477     13.500  -2.850  0.01725 * 
+## mean          10.631      2.941   3.615  0.00473 **
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
-## Residual standard error: 5.686 on 10 degrees of freedom
-## Multiple R-squared:  0.5676,	Adjusted R-squared:  0.5243 
-## F-statistic: 13.13 on 1 and 10 DF,  p-value: 0.004667
+## Residual standard error: 5.693 on 10 degrees of freedom
+## Multiple R-squared:  0.5664,	Adjusted R-squared:  0.5231 
+## F-statistic: 13.07 on 1 and 10 DF,  p-value: 0.004732
 ```
 
 ```r
@@ -835,16 +835,16 @@ summary(freeprod_ML_otu_invsimps)
 ## 
 ## Residuals:
 ##     Min      1Q  Median      3Q     Max 
-## -20.569 -10.734  -4.013   6.290  34.864 
+## -20.509 -10.752  -3.999   6.315  34.879 
 ## 
 ## Coefficients:
 ##             Estimate Std. Error t value Pr(>|t|)
-## (Intercept)   9.8575    15.6009   0.632    0.542
-## mean          0.5718     0.5935   0.963    0.358
+## (Intercept)   9.8660    15.6021   0.632    0.541
+## mean          0.5710     0.5935   0.962    0.359
 ## 
 ## Residual standard error: 17.59 on 10 degrees of freedom
-## Multiple R-squared:  0.08494,	Adjusted R-squared:  -0.006562 
-## F-statistic: 0.9283 on 1 and 10 DF,  p-value: 0.358
+## Multiple R-squared:  0.08471,	Adjusted R-squared:  -0.006819 
+## F-statistic: 0.9255 on 1 and 10 DF,  p-value: 0.3587
 ```
 
 ```r
@@ -861,18 +861,18 @@ summary(partprod_MLotu_invsimps)
 ## 
 ## Residuals:
 ##     Min      1Q  Median      3Q     Max 
-## -7.4169 -2.1453 -0.2015  0.9740  7.8468 
+## -7.4641 -2.1798 -0.1669  0.9857  7.8508 
 ## 
 ## Coefficients:
 ##             Estimate Std. Error t value Pr(>|t|)    
-## (Intercept) -0.12549    2.37217  -0.053 0.958852    
-## mean         0.26871    0.05264   5.105 0.000461 ***
+## (Intercept) -0.11137    2.37660  -0.047 0.963548    
+## mean         0.26844    0.05274   5.090 0.000471 ***
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
-## Residual standard error: 4.554 on 10 degrees of freedom
-## Multiple R-squared:  0.7227,	Adjusted R-squared:  0.6949 
-## F-statistic: 26.06 on 1 and 10 DF,  p-value: 0.0004608
+## Residual standard error: 4.562 on 10 degrees of freedom
+## Multiple R-squared:  0.7215,	Adjusted R-squared:  0.6937 
+## F-statistic: 25.91 on 1 and 10 DF,  p-value: 0.0004708
 ```
 
 ```r
@@ -914,16 +914,16 @@ summary(freeprod_ML_otu_simpseven)
 ## 
 ## Residuals:
 ##     Min      1Q  Median      3Q     Max 
-## -19.709 -12.801  -2.287   5.341  39.838 
+## -19.650 -12.823  -2.314   5.320  39.846 
 ## 
 ## Coefficients:
 ##             Estimate Std. Error t value Pr(>|t|)
-## (Intercept)    20.41      24.17   0.845    0.418
-## mean           41.29     266.14   0.155    0.880
+## (Intercept)    20.39      24.17   0.844    0.418
+## mean           41.35     266.13   0.155    0.880
 ## 
-## Residual standard error: 18.37 on 10 degrees of freedom
-## Multiple R-squared:  0.002401,	Adjusted R-squared:  -0.09736 
-## F-statistic: 0.02406 on 1 and 10 DF,  p-value: 0.8798
+## Residual standard error: 18.36 on 10 degrees of freedom
+## Multiple R-squared:  0.002409,	Adjusted R-squared:  -0.09735 
+## F-statistic: 0.02414 on 1 and 10 DF,  p-value: 0.8796
 ```
 
 ```r
@@ -940,18 +940,18 @@ summary(partprod_MLotu_simpseven)
 ## 
 ## Residuals:
 ##      Min       1Q   Median       3Q      Max 
-## -10.3301  -1.9616  -0.8216   1.2507  10.5267 
+## -10.3734  -1.9697  -0.8378   1.2650  10.5305 
 ## 
 ## Coefficients:
 ##             Estimate Std. Error t value Pr(>|t|)   
-## (Intercept)   -5.080      4.277  -1.188  0.26236   
-## mean         199.911     52.742   3.790  0.00354 **
+## (Intercept)   -5.057      4.282  -1.181   0.2650   
+## mean         199.656     52.810   3.781   0.0036 **
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
-## Residual standard error: 5.54 on 10 degrees of freedom
-## Multiple R-squared:  0.5896,	Adjusted R-squared:  0.5486 
-## F-statistic: 14.37 on 1 and 10 DF,  p-value: 0.003541
+## Residual standard error: 5.547 on 10 degrees of freedom
+## Multiple R-squared:  0.5884,	Adjusted R-squared:  0.5472 
+## F-statistic: 14.29 on 1 and 10 DF,  p-value: 0.003598
 ```
 
 ```r
@@ -1004,10 +1004,6 @@ plot_residuals(lm_model = partprod_MLotu_rich,
 # Residual analysis of the SHANNON ENTROPY Models
 plot_residuals(lm_model = partprod_MLotu_shannon, 
                lm_observed_y = filter(ML_otu_shannon_stats, fraction == "WholePart")$frac_bacprod)
-```
-
-```
-## Warning in rlm.default(x, y, weights, method = method, wt.method = wt.method, : 'rlm' failed to converge in 20 steps
 ```
 
 <img src="Rarefied_Figures/check-lm-residuals-2.png" style="display: block; margin: auto;" />
@@ -1082,33 +1078,83 @@ cor(filter(ML_otu_simpseven_stats, fraction == "WholePart")$mean,
 
 ```r
 # Are the fractions different from each other in predicting fraction production?
-lm_by_divmeasure <- lm(frac_bacprod ~ mean/measure, data=otu_alphadiv)
+prod_fracprod_values <- subset(otu_alphadiv, limnion == "Top" & year == "2015" & 
+                          fraction == "WholePart" &
+                          measure == "Richness") %>%
+  dplyr::select(norep_filter_name, frac_bacprod) 
+
+# Create a matrix with the 4 different diversity values 
+prod_alpha <- subset(otu_alphadiv, limnion == "Top" & year == "2015" & 
+                          fraction %in% c("WholePart", "WholeFree")) %>%
+  dplyr::select(norep_filter_name, measure, mean) %>%
+  spread(measure, mean)
+row.names(prod_alpha) <- prod_alpha$norep_filter_name
+prod_alpha$norep_filter_name = NULL
+prod_alpha <- as.matrix(prod_alpha)
+
+# Scale to a mean = 0 and  SD = 1
+scale_prod_alphadiv <- scale(prod_alpha)
+
+# Sanity Check
+colMeans(scale_prod_alphadiv)  # faster version of apply(scaled.dat, 2, mean)
+```
+
+```
+##          Richness Simpsons_Evenness   Shannon_Entropy   Inverse_Simpson 
+##     -1.827242e-16      1.590163e-16     -3.921921e-16      4.365721e-17
+```
+
+```r
+apply(scale_prod_alphadiv, 2, sd)
+```
+
+```
+##          Richness Simpsons_Evenness   Shannon_Entropy   Inverse_Simpson 
+##                 1                 1                 1                 1
+```
+
+```r
+# Melt the data frame to be in long format
+gather_prod_alpha <- as.data.frame(scale_prod_alphadiv) %>%   # Make scaled values a dataframe
+  tibble::rownames_to_column(var = "norep_filter_name") %>%   # Add the rownames to keep samplenames
+  gather(measure, mean, 2:5)                                  # Gather 4 columns and put values into 2
+  
+# Put it all together into one dataframe with 4 columns: sample_name, measure, mean, frac_bacprod 
+prod_alpha_fracprod <- inner_join(gather_prod_alpha, prod_fracprod_values, by = "norep_filter_name") 
+```
+
+```
+## Warning in inner_join_impl(x, y, by$x, by$y, suffix$x, suffix$y): joining character vector and factor, coercing into character vector
+```
+
+```r
+# Double check values from above models
+lm_by_divmeasure <- lm(frac_bacprod ~ mean/measure, data = prod_alpha_fracprod)
 summary(lm_by_divmeasure)
 ```
 
 ```
 ## 
 ## Call:
-## lm(formula = frac_bacprod ~ mean/measure, data = otu_alphadiv)
+## lm(formula = frac_bacprod ~ mean/measure, data = prod_alpha_fracprod)
 ## 
 ## Residuals:
 ##     Min      1Q  Median      3Q     Max 
-## -15.504 -11.818  -5.381   9.078  46.809 
+## -9.1328 -3.3521 -0.2908  2.0351 14.2938 
 ## 
 ## Coefficients:
-##                                Estimate Std. Error t value Pr(>|t|)    
-## (Intercept)                   14.786690   3.548610   4.167 4.71e-05 ***
-## mean                           0.004952   0.010170   0.487    0.627    
-## mean:measureSimpsons_Evenness 32.272480  45.724725   0.706    0.481    
-## mean:measureShannon_Entropy    0.470810   0.940750   0.500    0.617    
-## mean:measureInverse_Simpson    0.063010   0.099439   0.634    0.527    
+##                               Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)                     8.4117     0.8613   9.766 1.76e-12 ***
+## mean                            5.3755     1.2577   4.274 0.000104 ***
+## mean:measureRichness           -0.1873     1.8927  -0.099 0.921621    
+## mean:measureShannon_Entropy    -0.1670     1.8678  -0.089 0.929160    
+## mean:measureSimpsons_Evenness  -0.5105     1.8967  -0.269 0.789095    
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
-## Residual standard error: 15.07 on 187 degrees of freedom
-##   (88 observations deleted due to missingness)
-## Multiple R-squared:  0.00297,	Adjusted R-squared:  -0.01836 
-## F-statistic: 0.1393 on 4 and 187 DF,  p-value: 0.9675
+## Residual standard error: 5.526 on 43 degrees of freedom
+## Multiple R-squared:  0.5608,	Adjusted R-squared:  0.5199 
+## F-statistic: 13.73 on 4 and 43 DF,  p-value: 2.714e-07
 ```
 
 ```r
@@ -1116,34 +1162,23 @@ summary(lm_by_divmeasure)
 library(multcomp)
 post_hoc_measure <- glht(lm_by_divmeasure, linfct = mcp(measure = "Tukey", interaction_average=TRUE),
                 vcov=vcovHC(lm_by_divmeasure, type = "HC0"))
+```
+
+```
+## Error in mcp2matrix2(model, linfct = linfct, interaction_average = ia, : Variable(s) 'measure' of class 'character' is/are not contained as a factor in 'model'.
+```
+
+```r
 summary(post_hoc_measure)
 ```
 
 ```
-## 
-## 	 Simultaneous Tests for General Linear Hypotheses
-## 
-## Multiple Comparisons of Means: Tukey Contrasts
-## 
-## 
-## Fit: lm(formula = frac_bacprod ~ mean/measure, data = otu_alphadiv)
-## 
-## Linear Hypotheses:
-##                                           Estimate Std. Error t value Pr(>|t|)
-## Simpsons_Evenness - Richness == 0         32.27248   34.74205   0.929    0.678
-## Shannon_Entropy - Richness == 0            0.47081    0.76489   0.616    0.873
-## Inverse_Simpson - Richness == 0            0.06301    0.06688   0.942    0.669
-## Shannon_Entropy - Simpsons_Evenness == 0 -31.80167   34.29805  -0.927    0.679
-## Inverse_Simpson - Simpsons_Evenness == 0 -32.20947   34.70978  -0.928    0.679
-## Inverse_Simpson - Shannon_Entropy == 0    -0.40780    0.73326  -0.556    0.902
-## (Adjusted p values reported -- single-step method)
+## Error in summary(post_hoc_measure): object 'post_hoc_measure' not found
 ```
 
 ```r
 detach("package:multcomp", unload=TRUE) # This package masks the dplyr select function = :(
 ```
-
-
 
 
 
@@ -1243,19 +1278,19 @@ summary(freeprod_percell_ML_otu_rich)
 ##     fraction == "WholeFree"))
 ## 
 ## Residuals:
-##     Min      1Q  Median      3Q     Max 
-## -0.7056 -0.1326  0.0992  0.2334  0.4650 
+##      Min       1Q   Median       3Q      Max 
+## -0.70057 -0.13347  0.09905  0.23320  0.46523 
 ## 
 ## Coefficients:
 ##              Estimate Std. Error t value Pr(>|t|)    
-## (Intercept) -8.231139   0.392770 -20.957 1.36e-09 ***
-## mean         0.002332   0.001345   1.734    0.114    
+## (Intercept) -8.231303   0.392315 -20.981 1.34e-09 ***
+## mean         0.002332   0.001344   1.736    0.113    
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
-## Residual standard error: 0.3632 on 10 degrees of freedom
-## Multiple R-squared:  0.2311,	Adjusted R-squared:  0.1543 
-## F-statistic: 3.006 on 1 and 10 DF,  p-value: 0.1136
+## Residual standard error: 0.3627 on 10 degrees of freedom
+## Multiple R-squared:  0.2315,	Adjusted R-squared:  0.1547 
+## F-statistic: 3.013 on 1 and 10 DF,  p-value: 0.1133
 ```
 
 ```r
@@ -1272,18 +1307,18 @@ summary(partprod_percell_MLotu_rich)
 ## 
 ## Residuals:
 ##     Min      1Q  Median      3Q     Max 
-## -0.4778 -0.2188 -0.0434  0.1136  0.6824 
+## -0.4830 -0.2164 -0.0414  0.1123  0.6833 
 ## 
 ## Coefficients:
-##               Estimate Std. Error t value Pr(>|t|)    
-## (Intercept) -7.9295357  0.3569740 -22.213 3.59e-09 ***
-## mean         0.0026197  0.0007395   3.543  0.00629 ** 
+##              Estimate Std. Error t value Pr(>|t|)    
+## (Intercept) -7.927563   0.357240 -22.191 3.62e-09 ***
+## mean         0.002615   0.000740   3.534  0.00637 ** 
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
-## Residual standard error: 0.3628 on 9 degrees of freedom
-## Multiple R-squared:  0.5824,	Adjusted R-squared:  0.536 
-## F-statistic: 12.55 on 1 and 9 DF,  p-value: 0.006288
+## Residual standard error: 0.3631 on 9 degrees of freedom
+## Multiple R-squared:  0.5812,	Adjusted R-squared:  0.5347 
+## F-statistic: 12.49 on 1 and 9 DF,  p-value: 0.006373
 ```
 
 ```r
@@ -1320,18 +1355,18 @@ summary(freeprod_percell_ML_otu_shannon)
 ## 
 ## Residuals:
 ##      Min       1Q   Median       3Q      Max 
-## -0.73908 -0.12432  0.06301  0.16396  0.60637 
+## -0.73416 -0.12345  0.06239  0.16406  0.60638 
 ## 
 ## Coefficients:
 ##             Estimate Std. Error t value Pr(>|t|)    
-## (Intercept)  -9.3026     1.4662  -6.345 8.41e-05 ***
-## mean          0.4309     0.3646   1.182    0.265    
+## (Intercept)  -9.3048     1.4644  -6.354 8.31e-05 ***
+## mean          0.4314     0.3642   1.185    0.264    
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
-## Residual standard error: 0.388 on 10 degrees of freedom
-## Multiple R-squared:  0.1226,	Adjusted R-squared:  0.03482 
-## F-statistic: 1.397 on 1 and 10 DF,  p-value: 0.2646
+## Residual standard error: 0.3875 on 10 degrees of freedom
+## Multiple R-squared:  0.1231,	Adjusted R-squared:  0.03537 
+## F-statistic: 1.403 on 1 and 10 DF,  p-value: 0.2635
 ```
 
 ```r
@@ -1349,18 +1384,18 @@ summary(partprod_percell_MLotu_shannon)
 ## 
 ## Residuals:
 ##      Min       1Q   Median       3Q      Max 
-## -0.34887 -0.25847 -0.00133  0.03518  0.71166 
+## -0.35429 -0.25650  0.00058  0.03731  0.71258 
 ## 
 ## Coefficients:
 ##             Estimate Std. Error t value Pr(>|t|)    
-## (Intercept)  -9.7582     0.8571 -11.386  1.2e-06 ***
-## mean          0.6666     0.1869   3.567  0.00605 ** 
+## (Intercept)  -9.7528     0.8578 -11.369 1.22e-06 ***
+## mean          0.6654     0.1871   3.558  0.00614 ** 
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
-## Residual standard error: 0.3614 on 9 degrees of freedom
-## Multiple R-squared:  0.5857,	Adjusted R-squared:  0.5397 
-## F-statistic: 12.72 on 1 and 9 DF,  p-value: 0.006052
+## Residual standard error: 0.3617 on 9 degrees of freedom
+## Multiple R-squared:  0.5844,	Adjusted R-squared:  0.5382 
+## F-statistic: 12.66 on 1 and 9 DF,  p-value: 0.006143
 ```
 
 ```r
@@ -1398,18 +1433,18 @@ summary(freeprod_percell_ML_otu_invsimps)
 ## 
 ## Residuals:
 ##      Min       1Q   Median       3Q      Max 
-## -0.67727 -0.13613  0.01755  0.18500  0.59968 
+## -0.67225 -0.13709  0.01778  0.18505  0.59981 
 ## 
 ## Coefficients:
 ##             Estimate Std. Error t value Pr(>|t|)    
-## (Intercept) -8.05281    0.33073 -24.349 3.11e-10 ***
-## mean         0.01923    0.01258   1.528    0.157    
+## (Intercept) -8.05317    0.33033 -24.379 3.07e-10 ***
+## mean         0.01924    0.01257   1.531    0.157    
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
-## Residual standard error: 0.3729 on 10 degrees of freedom
-## Multiple R-squared:  0.1894,	Adjusted R-squared:  0.1083 
-## F-statistic: 2.336 on 1 and 10 DF,  p-value: 0.1574
+## Residual standard error: 0.3724 on 10 degrees of freedom
+## Multiple R-squared:  0.1898,	Adjusted R-squared:  0.1088 
+## F-statistic: 2.343 on 1 and 10 DF,  p-value: 0.1568
 ```
 
 ```r
@@ -1427,18 +1462,18 @@ summary(partprod_percell_MLotu_invsimps)
 ## 
 ## Residuals:
 ##      Min       1Q   Median       3Q      Max 
-## -0.29800 -0.18081 -0.11663  0.08102  0.56016 
+## -0.29755 -0.18187 -0.11572  0.07987  0.55970 
 ## 
 ## Coefficients:
 ##              Estimate Std. Error t value Pr(>|t|)    
-## (Intercept) -7.340126   0.157481 -46.610 4.82e-12 ***
-## mean         0.016480   0.003462   4.761  0.00103 ** 
+## (Intercept) -7.339445   0.157582 -46.576 4.85e-12 ***
+## mean         0.016461   0.003464   4.752  0.00104 ** 
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
-## Residual standard error: 0.2993 on 9 degrees of freedom
-## Multiple R-squared:  0.7158,	Adjusted R-squared:  0.6842 
-## F-statistic: 22.66 on 1 and 9 DF,  p-value: 0.001029
+## Residual standard error: 0.2995 on 9 degrees of freedom
+## Multiple R-squared:  0.715,	Adjusted R-squared:  0.6834 
+## F-statistic: 22.58 on 1 and 9 DF,  p-value: 0.001041
 ```
 
 ```r
@@ -1476,19 +1511,19 @@ summary(freeprod_percell_ML_otu_simpseven)
 ##     fraction == "WholeFree"))
 ## 
 ## Residuals:
-##     Min      1Q  Median      3Q     Max 
-## -0.6446 -0.2578  0.0211  0.1669  0.7773 
+##      Min       1Q   Median       3Q      Max 
+## -0.63959 -0.25702  0.02033  0.16632  0.77756 
 ## 
 ## Coefficients:
 ##             Estimate Std. Error t value Pr(>|t|)    
-## (Intercept)   -7.823      0.539 -14.513  4.8e-08 ***
-## mean           2.801      5.936   0.472    0.647    
+## (Intercept)  -7.8239     0.5385 -14.529 4.75e-08 ***
+## mean          2.8088     5.9300   0.474    0.646    
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
-## Residual standard error: 0.4096 on 10 degrees of freedom
-## Multiple R-squared:  0.02178,	Adjusted R-squared:  -0.07604 
-## F-statistic: 0.2227 on 1 and 10 DF,  p-value: 0.6471
+## Residual standard error: 0.4092 on 10 degrees of freedom
+## Multiple R-squared:  0.02194,	Adjusted R-squared:  -0.07586 
+## F-statistic: 0.2244 on 1 and 10 DF,  p-value: 0.6459
 ```
 
 ```r
@@ -1506,18 +1541,18 @@ summary(partprod_percell_MLotu_simpseven)
 ## 
 ## Residuals:
 ##      Min       1Q   Median       3Q      Max 
-## -0.45099 -0.20370 -0.08701  0.11225  0.58419 
+## -0.45012 -0.20162 -0.09284  0.11463  0.58351 
 ## 
 ## Coefficients:
 ##             Estimate Std. Error t value Pr(>|t|)    
-## (Intercept)  -7.6709     0.2715 -28.253 4.24e-10 ***
-## mean         12.9548     3.4302   3.777  0.00437 ** 
+## (Intercept)  -7.6694     0.2718 -28.222 4.28e-10 ***
+## mean         12.9334     3.4333   3.767  0.00444 ** 
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
-## Residual standard error: 0.3492 on 9 degrees of freedom
-## Multiple R-squared:  0.6131,	Adjusted R-squared:  0.5701 
-## F-statistic: 14.26 on 1 and 9 DF,  p-value: 0.004371
+## Residual standard error: 0.3495 on 9 degrees of freedom
+## Multiple R-squared:  0.6119,	Adjusted R-squared:  0.5688 
+## F-statistic: 14.19 on 1 and 9 DF,  p-value: 0.004437
 ```
 
 ```r
@@ -1573,19 +1608,19 @@ summary(total_prodpercell_rich)
 ##     fracprod_per_cell != Inf)))
 ## 
 ## Residuals:
-##     Min      1Q  Median      3Q     Max 
-## -0.8487 -0.2245  0.0577  0.2207  0.7277 
+##      Min       1Q   Median       3Q      Max 
+## -0.84389 -0.22579  0.05731  0.22144  0.72776 
 ## 
 ## Coefficients:
 ##               Estimate Std. Error t value Pr(>|t|)    
-## (Intercept) -8.4027594  0.2145671 -39.161  < 2e-16 ***
-## mean         0.0033662  0.0005434   6.195 3.81e-06 ***
+## (Intercept) -8.4022210  0.2145944 -39.154  < 2e-16 ***
+## mean         0.0033643  0.0005434   6.191 3.84e-06 ***
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
 ## Residual standard error: 0.3826 on 21 degrees of freedom
-## Multiple R-squared:  0.6463,	Adjusted R-squared:  0.6295 
-## F-statistic: 38.38 on 1 and 21 DF,  p-value: 3.808e-06
+## Multiple R-squared:  0.646,	Adjusted R-squared:  0.6292 
+## F-statistic: 38.33 on 1 and 21 DF,  p-value: 3.844e-06
 ```
 
 ```r
@@ -1616,18 +1651,18 @@ summary(total_prodpercell_shannon)
 ## 
 ## Residuals:
 ##      Min       1Q   Median       3Q      Max 
-## -1.01023 -0.15351 -0.02587  0.23804  0.84872 
+## -1.00531 -0.15315 -0.02546  0.23787  0.84866 
 ## 
 ## Coefficients:
 ##             Estimate Std. Error t value Pr(>|t|)    
-## (Intercept) -10.8281     0.7229 -14.979 1.11e-12 ***
-## mean          0.8575     0.1681   5.101 4.72e-05 ***
+## (Intercept) -10.8260     0.7229 -14.975 1.11e-12 ***
+## mean          0.8570     0.1681   5.098 4.76e-05 ***
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
 ## Residual standard error: 0.4299 on 21 degrees of freedom
-## Multiple R-squared:  0.5534,	Adjusted R-squared:  0.5322 
-## F-statistic: 26.02 on 1 and 21 DF,  p-value: 4.719e-05
+## Multiple R-squared:  0.5531,	Adjusted R-squared:  0.5318 
+## F-statistic: 25.99 on 1 and 21 DF,  p-value: 4.756e-05
 ```
 
 ```r
@@ -1658,18 +1693,18 @@ summary(total_prodpercell_simpson)
 ## 
 ## Residuals:
 ##      Min       1Q   Median       3Q      Max 
-## -0.95760 -0.26625 -0.04747  0.30807  0.98598 
+## -0.95272 -0.26613 -0.04815  0.30875  0.98582 
 ## 
 ## Coefficients:
 ##              Estimate Std. Error t value Pr(>|t|)    
-## (Intercept) -7.837452   0.173634 -45.138  < 2e-16 ***
-## mean         0.021713   0.004725   4.595 0.000157 ***
+## (Intercept) -7.837153   0.173640 -45.135  < 2e-16 ***
+## mean         0.021699   0.004725   4.592 0.000158 ***
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
-## Residual standard error: 0.4542 on 21 degrees of freedom
-## Multiple R-squared:  0.5014,	Adjusted R-squared:  0.4776 
-## F-statistic: 21.11 on 1 and 21 DF,  p-value: 0.0001567
+## Residual standard error: 0.4543 on 21 degrees of freedom
+## Multiple R-squared:  0.501,	Adjusted R-squared:  0.4773 
+## F-statistic: 21.09 on 1 and 21 DF,  p-value: 0.0001579
 ```
 
 ```r
@@ -1702,19 +1737,19 @@ summary(total_prodpercell_simpseven)
 ##     fracprod_per_cell != Inf))
 ## 
 ## Residuals:
-##      Min       1Q   Median       3Q      Max 
-## -1.07904 -0.43066  0.07355  0.35519  1.50111 
+##     Min      1Q  Median      3Q     Max 
+## -1.0740 -0.4307  0.0746  0.3555  1.5017 
 ## 
 ## Coefficients:
 ##             Estimate Std. Error t value Pr(>|t|)    
-## (Intercept)  -7.5192     0.4198 -17.912 3.36e-14 ***
-## mean          4.3198     4.9137   0.879    0.389    
+## (Intercept)  -7.5183     0.4197 -17.914 3.35e-14 ***
+## mean          4.3077     4.9126   0.877     0.39    
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
-## Residual standard error: 0.6318 on 21 degrees of freedom
-## Multiple R-squared:  0.0355,	Adjusted R-squared:  -0.01043 
-## F-statistic: 0.7729 on 1 and 21 DF,  p-value: 0.3893
+## Residual standard error: 0.6316 on 21 degrees of freedom
+## Multiple R-squared:  0.03532,	Adjusted R-squared:  -0.01062 
+## F-statistic: 0.7689 on 1 and 21 DF,  p-value: 0.3905
 ```
 
 ```r
@@ -1765,16 +1800,16 @@ summary(freeprod_expshannon)
 ## 
 ## Residuals:
 ##     Min      1Q  Median      3Q     Max 
-## -21.831 -10.032  -4.348   7.285  35.288 
+## -21.768 -10.068  -4.334   7.307  35.303 
 ## 
 ## Coefficients:
 ##             Estimate Std. Error t value Pr(>|t|)
-## (Intercept)  11.9560    16.6699   0.717    0.490
-## exp(mean)     0.2094     0.2740   0.764    0.462
+## (Intercept)   11.966     16.671   0.718    0.489
+## exp(mean)      0.209      0.274   0.763    0.463
 ## 
 ## Residual standard error: 17.87 on 10 degrees of freedom
-## Multiple R-squared:  0.05518,	Adjusted R-squared:  -0.0393 
-## F-statistic: 0.5841 on 1 and 10 DF,  p-value: 0.4624
+## Multiple R-squared:  0.05499,	Adjusted R-squared:  -0.03951 
+## F-statistic: 0.5819 on 1 and 10 DF,  p-value: 0.4632
 ```
 
 ```r
@@ -1792,18 +1827,18 @@ summary(partprod_expshannon)
 ## 
 ## Residuals:
 ##     Min      1Q  Median      3Q     Max 
-## -7.6328 -2.7344 -0.9818  1.9563 12.3093 
+## -7.6157 -2.7356 -0.9406  1.9685 12.3078 
 ## 
 ## Coefficients:
 ##             Estimate Std. Error t value Pr(>|t|)   
-## (Intercept)  0.16204    3.29910   0.049  0.96190   
-## exp(mean)    0.08538    0.02449   3.486  0.00687 **
+## (Intercept)  0.17313    3.30093   0.052  0.95932   
+## exp(mean)    0.08531    0.02450   3.482  0.00692 **
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
-## Residual standard error: 5.936 on 9 degrees of freedom
-## Multiple R-squared:  0.5746,	Adjusted R-squared:  0.5273 
-## F-statistic: 12.16 on 1 and 9 DF,  p-value: 0.006869
+## Residual standard error: 5.94 on 9 degrees of freedom
+## Multiple R-squared:  0.5739,	Adjusted R-squared:  0.5266 
+## F-statistic: 12.12 on 1 and 9 DF,  p-value: 0.006921
 ```
 
 ```r
@@ -1842,18 +1877,18 @@ summary(freeprod_percell_ML_otu_expshannon)
 ## 
 ## Residuals:
 ##      Min       1Q   Median       3Q      Max 
-## -0.71802 -0.15455  0.07673  0.16850  0.61743 
+## -0.71303 -0.15379  0.07661  0.16857  0.61752 
 ## 
 ## Coefficients:
 ##              Estimate Std. Error t value Pr(>|t|)    
-## (Intercept) -7.972211   0.362962 -21.964 8.57e-10 ***
-## exp(mean)    0.006868   0.005965   1.151    0.276    
+## (Intercept) -7.972668   0.362560 -21.990 8.47e-10 ***
+## exp(mean)    0.006872   0.005959   1.153    0.276    
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
-## Residual standard error: 0.3892 on 10 degrees of freedom
-## Multiple R-squared:  0.117,	Adjusted R-squared:  0.02875 
-## F-statistic: 1.326 on 1 and 10 DF,  p-value: 0.2764
+## Residual standard error: 0.3887 on 10 degrees of freedom
+## Multiple R-squared:  0.1174,	Adjusted R-squared:  0.02914 
+## F-statistic:  1.33 on 1 and 10 DF,  p-value: 0.2756
 ```
 
 ```r
@@ -1870,19 +1905,19 @@ summary(partprod_percell_MLotu_expshannon)
 ##     fraction == "WholePart" & fracprod_per_cell != Inf)))
 ## 
 ## Residuals:
-##      Min       1Q   Median       3Q      Max 
-## -0.37450 -0.20313 -0.12798  0.08723  0.71521 
+##     Min      1Q  Median      3Q     Max 
+## -0.3733 -0.2017 -0.1270  0.0861  0.7157 
 ## 
 ## Coefficients:
 ##              Estimate Std. Error t value Pr(>|t|)    
-## (Intercept) -7.337215   0.196190  -37.40 3.47e-11 ***
-## exp(mean)    0.005403   0.001456    3.71  0.00484 ** 
+## (Intercept) -7.336642   0.196165 -37.400 3.46e-11 ***
+## exp(mean)    0.005397   0.001456   3.707  0.00487 ** 
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
 ## Residual standard error: 0.353 on 9 degrees of freedom
-## Multiple R-squared:  0.6047,	Adjusted R-squared:  0.5607 
-## F-statistic: 13.77 on 1 and 9 DF,  p-value: 0.004844
+## Multiple R-squared:  0.6042,	Adjusted R-squared:  0.5603 
+## F-statistic: 13.74 on 1 and 9 DF,  p-value: 0.004868
 ```
 
 ```r
@@ -1918,18 +1953,18 @@ summary(combined_expshannon_percell)
 ## 
 ## Residuals:
 ##      Min       1Q   Median       3Q      Max 
-## -0.92928 -0.21787  0.01261  0.28579  0.84384 
+## -0.92439 -0.21873  0.01255  0.28770  0.84382 
 ## 
 ## Coefficients:
 ##              Estimate Std. Error t value Pr(>|t|)    
-## (Intercept) -7.813569   0.157920 -49.478  < 2e-16 ***
-## exp(mean)    0.007648   0.001533   4.989 6.15e-05 ***
+## (Intercept) -7.813435   0.157891 -49.486  < 2e-16 ***
+## exp(mean)    0.007645   0.001533   4.988 6.17e-05 ***
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
-## Residual standard error: 0.4352 on 21 degrees of freedom
-## Multiple R-squared:  0.5424,	Adjusted R-squared:  0.5206 
-## F-statistic: 24.89 on 1 and 21 DF,  p-value: 6.153e-05
+## Residual standard error: 0.4351 on 21 degrees of freedom
+## Multiple R-squared:  0.5423,	Adjusted R-squared:  0.5205 
+## F-statistic: 24.88 on 1 and 21 DF,  p-value: 6.169e-05
 ```
 
 ```r
@@ -2086,8 +2121,8 @@ adonis(productivity_bray ~ frac_bacprod, data = sampledf)
 ## Terms added sequentially (first to last)
 ## 
 ##              Df SumsOfSqs MeanSqs F.Model      R2 Pr(>F)   
-## frac_bacprod  1    0.7444 0.74444  4.1969 0.16021  0.004 **
-## Residuals    22    3.9024 0.17738         0.83979          
+## frac_bacprod  1    0.7430 0.74295  4.1869 0.15988  0.004 **
+## Residuals    22    3.9039 0.17745         0.84012          
 ## Total        23    4.6468                 1.00000          
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
