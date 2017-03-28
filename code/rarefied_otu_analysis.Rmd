@@ -31,7 +31,7 @@ knitr::opts_chunk$set(eval = TRUE,
                       echo = TRUE, 
                       cache = TRUE,
                       include = TRUE,
-                      warning = FALSE,
+                      warning = TRUE,
                       collapse = FALSE,
                       message = FALSE,
                       engine = "R", # Chunks will always have R code, unless noted
@@ -53,6 +53,7 @@ library(dplyr)
 library(cowplot)
 library(picante) # Will also include ape and vegan 
 library(car) # For residual analysis
+library(sandwich) # for vcovHC function in post-hoc test
 source("Muskegon_functions.R")
 source("set_colors.R")
 ```
@@ -66,8 +67,19 @@ load("../data/otu_merged_musk_pruned.RData")
 # The name of the phyloseq object is: 
 otu_merged_musk_pruned 
 
+# Productivity measurements are reliable only up to 1 decimal
+df1 <- sample_data(otu_merged_musk_pruned) %>% 
+  dplyr::mutate(tot_bacprod = round(tot_bacprod, digits = 1),
+                SD_tot_bacprod = round(SD_tot_bacprod, digits = 1),
+                frac_bacprod = round(frac_bacprod, digits = 1),
+                SD_frac_bacprod = round(SD_frac_bacprod, digits = 1))
+row.names(df1) = df1$norep_filter_name
+
+
 # Remove tree because it's too computationally intensive
-otu_merged_musk_pruned <- merge_phyloseq(tax_table(otu_merged_musk_pruned), sample_data(otu_merged_musk_pruned), otu_table(otu_merged_musk_pruned))
+otu_merged_musk_pruned <- merge_phyloseq(tax_table(otu_merged_musk_pruned), 
+                                         sample_data(otu_merged_musk_pruned), 
+                                         otu_table(otu_merged_musk_pruned))
 otu_merged_musk_pruned
 
 # Remove MOTHJ715 and MBRHP715
@@ -89,7 +101,7 @@ sums_otu <- make_metadata_norep(sums_otu)
 ## Add total sequences to metadata frame 
 metdf <- sample_data(otu_merged_musk_pruned_noMOTHJ715_MBRHP715)
 sums_otu$norep_filter_name <- sums_otu$names
-sums_otu2 <- select(sums_otu, norep_filter_name, Sample_TotalSeqs)
+sums_otu2 <- dplyr::select(sums_otu, norep_filter_name, Sample_TotalSeqs)
 metdf_num2 <- left_join(metdf, sums_otu2, by = "norep_filter_name") %>%
   dplyr::select(-one_of("D0", "D0_chao", "D1", "D2", "D0_SD", "D1_sd", "D0_chao_sd"))
 row.names(metdf_num2) <- metdf_num2$norep_filter_name
@@ -200,7 +212,7 @@ otu_simps_evenness <- inner_join(otu_rich_stats, otu_even_stats, by = "norep_fil
   mutate(mean = mean.y/mean.x,
          sd = sd(mean),
          measure = "Simpsons_Evenness") %>%
-  select(norep_filter_name, mean, sd, measure)
+  dplyr::select(norep_filter_name, mean, sd, measure)
 
 # Combine alpha diversity into one dataframe 
 otu_alpha <- rbind(otu_rich_stats, otu_even_stats, otu_simps_evenness, otu_shan_stats)
@@ -735,7 +747,39 @@ cor(filter(ML_otu_simpseven_stats, fraction == "WholePart")$mean,
 ## Post-hoc analysis 
 ```{r post-hoc, dependson="vean-otu-alphadiv-calc"}
 # Are the fractions different from each other in predicting fraction production?
-lm_by_divmeasure <- lm(frac_bacprod ~ mean/measure, data=otu_alphadiv)
+
+prod_fracprod_values <- subset(otu_alphadiv, limnion == "Top" & year == "2015" & 
+                          fraction %in% c("WholePart", "WholeFree") &
+                          measure == "Richness") %>%
+  dplyr::select(norep_filter_name, frac_bacprod) %>%
+  mutate(frac_bacprod = round(frac_bacprod, digits = 1))
+
+# Create a matrix with the 4 different diversity values 
+prod_alpha <- subset(otu_alphadiv, limnion == "Top" & year == "2015" & 
+                          fraction %in% c("WholePart", "WholeFree")) %>%
+  dplyr::select(norep_filter_name, measure, mean) %>%
+  spread(measure, mean)
+row.names(prod_alpha) <- prod_alpha$norep_filter_name
+prod_alpha$norep_filter_name = NULL
+prod_alpha <- as.matrix(prod_alpha)
+
+# Scale to a mean = 0 and  SD = 1
+scale_prod_alphadiv <- scale(prod_alpha)
+
+# Sanity Check
+colMeans(scale_prod_alphadiv)  # faster version of apply(scaled.dat, 2, mean)
+apply(scale_prod_alphadiv, 2, sd)
+
+# Melt the data frame to be in long format
+gather_prod_alpha <- as.data.frame(scale_prod_alphadiv) %>%   # Make scaled values a dataframe
+  tibble::rownames_to_column(var = "norep_filter_name") %>%   # Add the rownames to keep samplenames
+  gather(measure, mean, 2:5)                                  # Gather 4 columns and put values into 2
+  
+# Put it all together into one dataframe with 4 columns: sample_name, measure, mean, frac_bacprod 
+prod_alpha_fracprod <- inner_join(gather_prod_alpha, prod_fracprod_values, by = "norep_filter_name")
+
+# Double check values from above models
+lm_by_divmeasure <- lm(frac_bacprod ~ mean/measure, data = prod_alpha_fracprod)
 summary(lm_by_divmeasure)
 
 # Run a post-hoc test
@@ -1221,6 +1265,114 @@ ggplot(ML_otu_simpseven_stats, aes(x = mean, y = tot_bacprod)) +
   geom_smooth(method = "lm", data = filter(ML_otu_simpseven_stats, fraction == "WholePart")) +
   facet_grid(.~fraction)
 ```
+
+
+
+# Beta Diversity Analysis
+
+```{r scale-reads, dependson = "load-data"}
+scale_otu_merged_musk_pruned <- scale_reads(otu_merged_musk_pruned_noMOTHJ715_MBRHP715, round = "matround")
+scale_otu_merged_musk_pruned # ALL Samples phyloseq object
+
+
+# Check the sequencing depth of each sample 
+scaled_sums_otu <- data.frame(rowSums(otu_table(scale_otu_merged_musk_pruned)))
+colnames(scaled_sums_otu) <- "Sample_TotalSeqs"
+scaled_sums_otu$names <- row.names(scaled_sums_otu)
+scaled_sums_otu <- arrange(scaled_sums_otu, Sample_TotalSeqs) %>%
+  make_metadata_norep()
+
+##  Plot based on all samples 
+plot_sample_sums(dataframe = scaled_sums_otu, x_total_seqs = "Sample_TotalSeqs", fill_variable = "project")
+
+##  Plot based on depth of samples 
+plot_sample_sums(dataframe = scaled_sums_otu, x_total_seqs = "Sample_TotalSeqs", fill_variable = "limnion")
+
+##  Plot based on depth of samples WITHOUT SEDIMENT!
+plot_sample_sums(dataframe = filter(scaled_sums_otu, limnion != "Benthic"), 
+                 x_total_seqs = "Sample_TotalSeqs", fill_variable = "limnion")
+
+
+### Subset out samples that we only have productivity data for
+productivity_scale_int <- subset_samples(scale_otu_merged_musk_pruned, limnion == "Top" & year == "2015" & 
+                                           fraction %in% c("WholePart", "WholeFree"))
+
+productivity_scale <- prune_taxa(taxa_sums(productivity_scale_int) > 0, productivity_scale_int) 
+```
+
+
+```{r ordinate}
+productivity_bray <- phyloseq::distance(productivity_scale, method = "bray")
+
+# make a data frame from the sample_data
+sampledf <- data.frame(sample_data(productivity_scale))
+
+# Adonis test
+adonis(productivity_bray ~ frac_bacprod, data = sampledf)
+```
+
+
+
+
+```{r calculate-bray-curtis, dependson = "scale-reads"}
+scaled_productivity_otu_df <- as.matrix(otu_table(productivity_scale))
+
+bray_productivity_otu <- vegdist(scaled_productivity_otu_df, method = "bray", binary = FALSE, upper = TRUE)
+
+# Melt the bray curtis distance to a dataframe
+bray <- reshape2::melt(as.matrix(bray_productivity_otu), varnames = c("samp1", "samp2"))
+bray <- subset(bray, value > 0) # Remove the samples compared to themselves
+
+
+bray$lakesite1 <- substr(bray$samp1,2,3) # Create a new column called lakenames1 with first 3 letters of string
+bray$lakesite2 <- substr(bray$samp2,2,3) # Create a new column called lakenames2 with first 3 letters of string
+bray$limnion1 <- substr(bray$samp1, 4, 4) # Create a column called limnon1 with hypo or epi
+bray$limnion2 <- substr(bray$samp2, 4, 4) # Create a column called limnon2 with hypo or epi
+bray$filter1 <- substr(bray$samp1, 5, 5)  # Create a column called filter1 with PA or FL
+bray$filter2 <- substr(bray$samp2, 5, 5) # Create a column called filter2 with PA or FL
+bray$month1 <- substr(bray$samp1, 6, 6)  # Create a column called month1 with may, july, or september
+bray$month2 <- substr(bray$samp2, 6, 6) # Create a column called month2 with may, july, or september
+bray$year1 <- substr(bray$samp1, 7, 9) # Create a column called year1 with 2014 or 2015
+bray$year2 <- substr(bray$samp2, 7, 9) # Create a column called year2 with 2014 or 2015
+
+
+  # Depth in water column
+bray$limnion1 <- ifelse(bray$limnion1 == "E", "Top", NA)
+bray$limnion2 <- ifelse(bray$limnion2 == "E", "Top", NA)
+  
+# fraction Fraction
+bray$filter1 <- ifelse(bray$filter1 == "F", "Free", 
+                             ifelse(bray$filter1 == "P", "Particle",
+                                    ifelse(bray$filter1 == "J","WholePart",
+                                           ifelse(bray$filter1 == "K","WholeFree", NA))))
+bray$filter2 <- ifelse(bray$filter2 == "F", "Free", 
+                             ifelse(bray$filter2 == "P", "Particle",
+                                    ifelse(bray$filter2 == "J","WholePart",
+                                           ifelse(bray$filter2 == "K","WholeFree", NA))))
+
+
+# Stop calculations if sample1 is equal to sample2
+stopifnot(nrow(dplyr::filter(bray, samp1 == samp2)) == 0)
+
+
+##  Add productivity data to bray dataframe
+prod_data <- sample_data(productivity_scale) %>%
+  dplyr::select(norep_filter_name, frac_bacprod) %>%
+  mutate(frac_bacprod = round(frac_bacprod, digits = 1))
+
+
+bray %>%
+  mutate(frac_prod1 = ifelse(samp1 == prod_data, NA, fracprod_per_cell))
+
+
+
+
+```
+
+
+
+
+
 
 
 <!-- # Prefiltered Fraction Diversity-Production Analysis --> 

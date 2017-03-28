@@ -23,6 +23,7 @@ library(dplyr)
 library(cowplot)
 library(picante) # Will also include ape and vegan 
 library(car) # For residual analysis
+library(sandwich) # for vcovHC function in post-hoc test
 source("Muskegon_functions.R")
 source("set_colors.R")
 ```
@@ -47,8 +48,26 @@ otu_merged_musk_pruned
 ```
 
 ```r
+# Productivity measurements are reliable only up to 1 decimal
+df1 <- sample_data(otu_merged_musk_pruned) %>% 
+  dplyr::mutate(tot_bacprod = round(tot_bacprod, digits = 1),
+                SD_tot_bacprod = round(SD_tot_bacprod, digits = 1),
+                frac_bacprod = round(frac_bacprod, digits = 1),
+                SD_frac_bacprod = round(SD_frac_bacprod, digits = 1))
+```
+
+```
+## Warning in class(x) <- c("tbl_df", "tbl", "data.frame"): Setting class(x) to multiple strings ("tbl_df", "tbl", ...); result will no longer be an S4 object
+```
+
+```r
+row.names(df1) = df1$norep_filter_name
+
+
 # Remove tree because it's too computationally intensive
-otu_merged_musk_pruned <- merge_phyloseq(tax_table(otu_merged_musk_pruned), sample_data(otu_merged_musk_pruned), otu_table(otu_merged_musk_pruned))
+otu_merged_musk_pruned <- merge_phyloseq(tax_table(otu_merged_musk_pruned), 
+                                         sample_data(otu_merged_musk_pruned), 
+                                         otu_table(otu_merged_musk_pruned))
 otu_merged_musk_pruned
 ```
 
@@ -87,9 +106,16 @@ sums_otu <- make_metadata_norep(sums_otu)
 ## Add total sequences to metadata frame 
 metdf <- sample_data(otu_merged_musk_pruned_noMOTHJ715_MBRHP715)
 sums_otu$norep_filter_name <- sums_otu$names
-sums_otu2 <- select(sums_otu, norep_filter_name, Sample_TotalSeqs)
+sums_otu2 <- dplyr::select(sums_otu, norep_filter_name, Sample_TotalSeqs)
 metdf_num2 <- left_join(metdf, sums_otu2, by = "norep_filter_name") %>%
   dplyr::select(-one_of("D0", "D0_chao", "D1", "D2", "D0_SD", "D1_sd", "D0_chao_sd"))
+```
+
+```
+## Warning in class(x) <- c("tbl_df", "tbl", "data.frame"): Setting class(x) to multiple strings ("tbl_df", "tbl", ...); result will no longer be an S4 object
+```
+
+```r
 row.names(metdf_num2) <- metdf_num2$norep_filter_name
 # Rename the sample data 
 sample_data(otu_merged_musk_pruned_noMOTHJ715_MBRHP715) <- metdf_num2
@@ -168,7 +194,7 @@ otu_simps_evenness <- inner_join(otu_rich_stats, otu_even_stats, by = "norep_fil
   mutate(mean = mean.y/mean.x,
          sd = sd(mean),
          measure = "Simpsons_Evenness") %>%
-  select(norep_filter_name, mean, sd, measure)
+  dplyr::select(norep_filter_name, mean, sd, measure)
 
 # Combine alpha diversity into one dataframe 
 otu_alpha <- rbind(otu_rich_stats, otu_even_stats, otu_simps_evenness, otu_shan_stats)
@@ -980,6 +1006,10 @@ plot_residuals(lm_model = partprod_MLotu_shannon,
                lm_observed_y = filter(ML_otu_shannon_stats, fraction == "WholePart")$frac_bacprod)
 ```
 
+```
+## Warning in rlm.default(x, y, weights, method = method, wt.method = wt.method, : 'rlm' failed to converge in 20 steps
+```
+
 <img src="Rarefied_Figures/check-lm-residuals-2.png" style="display: block; margin: auto;" />
 
 ```r
@@ -1086,18 +1116,27 @@ summary(lm_by_divmeasure)
 library(multcomp)
 post_hoc_measure <- glht(lm_by_divmeasure, linfct = mcp(measure = "Tukey", interaction_average=TRUE),
                 vcov=vcovHC(lm_by_divmeasure, type = "HC0"))
-```
-
-```
-## Error in glht.mcp(lm_by_divmeasure, linfct = mcp(measure = "Tukey", interaction_average = TRUE), : could not find function "vcovHC"
-```
-
-```r
 summary(post_hoc_measure)
 ```
 
 ```
-## Error in summary(post_hoc_measure): object 'post_hoc_measure' not found
+## 
+## 	 Simultaneous Tests for General Linear Hypotheses
+## 
+## Multiple Comparisons of Means: Tukey Contrasts
+## 
+## 
+## Fit: lm(formula = frac_bacprod ~ mean/measure, data = otu_alphadiv)
+## 
+## Linear Hypotheses:
+##                                           Estimate Std. Error t value Pr(>|t|)
+## Simpsons_Evenness - Richness == 0         32.27248   34.74205   0.929    0.678
+## Shannon_Entropy - Richness == 0            0.47081    0.76489   0.616    0.873
+## Inverse_Simpson - Richness == 0            0.06301    0.06688   0.942    0.669
+## Shannon_Entropy - Simpsons_Evenness == 0 -31.80167   34.29805  -0.927    0.679
+## Inverse_Simpson - Simpsons_Evenness == 0 -32.20947   34.70978  -0.928    0.679
+## Inverse_Simpson - Shannon_Entropy == 0    -0.40780    0.73326  -0.556    0.902
+## (Adjusted p values reported -- single-step method)
 ```
 
 ```r
@@ -1968,6 +2007,163 @@ ggplot(combined_rich_df, aes(x=WholePart, y=WholeFree)) +
 
 
 <!-- # Total Production  --> 
+
+
+
+
+# Beta Diversity Analysis
+
+
+```r
+scale_otu_merged_musk_pruned <- scale_reads(otu_merged_musk_pruned_noMOTHJ715_MBRHP715, round = "matround")
+scale_otu_merged_musk_pruned # ALL Samples phyloseq object
+```
+
+```
+## phyloseq-class experiment-level object
+## otu_table()   OTU Table:         [ 8814 taxa and 161 samples ]
+## sample_data() Sample Data:       [ 161 samples by 64 sample variables ]
+## tax_table()   Taxonomy Table:    [ 8814 taxa by 8 taxonomic ranks ]
+```
+
+```r
+# Check the sequencing depth of each sample 
+scaled_sums_otu <- data.frame(rowSums(otu_table(scale_otu_merged_musk_pruned)))
+colnames(scaled_sums_otu) <- "Sample_TotalSeqs"
+scaled_sums_otu$names <- row.names(scaled_sums_otu)
+scaled_sums_otu <- arrange(scaled_sums_otu, Sample_TotalSeqs) %>%
+  make_metadata_norep()
+
+##  Plot based on all samples 
+plot_sample_sums(dataframe = scaled_sums_otu, x_total_seqs = "Sample_TotalSeqs", fill_variable = "project")
+```
+
+<img src="Rarefied_Figures/scale-reads-1.png" style="display: block; margin: auto;" />
+
+```r
+##  Plot based on depth of samples 
+plot_sample_sums(dataframe = scaled_sums_otu, x_total_seqs = "Sample_TotalSeqs", fill_variable = "limnion")
+```
+
+<img src="Rarefied_Figures/scale-reads-2.png" style="display: block; margin: auto;" />
+
+```r
+##  Plot based on depth of samples WITHOUT SEDIMENT!
+plot_sample_sums(dataframe = filter(scaled_sums_otu, limnion != "Benthic"), 
+                 x_total_seqs = "Sample_TotalSeqs", fill_variable = "limnion")
+```
+
+<img src="Rarefied_Figures/scale-reads-3.png" style="display: block; margin: auto;" />
+
+```r
+### Subset out samples that we only have productivity data for
+productivity_scale_int <- subset_samples(scale_otu_merged_musk_pruned, limnion == "Top" & year == "2015" & 
+                                           fraction %in% c("WholePart", "WholeFree"))
+
+productivity_scale <- prune_taxa(taxa_sums(productivity_scale_int) > 0, productivity_scale_int) 
+```
+
+
+
+```r
+productivity_bray <- phyloseq::distance(productivity_scale, method = "bray")
+
+# make a data frame from the sample_data
+sampledf <- data.frame(sample_data(productivity_scale))
+
+# Adonis test
+adonis(productivity_bray ~ frac_bacprod, data = sampledf)
+```
+
+```
+## 
+## Call:
+## adonis(formula = productivity_bray ~ frac_bacprod, data = sampledf) 
+## 
+## Permutation: free
+## Number of permutations: 999
+## 
+## Terms added sequentially (first to last)
+## 
+##              Df SumsOfSqs MeanSqs F.Model      R2 Pr(>F)   
+## frac_bacprod  1    0.7444 0.74444  4.1969 0.16021  0.004 **
+## Residuals    22    3.9024 0.17738         0.83979          
+## Total        23    4.6468                 1.00000          
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+```
+
+
+
+
+
+```r
+scaled_productivity_otu_df <- as.matrix(otu_table(productivity_scale))
+
+bray_productivity_otu <- vegdist(scaled_productivity_otu_df, method = "bray", binary = FALSE, upper = TRUE)
+
+# Melt the bray curtis distance to a dataframe
+bray <- reshape2::melt(as.matrix(bray_productivity_otu), varnames = c("samp1", "samp2"))
+bray <- subset(bray, value > 0) # Remove the samples compared to themselves
+
+
+bray$lakesite1 <- substr(bray$samp1,2,3) # Create a new column called lakenames1 with first 3 letters of string
+bray$lakesite2 <- substr(bray$samp2,2,3) # Create a new column called lakenames2 with first 3 letters of string
+bray$limnion1 <- substr(bray$samp1, 4, 4) # Create a column called limnon1 with hypo or epi
+bray$limnion2 <- substr(bray$samp2, 4, 4) # Create a column called limnon2 with hypo or epi
+bray$filter1 <- substr(bray$samp1, 5, 5)  # Create a column called filter1 with PA or FL
+bray$filter2 <- substr(bray$samp2, 5, 5) # Create a column called filter2 with PA or FL
+bray$month1 <- substr(bray$samp1, 6, 6)  # Create a column called month1 with may, july, or september
+bray$month2 <- substr(bray$samp2, 6, 6) # Create a column called month2 with may, july, or september
+bray$year1 <- substr(bray$samp1, 7, 9) # Create a column called year1 with 2014 or 2015
+bray$year2 <- substr(bray$samp2, 7, 9) # Create a column called year2 with 2014 or 2015
+
+
+  # Depth in water column
+bray$limnion1 <- ifelse(bray$limnion1 == "E", "Top", NA)
+bray$limnion2 <- ifelse(bray$limnion2 == "E", "Top", NA)
+  
+# fraction Fraction
+bray$filter1 <- ifelse(bray$filter1 == "F", "Free", 
+                             ifelse(bray$filter1 == "P", "Particle",
+                                    ifelse(bray$filter1 == "J","WholePart",
+                                           ifelse(bray$filter1 == "K","WholeFree", NA))))
+bray$filter2 <- ifelse(bray$filter2 == "F", "Free", 
+                             ifelse(bray$filter2 == "P", "Particle",
+                                    ifelse(bray$filter2 == "J","WholePart",
+                                           ifelse(bray$filter2 == "K","WholeFree", NA))))
+
+
+# Stop calculations if sample1 is equal to sample2
+stopifnot(nrow(dplyr::filter(bray, samp1 == samp2)) == 0)
+
+
+##  Add productivity data to bray dataframe
+prod_data <- sample_data(productivity_scale) %>%
+  dplyr::select(norep_filter_name, frac_bacprod) %>%
+  mutate(frac_bacprod = round(frac_bacprod, digits = 1))
+```
+
+```
+## Warning in class(x) <- c("tbl_df", "tbl", "data.frame"): Setting class(x) to multiple strings ("tbl_df", "tbl", ...); result will no longer be an S4 object
+```
+
+```r
+bray %>%
+  mutate(frac_prod1 = ifelse(samp1 == prod_data, NA, fracprod_per_cell))
+```
+
+```
+## Warning in ifelse(structure(c(2L, 3L, 4L, 5L, 6L, 7L, 8L, 9L, 10L, 11L, : Incompatible methods ("Ops.factor", "Ops.data.frame") for "=="
+```
+
+```
+## Error in eval(expr, envir, enclos): comparison of these types is not implemented
+```
+
+
+
+
 
 
 
