@@ -401,14 +401,15 @@ show_otu <- function(dataframe, nrow = 10, ncol = 10){
       # INPUT
       # 1. Linear model object from lm() 
       # 2. vector of observed values (y-variable)
+      # 3. Title in quotes for figure
 
-plot_residuals <- function(lm_model, lm_observed_y){
+plot_residuals <- function(lm_model, lm_observed_y, main_title){
   
   # set seed
   set.seed(777)
   
   # Make a 3 paneled plot
-  par(mfrow=c(1,3))
+  par(mfrow=c(1,3), oma=c(0,0,0,0)) # c(bottom, left, top, right) 
   
   # 1st plot:  A qqplot
   qqPlot(lm_model, col="blue", reps=10000, 
@@ -422,6 +423,10 @@ plot_residuals <- function(lm_model, lm_observed_y){
   # Draw a line at y=0
   lines(x=c(0,25), y=c(0,0), lty=2)
   
+  # Add a title to all the plots
+  mtext(text = main_title, side = 3, line = 2, outer = FALSE)
+  #  side:  1=bottom, 2=left, 3=top, 4=right
+  
   # 3rd plot: Predicted values vs. Observed Variables
   plot(y=lm_observed_y, x=predict(lm_model), col="blue",
        ylab="Observed values",
@@ -429,6 +434,7 @@ plot_residuals <- function(lm_model, lm_observed_y){
        las=1)
   # draw a 1:1 line
   abline(a = 0, b = 1, lty=2)
+  
 
  }
 

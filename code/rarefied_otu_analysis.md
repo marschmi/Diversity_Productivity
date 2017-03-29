@@ -994,37 +994,49 @@ otu_simpseven_vegan <- ggplot(ML_otu_simpseven_stats, aes(x=mean, y=frac_bacprod
 ######################################################### RICHNESS
 # Residual analysis of the RICHNESS Models
 plot_residuals(lm_model = partprod_MLotu_rich, 
-               lm_observed_y = filter(ML_otu_rich_stats, fraction == "WholePart")$frac_bacprod)
+               lm_observed_y = filter(ML_otu_rich_stats, fraction == "WholePart")$frac_bacprod,
+               main_title = "Particle-Associated Richness")
 ```
 
-<img src="Rarefied_Figures/check-lm-residuals-1.png" style="display: block; margin: auto;" />
+```
+## Error in plot_residuals(lm_model = partprod_MLotu_rich, lm_observed_y = filter(ML_otu_rich_stats, : unused argument (main_title = "Particle-Associated Richness")
+```
 
 ```r
 ######################################################### SHANNON ENTROPY
 # Residual analysis of the SHANNON ENTROPY Models
 plot_residuals(lm_model = partprod_MLotu_shannon, 
-               lm_observed_y = filter(ML_otu_shannon_stats, fraction == "WholePart")$frac_bacprod)
+               lm_observed_y = filter(ML_otu_shannon_stats, fraction == "WholePart")$frac_bacprod,
+               main_title = "Particle-Associated Shannon")
 ```
 
-<img src="Rarefied_Figures/check-lm-residuals-2.png" style="display: block; margin: auto;" />
+```
+## Error in plot_residuals(lm_model = partprod_MLotu_shannon, lm_observed_y = filter(ML_otu_shannon_stats, : unused argument (main_title = "Particle-Associated Shannon")
+```
 
 ```r
 ######################################################### INVERSE SIMPSON
 # Residual analysis of the INVERSE SIMPSON Models
 plot_residuals(lm_model = partprod_MLotu_invsimps, 
-               lm_observed_y = filter(ML_otu_invsimps_stats, fraction == "WholePart")$frac_bacprod)
+               lm_observed_y = filter(ML_otu_invsimps_stats, fraction == "WholePart")$frac_bacprod,
+               main_title = "Particle-Associated Inverse Simpson")
 ```
 
-<img src="Rarefied_Figures/check-lm-residuals-3.png" style="display: block; margin: auto;" />
+```
+## Error in plot_residuals(lm_model = partprod_MLotu_invsimps, lm_observed_y = filter(ML_otu_invsimps_stats, : unused argument (main_title = "Particle-Associated Inverse Simpson")
+```
 
 ```r
 ######################################################### SIMPSONS EVENNESS
 # Residual analysis of the INVERSE SIMPSON Models
 plot_residuals(lm_model = partprod_MLotu_simpseven, 
-               lm_observed_y = filter(ML_otu_simpseven_stats, fraction == "WholePart")$frac_bacprod)
+               lm_observed_y = filter(ML_otu_simpseven_stats, fraction == "WholePart")$frac_bacprod,
+               main_title = "Particle-Associated Simpson's Evenness")
 ```
 
-<img src="Rarefied_Figures/check-lm-residuals-4.png" style="display: block; margin: auto;" />
+```
+## Error in plot_residuals(lm_model = partprod_MLotu_simpseven, lm_observed_y = filter(ML_otu_simpseven_stats, : unused argument (main_title = "Particle-Associated Simpson's Evenness")
+```
 
 
 ## Correlations 
@@ -1120,7 +1132,8 @@ gather_prod_alpha <- as.data.frame(scale_prod_alphadiv) %>%   # Make scaled valu
   gather(measure, mean, 2:5)                                  # Gather 4 columns and put values into 2
   
 # Put it all together into one dataframe with 4 columns: sample_name, measure, mean, frac_bacprod 
-prod_alpha_fracprod <- inner_join(gather_prod_alpha, prod_fracprod_values, by = "norep_filter_name") 
+prod_alpha_fracprod <- inner_join(gather_prod_alpha, prod_fracprod_values, by = "norep_filter_name") %>%
+  mutate(measure = as.factor(measure))
 ```
 
 ```
@@ -1162,18 +1175,27 @@ summary(lm_by_divmeasure)
 library(multcomp)
 post_hoc_measure <- glht(lm_by_divmeasure, linfct = mcp(measure = "Tukey", interaction_average=TRUE),
                 vcov=vcovHC(lm_by_divmeasure, type = "HC0"))
-```
-
-```
-## Error in mcp2matrix2(model, linfct = linfct, interaction_average = ia, : Variable(s) 'measure' of class 'character' is/are not contained as a factor in 'model'.
-```
-
-```r
 summary(post_hoc_measure)
 ```
 
 ```
-## Error in summary(post_hoc_measure): object 'post_hoc_measure' not found
+## 
+## 	 Simultaneous Tests for General Linear Hypotheses
+## 
+## Multiple Comparisons of Means: Tukey Contrasts
+## 
+## 
+## Fit: lm(formula = frac_bacprod ~ mean/measure, data = prod_alpha_fracprod)
+## 
+## Linear Hypotheses:
+##                                          Estimate Std. Error t value Pr(>|t|)
+## Richness - Inverse_Simpson == 0           -0.1873     2.3131  -0.081    1.000
+## Shannon_Entropy - Inverse_Simpson == 0    -0.1670     2.1513  -0.078    1.000
+## Simpsons_Evenness - Inverse_Simpson == 0  -0.5105     2.3226  -0.220    0.996
+## Shannon_Entropy - Richness == 0            0.0203     2.5793   0.008    1.000
+## Simpsons_Evenness - Richness == 0         -0.3232     2.8005  -0.115    0.999
+## Simpsons_Evenness - Shannon_Entropy == 0  -0.3435     2.6346  -0.130    0.999
+## (Adjusted p values reported -- single-step method)
 ```
 
 ```r
