@@ -1353,11 +1353,11 @@ unweightedMNTD_vs_fracprod_taxlab <- ggplot(filter(unweighted_sesMNTD_taxalab, f
   scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
   geom_smooth(method = "lm", data = filter(unweighted_sesMNTD_taxalab, fraction == "WholePart")) +
   theme(legend.position = c(0.87, 0.87), legend.title = element_blank()) +
-    annotate("text", x = -1.25, y=25, 
+    annotate("text", x = -3.6, y=-2, 
            color = "firebrick3", fontface = "bold",
            label = paste("R2 =", round(summary(lmPA_unweightedMNTD_taxalab)$adj.r.squared, digits = 4), "\n", 
                          "p =", round(unname(summary(lmPA_unweightedMNTD_taxalab)$coefficients[,4][2]), digits = 4))) +
-  annotate("text", x = -1.25, y=40, 
+  annotate("text", x = -1.7, y=60, 
          color = "cornflowerblue", fontface = "bold",
          label = paste("R2 =", round(summary(lmFL_unweightedMNTD_taxalab)$adj.r.squared, digits = 4), "\n", 
                        "p =", round(unname(summary(lmFL_unweightedMNTD_taxalab)$coefficients[,4][2]), digits = 4))) 
@@ -1399,31 +1399,53 @@ plot_grid(unweightedMPD_vs_fracprod_taxlab, unweightedMNTD_vs_fracprod_taxlab,
 wilcox.test(mpd.obs.z ~ fraction, 
              data = filter(unweighted_sesMPD_taxalab, fraction %in% c("WholePart", "WholeFree")))
 
+# Make a data frame to draw significance line in boxplot (visually calculated)
+mpd_nums1 <- data.frame(a = c(1.15,1.15,1.85,1.85), b = c(3.2,3.3,3.3,3.2)) # WholePart vs WholeFree
+
 taxlab_unweight_mpd <- ggplot(filter(unweighted_sesMPD_taxalab, fraction %in% c("WholePart", "WholeFree")), 
-       aes(y = mpd.obs.z, x = fraction, color = fraction, fill = fraction)) +
-  scale_color_manual(values = fraction_colors) + 
-  scale_fill_manual(values = fraction_colors) +
-  geom_point(size = 3, position = position_jitterdodge()) + 
-  geom_boxplot(alpha = 0.5) + xlab("") + 
+       aes(y = mpd.obs.z, x = fraction)) +
+  scale_fill_manual(values = fraction_colors, 
+                    breaks=c("WholeFree", "WholePart"), 
+                    labels=c("Free-Living", "Particle-Associated")) +
+  scale_color_manual(values = fraction_colors,
+                 breaks=c("WholeFree", "WholePart"), 
+                 labels=c("Free-Living", "Particle-Associated")) + 
+  geom_point(size = 3, position = position_jitterdodge(), aes(color = fraction, fill = fraction)) + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(color = fraction, fill = fraction)) +
   ylab("Unweighted Mean Pairwise Distance") +
+  geom_path(data = mpd_nums1, aes(x = a, y = b), linetype = 1, color = "gray40") +
+  scale_y_continuous(limits = c(-1.5, 3.5), breaks = c(-1, 0, 1, 2, 3, 4)) +
   theme(legend.position = "none")
 
 
-wilcox.test(mpd.obs.z ~ fraction, 
+
+weight_MPD_wilcox <- wilcox.test(mpd.obs.z ~ fraction, 
              data = filter(WEIGHTED_sesMPD_taxalab, fraction %in% c("WholePart", "WholeFree")))
+weight_MPD_wilcox
 
 filter(WEIGHTED_sesMPD_taxalab, fraction %in% c("WholePart", "WholeFree")) %>%
   group_by(fraction) %>%
   summarize(mean(mpd.obs.z),  median(mpd.obs.z), sd(mpd.obs.z))
 
+# Make a data frame to draw significance line in boxplot (visually calculated)
+mpd_nums2 <- data.frame(a = c(1.15,1.15,1.85,1.85), b = c(2.2,2.3,2.3,2.2)) # WholePart vs WholeFree
+
 taxlab_weight_mpd <- ggplot(filter(WEIGHTED_sesMPD_taxalab, fraction %in% c("WholePart", "WholeFree")), 
-       aes(y = mpd.obs.z, x = fraction, color = fraction, fill = fraction)) +
-  scale_color_manual(values = fraction_colors) + 
-  scale_fill_manual(values = fraction_colors) +
-  geom_point(size = 3, position = position_jitterdodge()) + 
-  geom_boxplot(alpha = 0.5) + xlab("") + 
+       aes(y = mpd.obs.z, x = fraction)) +
+  scale_fill_manual(values = fraction_colors, 
+                    breaks=c("WholeFree", "WholePart"), 
+                    labels=c("Free-Living", "Particle-Associated")) +
+  scale_color_manual(values = fraction_colors,
+                 breaks=c("WholeFree", "WholePart"), 
+                 labels=c("Free-Living", "Particle-Associated")) + 
+  geom_point(size = 3, position = position_jitterdodge(), aes(color = fraction, fill = fraction)) + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(color = fraction, fill = fraction)) +
+  xlab("") + 
   ylab("Weighted Mean Pairwise Distance") +
+  geom_path(data = mpd_nums2, aes(x = a, y = b), linetype = 1, color = "gray40") +
+  scale_y_continuous(limits = c(-3.5, 2.5), breaks = c(-3, -2, -1, 0, 1, 2, 3, 4)) +
   theme(legend.position = "none")
+
 
 ########################################## MNTD
 
@@ -1435,25 +1457,37 @@ taxlab_unweight_mntd <- ggplot(filter(unweighted_sesMNTD_taxalab, fraction %in% 
   scale_color_manual(values = fraction_colors) + 
   scale_fill_manual(values = fraction_colors) +
   geom_point(size = 3, position = position_jitterdodge()) + 
-  geom_boxplot(alpha = 0.5) + xlab("") + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(color = fraction, fill = fraction)) +
+  xlab("") + 
   ylab("Unweighted Mean Nearest Taxon Distance") +
   theme(legend.position = "none")
 
 
-wilcox.test(mntd.obs.z ~ fraction, 
+weight_MNTD_wilcox <- wilcox.test(mntd.obs.z ~ fraction, 
              data = filter(WEIGHTED_sesMNTD_taxalab, fraction %in% c("WholePart", "WholeFree")))
+weight_MNTD_wilcox
 
 filter(WEIGHTED_sesMNTD_taxalab, fraction %in% c("WholePart", "WholeFree")) %>%
   group_by(fraction) %>%
   summarize(mean(mntd.obs.z),  median(mntd.obs.z))
 
+# Make a data frame to draw significance line in boxplot (visually calculated)
+mntd_nums2 <- data.frame(a = c(1.15,1.15,1.85,1.85), b = c(1,1.1,1.1,1)) # WholePart vs WholeFree
+
 taxlab_weight_mntd <- ggplot(filter(WEIGHTED_sesMNTD_taxalab, fraction %in% c("WholePart", "WholeFree")), 
-       aes(y = mntd.obs.z, x = fraction, color = fraction, fill = fraction)) +
-  scale_color_manual(values = fraction_colors) + 
-  scale_fill_manual(values = fraction_colors) +
-  geom_point(size = 3, position = position_jitterdodge()) + 
-  geom_boxplot(alpha = 0.5) + xlab("") + 
+       aes(y = mntd.obs.z, x = fraction)) +
+ scale_fill_manual(values = fraction_colors, 
+                    breaks=c("WholeFree", "WholePart"), 
+                    labels=c("Free-Living", "Particle-Associated")) +
+  scale_color_manual(values = fraction_colors,
+                 breaks=c("WholeFree", "WholePart"), 
+                 labels=c("Free-Living", "Particle-Associated")) + 
+  geom_point(size = 3, position = position_jitterdodge(), aes(color = fraction, fill = fraction)) + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(color = fraction, fill = fraction)) +
+  xlab("") + 
   ylab("Weighted Mean Nearest Taxon Distance") +
+  geom_path(data = mntd_nums2, aes(x = a, y = b), linetype = 1, color = "gray40") +
+  scale_y_continuous(limits = c(-3.25, 1.25), breaks = c(-3, -2, -1, 0, 1)) +
   theme(legend.position = "none")
 
 plot_grid(taxlab_unweight_mpd, taxlab_weight_mpd,taxlab_unweight_mntd, taxlab_weight_mntd,
@@ -1463,7 +1497,7 @@ plot_grid(taxlab_unweight_mpd, taxlab_weight_mpd,taxlab_unweight_mntd, taxlab_we
 
 
 # Figure 3
-```{r fig-3, dependson = c("taxa-labels","taxalab-vs-fracprod", "taxalab-fractions")}
+```{r fig-3, fig.width = 8, fig.height = 8, dependson = c("taxa-labels","taxalab-vs-fracprod", "taxalab-fractions")}
 # Plot it altogether 
 plot_grid(unweightedMPD_vs_fracprod_taxlab + ggtitle("") +
             xlab("Unweighted Mean Pairwise Distance") +
@@ -1471,10 +1505,18 @@ plot_grid(unweightedMPD_vs_fracprod_taxlab + ggtitle("") +
           unweightedMNTD_vs_fracprod_taxlab + ggtitle("") +
             xlab("Unweighted Mean Nearest Taxon Distance") +
             theme(legend.position = "none"), 
-          taxlab_weight_mpd + coord_flip() + xlab("Fraction \n") +
-            theme(axis.text.y = element_blank()), 
-          taxlab_weight_mntd + coord_flip() + xlab("Fraction \n") +
-            theme(axis.text.y = element_blank()), 
+          taxlab_weight_mpd +  xlab("Fraction \n") +
+            theme(axis.text.y = element_blank()) + 
+            ylab("Weighted Mean Pairwise Distance") +
+            annotate("text", x=1.55, y=1.6, fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("***\np =", round(weight_MPD_wilcox$p.value, digits = 6))) + 
+            coord_flip(),
+          taxlab_weight_mntd + xlab("Fraction \n") +
+            theme(axis.text.y = element_blank()) + 
+            ylab("Weighted Mean Nearest Taxon Distance") +
+            annotate("text", x=1.5, y=0.5, fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("***\np =", round(weight_MNTD_wilcox$p.value, digits = 3))) + 
+            coord_flip(), 
           labels = c("A", "B", "C", "D"), 
           ncol = 2, nrow = 2)
 ```
