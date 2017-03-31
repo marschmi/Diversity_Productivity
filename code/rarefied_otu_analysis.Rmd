@@ -1190,6 +1190,12 @@ plot_grid(expshannon_fracprod, expshannon_fracprod_percell, expshannon_combined,
 # Phylogenetic Community Structure 
 ##Taxa.Labels
 ```{r taxa-labels,  fig.width= 14, fig.height = 7}
+nosed_meta_data <- nosed_meta_data %>%
+  mutate(fraction_bac_abund = as.numeric(fraction_bac_abund),
+         fracprod_per_cell = frac_bacprod/(1000*fraction_bac_abund),
+         fracprod_per_cell_noinf = ifelse(fracprod_per_cell == Inf, NA, fracprod_per_cell))
+
+
 ### UNWEIGHTED
 unweighted_sesMPD_taxalab <- read.csv("PrunedTree/mpd_mntd/unweighted_sesMPD_taxalab.csv", header = TRUE) %>%
   dplyr::rename(norep_filter_name = X) %>%
@@ -1298,7 +1304,7 @@ unweightedMPD_vs_fracprod_taxlab <- ggplot(filter(unweighted_sesMPD_taxalab, fra
        aes(x = mpd.obs.z, y = frac_bacprod, color = fraction)) + 
   geom_point(size = 3) +
   xlab("Unweighted Mean Pairwise Distance \n (ses.mpd)") + 
-  ylab("Heterotrophic Production") +
+  ylab("Heterotrophic Production \n(μgC/L/hr)") +
   ggtitle("Unweighted MPD: Taxa Labels") + 
   scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
   geom_smooth(method = "lm") +
@@ -1323,7 +1329,7 @@ weightedMPD_vs_fracprod_taxlab <- ggplot(filter(WEIGHTED_sesMPD_taxalab, fractio
        aes(x = mpd.obs.z, y = frac_bacprod, color = fraction)) + 
   geom_point(size = 3) +
   xlab("Weighted Mean Pairwise Distance  \n (ses.mpd)") + 
-  ylab("Heterotrophic Production") +
+  ylab("Heterotrophic Production \n(μgC/L/hr)") +
   ggtitle("Weighted MPD: Taxa Labels") + 
   scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
   #geom_smooth(method = "lm", data = filter(WEIGHTED_sesMPD_taxalab, fraction == "WholePart")) +
@@ -1338,7 +1344,7 @@ weightedMPD_vs_fracprod_taxlab <- ggplot(filter(WEIGHTED_sesMPD_taxalab, fractio
                        "p =", round(unname(summary(lmFL_weightedMPD_taxalab)$coefficients[,4][2]), digits = 4))) 
 
 
-####### UNWEIGHTED MPD ANALYSIS
+####### UNWEIGHTED MNTD ANALYSIS
 lmFL_unweightedMNTD_taxalab <- lm(frac_bacprod ~ mntd.obs.z, 
                                       data = filter(unweighted_sesMNTD_taxalab, fraction == "WholeFree"))
 lmPA_unweightedMNTD_taxalab <- lm(frac_bacprod ~ mntd.obs.z, 
@@ -1348,7 +1354,7 @@ unweightedMNTD_vs_fracprod_taxlab <- ggplot(filter(unweighted_sesMNTD_taxalab, f
        aes(x = mntd.obs.z, y = frac_bacprod, color = fraction)) + 
   geom_point(size = 3) +
   xlab("Unweighted Mean Nearest Taxon Distance  \n (ses.mntd)") + 
-  ylab("Heterotrophic Production") +
+  ylab("Heterotrophic Production \n(μgC/L/hr)") +
   ggtitle("Unweighted MNTD: Taxa Labels") + 
   scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
   geom_smooth(method = "lm", data = filter(unweighted_sesMNTD_taxalab, fraction == "WholePart")) +
@@ -1373,7 +1379,7 @@ weightedMNTD_vs_fracprod_taxlab <- ggplot(filter(WEIGHTED_sesMNTD_taxalab, fract
        aes(x = mntd.obs.z, y = frac_bacprod, color = fraction)) + 
   geom_point(size = 3) +
   xlab("Weighted Mean Nearest Taxon Distance  \n (ses.mntd)") + 
-  ylab("Heterotrophic Production") +
+  ylab("Heterotrophic Production \n(μgC/L/hr)") +
   ggtitle("Weighted MNTD: Taxa Labels") + 
   scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
   #geom_smooth(method = "lm", data = filter(WEIGHTED_sesMNTD_taxalab, fraction == "WholePart")) +
@@ -1395,24 +1401,29 @@ plot_grid(unweightedMPD_vs_fracprod_taxlab, unweightedMNTD_vs_fracprod_taxlab,
 ```
 
 
-```{r taxalab-fractions, fig.width= 12, fig.height = 5}
-wilcox.test(mpd.obs.z ~ fraction, 
+```{r taxalab-comparison, fig.width= 12, fig.height = 5}
+unweight_MPD_wilcox <- wilcox.test(mpd.obs.z ~ fraction, 
              data = filter(unweighted_sesMPD_taxalab, fraction %in% c("WholePart", "WholeFree")))
+unweight_MPD_wilcox
 
 # Make a data frame to draw significance line in boxplot (visually calculated)
 mpd_nums1 <- data.frame(a = c(1.15,1.15,1.85,1.85), b = c(3.2,3.3,3.3,3.2)) # WholePart vs WholeFree
 
 taxlab_unweight_mpd <- ggplot(filter(unweighted_sesMPD_taxalab, fraction %in% c("WholePart", "WholeFree")), 
        aes(y = mpd.obs.z, x = fraction)) +
+  geom_hline(yintercept = 0, linetype = "dashed", size = 1.5) +
   scale_fill_manual(values = fraction_colors, 
                     breaks=c("WholeFree", "WholePart"), 
                     labels=c("Free-Living", "Particle-Associated")) +
   scale_color_manual(values = fraction_colors,
                  breaks=c("WholeFree", "WholePart"), 
                  labels=c("Free-Living", "Particle-Associated")) + 
+  scale_x_discrete(breaks=c("WholeFree", "WholePart"), 
+                 labels=c("Free\nLiving", "Particle\nAssociated")) + 
   geom_point(size = 3, position = position_jitterdodge(), aes(color = fraction, fill = fraction)) + 
   geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(color = fraction, fill = fraction)) +
-  ylab("Unweighted Mean Pairwise Distance") +
+  ylab("Unweighted Mean Pairwise Dist") +
+  xlab("") +
   geom_path(data = mpd_nums1, aes(x = a, y = b), linetype = 1, color = "gray40") +
   scale_y_continuous(limits = c(-1.5, 3.5), breaks = c(-1, 0, 1, 2, 3, 4)) +
   theme(legend.position = "none")
@@ -1432,37 +1443,56 @@ mpd_nums2 <- data.frame(a = c(1.15,1.15,1.85,1.85), b = c(2.2,2.3,2.3,2.2)) # Wh
 
 taxlab_weight_mpd <- ggplot(filter(WEIGHTED_sesMPD_taxalab, fraction %in% c("WholePart", "WholeFree")), 
        aes(y = mpd.obs.z, x = fraction)) +
+  geom_hline(yintercept = 0, slope = 0, linetype = "dashed", size = 1.5) +
   scale_fill_manual(values = fraction_colors, 
                     breaks=c("WholeFree", "WholePart"), 
                     labels=c("Free-Living", "Particle-Associated")) +
   scale_color_manual(values = fraction_colors,
                  breaks=c("WholeFree", "WholePart"), 
                  labels=c("Free-Living", "Particle-Associated")) + 
+  scale_x_discrete(breaks=c("WholeFree", "WholePart"), 
+                 labels=c("Free\nLiving", "Particle\nAssociated")) + 
   geom_point(size = 3, position = position_jitterdodge(), aes(color = fraction, fill = fraction)) + 
   geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(color = fraction, fill = fraction)) +
   xlab("") + 
-  ylab("Weighted Mean Pairwise Distance") +
+  ylab("Weighted Mean Pairwise Dist") +
   geom_path(data = mpd_nums2, aes(x = a, y = b), linetype = 1, color = "gray40") +
   scale_y_continuous(limits = c(-3.5, 2.5), breaks = c(-3, -2, -1, 0, 1, 2, 3, 4)) +
   theme(legend.position = "none")
 
 
 ########################################## MNTD
-
-wilcox.test(mntd.obs.z ~ fraction, 
+###### UNWEIGHTED MNTD 
+unweight_MNTD_wilcox <- wilcox.test(mntd.obs.z ~ fraction, 
              data = filter(unweighted_sesMNTD_taxalab, fraction %in% c("WholePart", "WholeFree")))
+unweight_MNTD_wilcox
+
+# Make a data frame to draw significance line in boxplot (visually calculated)
+mntd_nums1 <- data.frame(a = c(1.15,1.15,1.85,1.85), b = c(-0.5,-0.4,-0.4,-0.5)) # WholePart vs WholeFree
 
 taxlab_unweight_mntd <- ggplot(filter(unweighted_sesMNTD_taxalab, fraction %in% c("WholePart", "WholeFree")), 
-       aes(y = mntd.obs.z, x = fraction, color = fraction, fill = fraction)) +
-  scale_color_manual(values = fraction_colors) + 
-  scale_fill_manual(values = fraction_colors) +
-  geom_point(size = 3, position = position_jitterdodge()) + 
+       aes(y = mntd.obs.z, x = fraction)) +  
+  geom_hline(yintercept = 0, slope = 0, linetype = "dashed", size = 1.5) +
+  scale_fill_manual(values = fraction_colors, 
+                    breaks=c("WholeFree", "WholePart"), 
+                    labels=c("Free-Living", "Particle-Associated")) +
+  scale_color_manual(values = fraction_colors,
+                 breaks=c("WholeFree", "WholePart"), 
+                 labels=c("Free-Living", "Particle-Associated")) + 
+  scale_x_discrete(breaks=c("WholeFree", "WholePart"), 
+                 labels=c("Free\nLiving", "Particle\nAssociated")) + 
+  geom_point(size = 3, position = position_jitterdodge(), aes(color = fraction, fill = fraction)) + 
   geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(color = fraction, fill = fraction)) +
   xlab("") + 
-  ylab("Unweighted Mean Nearest Taxon Distance") +
+  ylab("Unweighted Mean Nearest Taxon Dist") +
+  geom_path(data = mntd_nums1, aes(x = a, y = b), linetype = 1, color = "gray40") +
+  scale_y_continuous(limits = c(-4, 0), breaks = c(-4, -3, -2, -1, 0)) +
   theme(legend.position = "none")
 
 
+
+
+##### WEIGHTED MNTD
 weight_MNTD_wilcox <- wilcox.test(mntd.obs.z ~ fraction, 
              data = filter(WEIGHTED_sesMNTD_taxalab, fraction %in% c("WholePart", "WholeFree")))
 weight_MNTD_wilcox
@@ -1476,28 +1506,209 @@ mntd_nums2 <- data.frame(a = c(1.15,1.15,1.85,1.85), b = c(1,1.1,1.1,1)) # Whole
 
 taxlab_weight_mntd <- ggplot(filter(WEIGHTED_sesMNTD_taxalab, fraction %in% c("WholePart", "WholeFree")), 
        aes(y = mntd.obs.z, x = fraction)) +
- scale_fill_manual(values = fraction_colors, 
+  geom_hline(yintercept = 0, slope = 0, linetype = "dashed", size = 1.5) +
+  scale_fill_manual(values = fraction_colors, 
                     breaks=c("WholeFree", "WholePart"), 
                     labels=c("Free-Living", "Particle-Associated")) +
   scale_color_manual(values = fraction_colors,
                  breaks=c("WholeFree", "WholePart"), 
                  labels=c("Free-Living", "Particle-Associated")) + 
+  scale_x_discrete(breaks=c("WholeFree", "WholePart"), 
+                 labels=c("Free\nLiving", "Particle\nAssociated")) + 
   geom_point(size = 3, position = position_jitterdodge(), aes(color = fraction, fill = fraction)) + 
   geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(color = fraction, fill = fraction)) +
   xlab("") + 
-  ylab("Weighted Mean Nearest Taxon Distance") +
+  ylab("Weighted Mean Nearest Taxon Dist") +
   geom_path(data = mntd_nums2, aes(x = a, y = b), linetype = 1, color = "gray40") +
   scale_y_continuous(limits = c(-3.25, 1.25), breaks = c(-3, -2, -1, 0, 1)) +
   theme(legend.position = "none")
 
-plot_grid(taxlab_unweight_mpd, taxlab_weight_mpd,taxlab_unweight_mntd, taxlab_weight_mntd,
+
+
+plot_grid(taxlab_unweight_mpd + ylim(-4.5, 3.5) +
+            annotate("text", x=1.55, y=max(mpd_nums1$b), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("NS\np =", round(unweight_MPD_wilcox$p.value, digits = 2))), 
+          taxlab_unweight_mntd + ylim(-4.5, 3.5) +
+            annotate("text", x=1.55, y=max(mntd_nums1$b), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("NS\np =", round(unweight_MNTD_wilcox$p.value, digits = 2))), 
+          taxlab_weight_mpd + ylim(-4.5, 3.5) +
+            annotate("text", x=1.55, y=max(mpd_nums2$b), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("***\np =", round(weight_MPD_wilcox$p.value, digits = 6))),
+          taxlab_weight_mntd + ylim(-4.5, 3.5) +
+            annotate("text", x=1.55, y=max(mntd_nums2$b), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("***\np =", round(weight_MNTD_wilcox$p.value, digits = 3))),
           labels = c("A", "B", "C", "D"),
           ncol = 4)
 ```
 
 
+```{r taxalab-percell, fig.width= 15, fig.height = 4, dependson = "taxa-labels"}
+##########  MPD ANALYSIS 
+# Free-Living Model
+percell_lmFL_unweightedMPD_taxalab <- lm(log10(fracprod_per_cell_noinf) ~ mpd.obs.z, 
+                                      data = filter(unweighted_sesMPD_taxalab, fraction == "WholeFree"))
+summary(percell_lmFL_unweightedMPD_taxalab)
+
+# Particle-associated model
+percell_lmPA_unweightedMPD_taxalab <- lm(log10(fracprod_per_cell_noinf) ~ mpd.obs.z, 
+                                      data = filter(unweighted_sesMPD_taxalab, fraction == "WholePart"))
+summary(percell_lmPA_unweightedMPD_taxalab)
+
+plot_unweightedMPD_percell <- ggplot(filter(unweighted_sesMPD_taxalab, fraction %in% c("WholePart", "WholeFree")), 
+       aes(x = mpd.obs.z, y =log10(fracprod_per_cell_noinf), color = fraction)) + 
+  geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) + xlim(-4.5, 3.5) +
+  geom_point(size = 3) +
+  xlab("Unweighted Mean Pairwise Dist") + 
+  ylab("log10(Production/Cell)\n (μgC/cell/hr)") + 
+  scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
+  geom_smooth(method = "lm") +
+  theme(legend.position = "none", legend.title = element_blank()) +
+  annotate("text", x = -3, y=-6, 
+           color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(percell_lmPA_unweightedMPD_taxalab)$adj.r.squared, digits = 2), "\n", 
+                         "p =", round(unname(summary(percell_lmPA_unweightedMPD_taxalab)$coefficients[,4][2]), digits = 3))) +
+  annotate("text", x = -3, y=-7, 
+         color = "cornflowerblue", fontface = "bold",
+         label = paste("R2 =", round(summary(percell_lmFL_unweightedMPD_taxalab)$adj.r.squared, digits = 2), "\n", 
+                       "p =", round(unname(summary(percell_lmFL_unweightedMPD_taxalab)$coefficients[,4][2]), digits = 3))) 
+
+
+############ WEIGHTED MPD
+##########  MPD ANALYSIS 
+# Free-Living Model
+percell_lmFL_weightedMPD_taxalab <- lm(log10(fracprod_per_cell_noinf) ~ mpd.obs.z, 
+                                      data = filter(WEIGHTED_sesMPD_taxalab, fraction == "WholeFree"))
+summary(percell_lmFL_weightedMPD_taxalab)
+
+# Particle-associated model
+percell_lmPA_weightedMPD_taxalab <- lm(log10(fracprod_per_cell_noinf) ~ mpd.obs.z, 
+                                      data = filter(WEIGHTED_sesMPD_taxalab, fraction == "WholePart"))
+summary(percell_lmPA_weightedMPD_taxalab)
+
+plot_weightedMPD_percell <- ggplot(filter(WEIGHTED_sesMPD_taxalab, fraction %in% c("WholePart", "WholeFree")), 
+       aes(x = mpd.obs.z, y =log10(fracprod_per_cell_noinf), color = fraction)) + 
+  geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) + xlim(-4.5, 3.5) +
+  geom_point(size = 3) +
+  xlab("Weighted Mean Pairwise Dist") + 
+  ylab("log10(Production/Cell)\n (μgC/cell/hr)") + 
+  scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
+  #geom_smooth(method = "lm") +
+  theme(legend.position = "none", legend.title = element_blank()) #+
+  #annotate("text", x = -2, y=-6.5, 
+  #         color = "firebrick3", fontface = "bold",
+  #         label = paste("R2 =", round(summary(percell_lmPA_weightedMPD_taxalab)$adj.r.squared, digits = 4), "\n", 
+  #                       "p =", round(unname(summary(percell_lmPA_weightedMPD_taxalab)$coefficients[,4][2]), digits = 4))) +
+  #annotate("text", x = 0, y=-8.2, 
+  #       color = "cornflowerblue", fontface = "bold",
+  #       label = paste("R2 =", round(summary(percell_lmFL_weightedMPD_taxalab)$adj.r.squared, digits = 4), "\n", 
+  #                     "p =", round(unname(summary(percell_lmFL_weightedMPD_taxalab)$coefficients[,4][2]), digits = 4))) 
+
+
+
+
+
+####### UNWEIGHTED MNTD ANALYSIS
+# Free-living
+percell_lmFL_unweightedMNTD_taxalab <- lm(log10(fracprod_per_cell_noinf) ~ mntd.obs.z, 
+                                      data = filter(unweighted_sesMNTD_taxalab, fraction == "WholeFree"))
+summary(percell_lmFL_unweightedMNTD_taxalab)
+
+# Particle-associated
+percell_lmPA_unweightedMNTD_taxalab <- lm(log10(fracprod_per_cell_noinf) ~ mntd.obs.z, 
+                                      data = filter(unweighted_sesMNTD_taxalab, fraction == "WholePart"))
+summary(percell_lmPA_unweightedMNTD_taxalab)
+
+
+plot_unweightedMNTD_percell <- ggplot(filter(unweighted_sesMNTD_taxalab, fraction %in% c("WholePart", "WholeFree")), 
+       aes(x = mntd.obs.z, y = log10(fracprod_per_cell_noinf), color = fraction)) + 
+  geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) + xlim(-4.5, 3.5) +
+  geom_point(size = 3) +
+  xlab("Unweighted Mean Nearest Taxon Dist") + 
+  ylab("log10(Production/Cell)\n (μgC/cell/hr)") + 
+  scale_color_manual(values = fraction_colors,
+                 breaks=c("WholeFree", "WholePart"), 
+                 labels=c("Free", "Particle")) + 
+  geom_smooth(method = "lm", data = filter(unweighted_sesMNTD_taxalab, fraction == "WholePart")) +
+  theme(legend.position = c(0.87, 0.87), 
+        legend.title = element_blank()) +
+  annotate("text", x = 1.5, y=-7.2,
+           color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(percell_lmPA_unweightedMNTD_taxalab)$adj.r.squared, digits = 2), "\n", 
+                         "p =", round(unname(summary(percell_lmPA_unweightedMNTD_taxalab)$coefficients[,4][2]), digits = 3))) #+
+  #annotate("text", x = -2.4, y=-7.8, 
+  #       color = "cornflowerblue", fontface = "bold",
+  #       label = paste("R2 =", round(summary(percell_lmFL_unweightedMNTD_taxalab)$adj.r.squared, digits = 4), "\n", 
+  #                     "p =", round(unname(summary(percell_lmFL_unweightedMNTD_taxalab)$coefficients[,4][2]), digits = 4))) 
+
+
+####### WEIGHTED MPD ANALYSIS
+# Free-living
+percell_lmFL_weightedMNTD_taxalab <- lm(log10(fracprod_per_cell_noinf) ~ mntd.obs.z, 
+                                      data = filter(WEIGHTED_sesMNTD_taxalab, fraction == "WholeFree"))
+summary(percell_lmFL_weightedMNTD_taxalab)
+# Particle-associated
+percell_lmPA_weightedMNTD_taxalab <- lm(log10(fracprod_per_cell_noinf) ~ mntd.obs.z, 
+                                      data = filter(WEIGHTED_sesMNTD_taxalab, fraction == "WholePart"))
+summary(percell_lmPA_weightedMNTD_taxalab)
+
+plot_weightedMNTD_percell <- ggplot(filter(WEIGHTED_sesMNTD_taxalab, fraction %in% c("WholePart", "WholeFree")), 
+       aes(x = mntd.obs.z, y = log10(fracprod_per_cell_noinf), color = fraction)) + 
+  geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) + xlim(-4.5, 3.5) +
+  geom_point(size = 3) +
+  xlab("Weighted Mean Nearest Taxon Dist") + 
+  ylab("log10(Production/Cell)\n (μgC/cell/hr)") + 
+  scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
+  geom_smooth(method = "lm", data = filter(WEIGHTED_sesMNTD_taxalab, fraction == "WholeFree")) +
+  theme(legend.position = "none", legend.title = element_blank()) +
+  #annotate("text", x = -2.5, y=-5.9,
+  #         color = "firebrick3", fontface = "bold",
+  #         label = paste("R2 =", round(summary(percell_lmPA_weightedMNTD_taxalab)$adj.r.squared, digits = 4), "\n", 
+  #                       "p =", round(unname(summary(percell_lmPA_weightedMNTD_taxalab)$coefficients[,4][2]), digits = 4))) +
+  annotate("text", x = 1.5, y=-8, 
+         color = "cornflowerblue", fontface = "bold",
+         label = paste("R2 =", round(summary(percell_lmFL_weightedMNTD_taxalab)$adj.r.squared, digits = 2), "\n", 
+                       "p =", round(unname(summary(percell_lmFL_weightedMNTD_taxalab)$coefficients[,4][2]), digits = 4))) 
+
+
+plot_grid(plot_unweightedMPD_percell, plot_unweightedMNTD_percell,
+          plot_weightedMPD_percell, plot_weightedMNTD_percell,
+  labels = c("A", "B", "C", "D"),
+  nrow= 1, ncol = 4
+)
+
+```
+
+
+
 # Figure 3
-```{r fig-3, fig.width = 8, fig.height = 8, dependson = c("taxa-labels","taxalab-vs-fracprod", "taxalab-fractions")}
+```{r fig-3, fig.width= 16, fig.height = 8, dependson=c("taxalab-comparison", "taxalab-percell")}
+plot_grid(taxlab_unweight_mpd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
+            annotate("text", x=1.55, y=(max(mpd_nums1$b)-0.5), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("NS")) +
+            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
+          taxlab_unweight_mntd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
+            annotate("text", x=1.55, y=(max(mntd_nums1$b)-0.5), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("NS")) + 
+            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
+          taxlab_weight_mpd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
+            annotate("text", x=1.55, y=(max(mpd_nums2$b)-1), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("***\np =", round(weight_MPD_wilcox$p.value, digits = 6))) + 
+            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
+          taxlab_weight_mntd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
+            annotate("text", x=1.55, y=(max(mntd_nums2$b)+1.2), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("***\np =", round(weight_MNTD_wilcox$p.value, digits = 3))) + 
+            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
+          plot_unweightedMPD_percell + xlim(-4.5, 3.5), 
+          plot_unweightedMNTD_percell + xlim(-4.5, 3.5), 
+          plot_weightedMPD_percell + xlim(-4.5, 3.5), 
+          plot_weightedMNTD_percell + xlim(-4.5, 3.5), 
+          labels = c("A", "B", "C", "D", "E", "F", "G", "H"),
+          ncol = 4, nrow = 2)
+
+```
+
+
+```{r old-fig3, fig.width = 8.5, fig.height = 7, dependson = c("taxa-labels","taxalab-vs-fracprod", "taxalab-comparison")}
 # Plot it altogether 
 plot_grid(unweightedMPD_vs_fracprod_taxlab + ggtitle("") +
             xlab("Unweighted Mean Pairwise Distance") +
@@ -1505,13 +1716,13 @@ plot_grid(unweightedMPD_vs_fracprod_taxlab + ggtitle("") +
           unweightedMNTD_vs_fracprod_taxlab + ggtitle("") +
             xlab("Unweighted Mean Nearest Taxon Distance") +
             theme(legend.position = "none"), 
-          taxlab_weight_mpd +  xlab("Fraction \n") +
+          taxlab_weight_mpd +  xlab("\n Fraction \n") +
             theme(axis.text.y = element_blank()) + 
             ylab("Weighted Mean Pairwise Distance") +
             annotate("text", x=1.55, y=1.6, fontface = "bold",  size = 3.5, color = "gray40",
                        label= paste("***\np =", round(weight_MPD_wilcox$p.value, digits = 6))) + 
             coord_flip(),
-          taxlab_weight_mntd + xlab("Fraction \n") +
+          taxlab_weight_mntd + xlab("\n Fraction \n") +
             theme(axis.text.y = element_blank()) + 
             ylab("Weighted Mean Nearest Taxon Distance") +
             annotate("text", x=1.5, y=0.5, fontface = "bold",  size = 3.5, color = "gray40",
