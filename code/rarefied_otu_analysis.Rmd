@@ -560,6 +560,9 @@ summary(freeprod_ML_otu_rich)
 # Particle-Associated Richness vs fractional production 
 partprod_MLotu_rich <- lm(frac_bacprod ~ mean, data = filter(ML_otu_rich_stats, fraction == "WholePart"))
 summary(partprod_MLotu_rich) 
+
+# Both fractions together
+summary(lm(frac_bacprod ~ mean, data = ML_otu_rich_stats))
  
 # Plot 
 otu_rich_vegan <-  ggplot(ML_otu_rich_stats, aes(x=mean, y=frac_bacprod, color = fraction)) + 
@@ -593,6 +596,9 @@ summary(freeprod_ML_otu_shannon)
 partprod_MLotu_shannon <- lm(frac_bacprod ~ mean, data = filter(ML_otu_shannon_stats, fraction == "WholePart"))
 summary(partprod_MLotu_shannon)
 
+# Both fractions together
+summary(lm(frac_bacprod ~ mean, data = ML_otu_shannon_stats))
+
 # Plot 
 otu_shannon_vegan <- ggplot(ML_otu_shannon_stats, aes(x=mean, y=frac_bacprod, color = fraction)) + 
   geom_point(size = 3.5) + 
@@ -624,6 +630,9 @@ summary(freeprod_ML_otu_invsimps)
 # Particle-Associated Inverse Simpson vs fractional production 
 partprod_MLotu_invsimps <- lm(frac_bacprod ~ mean, data = filter(ML_otu_invsimps_stats, fraction == "WholePart"))
 summary(partprod_MLotu_invsimps)
+
+# Both fractions together
+summary(lm(frac_bacprod ~ mean, data = ML_otu_invsimps_stats))
 
 # Plot Simpson's Evenness
 otu_invsimps_vegan <- ggplot(ML_otu_invsimps_stats, aes(x=mean, y=frac_bacprod, color = fraction)) + 
@@ -658,6 +667,8 @@ summary(freeprod_ML_otu_simpseven)
 partprod_MLotu_simpseven <- lm(frac_bacprod ~ mean, data = filter(ML_otu_simpseven_stats, fraction == "WholePart"))
 summary(partprod_MLotu_simpseven)
 
+# Both fractions together
+summary(lm(frac_bacprod ~ mean, data = ML_otu_simpseven_stats))
 
 # Plot 
 otu_simpseven_vegan <- ggplot(ML_otu_simpseven_stats, aes(x=mean, y=frac_bacprod, color = fraction)) + 
@@ -797,77 +808,6 @@ detach("package:multcomp", unload=TRUE) # This package masks the dplyr select fu
 
 
 
-```{r richness-div-boxplot-BEF, warning=FALSE, fig.width = 15, fig.height = 8, dependson= c("boxplot-diversity-comparison","plot-vegan-fracprod")}
-plot_grid(poster_rich1 + xlab("Fraction \n") + ylab("Observed Richness") + 
-                theme(legend.position = "none", axis.text.y = element_blank()) +coord_flip() +
-                annotate("text", x=1.5, y=700, fontface = "bold",  size = 4, color = "gray40",
-                          label= paste("***\np =", round(rich_wilcox$p.value, digits = 3))), 
-          poster_shannon1 + xlab("Fraction  \n") + ylab("Shannon Entropy") + 
-                theme(legend.position = "none", axis.text.y = element_blank()) +
-                coord_flip() +
-                annotate("text", x=1.5, y=5.45, fontface = "bold",  size = 4, color = "gray40",
-                          label= paste("**\np =", round(shannon_wilcox$p.value, digits = 3))),  
-          poster_invsimps1 + xlab("Fraction \n") + ylab("Inverse Simpson") + 
-                theme(legend.position = c(0.78, 0.90), axis.text.y = element_blank(), legend.title = element_blank()) +
-                coord_flip() +
-                annotate("text", x=1.5, y=78, fontface = "bold",  size = 4, color = "gray40",
-                          label= paste("NS\np =", round(simpson_wilcox$p.value, digits = 2))), 
-          poster_simpseven1 + xlab("Fraction \n") + ylab("Simpson's Evenness") + 
-                theme(legend.position = "none", axis.text.y = element_blank()) +
-                coord_flip() +
-                annotate("text", x=1.5, y=0.135, fontface = "bold",  size = 4, color = "gray40",
-                          label= paste("NS\np =", round(simpseven_wilcox$p.value, digits = 2))), 
-          otu_rich_vegan + theme(legend.position = "none"), 
-          otu_shannon_vegan + theme(legend.position = "none"), 
-          otu_invsimps_vegan + theme(legend.position = c(0.7, 0.80)), 
-          otu_simpseven_vegan + theme(legend.position = "none"), 
-          labels = c("A", "B", "C", "D", "E", "F", "G", "H"),
-          ncol = 4, nrow = 2)
-```
-
-
-
-```{r rich-and-invsimps, warning=FALSE, fig.width = 8, fig.height = 7, dependson= c("boxplot-diversity-comparison","plot-vegan-fracprod")}
-plot_grid(poster_rich1 + xlab("\n Fraction \n") + ylab("Observed Richness") + 
-                theme(legend.position = "none", axis.text.y = element_blank()) +coord_flip() +
-                annotate("text", x=1.5, y=700, fontface = "bold",  size = 4, color = "gray40",
-                          label= paste("***\np =", round(rich_wilcox$p.value, digits = 3))), 
-          poster_invsimps1 + xlab("\n Fraction \n") + ylab("Inverse Simpson") + 
-                theme(legend.position = c(0.78, 0.90), 
-                      axis.text.y = element_blank(), 
-                      legend.title = element_blank()) +
-                coord_flip() +
-                annotate("text", x=1.5, y=78, fontface = "bold",  size = 4, color = "gray40",
-                          label= paste("NS\np =", round(simpson_wilcox$p.value, digits = 2))), 
-          otu_rich_vegan +  ylab("Heterotrophic Production \n(μgC/L/hr)") + 
-                theme(legend.position = "none"), 
-          otu_invsimps_vegan + ylab("Heterotrophic Production \n(μgC/L/hr)") +
-                theme(legend.position = c(0.7, 0.80)), 
-          labels = c("A", "B", "C", "D"),
-          ncol = 2, nrow = 2)
-```
-
-```{r shannon-and-simpseven, warning=FALSE, fig.width = 8, fig.height = 7, dependson= c("boxplot-diversity-comparison","plot-vegan-fracprod")}
-plot_grid(poster_shannon1 + xlab("\n Fraction  \n") + ylab("Shannon Entropy") + 
-                theme(legend.position = c(0.78, 0.90), axis.text.y = element_blank()) +
-                coord_flip() +
-                annotate("text", x=1.5, y=5.45, fontface = "bold",  size = 4, color = "gray40",
-                          label= paste("**\np =", round(shannon_wilcox$p.value, digits = 3))),  
-          poster_simpseven1 + xlab("\n Fraction \n") + ylab("Simpson's Evenness") + 
-                theme(legend.position = "none", axis.text.y = element_blank()) +
-                coord_flip() +
-                annotate("text", x=1.5, y=0.135, fontface = "bold",  size = 4, color = "gray40",
-                          label= paste("NS\np =", round(simpseven_wilcox$p.value, digits = 2))), 
-          otu_shannon_vegan + ylab("Heterotrophic Production \n(μgC/L/hr)") + 
-                theme(legend.position = c(0.7, 0.75)), 
-          otu_simpseven_vegan + ylab("Heterotrophic Production \n(μgC/L/hr)") + 
-                theme(legend.position = "none"), 
-          labels = c("A", "B", "C", "D"),
-          ncol = 2, nrow = 2)
-```
-
-
-
 # Per cell Fraction Production vs Diversity
 ```{r fracprod_percell-vs-div, eval = TRUE, fig.width = 15, fig.height = 4, warning = FALSE, dependson="subset-diversity"}
 #########################################################  RICHNESS 
@@ -885,7 +825,7 @@ rich_vs_fracprod_percell <- ggplot(filter(ML_otu_rich_stats, fracprod_per_cell !
   geom_point(size = 3.5) + geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd)) + 
   scale_x_continuous(limits = c(180, 810), breaks = c(200, 400, 600, 800)) + 
   scale_color_manual(values = c("firebrick3","cornflowerblue"), limits = c("WholePart", "WholeFree")) +
-  ylab("log10(Fraction Production/Cell)\n (μgC/cell/hr)") + 
+  ylab("log10(Production/Cell)\n (μgC/cell/hr)") + 
   xlab("Observed Richness") +
   geom_smooth(data=subset(ML_otu_rich_stats, fraction == "WholePart"), method='lm') + 
   theme(legend.position=c(0.2,0.9),        
@@ -914,7 +854,7 @@ shannon_vs_fracprod_percell <- ggplot(filter(ML_otu_shannon_stats, fracprod_per_
        aes(x=mean, y=log10(fracprod_per_cell), color = fraction)) + 
   geom_point(size = 3.5) + geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd)) + 
   scale_color_manual(values = c("firebrick3","cornflowerblue"), limits = c("WholePart", "WholeFree")) +
-  ylab("log10(Fraction Production/Cell)\n (μgC/cell/hr)") + 
+  ylab("log10(Production/Cell)\n (μgC/cell/hr)") + 
   xlab("Shannon Entropy") +
   scale_x_continuous(limits = c(3.4, 5.85), breaks = c(3.5, 4, 4.5, 5, 5.5)) + 
   geom_smooth(data=subset(ML_otu_shannon_stats, fraction == "WholePart"), method='lm') + 
@@ -945,7 +885,7 @@ invsimps_vs_fracprod_percell <- ggplot(filter(ML_otu_invsimps_stats, fracprod_pe
   geom_point(size = 3.5) + geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd)) + 
   scale_color_manual(values = c("firebrick3","cornflowerblue"), limits = c("WholePart", "WholeFree")) +
   scale_x_continuous(limits = c(0,95), breaks = c(0, 20, 40, 60, 80), expand = c(0,0)) + 
-  ylab("log10(Fraction Production/Cell)\n (μgC/cell/hr)") + 
+  ylab("log10(Production/Cell)\n (μgC/cell/hr)") + 
   xlab("Inverse Simpson") +
   geom_smooth(data=subset(ML_otu_invsimps_stats, fraction == "WholePart"), method='lm') + 
   theme(legend.position=c(0.2,0.9),        
@@ -979,7 +919,7 @@ simpseven_vs_fracprod_percell <- ggplot(filter(ML_otu_simpseven_stats, fracprod_
                      breaks=c("WholePart", "WholeFree"),
                      labels=c("Particle-Associated", "Free-Living")) + 
   scale_x_continuous(limits = c(0.03,0.151), breaks = c(0.05, 0.1, 0.15))  +
-  ylab("log10(Fraction Production/Cell)\n (μgC/cell/hr)") + 
+  ylab("log10(Production/Cell)\n (μgC/cell/hr)") + 
   xlab("Simpson's Evenness") +
   geom_smooth(data=subset(ML_otu_simpseven_stats, fraction == "WholePart"), method='lm') + 
   theme(legend.position=c(0.2,0.9),        
@@ -993,13 +933,61 @@ simpseven_vs_fracprod_percell <- ggplot(filter(ML_otu_simpseven_stats, fracprod_
 
 
 
-
 plot_grid(rich_vs_fracprod_percell + theme(legend.position= "none"), 
           shannon_vs_fracprod_percell + theme(legend.position= "none"),  
           invsimps_vs_fracprod_percell + theme(legend.position= "none"),
           simpseven_vs_fracprod_percell + theme(legend.position= c(0.35,0.9)),
           labels = c("A", "B", "C", "D"), 
           ncol = 4)
+```
+
+
+
+# Figure 2
+```{r rich-and-invsimps-BEF, warning=FALSE, fig.width = 8, fig.height = 10, dependson= c("boxplot-diversity-comparison","plot-vegan-fracprod", "fracprod_percell-vs-div")}
+plot_grid(poster_rich1 + xlab("\n Fraction \n") + ylab("Observed Richness") + 
+                theme(legend.position = "none", axis.text.y = element_blank()) +coord_flip() +
+                annotate("text", x=1.5, y=700, fontface = "bold",  size = 4, color = "gray40",
+                          label= paste("***\np =", round(rich_wilcox$p.value, digits = 3))), 
+          poster_invsimps1 + xlab("\n Fraction \n") + ylab("Inverse Simpson") + 
+                theme(legend.position = c(0.78, 0.90), 
+                      axis.text.y = element_blank(), 
+                      legend.title = element_blank()) +
+                coord_flip() +
+                annotate("text", x=1.5, y=78, fontface = "bold",  size = 4, color = "gray40",
+                          label= paste("NS\np =", round(simpson_wilcox$p.value, digits = 2))), 
+          otu_rich_vegan +  ylab("Heterotrophic Production \n(μgC/L/hr)") + 
+                theme(legend.position = "none"), 
+          otu_invsimps_vegan + ylab("Heterotrophic Production \n(μgC/L/hr)") +
+                theme(legend.position = c(0.7, 0.80)), 
+          rich_vs_fracprod_percell + theme(legend.position= "none"), 
+          invsimps_vs_fracprod_percell + theme(legend.position= "none"), 
+          labels = c("A", "B", "C", "D", "E", "F"),
+          ncol = 2, nrow = 3)
+```
+
+
+
+
+```{r shannon-and-simpseven-BEF, warning=FALSE, fig.width = 8, fig.height = 10, dependson= c("boxplot-diversity-comparison","plot-vegan-fracprod", "fracprod_percell-vs-div")}
+plot_grid(poster_shannon1 + xlab("\n Fraction  \n") + ylab("Shannon Entropy") + 
+                theme(legend.position = c(0.78, 0.90), axis.text.y = element_blank()) +
+                coord_flip() +
+                annotate("text", x=1.5, y=5.45, fontface = "bold",  size = 4, color = "gray40",
+                          label= paste("**\np =", round(shannon_wilcox$p.value, digits = 3))),  
+          poster_simpseven1 + xlab("\n Fraction \n") + ylab("Simpson's Evenness") + 
+                theme(legend.position = "none", axis.text.y = element_blank()) +
+                coord_flip() +
+                annotate("text", x=1.5, y=0.135, fontface = "bold",  size = 4, color = "gray40",
+                          label= paste("NS\np =", round(simpseven_wilcox$p.value, digits = 2))), 
+          otu_shannon_vegan + ylab("Heterotrophic Production \n(μgC/L/hr)") + 
+                theme(legend.position = c(0.7, 0.75)), 
+          otu_simpseven_vegan + ylab("Heterotrophic Production \n(μgC/L/hr)") + 
+                theme(legend.position = "none"), 
+          shannon_vs_fracprod_percell + theme(legend.position= "none"), 
+          simpseven_vs_fracprod_percell + theme(legend.position= "none"), 
+          labels = c("A", "B", "C", "D", "E", "F"),
+          ncol = 2, nrow = 3)
 ```
 
 
@@ -1011,11 +999,12 @@ plot_grid(rich_vs_fracprod_percell + theme(legend.position= "none"),
 total_prodpercell_rich <- lm(log10(fracprod_per_cell) ~ mean, data = filter(filter(ML_otu_rich_stats, fracprod_per_cell != Inf)))
 summary(total_prodpercell_rich)
 
+anova(partprod_percell_MLotu_rich, total_prodpercell_rich)
 
 # Plot 
 combined_richness <- ggplot(filter(ML_otu_rich_stats, fracprod_per_cell != Inf), aes(x=mean, y=log10(fracprod_per_cell))) + 
   geom_point(size = 3.5) + geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd)) + 
-  ylab("log10(Fraction Production/Cell)\n (μgC/cell/hr)") + 
+  ylab("log10(Production/Cell)\n (μgC/cell/hr)") + 
   xlab("Observed Richness") +
   geom_smooth(data= ML_otu_rich_stats, method='lm', color = "black") + 
   theme(legend.position=c(0.2,0.9),        
@@ -1034,7 +1023,7 @@ summary(total_prodpercell_shannon)
 combined_shannon <- ggplot(filter(ML_otu_shannon_stats, fracprod_per_cell != Inf),
        aes(x=mean, y=log10(fracprod_per_cell))) + 
   geom_point(size = 3.5) + geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd)) + 
-  ylab("log10(Fraction Production/Cell)\n (μgC/cell/hr)") + 
+  ylab("log10(Production/Cell)\n (μgC/cell/hr)") + 
   xlab("Shannon Entropy") +
   geom_smooth(data= ML_otu_shannon_stats, method='lm', color = "black") + 
   theme(legend.position=c(0.2,0.9),        
@@ -1054,7 +1043,7 @@ combined_invsimps <- ggplot(filter(ML_otu_invsimps_stats, fracprod_per_cell != I
   geom_point(size = 3.5) + geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd)) + 
   scale_color_manual(values = c("firebrick3","cornflowerblue"), limits = c("WholePart", "WholeFree")) +
   scale_x_continuous(limits = c(0,100), expand = c(0,0)) + 
-  ylab("log10(Fraction Production/Cell)\n (μgC/cell/hr)") + 
+  ylab("log10(Production/Cell)\n (μgC/cell/hr)") + 
   xlab("Inverse Simpson") +
   geom_smooth(data = ML_otu_invsimps_stats, method='lm', color = "black") + 
   theme(legend.position=c(0.2,0.9),        
@@ -1075,7 +1064,7 @@ combined_simpseven <- ggplot(filter(ML_otu_simpseven_stats, fracprod_per_cell !=
        aes(x=mean, y=log10(fracprod_per_cell))) + 
   geom_point(size = 3.5) + geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd)) + 
   scale_x_continuous(limits = c(0.03,0.151), breaks = c(0.05, 0.1, 0.15))  +
-  ylab("log10(Fraction Production/Cell)\n (μgC/cell/hr)") + 
+  ylab("log10(Production/Cell)\n (μgC/cell/hr)") + 
   xlab("Simpson's Evenness") +
   geom_smooth(data = ML_otu_simpseven_stats, method='lm', color = "black") + 
   theme(legend.position=c(0.2,0.9),        
@@ -1086,17 +1075,24 @@ combined_simpseven <- ggplot(filter(ML_otu_simpseven_stats, fracprod_per_cell !=
 
 
 
-plot_grid(rich_vs_fracprod_percell + ylab("log10(Fraction Production/Cell)\n (μgC/cell/hr)") + theme(legend.position = "none"), 
-          shannon_vs_fracprod_percell + ylab("log10(Fraction Production/Cell)\n (μgC/cell/hr)")+ theme(legend.position = "none"), 
-          invsimps_vs_fracprod_percell + ylab("log10(Fraction Production/Cell)\n (μgC/cell/hr)")+ theme(legend.position = "none"), 
-          simpseven_vs_fracprod_percell + ylab("log10(Fraction Production/Cell)\n (μgC/cell/hr)") +
+plot_grid(rich_vs_fracprod_percell + ylab("log10(Production/Cell)\n (μgC/cell/hr)") + theme(legend.position = "none"), 
+          shannon_vs_fracprod_percell + ylab("log10(Production/Cell)\n (μgC/cell/hr)")+ theme(legend.position = "none"), 
+          invsimps_vs_fracprod_percell + ylab("log10(Production/Cell)\n (μgC/cell/hr)")+ theme(legend.position = "none"), 
+          simpseven_vs_fracprod_percell + ylab("log10(Production/Cell)\n (μgC/cell/hr)") +
                     theme(legend.position = c(0.35,0.9)), 
           combined_richness, combined_shannon, combined_invsimps,combined_simpseven, 
           labels = c("A", "B", "C", "D","E", "F", "G", "H"), 
           ncol = 4, nrow = 2)
-
 ```
 
+
+
+```{r plot-combined-percell, eval = TRUE, fig.width = 15, fig.height = 4, warning = FALSE, dependson=c("subset-diversity", "fracprod-together-vs-div")}
+
+plot_grid(combined_richness, combined_shannon, combined_invsimps,combined_simpseven, 
+          labels = c("A", "B", "C", "D"), 
+          ncol = 4, nrow = 1)
+```
 
 
 # Exponential Shannon
@@ -1188,6 +1184,300 @@ plot_grid(expshannon_fracprod, expshannon_fracprod_percell, expshannon_combined,
 ```
 
 
+
+
+
+# Phylogenetic Community Structure 
+##Taxa.Labels
+```{r taxa-labels,  fig.width= 14, fig.height = 7}
+### UNWEIGHTED
+unweighted_sesMPD_taxalab <- read.csv("PrunedTree/mpd_mntd/unweighted_sesMPD_taxalab.csv", header = TRUE) %>%
+  dplyr::rename(norep_filter_name = X) %>%
+  left_join(nosed_meta_data, by = "norep_filter_name") %>%
+  # Create discrete pvalues and reorder factors for fraction and lakesite
+  mutate(pval = ifelse(mpd.obs.p > 0.9499, "high_pval",
+                       ifelse(mpd.obs.p < 0.0511, "low_pval",
+                              "insignificant")),
+         fraction = factor(fraction, levels = c("WholePart", "Particle", "WholeFree", "Free")),
+         lakesite = factor(lakesite, levels =c("MOT", "MDP", "MBR", "MIN")))
+
+
+### WEIGHTED
+WEIGHTED_sesMPD_taxalab <- read.csv("PrunedTree/mpd_mntd/weighted_sesMPD_taxalab.csv", header = TRUE) %>%
+  dplyr::rename(norep_filter_name = X) %>%
+  left_join(nosed_meta_data, by = "norep_filter_name") %>%
+  # Create discrete pvalues and reorder factors for fraction and lakesite
+  mutate(pval = ifelse(mpd.obs.p > 0.9499, "high_pval",
+                       ifelse(mpd.obs.p < 0.0511, "low_pval",
+                              "insignificant")),
+         fraction = factor(fraction, levels = c("WholePart", "Particle", "WholeFree", "Free")),
+         lakesite = factor(lakesite, levels =c("MOT", "MDP", "MBR", "MIN")))
+
+p1 <- ggplot(unweighted_sesMPD_taxalab, 
+             aes(x = lakesite, y = mpd.obs.z, color = pval, fill = fraction)) + 
+  geom_point(size = 3, position = position_jitterdodge()) + 
+  ggtitle("Unweighted MPD") +
+  ylab("Mean Pairwise Distance \n (ses.mpd)") +
+  geom_boxplot(alpha = 0.5, color = "black") +
+  scale_color_manual(values = pd_colors) + 
+  scale_fill_manual(values = fraction_colors) +
+  facet_grid(.~fraction, scale = "free_x") +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
+
+p2 <- ggplot(WEIGHTED_sesMPD_taxalab, 
+             aes(x = lakesite, y = mpd.obs.z, color = pval, fill = fraction)) + 
+  geom_point(size = 3, position = position_jitterdodge()) + 
+  ggtitle("Weighted MPD") +
+  ylab("Mean Pairwise Distance \n (ses.mpd)") +
+  geom_boxplot(alpha = 0.5, color = "black") +
+  scale_color_manual(values = pd_colors) + 
+  scale_fill_manual(values = fraction_colors) +
+  facet_grid(.~fraction, scale = "free_x") +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
+
+
+### UNWEIGHTED
+unweighted_sesMNTD_taxalab <- read.csv("PrunedTree/mpd_mntd/unweighted_sesMNTD_taxalab.csv", header = TRUE) %>%
+  dplyr::rename(norep_filter_name = X) %>%
+  left_join(nosed_meta_data, by = "norep_filter_name") %>%
+  # Create discrete pvalues and reorder factors for fraction and lakesite
+  mutate(pval = ifelse(mntd.obs.p > 0.9499, "high_pval",
+                       ifelse(mntd.obs.p < 0.0511, "low_pval",
+                              "insignificant")),
+         fraction = factor(fraction, levels = c("WholePart", "Particle", "WholeFree", "Free")),
+         lakesite = factor(lakesite, levels =c("MOT", "MDP", "MBR", "MIN")))
+
+
+### WEIGHTED
+WEIGHTED_sesMNTD_taxalab <- read.csv("PrunedTree/mpd_mntd/weighted_sesMNTD_taxalab.csv", header = TRUE) %>%
+  dplyr::rename(norep_filter_name = X) %>%
+  left_join(nosed_meta_data, by = "norep_filter_name") %>%
+  # Create discrete pvalues and reorder factors for fraction and lakesite
+  mutate(pval = ifelse(mntd.obs.p > 0.9499, "high_pval",
+                       ifelse(mntd.obs.p < 0.0511, "low_pval",
+                              "insignificant")),
+         fraction = factor(fraction, levels = c("WholePart", "Particle", "WholeFree", "Free")),
+         lakesite = factor(lakesite, levels =c("MOT", "MDP", "MBR", "MIN")))
+
+p3 <- ggplot(unweighted_sesMNTD_taxalab, 
+             aes(x = lakesite, y = mntd.obs.z, color = pval, fill = fraction)) + 
+  geom_point(size = 3, position = position_jitterdodge()) + 
+  ggtitle("Unweighted MNTD") +
+  ylab("Mean Nearest Taxon Distance \n (ses.mntd)") +
+  geom_boxplot(alpha = 0.5, color = "black") +
+  scale_color_manual(values = pd_colors) + 
+  scale_fill_manual(values = fraction_colors) +
+  facet_grid(.~fraction, scale = "free_x") +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
+
+p4 <- ggplot(WEIGHTED_sesMNTD_taxalab, 
+             aes(x = lakesite, y = mntd.obs.z, color = pval, fill = fraction)) + 
+  geom_point(size = 3, position = position_jitterdodge()) + 
+  ggtitle("Weighted MNTD") +
+  ylab("Mean Nearest Taxon Distance \n (ses.mntd)") +
+  geom_boxplot(alpha = 0.5, color = "black") +
+  scale_color_manual(values = pd_colors) + 
+  scale_fill_manual(values = fraction_colors) +
+  facet_grid(.~fraction, scale = "free_x") +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
+
+# Put all of it together into one plot
+plot_grid(p1, p2, p3, p4,
+          labels = c("A", "B", "C", "D"), 
+          ncol = 2, nrow = 2)
+```
+
+```{r taxalab-vs-fracprod, fig.width= 10, fig.height = 10}
+##########  MPD ANALYSIS 
+lmFL_unweightedMPD_taxalab <- lm(frac_bacprod ~ mpd.obs.z, 
+                                      data = filter(unweighted_sesMPD_taxalab, fraction == "WholeFree"))
+lmPA_unweightedMPD_taxalab <- lm(frac_bacprod ~ mpd.obs.z, 
+                                      data = filter(unweighted_sesMPD_taxalab, fraction == "WholePart"))
+
+unweightedMPD_vs_fracprod_taxlab <- ggplot(filter(unweighted_sesMPD_taxalab, fraction %in% c("WholePart", "WholeFree")), 
+       aes(x = mpd.obs.z, y = frac_bacprod, color = fraction)) + 
+  geom_point(size = 3) +
+  xlab("Unweighted Mean Pairwise Distance \n (ses.mpd)") + 
+  ylab("Heterotrophic Production") +
+  ggtitle("Unweighted MPD: Taxa Labels") + 
+  scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
+  geom_smooth(method = "lm") +
+  theme(legend.position = c(0.2, 0.87), legend.title = element_blank()) +
+    annotate("text", x = -0, y=-2, 
+           color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(lmPA_unweightedMPD_taxalab)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lmPA_unweightedMPD_taxalab)$coefficients[,4][2]), digits = 4))) +
+  annotate("text", x = 2, y=60, 
+         color = "cornflowerblue", fontface = "bold",
+         label = paste("R2 =", round(summary(lmFL_unweightedMPD_taxalab)$adj.r.squared, digits = 4), "\n", 
+                       "p =", round(unname(summary(lmFL_unweightedMPD_taxalab)$coefficients[,4][2]), digits = 4))) 
+
+
+####### WEIGHTED MPD ANALYSIS
+lmFL_weightedMPD_taxalab <- lm(frac_bacprod ~ mpd.obs.z, 
+                                      data = filter(WEIGHTED_sesMPD_taxalab, fraction == "WholeFree"))
+lmPA_weightedMPD_taxalab <- lm(frac_bacprod ~ mpd.obs.z, 
+                                      data = filter(WEIGHTED_sesMPD_taxalab, fraction == "WholePart"))
+
+weightedMPD_vs_fracprod_taxlab <- ggplot(filter(WEIGHTED_sesMPD_taxalab, fraction %in% c("WholePart", "WholeFree")), 
+       aes(x = mpd.obs.z, y = frac_bacprod, color = fraction)) + 
+  geom_point(size = 3) +
+  xlab("Weighted Mean Pairwise Distance  \n (ses.mpd)") + 
+  ylab("Heterotrophic Production") +
+  ggtitle("Weighted MPD: Taxa Labels") + 
+  scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
+  #geom_smooth(method = "lm", data = filter(WEIGHTED_sesMPD_taxalab, fraction == "WholePart")) +
+  theme(legend.position = c(0.2, 0.87), legend.title = element_blank()) +
+    annotate("text", x = 1, y=25, 
+           color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(lmPA_weightedMPD_taxalab)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lmPA_weightedMPD_taxalab)$coefficients[,4][2]), digits = 4))) +
+  annotate("text", x = 0, y=45, 
+         color = "cornflowerblue", fontface = "bold",
+         label = paste("R2 =", round(summary(lmFL_weightedMPD_taxalab)$adj.r.squared, digits = 4), "\n", 
+                       "p =", round(unname(summary(lmFL_weightedMPD_taxalab)$coefficients[,4][2]), digits = 4))) 
+
+
+####### UNWEIGHTED MPD ANALYSIS
+lmFL_unweightedMNTD_taxalab <- lm(frac_bacprod ~ mntd.obs.z, 
+                                      data = filter(unweighted_sesMNTD_taxalab, fraction == "WholeFree"))
+lmPA_unweightedMNTD_taxalab <- lm(frac_bacprod ~ mntd.obs.z, 
+                                      data = filter(unweighted_sesMNTD_taxalab, fraction == "WholePart"))
+
+unweightedMNTD_vs_fracprod_taxlab <- ggplot(filter(unweighted_sesMNTD_taxalab, fraction %in% c("WholePart", "WholeFree")), 
+       aes(x = mntd.obs.z, y = frac_bacprod, color = fraction)) + 
+  geom_point(size = 3) +
+  xlab("Unweighted Mean Nearest Taxon Distance  \n (ses.mntd)") + 
+  ylab("Heterotrophic Production") +
+  ggtitle("Unweighted MNTD: Taxa Labels") + 
+  scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
+  geom_smooth(method = "lm", data = filter(unweighted_sesMNTD_taxalab, fraction == "WholePart")) +
+  theme(legend.position = c(0.87, 0.87), legend.title = element_blank()) +
+    annotate("text", x = -1.25, y=25, 
+           color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(lmPA_unweightedMNTD_taxalab)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lmPA_unweightedMNTD_taxalab)$coefficients[,4][2]), digits = 4))) +
+  annotate("text", x = -1.25, y=40, 
+         color = "cornflowerblue", fontface = "bold",
+         label = paste("R2 =", round(summary(lmFL_unweightedMNTD_taxalab)$adj.r.squared, digits = 4), "\n", 
+                       "p =", round(unname(summary(lmFL_unweightedMNTD_taxalab)$coefficients[,4][2]), digits = 4))) 
+
+
+####### WEIGHTED MPD ANALYSIS
+lmFL_weightedMNTD_taxalab <- lm(frac_bacprod ~ mntd.obs.z, 
+                                      data = filter(WEIGHTED_sesMNTD_taxalab, fraction == "WholeFree"))
+lmPA_weightedMNTD_taxalab <- lm(frac_bacprod ~ mntd.obs.z, 
+                                      data = filter(WEIGHTED_sesMNTD_taxalab, fraction == "WholePart"))
+
+weightedMNTD_vs_fracprod_taxlab <- ggplot(filter(WEIGHTED_sesMNTD_taxalab, fraction %in% c("WholePart", "WholeFree")), 
+       aes(x = mntd.obs.z, y = frac_bacprod, color = fraction)) + 
+  geom_point(size = 3) +
+  xlab("Weighted Mean Nearest Taxon Distance  \n (ses.mntd)") + 
+  ylab("Heterotrophic Production") +
+  ggtitle("Weighted MNTD: Taxa Labels") + 
+  scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
+  #geom_smooth(method = "lm", data = filter(WEIGHTED_sesMNTD_taxalab, fraction == "WholePart")) +
+  theme(legend.position = c(0.87, 0.87), legend.title = element_blank()) +
+    annotate("text", x = -1.25, y=25, 
+           color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(lmPA_weightedMNTD_taxalab)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lmPA_weightedMNTD_taxalab)$coefficients[,4][2]), digits = 4))) +
+  annotate("text", x = -1.25, y=45, 
+         color = "cornflowerblue", fontface = "bold",
+         label = paste("R2 =", round(summary(lmFL_weightedMNTD_taxalab)$adj.r.squared, digits = 4), "\n", 
+                       "p =", round(unname(summary(lmFL_weightedMNTD_taxalab)$coefficients[,4][2]), digits = 4))) 
+
+# Plot it altogether 
+plot_grid(unweightedMPD_vs_fracprod_taxlab, unweightedMNTD_vs_fracprod_taxlab, 
+          weightedMPD_vs_fracprod_taxlab, weightedMNTD_vs_fracprod_taxlab,
+          labels = c("A", "B", "C", "D"), 
+          ncol = 2, nrow = 2)
+```
+
+
+```{r taxalab-fractions, fig.width= 12, fig.height = 5}
+wilcox.test(mpd.obs.z ~ fraction, 
+             data = filter(unweighted_sesMPD_taxalab, fraction %in% c("WholePart", "WholeFree")))
+
+taxlab_unweight_mpd <- ggplot(filter(unweighted_sesMPD_taxalab, fraction %in% c("WholePart", "WholeFree")), 
+       aes(y = mpd.obs.z, x = fraction, color = fraction, fill = fraction)) +
+  scale_color_manual(values = fraction_colors) + 
+  scale_fill_manual(values = fraction_colors) +
+  geom_point(size = 3, position = position_jitterdodge()) + 
+  geom_boxplot(alpha = 0.5) + xlab("") + 
+  ylab("Unweighted Mean Pairwise Distance") +
+  theme(legend.position = "none")
+
+
+wilcox.test(mpd.obs.z ~ fraction, 
+             data = filter(WEIGHTED_sesMPD_taxalab, fraction %in% c("WholePart", "WholeFree")))
+
+filter(WEIGHTED_sesMPD_taxalab, fraction %in% c("WholePart", "WholeFree")) %>%
+  group_by(fraction) %>%
+  summarize(mean(mpd.obs.z),  median(mpd.obs.z), sd(mpd.obs.z))
+
+taxlab_weight_mpd <- ggplot(filter(WEIGHTED_sesMPD_taxalab, fraction %in% c("WholePart", "WholeFree")), 
+       aes(y = mpd.obs.z, x = fraction, color = fraction, fill = fraction)) +
+  scale_color_manual(values = fraction_colors) + 
+  scale_fill_manual(values = fraction_colors) +
+  geom_point(size = 3, position = position_jitterdodge()) + 
+  geom_boxplot(alpha = 0.5) + xlab("") + 
+  ylab("Weighted Mean Pairwise Distance") +
+  theme(legend.position = "none")
+
+########################################## MNTD
+
+wilcox.test(mntd.obs.z ~ fraction, 
+             data = filter(unweighted_sesMNTD_taxalab, fraction %in% c("WholePart", "WholeFree")))
+
+taxlab_unweight_mntd <- ggplot(filter(unweighted_sesMNTD_taxalab, fraction %in% c("WholePart", "WholeFree")), 
+       aes(y = mntd.obs.z, x = fraction, color = fraction, fill = fraction)) +
+  scale_color_manual(values = fraction_colors) + 
+  scale_fill_manual(values = fraction_colors) +
+  geom_point(size = 3, position = position_jitterdodge()) + 
+  geom_boxplot(alpha = 0.5) + xlab("") + 
+  ylab("Unweighted Mean Nearest Taxon Distance") +
+  theme(legend.position = "none")
+
+
+wilcox.test(mntd.obs.z ~ fraction, 
+             data = filter(WEIGHTED_sesMNTD_taxalab, fraction %in% c("WholePart", "WholeFree")))
+
+filter(WEIGHTED_sesMNTD_taxalab, fraction %in% c("WholePart", "WholeFree")) %>%
+  group_by(fraction) %>%
+  summarize(mean(mntd.obs.z),  median(mntd.obs.z))
+
+taxlab_weight_mntd <- ggplot(filter(WEIGHTED_sesMNTD_taxalab, fraction %in% c("WholePart", "WholeFree")), 
+       aes(y = mntd.obs.z, x = fraction, color = fraction, fill = fraction)) +
+  scale_color_manual(values = fraction_colors) + 
+  scale_fill_manual(values = fraction_colors) +
+  geom_point(size = 3, position = position_jitterdodge()) + 
+  geom_boxplot(alpha = 0.5) + xlab("") + 
+  ylab("Weighted Mean Nearest Taxon Distance") +
+  theme(legend.position = "none")
+
+plot_grid(taxlab_unweight_mpd, taxlab_weight_mpd,taxlab_unweight_mntd, taxlab_weight_mntd,
+          labels = c("A", "B", "C", "D"),
+          ncol = 4)
+```
+
+
+# Figure 3
+```{r fig-3, dependson = c("taxa-labels","taxalab-vs-fracprod", "taxalab-fractions")}
+# Plot it altogether 
+plot_grid(unweightedMPD_vs_fracprod_taxlab + ggtitle("") +
+            xlab("Unweighted Mean Pairwise Distance") +
+            theme(legend.position = "none"), 
+          unweightedMNTD_vs_fracprod_taxlab + ggtitle("") +
+            xlab("Unweighted Mean Nearest Taxon Distance") +
+            theme(legend.position = "none"), 
+          taxlab_weight_mpd + coord_flip() + xlab("Fraction \n") +
+            theme(axis.text.y = element_blank()), 
+          taxlab_weight_mntd + coord_flip() + xlab("Fraction \n") +
+            theme(axis.text.y = element_blank()), 
+          labels = c("A", "B", "C", "D"), 
+          ncol = 2, nrow = 2)
+```
 
 ## Congruency between fractions 
 ```{r frac-congruency, fig.width=4, fig.height=4, dependson="subset-diversity"}

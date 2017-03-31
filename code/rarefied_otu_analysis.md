@@ -720,6 +720,32 @@ summary(partprod_MLotu_rich)
 ```
 
 ```r
+# Both fractions together
+summary(lm(frac_bacprod ~ mean, data = ML_otu_rich_stats))
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mean, data = ML_otu_rich_stats)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -14.757 -11.705  -5.573   9.159  46.467 
+## 
+## Coefficients:
+##              Estimate Std. Error t value Pr(>|t|)  
+## (Intercept) 15.810455   8.714369   1.814   0.0833 .
+## mean         0.003255   0.022053   0.148   0.8840  
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 15.54 on 22 degrees of freedom
+## Multiple R-squared:  0.0009892,	Adjusted R-squared:  -0.04442 
+## F-statistic: 0.02178 on 1 and 22 DF,  p-value: 0.884
+```
+
+```r
 # Plot 
 otu_rich_vegan <-  ggplot(ML_otu_rich_stats, aes(x=mean, y=frac_bacprod, color = fraction)) + 
   geom_point(size = 3.5) + 
@@ -795,6 +821,30 @@ summary(partprod_MLotu_shannon)
 ## Residual standard error: 5.693 on 10 degrees of freedom
 ## Multiple R-squared:  0.5664,	Adjusted R-squared:  0.5231 
 ## F-statistic: 13.07 on 1 and 10 DF,  p-value: 0.004732
+```
+
+```r
+# Both fractions together
+summary(lm(frac_bacprod ~ mean, data = ML_otu_shannon_stats))
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mean, data = ML_otu_shannon_stats)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -14.551 -11.737  -5.533   8.998  46.485 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)
+## (Intercept)   10.966     25.955   0.423    0.677
+## mean           1.411      6.015   0.235    0.817
+## 
+## Residual standard error: 15.53 on 22 degrees of freedom
+## Multiple R-squared:  0.002494,	Adjusted R-squared:  -0.04285 
+## F-statistic: 0.05501 on 1 and 22 DF,  p-value: 0.8167
 ```
 
 ```r
@@ -876,6 +926,32 @@ summary(partprod_MLotu_invsimps)
 ```
 
 ```r
+# Both fractions together
+summary(lm(frac_bacprod ~ mean, data = ML_otu_invsimps_stats))
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mean, data = ML_otu_invsimps_stats)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -15.277 -10.223  -5.040   5.606  46.308 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)  
+## (Intercept)  12.1929     5.8162   2.096   0.0478 *
+## mean          0.1544     0.1577   0.979   0.3380  
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 15.22 on 22 degrees of freedom
+## Multiple R-squared:  0.04178,	Adjusted R-squared:  -0.001773 
+## F-statistic: 0.9593 on 1 and 22 DF,  p-value: 0.338
+```
+
+```r
 # Plot Simpson's Evenness
 otu_invsimps_vegan <- ggplot(ML_otu_invsimps_stats, aes(x=mean, y=frac_bacprod, color = fraction)) + 
   geom_point(size = 3.5) +  
@@ -952,6 +1028,32 @@ summary(partprod_MLotu_simpseven)
 ## Residual standard error: 5.547 on 10 degrees of freedom
 ## Multiple R-squared:  0.5884,	Adjusted R-squared:  0.5472 
 ## F-statistic: 14.29 on 1 and 10 DF,  p-value: 0.003598
+```
+
+```r
+# Both fractions together
+summary(lm(frac_bacprod ~ mean, data = ML_otu_simpseven_stats))
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mean, data = ML_otu_simpseven_stats)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -16.188  -7.251  -4.197   2.929  46.731 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)  
+## (Intercept)  -0.1406     9.5644  -0.015   0.9884  
+## mean        209.3885   111.1051   1.885   0.0728 .
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 14.43 on 22 degrees of freedom
+## Multiple R-squared:  0.139,	Adjusted R-squared:  0.09986 
+## F-statistic: 3.552 on 1 and 22 DF,  p-value: 0.07276
 ```
 
 ```r
@@ -1204,86 +1306,6 @@ detach("package:multcomp", unload=TRUE) # This package masks the dplyr select fu
 
 
 
-
-```r
-plot_grid(poster_rich1 + xlab("Fraction \n") + ylab("Observed Richness") + 
-                theme(legend.position = "none", axis.text.y = element_blank()) +coord_flip() +
-                annotate("text", x=1.5, y=700, fontface = "bold",  size = 4, color = "gray40",
-                          label= paste("***\np =", round(rich_wilcox$p.value, digits = 3))), 
-          poster_shannon1 + xlab("Fraction  \n") + ylab("Shannon Entropy") + 
-                theme(legend.position = "none", axis.text.y = element_blank()) +
-                coord_flip() +
-                annotate("text", x=1.5, y=5.45, fontface = "bold",  size = 4, color = "gray40",
-                          label= paste("**\np =", round(shannon_wilcox$p.value, digits = 3))),  
-          poster_invsimps1 + xlab("Fraction \n") + ylab("Inverse Simpson") + 
-                theme(legend.position = c(0.78, 0.90), axis.text.y = element_blank(), legend.title = element_blank()) +
-                coord_flip() +
-                annotate("text", x=1.5, y=78, fontface = "bold",  size = 4, color = "gray40",
-                          label= paste("NS\np =", round(simpson_wilcox$p.value, digits = 2))), 
-          poster_simpseven1 + xlab("Fraction \n") + ylab("Simpson's Evenness") + 
-                theme(legend.position = "none", axis.text.y = element_blank()) +
-                coord_flip() +
-                annotate("text", x=1.5, y=0.135, fontface = "bold",  size = 4, color = "gray40",
-                          label= paste("NS\np =", round(simpseven_wilcox$p.value, digits = 2))), 
-          otu_rich_vegan + theme(legend.position = "none"), 
-          otu_shannon_vegan + theme(legend.position = "none"), 
-          otu_invsimps_vegan + theme(legend.position = c(0.7, 0.80)), 
-          otu_simpseven_vegan + theme(legend.position = "none"), 
-          labels = c("A", "B", "C", "D", "E", "F", "G", "H"),
-          ncol = 4, nrow = 2)
-```
-
-<img src="Rarefied_Figures/richness-div-boxplot-BEF-1.png" style="display: block; margin: auto;" />
-
-
-
-
-```r
-plot_grid(poster_rich1 + xlab("\n Fraction \n") + ylab("Observed Richness") + 
-                theme(legend.position = "none", axis.text.y = element_blank()) +coord_flip() +
-                annotate("text", x=1.5, y=700, fontface = "bold",  size = 4, color = "gray40",
-                          label= paste("***\np =", round(rich_wilcox$p.value, digits = 3))), 
-          poster_invsimps1 + xlab("\n Fraction \n") + ylab("Inverse Simpson") + 
-                theme(legend.position = c(0.78, 0.90), 
-                      axis.text.y = element_blank(), 
-                      legend.title = element_blank()) +
-                coord_flip() +
-                annotate("text", x=1.5, y=78, fontface = "bold",  size = 4, color = "gray40",
-                          label= paste("NS\np =", round(simpson_wilcox$p.value, digits = 2))), 
-          otu_rich_vegan +  ylab("Heterotrophic Production \n(μgC/L/hr)") + 
-                theme(legend.position = "none"), 
-          otu_invsimps_vegan + ylab("Heterotrophic Production \n(μgC/L/hr)") +
-                theme(legend.position = c(0.7, 0.80)), 
-          labels = c("A", "B", "C", "D"),
-          ncol = 2, nrow = 2)
-```
-
-<img src="Rarefied_Figures/rich-and-invsimps-1.png" style="display: block; margin: auto;" />
-
-
-```r
-plot_grid(poster_shannon1 + xlab("\n Fraction  \n") + ylab("Shannon Entropy") + 
-                theme(legend.position = c(0.78, 0.90), axis.text.y = element_blank()) +
-                coord_flip() +
-                annotate("text", x=1.5, y=5.45, fontface = "bold",  size = 4, color = "gray40",
-                          label= paste("**\np =", round(shannon_wilcox$p.value, digits = 3))),  
-          poster_simpseven1 + xlab("\n Fraction \n") + ylab("Simpson's Evenness") + 
-                theme(legend.position = "none", axis.text.y = element_blank()) +
-                coord_flip() +
-                annotate("text", x=1.5, y=0.135, fontface = "bold",  size = 4, color = "gray40",
-                          label= paste("NS\np =", round(simpseven_wilcox$p.value, digits = 2))), 
-          otu_shannon_vegan + ylab("Heterotrophic Production \n(μgC/L/hr)") + 
-                theme(legend.position = c(0.7, 0.75)), 
-          otu_simpseven_vegan + ylab("Heterotrophic Production \n(μgC/L/hr)") + 
-                theme(legend.position = "none"), 
-          labels = c("A", "B", "C", "D"),
-          ncol = 2, nrow = 2)
-```
-
-<img src="Rarefied_Figures/shannon-and-simpseven-1.png" style="display: block; margin: auto;" />
-
-
-
 # Per cell Fraction Production vs Diversity
 
 ```r
@@ -1350,7 +1372,7 @@ rich_vs_fracprod_percell <- ggplot(filter(ML_otu_rich_stats, fracprod_per_cell !
   geom_point(size = 3.5) + geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd)) + 
   scale_x_continuous(limits = c(180, 810), breaks = c(200, 400, 600, 800)) + 
   scale_color_manual(values = c("firebrick3","cornflowerblue"), limits = c("WholePart", "WholeFree")) +
-  ylab("log10(Fraction Production/Cell)\n (μgC/cell/hr)") + 
+  ylab("log10(Production/Cell)\n (μgC/cell/hr)") + 
   xlab("Observed Richness") +
   geom_smooth(data=subset(ML_otu_rich_stats, fraction == "WholePart"), method='lm') + 
   theme(legend.position=c(0.2,0.9),        
@@ -1426,7 +1448,7 @@ shannon_vs_fracprod_percell <- ggplot(filter(ML_otu_shannon_stats, fracprod_per_
        aes(x=mean, y=log10(fracprod_per_cell), color = fraction)) + 
   geom_point(size = 3.5) + geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd)) + 
   scale_color_manual(values = c("firebrick3","cornflowerblue"), limits = c("WholePart", "WholeFree")) +
-  ylab("log10(Fraction Production/Cell)\n (μgC/cell/hr)") + 
+  ylab("log10(Production/Cell)\n (μgC/cell/hr)") + 
   xlab("Shannon Entropy") +
   scale_x_continuous(limits = c(3.4, 5.85), breaks = c(3.5, 4, 4.5, 5, 5.5)) + 
   geom_smooth(data=subset(ML_otu_shannon_stats, fraction == "WholePart"), method='lm') + 
@@ -1505,7 +1527,7 @@ invsimps_vs_fracprod_percell <- ggplot(filter(ML_otu_invsimps_stats, fracprod_pe
   geom_point(size = 3.5) + geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd)) + 
   scale_color_manual(values = c("firebrick3","cornflowerblue"), limits = c("WholePart", "WholeFree")) +
   scale_x_continuous(limits = c(0,95), breaks = c(0, 20, 40, 60, 80), expand = c(0,0)) + 
-  ylab("log10(Fraction Production/Cell)\n (μgC/cell/hr)") + 
+  ylab("log10(Production/Cell)\n (μgC/cell/hr)") + 
   xlab("Inverse Simpson") +
   geom_smooth(data=subset(ML_otu_invsimps_stats, fraction == "WholePart"), method='lm') + 
   theme(legend.position=c(0.2,0.9),        
@@ -1587,7 +1609,7 @@ simpseven_vs_fracprod_percell <- ggplot(filter(ML_otu_simpseven_stats, fracprod_
                      breaks=c("WholePart", "WholeFree"),
                      labels=c("Particle-Associated", "Free-Living")) + 
   scale_x_continuous(limits = c(0.03,0.151), breaks = c(0.05, 0.1, 0.15))  +
-  ylab("log10(Fraction Production/Cell)\n (μgC/cell/hr)") + 
+  ylab("log10(Production/Cell)\n (μgC/cell/hr)") + 
   xlab("Simpson's Evenness") +
   geom_smooth(data=subset(ML_otu_simpseven_stats, fraction == "WholePart"), method='lm') + 
   theme(legend.position=c(0.2,0.9),        
@@ -1601,7 +1623,6 @@ simpseven_vs_fracprod_percell <- ggplot(filter(ML_otu_simpseven_stats, fracprod_
 
 
 
-
 plot_grid(rich_vs_fracprod_percell + theme(legend.position= "none"), 
           shannon_vs_fracprod_percell + theme(legend.position= "none"),  
           invsimps_vs_fracprod_percell + theme(legend.position= "none"),
@@ -1611,6 +1632,72 @@ plot_grid(rich_vs_fracprod_percell + theme(legend.position= "none"),
 ```
 
 <img src="Rarefied_Figures/fracprod_percell-vs-div-1.png" style="display: block; margin: auto;" />
+
+
+
+
+
+
+
+
+# Figure 2
+
+
+
+
+
+```r
+plot_grid(poster_rich1 + xlab("\n Fraction \n") + ylab("Observed Richness") + 
+                theme(legend.position = "none", axis.text.y = element_blank()) +coord_flip() +
+                annotate("text", x=1.5, y=700, fontface = "bold",  size = 4, color = "gray40",
+                          label= paste("***\np =", round(rich_wilcox$p.value, digits = 3))), 
+          poster_invsimps1 + xlab("\n Fraction \n") + ylab("Inverse Simpson") + 
+                theme(legend.position = c(0.78, 0.90), 
+                      axis.text.y = element_blank(), 
+                      legend.title = element_blank()) +
+                coord_flip() +
+                annotate("text", x=1.5, y=78, fontface = "bold",  size = 4, color = "gray40",
+                          label= paste("NS\np =", round(simpson_wilcox$p.value, digits = 2))), 
+          otu_rich_vegan +  ylab("Heterotrophic Production \n(μgC/L/hr)") + 
+                theme(legend.position = "none"), 
+          otu_invsimps_vegan + ylab("Heterotrophic Production \n(μgC/L/hr)") +
+                theme(legend.position = c(0.7, 0.80)), 
+          rich_vs_fracprod_percell + theme(legend.position= "none"), 
+          invsimps_vs_fracprod_percell + theme(legend.position= "none"), 
+          labels = c("A", "B", "C", "D", "E", "F"),
+          ncol = 2, nrow = 3)
+```
+
+<img src="Rarefied_Figures/rich-and-invsimps-BEF-1.png" style="display: block; margin: auto;" />
+
+
+
+
+
+```r
+plot_grid(poster_shannon1 + xlab("\n Fraction  \n") + ylab("Shannon Entropy") + 
+                theme(legend.position = c(0.78, 0.90), axis.text.y = element_blank()) +
+                coord_flip() +
+                annotate("text", x=1.5, y=5.45, fontface = "bold",  size = 4, color = "gray40",
+                          label= paste("**\np =", round(shannon_wilcox$p.value, digits = 3))),  
+          poster_simpseven1 + xlab("\n Fraction \n") + ylab("Simpson's Evenness") + 
+                theme(legend.position = "none", axis.text.y = element_blank()) +
+                coord_flip() +
+                annotate("text", x=1.5, y=0.135, fontface = "bold",  size = 4, color = "gray40",
+                          label= paste("NS\np =", round(simpseven_wilcox$p.value, digits = 2))), 
+          otu_shannon_vegan + ylab("Heterotrophic Production \n(μgC/L/hr)") + 
+                theme(legend.position = c(0.7, 0.75)), 
+          otu_simpseven_vegan + ylab("Heterotrophic Production \n(μgC/L/hr)") + 
+                theme(legend.position = "none"), 
+          shannon_vs_fracprod_percell + theme(legend.position= "none"), 
+          simpseven_vs_fracprod_percell + theme(legend.position= "none"), 
+          labels = c("A", "B", "C", "D", "E", "F"),
+          ncol = 2, nrow = 3)
+```
+
+<img src="Rarefied_Figures/shannon-and-simpseven-BEF-1.png" style="display: block; margin: auto;" />
+
+
 
 
 
@@ -1646,10 +1733,18 @@ summary(total_prodpercell_rich)
 ```
 
 ```r
+anova(partprod_percell_MLotu_rich, total_prodpercell_rich)
+```
+
+```
+## Error in anova.lmlist(object, ...): models were not all fitted to the same size of dataset
+```
+
+```r
 # Plot 
 combined_richness <- ggplot(filter(ML_otu_rich_stats, fracprod_per_cell != Inf), aes(x=mean, y=log10(fracprod_per_cell))) + 
   geom_point(size = 3.5) + geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd)) + 
-  ylab("log10(Fraction Production/Cell)\n (μgC/cell/hr)") + 
+  ylab("log10(Production/Cell)\n (μgC/cell/hr)") + 
   xlab("Observed Richness") +
   geom_smooth(data= ML_otu_rich_stats, method='lm', color = "black") + 
   theme(legend.position=c(0.2,0.9),        
@@ -1692,7 +1787,7 @@ summary(total_prodpercell_shannon)
 combined_shannon <- ggplot(filter(ML_otu_shannon_stats, fracprod_per_cell != Inf),
        aes(x=mean, y=log10(fracprod_per_cell))) + 
   geom_point(size = 3.5) + geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd)) + 
-  ylab("log10(Fraction Production/Cell)\n (μgC/cell/hr)") + 
+  ylab("log10(Production/Cell)\n (μgC/cell/hr)") + 
   xlab("Shannon Entropy") +
   geom_smooth(data= ML_otu_shannon_stats, method='lm', color = "black") + 
   theme(legend.position=c(0.2,0.9),        
@@ -1736,7 +1831,7 @@ combined_invsimps <- ggplot(filter(ML_otu_invsimps_stats, fracprod_per_cell != I
   geom_point(size = 3.5) + geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd)) + 
   scale_color_manual(values = c("firebrick3","cornflowerblue"), limits = c("WholePart", "WholeFree")) +
   scale_x_continuous(limits = c(0,100), expand = c(0,0)) + 
-  ylab("log10(Fraction Production/Cell)\n (μgC/cell/hr)") + 
+  ylab("log10(Production/Cell)\n (μgC/cell/hr)") + 
   xlab("Inverse Simpson") +
   geom_smooth(data = ML_otu_invsimps_stats, method='lm', color = "black") + 
   theme(legend.position=c(0.2,0.9),        
@@ -1780,7 +1875,7 @@ combined_simpseven <- ggplot(filter(ML_otu_simpseven_stats, fracprod_per_cell !=
        aes(x=mean, y=log10(fracprod_per_cell))) + 
   geom_point(size = 3.5) + geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd)) + 
   scale_x_continuous(limits = c(0.03,0.151), breaks = c(0.05, 0.1, 0.15))  +
-  ylab("log10(Fraction Production/Cell)\n (μgC/cell/hr)") + 
+  ylab("log10(Production/Cell)\n (μgC/cell/hr)") + 
   xlab("Simpson's Evenness") +
   geom_smooth(data = ML_otu_simpseven_stats, method='lm', color = "black") + 
   theme(legend.position=c(0.2,0.9),        
@@ -1791,10 +1886,10 @@ combined_simpseven <- ggplot(filter(ML_otu_simpseven_stats, fracprod_per_cell !=
 
 
 
-plot_grid(rich_vs_fracprod_percell + ylab("log10(Fraction Production/Cell)\n (μgC/cell/hr)") + theme(legend.position = "none"), 
-          shannon_vs_fracprod_percell + ylab("log10(Fraction Production/Cell)\n (μgC/cell/hr)")+ theme(legend.position = "none"), 
-          invsimps_vs_fracprod_percell + ylab("log10(Fraction Production/Cell)\n (μgC/cell/hr)")+ theme(legend.position = "none"), 
-          simpseven_vs_fracprod_percell + ylab("log10(Fraction Production/Cell)\n (μgC/cell/hr)") +
+plot_grid(rich_vs_fracprod_percell + ylab("log10(Production/Cell)\n (μgC/cell/hr)") + theme(legend.position = "none"), 
+          shannon_vs_fracprod_percell + ylab("log10(Production/Cell)\n (μgC/cell/hr)")+ theme(legend.position = "none"), 
+          invsimps_vs_fracprod_percell + ylab("log10(Production/Cell)\n (μgC/cell/hr)")+ theme(legend.position = "none"), 
+          simpseven_vs_fracprod_percell + ylab("log10(Production/Cell)\n (μgC/cell/hr)") +
                     theme(legend.position = c(0.35,0.9)), 
           combined_richness, combined_shannon, combined_invsimps,combined_simpseven, 
           labels = c("A", "B", "C", "D","E", "F", "G", "H"), 
@@ -1803,6 +1898,16 @@ plot_grid(rich_vs_fracprod_percell + ylab("log10(Fraction Production/Cell)\n (μ
 
 <img src="Rarefied_Figures/fracprod-together-vs-div-1.png" style="display: block; margin: auto;" />
 
+
+
+
+```r
+plot_grid(combined_richness, combined_shannon, combined_invsimps,combined_simpseven, 
+          labels = c("A", "B", "C", "D"), 
+          ncol = 4, nrow = 1)
+```
+
+<img src="Rarefied_Figures/plot-combined-percell-1.png" style="display: block; margin: auto;" />
 
 
 # Exponential Shannon
