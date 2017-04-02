@@ -943,6 +943,39 @@ plot_grid(rich_vs_fracprod_percell + theme(legend.position= "none"),
 
 
 
+## Post-hoc analysis 
+```{r percell-post-hoc, dependson=c("vean-otu-alphadiv-calc", "fracprod_percell-vs-div", "post-hoc")}
+# Are the fractions different from each other in predicting fraction production?
+prod_fracprodpercell_values <- subset(otu_alphadiv, limnion == "Top" & year == "2015" & 
+                          fraction == "WholePart" &
+                          measure == "Richness") %>%
+  dplyr::select(norep_filter_name, fracprod_per_cell_noinf) 
+
+# Melt the data frame to be in long format
+gather_prod_alpha <- as.data.frame(scale_prod_alphadiv) %>%   # Make scaled values a dataframe
+  tibble::rownames_to_column(var = "norep_filter_name") %>%   # Add the rownames to keep samplenames
+  gather(measure, mean, 2:5)                                  # Gather 4 columns and put values into 2
+  
+# Put it all together into one dataframe with 4 columns: sample_name, measure, mean, frac_bacprod 
+prod_alpha_fracprod_percell <- inner_join(gather_prod_alpha, prod_fracprodpercell_values, by = "norep_filter_name") %>%
+  mutate(measure = as.factor(measure)) %>%
+  dplyr::filter(!is.na(fracprod_per_cell_noinf))
+
+
+
+# Double check values from above models
+lm_percell_by_divmeasure <- lm(log10(fracprod_per_cell_noinf) ~ mean/measure, data = prod_alpha_fracprod_percell)
+summary(lm_percell_by_divmeasure)
+
+# Run a post-hoc test
+library(multcomp)
+post_hoc_measure <- glht(lm_percell_by_divmeasure, linfct = mcp(measure = "Tukey", interaction_average=TRUE),
+                vcov=vcovHC(lm_percell_by_divmeasure, type = "HC0"))
+summary(post_hoc_measure)
+detach("package:multcomp", unload=TRUE) # This package masks the dplyr select function = :(
+```
+
+
 # Figure 2
 ```{r rich-and-invsimps-BEF, warning=FALSE, fig.width = 8, fig.height = 10, dependson= c("boxplot-diversity-comparison","plot-vegan-fracprod", "fracprod_percell-vs-div")}
 plot_grid(poster_rich1 + xlab("\n Fraction \n") + ylab("Observed Richness") + 
@@ -1190,7 +1223,7 @@ plot_grid(expshannon_fracprod, expshannon_fracprod_percell, expshannon_combined,
 # Phylogenetic Community Structure 
 
 # Faiths PD
-```{r faiths-pd}
+```{r faiths-pd, fig.width=4, fig.height=4}
 # Create the metadata frame 
 nosed_meta_data <- nosed_meta_data %>%
   mutate(fraction_bac_abund = as.numeric(fraction_bac_abund),

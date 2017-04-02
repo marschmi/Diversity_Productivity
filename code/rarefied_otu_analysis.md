@@ -1627,6 +1627,93 @@ plot_grid(rich_vs_fracprod_percell + theme(legend.position= "none"),
 
 
 
+## Post-hoc analysis 
+
+```r
+# Are the fractions different from each other in predicting fraction production?
+prod_fracprodpercell_values <- subset(otu_alphadiv, limnion == "Top" & year == "2015" & 
+                          fraction == "WholePart" &
+                          measure == "Richness") %>%
+  dplyr::select(norep_filter_name, fracprod_per_cell_noinf) 
+
+# Melt the data frame to be in long format
+gather_prod_alpha <- as.data.frame(scale_prod_alphadiv) %>%   # Make scaled values a dataframe
+  tibble::rownames_to_column(var = "norep_filter_name") %>%   # Add the rownames to keep samplenames
+  gather(measure, mean, 2:5)                                  # Gather 4 columns and put values into 2
+  
+# Put it all together into one dataframe with 4 columns: sample_name, measure, mean, frac_bacprod 
+prod_alpha_fracprod_percell <- inner_join(gather_prod_alpha, prod_fracprodpercell_values, by = "norep_filter_name") %>%
+  mutate(measure = as.factor(measure)) %>%
+  dplyr::filter(!is.na(fracprod_per_cell_noinf))
+```
+
+```
+## Warning in inner_join_impl(x, y, by$x, by$y, suffix$x, suffix$y): joining character vector and factor, coercing into character vector
+```
+
+```r
+# Double check values from above models
+lm_percell_by_divmeasure <- lm(log10(fracprod_per_cell_noinf) ~ mean/measure, data = prod_alpha_fracprod_percell)
+summary(lm_percell_by_divmeasure)
+```
+
+```
+## 
+## Call:
+## lm(formula = log10(fracprod_per_cell_noinf) ~ mean/measure, data = prod_alpha_fracprod_percell)
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -0.59782 -0.21451 -0.07629  0.11273  0.85211 
+## 
+## Coefficients:
+##                                Estimate Std. Error  t value Pr(>|t|)    
+## (Intercept)                   -6.815885   0.058063 -117.388  < 2e-16 ***
+## mean                           0.329669   0.081366    4.052 0.000235 ***
+## mean:measureRichness          -0.011579   0.122503   -0.095 0.925180    
+## mean:measureShannon_Entropy   -0.001707   0.121526   -0.014 0.988867    
+## mean:measureSimpsons_Evenness -0.028143   0.123928   -0.227 0.821537    
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 0.3562 on 39 degrees of freedom
+## Multiple R-squared:  0.5635,	Adjusted R-squared:  0.5187 
+## F-statistic: 12.58 on 4 and 39 DF,  p-value: 1.146e-06
+```
+
+```r
+# Run a post-hoc test
+library(multcomp)
+post_hoc_measure <- glht(lm_percell_by_divmeasure, linfct = mcp(measure = "Tukey", interaction_average=TRUE),
+                vcov=vcovHC(lm_percell_by_divmeasure, type = "HC0"))
+summary(post_hoc_measure)
+```
+
+```
+## 
+## 	 Simultaneous Tests for General Linear Hypotheses
+## 
+## Multiple Comparisons of Means: Tukey Contrasts
+## 
+## 
+## Fit: lm(formula = log10(fracprod_per_cell_noinf) ~ mean/measure, data = prod_alpha_fracprod_percell)
+## 
+## Linear Hypotheses:
+##                                           Estimate Std. Error t value Pr(>|t|)
+## Richness - Inverse_Simpson == 0          -0.011579   0.131984  -0.088    1.000
+## Shannon_Entropy - Inverse_Simpson == 0   -0.001707   0.125838  -0.014    1.000
+## Simpsons_Evenness - Inverse_Simpson == 0 -0.028143   0.149061  -0.189    0.998
+## Shannon_Entropy - Richness == 0           0.009872   0.147365   0.067    1.000
+## Simpsons_Evenness - Richness == 0        -0.016564   0.172518  -0.096    1.000
+## Simpsons_Evenness - Shannon_Entropy == 0 -0.026437   0.165521  -0.160    0.998
+## (Adjusted p values reported -- single-step method)
+```
+
+```r
+detach("package:multcomp", unload=TRUE) # This package masks the dplyr select function = :(
+```
+
+
 # Figure 2
 
 ```r
