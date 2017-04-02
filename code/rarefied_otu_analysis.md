@@ -2101,15 +2101,53 @@ plot_grid(expshannon_fracprod, expshannon_fracprod_percell, expshannon_combined,
 
 
 # Phylogenetic Community Structure 
-##Taxa.Labels
+
+# Faiths PD
 
 ```r
+# Create the metadata frame 
 nosed_meta_data <- nosed_meta_data %>%
   mutate(fraction_bac_abund = as.numeric(fraction_bac_abund),
          fracprod_per_cell = frac_bacprod/(1000*fraction_bac_abund),
          fracprod_per_cell_noinf = ifelse(fracprod_per_cell == Inf, NA, fracprod_per_cell))
 
 
+
+## Calculate Faith's PD and species richness for sample 
+#faiths_pd_RAREFIED <- pd(relabund_otu_RAREFIED, tree_RAREFIED_rm10, include.root = FALSE)
+#faiths_pd_RAREFIED$norep_filter_name <- row.names(faiths_pd_RAREFIED)
+  
+#write.csv(faiths_pd_RAREFIED, file = "PrunedTree/mpd_mntd/faithsPD_rarefy_rm10.csv", row.names = FALSE)
+faiths_pd_RAREFIED_rm10 <- read.csv("PrunedTree/mpd_mntd/faithsPD_rarefy_rm10.csv", header = TRUE)
+
+# Join Faith's PD with the rest of the metadata 
+meta_data_PD <- left_join(faiths_pd_RAREFIED_rm10, nosed_meta_data, by = "norep_filter_name")
+```
+
+```
+## Warning in left_join_impl(x, y, by$x, by$y, suffix$x, suffix$y): joining character vector and factor, coercing into character vector
+```
+
+```r
+### Is there a correlation between species richness and faith's PD?
+lm_PD_vs_SR <- lm(PD ~ SR, data = meta_data_PD)
+ggplot(meta_data_PD, aes(y = PD, x = SR)) + 
+  geom_point(size = 3) + ylab("Faith's Phylogenetic Diversity") + 
+  xlab("Species richness") +
+  geom_smooth(method = "lm") +
+    annotate("text", x = 300, y=15, color = "black", fontface = "bold",
+           label = paste("R2 =", round(summary(lm_PD_vs_SR)$adj.r.squared, digits = 2), "\n", 
+                         "p =", round(unname(summary(lm_PD_vs_SR)$coefficients[,4][2]), digits = 35))) 
+```
+
+<img src="Rarefied_Figures/faiths-pd-1.png" style="display: block; margin: auto;" />
+
+
+
+
+##Taxa.Labels
+
+```r
 ### UNWEIGHTED
 unweighted_sesMPD_taxalab <- read.csv("PrunedTree/mpd_mntd/unweighted_sesMPD_taxalab.csv", header = TRUE) %>%
   dplyr::rename(norep_filter_name = X) %>%
