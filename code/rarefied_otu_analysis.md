@@ -1100,9 +1100,7 @@ plot_residuals(lm_model = partprod_MLotu_rich,
                main_title = "Particle-Associated Richness")
 ```
 
-```
-## Error in plot_residuals(lm_model = partprod_MLotu_rich, lm_observed_y = filter(ML_otu_rich_stats, : unused argument (main_title = "Particle-Associated Richness")
-```
+<img src="Rarefied_Figures/check-lm-residuals-1.png" style="display: block; margin: auto;" />
 
 ```r
 ######################################################### SHANNON ENTROPY
@@ -1112,9 +1110,7 @@ plot_residuals(lm_model = partprod_MLotu_shannon,
                main_title = "Particle-Associated Shannon")
 ```
 
-```
-## Error in plot_residuals(lm_model = partprod_MLotu_shannon, lm_observed_y = filter(ML_otu_shannon_stats, : unused argument (main_title = "Particle-Associated Shannon")
-```
+<img src="Rarefied_Figures/check-lm-residuals-2.png" style="display: block; margin: auto;" />
 
 ```r
 ######################################################### INVERSE SIMPSON
@@ -1124,9 +1120,7 @@ plot_residuals(lm_model = partprod_MLotu_invsimps,
                main_title = "Particle-Associated Inverse Simpson")
 ```
 
-```
-## Error in plot_residuals(lm_model = partprod_MLotu_invsimps, lm_observed_y = filter(ML_otu_invsimps_stats, : unused argument (main_title = "Particle-Associated Inverse Simpson")
-```
+<img src="Rarefied_Figures/check-lm-residuals-3.png" style="display: block; margin: auto;" />
 
 ```r
 ######################################################### SIMPSONS EVENNESS
@@ -1136,9 +1130,7 @@ plot_residuals(lm_model = partprod_MLotu_simpseven,
                main_title = "Particle-Associated Simpson's Evenness")
 ```
 
-```
-## Error in plot_residuals(lm_model = partprod_MLotu_simpseven, lm_observed_y = filter(ML_otu_simpseven_stats, : unused argument (main_title = "Particle-Associated Simpson's Evenness")
-```
+<img src="Rarefied_Figures/check-lm-residuals-4.png" style="display: block; margin: auto;" />
 
 
 ## Correlations 
@@ -3080,6 +3072,65 @@ plot_grid(taxlab_unweight_mpd + ylim(-4.5, 3.5) + xlab("") + coord_flip() +
 <img src="Rarefied_Figures/fig-3-1.png" style="display: block; margin: auto;" />
 
 
+## Residual Analysis 
+
+```r
+##########################################################################
+#############################   RESIDUALS   ##############################
+##########################################################################
+
+######################################################### UNWEIGHTED MPD Models
+# Residual analysis of the UNWEIGHTED MPD Models: FREE-LIVING
+FL_unweight_sesMPD_df <- dplyr::filter(unweighted_sesMPD_taxalab, fraction == "WholeFree")
+
+plot_residuals(lm_model = percell_lmFL_unweightedMPD_taxalab, 
+               lm_observed_y = log10(FL_unweight_sesMPD_df$fracprod_per_cell_noinf),
+               main_title = "Free-Living Unweighted MPD")
+```
+
+<img src="Rarefied_Figures/check-lm-phylogenetic-residuals-1.png" style="display: block; margin: auto;" />
+
+```r
+# Residual analysis of the UNWEIGHTED MPD Models: PARTICLE-ASSOCIATED
+PA_unweight_sesMPD_df <- dplyr::filter(unweighted_sesMPD_taxalab, fraction == "WholePart" & !is.na(fracprod_per_cell_noinf))
+
+plot_residuals(lm_model = percell_lmPA_unweightedMPD_taxalab, 
+               lm_observed_y = log10(PA_unweight_sesMPD_df$fracprod_per_cell_noinf),
+               main_title = "Particle-Associated Unweighted MPD")
+```
+
+```
+## Warning in rlm.default(x, y, weights, method = method, wt.method = wt.method, : 'rlm' failed to converge in 20 steps
+```
+
+<img src="Rarefied_Figures/check-lm-phylogenetic-residuals-2.png" style="display: block; margin: auto;" />
+
+```r
+######################################################### UNWEIGHTED MNTD
+# Residual analysis of the UNWEIGHTED MNTD Models: PARTICLE-ASSOCIATED
+PA_unweight_sesMNTD_df <- filter(unweighted_sesMNTD_taxalab, fraction == "WholePart" & !is.na(fracprod_per_cell_noinf))
+
+plot_residuals(lm_model = percell_lmPA_unweightedMNTD_taxalab, 
+               lm_observed_y = log10(PA_unweight_sesMNTD_df$fracprod_per_cell_noinf),
+               main_title = "Particle-Associated Unweighted MNTD")
+```
+
+<img src="Rarefied_Figures/check-lm-phylogenetic-residuals-3.png" style="display: block; margin: auto;" />
+
+```r
+######################################################### WEIGHTED MNTD 
+# Residual analysis of the WEIGHTED MNTD Models: FREE-LIVING
+FL_unweight_sesMNTD_df <- filter(WEIGHTED_sesMNTD_taxalab, fraction == "WholeFree" & !is.na(fracprod_per_cell_noinf))
+
+plot_residuals(lm_model = percell_lmFL_weightedMNTD_taxalab, 
+               lm_observed_y = log10(FL_unweight_sesMNTD_df$fracprod_per_cell_noinf),
+               main_title = "Free-Living Weighted MNTD")
+```
+
+<img src="Rarefied_Figures/check-lm-phylogenetic-residuals-4.png" style="display: block; margin: auto;" />
+
+
+
 
 ```r
 # Plot it altogether 
@@ -3253,10 +3304,10 @@ adonis(productivity_bray ~ frac_bacprod, data = sampledf)
 ## 
 ## Terms added sequentially (first to last)
 ## 
-##              Df SumsOfSqs MeanSqs F.Model      R2 Pr(>F)   
-## frac_bacprod  1    0.7430 0.74295  4.1869 0.15988  0.004 **
-## Residuals    22    3.9039 0.17745         0.84012          
-## Total        23    4.6468                 1.00000          
+##              Df SumsOfSqs MeanSqs F.Model      R2 Pr(>F)    
+## frac_bacprod  1    0.7430 0.74295  4.1869 0.15988  0.001 ***
+## Residuals    22    3.9039 0.17745         0.84012           
+## Total        23    4.6468                 1.00000           
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ```

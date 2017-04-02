@@ -1708,6 +1708,49 @@ plot_grid(taxlab_unweight_mpd + ylim(-4.5, 3.5) + xlab("") + coord_flip() +
 ```
 
 
+## Residual Analysis 
+```{r check-lm-phylogenetic-residuals, fig.width = 12, fig.height = 4, dependson = "plot-vegan-fracprod"}
+##########################################################################
+#############################   RESIDUALS   ##############################
+##########################################################################
+
+######################################################### UNWEIGHTED MPD Models
+# Residual analysis of the UNWEIGHTED MPD Models: FREE-LIVING
+FL_unweight_sesMPD_df <- dplyr::filter(unweighted_sesMPD_taxalab, fraction == "WholeFree")
+
+plot_residuals(lm_model = percell_lmFL_unweightedMPD_taxalab, 
+               lm_observed_y = log10(FL_unweight_sesMPD_df$fracprod_per_cell_noinf),
+               main_title = "Free-Living Unweighted MPD")
+
+# Residual analysis of the UNWEIGHTED MPD Models: PARTICLE-ASSOCIATED
+PA_unweight_sesMPD_df <- dplyr::filter(unweighted_sesMPD_taxalab, fraction == "WholePart" & !is.na(fracprod_per_cell_noinf))
+
+plot_residuals(lm_model = percell_lmPA_unweightedMPD_taxalab, 
+               lm_observed_y = log10(PA_unweight_sesMPD_df$fracprod_per_cell_noinf),
+               main_title = "Particle-Associated Unweighted MPD")
+
+
+
+######################################################### UNWEIGHTED MNTD
+# Residual analysis of the UNWEIGHTED MNTD Models: PARTICLE-ASSOCIATED
+PA_unweight_sesMNTD_df <- filter(unweighted_sesMNTD_taxalab, fraction == "WholePart" & !is.na(fracprod_per_cell_noinf))
+
+plot_residuals(lm_model = percell_lmPA_unweightedMNTD_taxalab, 
+               lm_observed_y = log10(PA_unweight_sesMNTD_df$fracprod_per_cell_noinf),
+               main_title = "Particle-Associated Unweighted MNTD")
+
+
+######################################################### WEIGHTED MNTD 
+# Residual analysis of the WEIGHTED MNTD Models: FREE-LIVING
+FL_unweight_sesMNTD_df <- filter(WEIGHTED_sesMNTD_taxalab, fraction == "WholeFree" & !is.na(fracprod_per_cell_noinf))
+
+plot_residuals(lm_model = percell_lmFL_weightedMNTD_taxalab, 
+               lm_observed_y = log10(FL_unweight_sesMNTD_df$fracprod_per_cell_noinf),
+               main_title = "Free-Living Weighted MNTD")
+```
+
+
+
 ```{r old-fig3, fig.width = 8.5, fig.height = 7, dependson = c("taxa-labels","taxalab-vs-fracprod", "taxalab-comparison")}
 # Plot it altogether 
 plot_grid(unweightedMPD_vs_fracprod_taxlab + ggtitle("") +
