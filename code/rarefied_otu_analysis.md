@@ -2861,6 +2861,63 @@ summary(percell_lmPA_weightedMPD_taxalab)
 ```
 
 ```r
+###  COMBINE BOTH PARTICLE AND FREE INTO ONE MODEL
+percell_lmALL_weightedMPD_taxalab <- lm(log10(fracprod_per_cell_noinf) ~ mpd.obs.z, 
+                                      data = filter(WEIGHTED_sesMPD_taxalab, fraction %in% c("WholePart", "WholeFree")))
+summary(percell_lmALL_weightedMPD_taxalab)
+```
+
+```
+## 
+## Call:
+## lm(formula = log10(fracprod_per_cell_noinf) ~ mpd.obs.z, data = filter(WEIGHTED_sesMPD_taxalab, 
+##     fraction %in% c("WholePart", "WholeFree")))
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -0.74355 -0.34699 -0.09008  0.26660  1.53312 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)    
+## (Intercept) -7.01476    0.11983 -58.541  < 2e-16 ***
+## mpd.obs.z    0.24036    0.07482   3.212  0.00418 ** 
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 0.5266 on 21 degrees of freedom
+##   (1 observation deleted due to missingness)
+## Multiple R-squared:  0.3295,	Adjusted R-squared:  0.2976 
+## F-statistic: 10.32 on 1 and 21 DF,  p-value: 0.004181
+```
+
+```r
+# Residual analysis of the UNWEIGHTED MPD Models: PARTICLE-ASSOCIATED
+ALL_weight_sesMPD_df <- dplyr::filter(WEIGHTED_sesMPD_taxalab, 
+                                      fraction %in% c("WholePart", "WholeFree") & !is.na(fracprod_per_cell_noinf))
+
+plot_residuals(lm_model = percell_lmALL_weightedMPD_taxalab, 
+               lm_observed_y = log10(ALL_weight_sesMPD_df$fracprod_per_cell_noinf),
+               main_title = "Both Fractions Weighted MPD")
+```
+
+<img src="Rarefied_Figures/taxalab-percell-1.png" style="display: block; margin: auto;" />
+
+```r
+plot_weightedMPD_percell_TOGETHER <- ggplot(filter(WEIGHTED_sesMPD_taxalab, fraction %in% c("WholePart", "WholeFree")), 
+       aes(x = mpd.obs.z, y =log10(fracprod_per_cell_noinf))) + 
+  geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) + xlim(-4.5, 3.5) +
+  geom_point(size = 3,  aes(color = fraction)) +
+  xlab("Weighted Mean Pairwise Dist") + 
+  ylab("log10(Production/Cell)\n (μgC/cell/hr)") + 
+  scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
+  geom_smooth(method = "lm", color = "black") +
+  theme(legend.position = "none") +
+  annotate("text", x = -3, y=-6, 
+           color = "black", fontface = "bold",
+           label = paste("R2 =", round(summary(percell_lmALL_weightedMPD_taxalab)$adj.r.squared, digits = 3), "\n", 
+                         "p =", round(unname(summary(percell_lmALL_weightedMPD_taxalab)$coefficients[,4][2]), digits = 3)))
+
+
 plot_weightedMPD_percell <- ggplot(filter(WEIGHTED_sesMPD_taxalab, fraction %in% c("WholePart", "WholeFree")), 
        aes(x = mpd.obs.z, y =log10(fracprod_per_cell_noinf), color = fraction)) + 
   geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) + xlim(-4.5, 3.5) +
@@ -3025,6 +3082,41 @@ summary(percell_lmPA_weightedMNTD_taxalab)
 ```
 
 ```r
+###  COMBINE BOTH PARTICLE AND FREE INTO ONE MODEL
+percell_lmALL_weightedMNTD_taxalab <- lm(log10(fracprod_per_cell_noinf) ~ mntd.obs.z, 
+                                      data = filter(WEIGHTED_sesMNTD_taxalab, fraction %in% c("WholePart", "WholeFree")))
+summary(percell_lmALL_weightedMNTD_taxalab)  # NOT SIGNIFICANT 
+```
+
+```
+## 
+## Call:
+## lm(formula = log10(fracprod_per_cell_noinf) ~ mntd.obs.z, data = filter(WEIGHTED_sesMNTD_taxalab, 
+##     fraction %in% c("WholePart", "WholeFree")))
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -1.0430 -0.2670 -0.1390  0.3029  1.8233 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)  -6.8167     0.2525 -27.002   <2e-16 ***
+## mntd.obs.z    0.1973     0.1224   1.612    0.122    
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 0.6066 on 21 degrees of freedom
+##   (1 observation deleted due to missingness)
+## Multiple R-squared:  0.1101,	Adjusted R-squared:  0.06773 
+## F-statistic: 2.598 on 1 and 21 DF,  p-value: 0.1219
+```
+
+```r
+# Residual analysis of the UNWEIGHTED MPD Models: PARTICLE-ASSOCIATED
+ALL_weight_sesMNTD_df <- dplyr::filter(WEIGHTED_sesMNTD_taxalab, 
+                                      fraction %in% c("WholePart", "WholeFree") & !is.na(fracprod_per_cell_noinf))
+
+
 plot_weightedMNTD_percell <- ggplot(filter(WEIGHTED_sesMNTD_taxalab, fraction %in% c("WholePart", "WholeFree")), 
        aes(x = mntd.obs.z, y = log10(fracprod_per_cell_noinf), color = fraction)) + 
   geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) + xlim(-4.5, 3.5) +
@@ -3042,6 +3134,10 @@ plot_weightedMNTD_percell <- ggplot(filter(WEIGHTED_sesMNTD_taxalab, fraction %i
          color = "cornflowerblue", fontface = "bold",
          label = paste("R2 =", round(summary(percell_lmFL_weightedMNTD_taxalab)$adj.r.squared, digits = 2), "\n", 
                        "p =", round(unname(summary(percell_lmFL_weightedMNTD_taxalab)$coefficients[,4][2]), digits = 4))) 
+
+
+
+
 
 
 plot_grid(plot_unweightedMPD_percell, plot_unweightedMNTD_percell,
@@ -3107,7 +3203,7 @@ plot_grid(plot_unweightedMPD_percell, plot_unweightedMNTD_percell,
 ## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <bc>
 ```
 
-<img src="Rarefied_Figures/taxalab-percell-1.png" style="display: block; margin: auto;" />
+<img src="Rarefied_Figures/taxalab-percell-2.png" style="display: block; margin: auto;" />
 
 
 
@@ -3195,6 +3291,94 @@ plot_grid(taxlab_unweight_mpd + ylim(-4.5, 3.5) + xlab("") + coord_flip() +
 ```
 
 <img src="Rarefied_Figures/fig-3-1.png" style="display: block; margin: auto;" />
+
+```r
+###  COMBINE TOGETHER FRACTIONS FOR FIGURE G
+plot_grid(taxlab_unweight_mpd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
+            annotate("text", x=1.55, y=(max(mpd_nums1$b)-0.5), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("NS")) +
+            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
+          taxlab_unweight_mntd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
+            annotate("text", x=1.55, y=(max(mntd_nums1$b)-0.5), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("NS")) + 
+            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
+          taxlab_weight_mpd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
+            annotate("text", x=1.55, y=(max(mpd_nums2$b)-1), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("***\np =", round(weight_MPD_wilcox$p.value, digits = 6))) + 
+            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
+          taxlab_weight_mntd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
+            annotate("text", x=1.55, y=(max(mntd_nums2$b)+1.2), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("***\np =", round(weight_MNTD_wilcox$p.value, digits = 3))) + 
+            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
+          plot_unweightedMPD_percell + xlim(-4.5, 3.5), 
+          plot_unweightedMNTD_percell + xlim(-4.5, 3.5), 
+          plot_weightedMPD_percell_TOGETHER + xlim(-4.5, 3.5), 
+          plot_weightedMNTD_percell + xlim(-4.5, 3.5), 
+          labels = c("A", "B", "C", "D", "E", "F", "G", "H"),
+          ncol = 4, nrow = 2)
+```
+
+```
+## Warning: Removed 1 rows containing non-finite values (stat_smooth).
+```
+
+```
+## Warning: Removed 1 rows containing missing values (geom_point).
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <ce>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <bc>
+```
+
+```
+## Warning: Removed 1 rows containing non-finite values (stat_smooth).
+```
+
+```
+## Warning: Removed 1 rows containing missing values (geom_point).
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <ce>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <bc>
+```
+
+```
+## Warning: Removed 1 rows containing non-finite values (stat_smooth).
+```
+
+```
+## Warning: Removed 1 rows containing missing values (geom_point).
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <ce>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <bc>
+```
+
+```
+## Warning: Removed 1 rows containing missing values (geom_point).
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <ce>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <bc>
+```
+
+<img src="Rarefied_Figures/fig-3-2.png" style="display: block; margin: auto;" />
 
 
 ## Residual Analysis 
