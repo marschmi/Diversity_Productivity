@@ -1605,6 +1605,191 @@ plot_grid(taxlab_unweight_mpd + ylim(-4.5, 3.5) +
 ```
 
 
+
+
+```{r taxalab-production-BEF, fig.width= 15, fig.height = 4, dependson = "taxa-labels"}
+##########  MPD ANALYSIS 
+# Free-Living Model
+prod_lmFL_unweightedMPD_taxalab <- lm(frac_bacprod~ mpd.obs.z, 
+                                      data = filter(unweighted_sesMPD_taxalab, fraction == "WholeFree"))
+summary(prod_lmFL_unweightedMPD_taxalab)
+
+# Particle-associated model
+prod_lmPA_unweightedMPD_taxalab <- lm(frac_bacprod~ mpd.obs.z, 
+                                      data = filter(unweighted_sesMPD_taxalab, fraction == "WholePart"))
+summary(prod_lmPA_unweightedMPD_taxalab)
+
+
+plot_unweightedMPD_prod <- ggplot(filter(unweighted_sesMPD_taxalab, fraction %in% c("WholePart", "WholeFree")), 
+       aes(x = mpd.obs.z, y =frac_bacprod, color = fraction)) + 
+  geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) + xlim(-4.5, 3.5) +
+  geom_point(size = 3) +
+  xlab("Unweighted Mean Pairwise Dist") + 
+  ylab("Heterotrophic Production \n (μgC/L/hr)") + 
+  scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
+  geom_smooth(method = "lm") +
+  theme(legend.position = "none", legend.title = element_blank()) +
+  annotate("text", x = -3, y=20, 
+           color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(prod_lmPA_unweightedMPD_taxalab)$adj.r.squared, digits = 2), "\n", 
+                         "p =", round(unname(summary(prod_lmPA_unweightedMPD_taxalab)$coefficients[,4][2]), digits = 3))) +
+  annotate("text", x = -3, y=60, 
+         color = "cornflowerblue", fontface = "bold",
+         label = paste("R2 =", round(summary(prod_lmFL_unweightedMPD_taxalab)$adj.r.squared, digits = 2), "\n", 
+                       "p =", round(unname(summary(prod_lmFL_unweightedMPD_taxalab)$coefficients[,4][2]), digits = 3))) 
+
+
+############ WEIGHTED MPD
+##########  MPD ANALYSIS 
+# Free-Living Model
+prod_lmFL_weightedMPD_taxalab <- lm(frac_bacprod~ mpd.obs.z, 
+                                      data = filter(WEIGHTED_sesMPD_taxalab, fraction == "WholeFree"))
+summary(prod_lmFL_weightedMPD_taxalab)
+
+# Particle-associated model
+prod_lmPA_weightedMPD_taxalab <- lm(frac_bacprod~ mpd.obs.z, 
+                                      data = filter(WEIGHTED_sesMPD_taxalab, fraction == "WholePart"))
+summary(prod_lmPA_weightedMPD_taxalab)
+
+
+###  COMBINE BOTH PARTICLE AND FREE INTO ONE MODEL
+prod_lmALL_weightedMPD_taxalab <- lm(frac_bacprod~ mpd.obs.z, 
+                                      data = filter(WEIGHTED_sesMPD_taxalab, fraction %in% c("WholePart", "WholeFree")))
+summary(prod_lmALL_weightedMPD_taxalab)
+
+# Residual analysis of the UNWEIGHTED MPD Models: PARTICLE-ASSOCIATED
+ALL_weight_sesMPD_df <- dplyr::filter(WEIGHTED_sesMPD_taxalab, 
+                                      fraction %in% c("WholePart", "WholeFree") & !is.na(fracprod_per_cell_noinf))
+
+plot_residuals(lm_model = prod_lmALL_weightedMPD_taxalab, 
+               lm_observed_y = (ALL_weight_sesMPD_df$fracprod_per_cell_noinf),
+               main_title = "Both Fractions Weighted MPD")
+
+
+
+plot_weightedMPD_prod_TOGETHER <- ggplot(filter(WEIGHTED_sesMPD_taxalab, fraction %in% c("WholePart", "WholeFree")), 
+       aes(x = mpd.obs.z, y =frac_bacprod)) + 
+  geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) + xlim(-4.5, 3.5) +
+  geom_point(size = 3,  aes(color = fraction)) +
+  xlab("Weighted Mean Pairwise Dist") + 
+  ylab("Heterotrophic Production \n (μgC/L/hr)") + 
+  scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
+  geom_smooth(method = "lm", color = "black") +
+  theme(legend.position = "none") +
+  annotate("text", x = -3, y=-6, 
+           color = "black", fontface = "bold",
+           label = paste("R2 =", round(summary(prod_lmALL_weightedMPD_taxalab)$adj.r.squared, digits = 3), "\n", 
+                         "p =", round(unname(summary(prod_lmALL_weightedMPD_taxalab)$coefficients[,4][2]), digits = 3)))
+
+
+plot_weightedMPD_prod <- ggplot(filter(WEIGHTED_sesMPD_taxalab, fraction %in% c("WholePart", "WholeFree")), 
+       aes(x = mpd.obs.z, y =frac_bacprod, color = fraction)) + 
+  geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) + xlim(-4.5, 3.5) +
+  geom_point(size = 3) +
+  xlab("Weighted Mean Pairwise Dist") + 
+  ylab("Heterotrophic Production \n (μgC/L/hr)") + 
+  scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
+  #geom_smooth(method = "lm") +
+  theme(legend.position = "none", legend.title = element_blank()) #+
+  #annotate("text", x = -2, y=-6.5, 
+  #         color = "firebrick3", fontface = "bold",
+  #         label = paste("R2 =", round(summary(prod_lmPA_weightedMPD_taxalab)$adj.r.squared, digits = 4), "\n", 
+  #                       "p =", round(unname(summary(prod_lmPA_weightedMPD_taxalab)$coefficients[,4][2]), digits = 4))) +
+  #annotate("text", x = 0, y=-8.2, 
+  #       color = "cornflowerblue", fontface = "bold",
+  #       label = paste("R2 =", round(summary(prod_lmFL_weightedMPD_taxalab)$adj.r.squared, digits = 4), "\n", 
+  #                     "p =", round(unname(summary(prod_lmFL_weightedMPD_taxalab)$coefficients[,4][2]), digits = 4))) 
+
+
+
+
+
+####### UNWEIGHTED MNTD ANALYSIS
+# Free-living
+prod_lmFL_unweightedMNTD_taxalab <- lm(frac_bacprod~ mntd.obs.z, 
+                                      data = filter(unweighted_sesMNTD_taxalab, fraction == "WholeFree"))
+summary(prod_lmFL_unweightedMNTD_taxalab)
+
+# Particle-associated
+prod_lmPA_unweightedMNTD_taxalab <- lm(frac_bacprod~ mntd.obs.z, 
+                                      data = filter(unweighted_sesMNTD_taxalab, fraction == "WholePart"))
+summary(prod_lmPA_unweightedMNTD_taxalab)
+
+
+plot_unweightedMNTD_prod <- ggplot(filter(unweighted_sesMNTD_taxalab, fraction %in% c("WholePart", "WholeFree")), 
+       aes(x = mntd.obs.z, y = frac_bacprod, color = fraction)) + 
+  geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) + xlim(-4.5, 3.5) +
+  geom_point(size = 3) +
+  xlab("Unweighted Mean Nearest Taxon Dist") + 
+  ylab("Heterotrophic Production \n (μgC/L/hr)") + 
+  scale_color_manual(values = fraction_colors,
+                 breaks=c("WholeFree", "WholePart"), 
+                 labels=c("Free", "Particle")) + 
+  geom_smooth(method = "lm", data = filter(unweighted_sesMNTD_taxalab, fraction == "WholePart")) +
+  theme(legend.position = c(0.87, 0.87), 
+        legend.title = element_blank()) +
+  annotate("text", x = 1.5, y=10,
+           color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(prod_lmPA_unweightedMNTD_taxalab)$adj.r.squared, digits = 2), "\n", 
+                         "p =", round(unname(summary(prod_lmPA_unweightedMNTD_taxalab)$coefficients[,4][2]), digits = 4))) #+
+  #annotate("text", x = -2.4, y=-7.8, 
+  #       color = "cornflowerblue", fontface = "bold",
+  #       label = paste("R2 =", round(summary(prod_lmFL_unweightedMNTD_taxalab)$adj.r.squared, digits = 4), "\n", 
+  #                     "p =", round(unname(summary(prod_lmFL_unweightedMNTD_taxalab)$coefficients[,4][2]), digits = 4))) 
+
+
+####### WEIGHTED MPD ANALYSIS
+# Free-living
+prod_lmFL_weightedMNTD_taxalab <- lm(frac_bacprod~ mntd.obs.z, 
+                                      data = filter(WEIGHTED_sesMNTD_taxalab, fraction == "WholeFree"))
+summary(prod_lmFL_weightedMNTD_taxalab)
+# Particle-associated
+prod_lmPA_weightedMNTD_taxalab <- lm(frac_bacprod~ mntd.obs.z, 
+                                      data = filter(WEIGHTED_sesMNTD_taxalab, fraction == "WholePart"))
+summary(prod_lmPA_weightedMNTD_taxalab)
+
+###  COMBINE BOTH PARTICLE AND FREE INTO ONE MODEL
+prod_lmALL_weightedMNTD_taxalab <- lm(frac_bacprod~ mntd.obs.z, 
+                                      data = filter(WEIGHTED_sesMNTD_taxalab, fraction %in% c("WholePart", "WholeFree")))
+summary(prod_lmALL_weightedMNTD_taxalab)  # NOT SIGNIFICANT 
+
+# Residual analysis of the UNWEIGHTED MPD Models: PARTICLE-ASSOCIATED
+ALL_weight_sesMNTD_df <- dplyr::filter(WEIGHTED_sesMNTD_taxalab, 
+                                      fraction %in% c("WholePart", "WholeFree") & !is.na(fracprod_per_cell_noinf))
+
+
+plot_weightedMNTD_prod <- ggplot(filter(WEIGHTED_sesMNTD_taxalab, fraction %in% c("WholePart", "WholeFree")), 
+       aes(x = mntd.obs.z, y = frac_bacprod, color = fraction)) + 
+  geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) + xlim(-4.5, 3.5) +
+  geom_point(size = 3) +
+  xlab("Weighted Mean Nearest Taxon Dist") + 
+  ylab("Heterotrophic Production \n (μgC/L/hr)") + 
+  scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
+  #geom_smooth(method = "lm", data = filter(WEIGHTED_sesMNTD_taxalab, fraction == "WholeFree")) +
+  theme(legend.position = "none", legend.title = element_blank()) 
+  #annotate("text", x = -2.5, y=-5.9,
+  #         color = "firebrick3", fontface = "bold",
+  #         label = paste("R2 =", round(summary(prod_lmPA_weightedMNTD_taxalab)$adj.r.squared, digits = 4), "\n", 
+  #                       "p =", round(unname(summary(prod_lmPA_weightedMNTD_taxalab)$coefficients[,4][2]), digits = 4))) +
+  #annotate("text", x = 1.5, y=50, 
+  #       color = "cornflowerblue", fontface = "bold",
+  #       label = paste("R2 =", round(summary(prod_lmFL_weightedMNTD_taxalab)$adj.r.squared, digits = 2), "\n", 
+  #                     "p =", round(unname(summary(prod_lmFL_weightedMNTD_taxalab)$coefficients[,4][2]), digits = 4))) 
+
+
+
+
+
+
+plot_grid(plot_unweightedMPD_prod, plot_unweightedMNTD_prod,
+          plot_weightedMPD_prod, plot_weightedMNTD_prod,
+  labels = c("A", "B", "C", "D"),
+  nrow= 1, ncol = 4
+)
+
+```
+
+
 ```{r taxalab-percell, fig.width= 15, fig.height = 4, dependson = "taxa-labels"}
 ##########  MPD ANALYSIS 
 # Free-Living Model
@@ -1616,6 +1801,9 @@ summary(percell_lmFL_unweightedMPD_taxalab)
 percell_lmPA_unweightedMPD_taxalab <- lm(log10(fracprod_per_cell_noinf) ~ mpd.obs.z, 
                                       data = filter(unweighted_sesMPD_taxalab, fraction == "WholePart"))
 summary(percell_lmPA_unweightedMPD_taxalab)
+
+summary(lm(fracprod_per_cell_noinf ~ mpd.obs.z, data = filter(unweighted_sesMPD_taxalab, fraction == "WholePart")))
+
 
 plot_unweightedMPD_percell <- ggplot(filter(unweighted_sesMPD_taxalab, fraction %in% c("WholePart", "WholeFree")), 
        aes(x = mpd.obs.z, y =log10(fracprod_per_cell_noinf), color = fraction)) + 
@@ -1837,12 +2025,45 @@ plot_grid(taxlab_unweight_mpd + ylim(-4.5, 3.5) + xlab("") + coord_flip() +
           plot_weightedMPD_percell_TOGETHER + xlim(-4.5, 3.5), 
           plot_weightedMNTD_percell + xlim(-4.5, 3.5), 
           labels = c("A", "B", "C", "D", "E", "F", "G", "H"),
-          ncol = 4, nrow = 2)
+          ncol = 4, nrow = 3)
 
 
 
 
 ```
+
+
+```{r super-fig3, fig.width= 16, fig.height = 12, dependson=c("taxalab-comparison", "taxalab-percell", "taxalab-production-BEF")}
+plot_grid(taxlab_unweight_mpd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
+            annotate("text", x=1.55, y=(max(mpd_nums1$b)-0.5), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("NS")) +
+            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
+          taxlab_unweight_mntd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
+            annotate("text", x=1.55, y=(max(mntd_nums1$b)-0.5), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("NS")) + 
+            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
+          taxlab_weight_mpd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
+            annotate("text", x=1.55, y=(max(mpd_nums2$b)-1), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("***\np =", round(weight_MPD_wilcox$p.value, digits = 6))) + 
+            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
+          taxlab_weight_mntd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
+            annotate("text", x=1.55, y=(max(mntd_nums2$b)+1.2), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("***\np =", round(weight_MNTD_wilcox$p.value, digits = 3))) + 
+            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
+          plot_unweightedMPD_prod, 
+          plot_unweightedMNTD_prod,
+          plot_weightedMPD_prod, 
+          plot_weightedMNTD_prod,
+          plot_unweightedMPD_percell + xlim(-4.5, 3.5), 
+          plot_unweightedMNTD_percell + xlim(-4.5, 3.5), 
+          plot_weightedMPD_percell_TOGETHER + xlim(-4.5, 3.5), 
+          plot_weightedMNTD_percell + xlim(-4.5, 3.5), 
+          labels = c("A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L"),
+          ncol = 4, nrow = 3)
+
+
+```
+
 
 
 ## Residual Analysis 

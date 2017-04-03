@@ -2720,6 +2720,463 @@ plot_grid(taxlab_unweight_mpd + ylim(-4.5, 3.5) +
 
 
 
+
+
+```r
+##########  MPD ANALYSIS 
+# Free-Living Model
+prod_lmFL_unweightedMPD_taxalab <- lm(frac_bacprod~ mpd.obs.z, 
+                                      data = filter(unweighted_sesMPD_taxalab, fraction == "WholeFree"))
+summary(prod_lmFL_unweightedMPD_taxalab)
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mpd.obs.z, data = filter(unweighted_sesMPD_taxalab, 
+##     fraction == "WholeFree"))
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -20.349  -6.690  -3.998   5.997  20.900 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)   41.880      7.053   5.938 0.000143 ***
+## mpd.obs.z    -14.406      4.780  -3.014 0.013038 *  
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 13.31 on 10 degrees of freedom
+## Multiple R-squared:  0.4759,	Adjusted R-squared:  0.4235 
+## F-statistic: 9.082 on 1 and 10 DF,  p-value: 0.01304
+```
+
+```r
+# Particle-associated model
+prod_lmPA_unweightedMPD_taxalab <- lm(frac_bacprod~ mpd.obs.z, 
+                                      data = filter(unweighted_sesMPD_taxalab, fraction == "WholePart"))
+summary(prod_lmPA_unweightedMPD_taxalab)
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mpd.obs.z, data = filter(unweighted_sesMPD_taxalab, 
+##     fraction == "WholePart"))
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -12.1297  -3.7843   0.2251   2.0581  13.1658 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)   12.211      2.132   5.727 0.000191 ***
+## mpd.obs.z     -3.659      1.432  -2.554 0.028643 *  
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 6.725 on 10 degrees of freedom
+## Multiple R-squared:  0.3949,	Adjusted R-squared:  0.3344 
+## F-statistic: 6.525 on 1 and 10 DF,  p-value: 0.02864
+```
+
+```r
+plot_unweightedMPD_prod <- ggplot(filter(unweighted_sesMPD_taxalab, fraction %in% c("WholePart", "WholeFree")), 
+       aes(x = mpd.obs.z, y =frac_bacprod, color = fraction)) + 
+  geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) + xlim(-4.5, 3.5) +
+  geom_point(size = 3) +
+  xlab("Unweighted Mean Pairwise Dist") + 
+  ylab("Heterotrophic Production \n (μgC/L/hr)") + 
+  scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
+  geom_smooth(method = "lm") +
+  theme(legend.position = "none", legend.title = element_blank()) +
+  annotate("text", x = -3, y=20, 
+           color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(prod_lmPA_unweightedMPD_taxalab)$adj.r.squared, digits = 2), "\n", 
+                         "p =", round(unname(summary(prod_lmPA_unweightedMPD_taxalab)$coefficients[,4][2]), digits = 3))) +
+  annotate("text", x = -3, y=60, 
+         color = "cornflowerblue", fontface = "bold",
+         label = paste("R2 =", round(summary(prod_lmFL_unweightedMPD_taxalab)$adj.r.squared, digits = 2), "\n", 
+                       "p =", round(unname(summary(prod_lmFL_unweightedMPD_taxalab)$coefficients[,4][2]), digits = 3))) 
+
+
+############ WEIGHTED MPD
+##########  MPD ANALYSIS 
+# Free-Living Model
+prod_lmFL_weightedMPD_taxalab <- lm(frac_bacprod~ mpd.obs.z, 
+                                      data = filter(WEIGHTED_sesMPD_taxalab, fraction == "WholeFree"))
+summary(prod_lmFL_weightedMPD_taxalab)
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mpd.obs.z, data = filter(WEIGHTED_sesMPD_taxalab, 
+##     fraction == "WholeFree"))
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -21.159  -7.589  -3.981   4.588  37.417 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)  
+## (Intercept)   33.958     12.771   2.659   0.0239 *
+## mpd.obs.z      5.330      6.298   0.846   0.4171  
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 17.76 on 10 degrees of freedom
+## Multiple R-squared:  0.06685,	Adjusted R-squared:  -0.02647 
+## F-statistic: 0.7164 on 1 and 10 DF,  p-value: 0.4171
+```
+
+```r
+# Particle-associated model
+prod_lmPA_weightedMPD_taxalab <- lm(frac_bacprod~ mpd.obs.z, 
+                                      data = filter(WEIGHTED_sesMPD_taxalab, fraction == "WholePart"))
+summary(prod_lmPA_weightedMPD_taxalab)
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mpd.obs.z, data = filter(WEIGHTED_sesMPD_taxalab, 
+##     fraction == "WholePart"))
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -9.1294 -6.3948 -0.9037  4.3160 16.8990 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)   
+## (Intercept)   13.859      3.463   4.002  0.00251 **
+## mpd.obs.z     -5.310      3.573  -1.486  0.16806   
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 7.824 on 10 degrees of freedom
+## Multiple R-squared:  0.1809,	Adjusted R-squared:  0.09901 
+## F-statistic: 2.209 on 1 and 10 DF,  p-value: 0.1681
+```
+
+```r
+###  COMBINE BOTH PARTICLE AND FREE INTO ONE MODEL
+prod_lmALL_weightedMPD_taxalab <- lm(frac_bacprod~ mpd.obs.z, 
+                                      data = filter(WEIGHTED_sesMPD_taxalab, fraction %in% c("WholePart", "WholeFree")))
+summary(prod_lmALL_weightedMPD_taxalab)
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mpd.obs.z, data = filter(WEIGHTED_sesMPD_taxalab, 
+##     fraction %in% c("WholePart", "WholeFree")))
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -18.681 -10.080  -4.055   6.775  43.169 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)   14.868      3.138   4.739 9.94e-05 ***
+## mpd.obs.z     -3.814      1.974  -1.932   0.0664 .  
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 14.38 on 22 degrees of freedom
+## Multiple R-squared:  0.145,	Adjusted R-squared:  0.1061 
+## F-statistic: 3.731 on 1 and 22 DF,  p-value: 0.06638
+```
+
+```r
+# Residual analysis of the UNWEIGHTED MPD Models: PARTICLE-ASSOCIATED
+ALL_weight_sesMPD_df <- dplyr::filter(WEIGHTED_sesMPD_taxalab, 
+                                      fraction %in% c("WholePart", "WholeFree") & !is.na(fracprod_per_cell_noinf))
+
+plot_residuals(lm_model = prod_lmALL_weightedMPD_taxalab, 
+               lm_observed_y = (ALL_weight_sesMPD_df$fracprod_per_cell_noinf),
+               main_title = "Both Fractions Weighted MPD")
+```
+
+```
+## Error in xy.coords(x, y, xlabel, ylabel, log): 'x' and 'y' lengths differ
+```
+
+```r
+plot_weightedMPD_prod_TOGETHER <- ggplot(filter(WEIGHTED_sesMPD_taxalab, fraction %in% c("WholePart", "WholeFree")), 
+       aes(x = mpd.obs.z, y =frac_bacprod)) + 
+  geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) + xlim(-4.5, 3.5) +
+  geom_point(size = 3,  aes(color = fraction)) +
+  xlab("Weighted Mean Pairwise Dist") + 
+  ylab("Heterotrophic Production \n (μgC/L/hr)") + 
+  scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
+  geom_smooth(method = "lm", color = "black") +
+  theme(legend.position = "none") +
+  annotate("text", x = -3, y=-6, 
+           color = "black", fontface = "bold",
+           label = paste("R2 =", round(summary(prod_lmALL_weightedMPD_taxalab)$adj.r.squared, digits = 3), "\n", 
+                         "p =", round(unname(summary(prod_lmALL_weightedMPD_taxalab)$coefficients[,4][2]), digits = 3)))
+
+
+plot_weightedMPD_prod <- ggplot(filter(WEIGHTED_sesMPD_taxalab, fraction %in% c("WholePart", "WholeFree")), 
+       aes(x = mpd.obs.z, y =frac_bacprod, color = fraction)) + 
+  geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) + xlim(-4.5, 3.5) +
+  geom_point(size = 3) +
+  xlab("Weighted Mean Pairwise Dist") + 
+  ylab("Heterotrophic Production \n (μgC/L/hr)") + 
+  scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
+  #geom_smooth(method = "lm") +
+  theme(legend.position = "none", legend.title = element_blank()) #+
+  #annotate("text", x = -2, y=-6.5, 
+  #         color = "firebrick3", fontface = "bold",
+  #         label = paste("R2 =", round(summary(prod_lmPA_weightedMPD_taxalab)$adj.r.squared, digits = 4), "\n", 
+  #                       "p =", round(unname(summary(prod_lmPA_weightedMPD_taxalab)$coefficients[,4][2]), digits = 4))) +
+  #annotate("text", x = 0, y=-8.2, 
+  #       color = "cornflowerblue", fontface = "bold",
+  #       label = paste("R2 =", round(summary(prod_lmFL_weightedMPD_taxalab)$adj.r.squared, digits = 4), "\n", 
+  #                     "p =", round(unname(summary(prod_lmFL_weightedMPD_taxalab)$coefficients[,4][2]), digits = 4))) 
+
+
+
+
+
+####### UNWEIGHTED MNTD ANALYSIS
+# Free-living
+prod_lmFL_unweightedMNTD_taxalab <- lm(frac_bacprod~ mntd.obs.z, 
+                                      data = filter(unweighted_sesMNTD_taxalab, fraction == "WholeFree"))
+summary(prod_lmFL_unweightedMNTD_taxalab)
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mntd.obs.z, data = filter(unweighted_sesMNTD_taxalab, 
+##     fraction == "WholeFree"))
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -18.872 -13.636  -1.840   6.629  40.189 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)
+## (Intercept)   14.507     25.752   0.563    0.586
+## mntd.obs.z    -3.204      8.456  -0.379    0.713
+## 
+## Residual standard error: 18.26 on 10 degrees of freedom
+## Multiple R-squared:  0.01416,	Adjusted R-squared:  -0.08443 
+## F-statistic: 0.1436 on 1 and 10 DF,  p-value: 0.7127
+```
+
+```r
+# Particle-associated
+prod_lmPA_unweightedMNTD_taxalab <- lm(frac_bacprod~ mntd.obs.z, 
+                                      data = filter(unweighted_sesMNTD_taxalab, fraction == "WholePart"))
+summary(prod_lmPA_unweightedMNTD_taxalab)
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mntd.obs.z, data = filter(unweighted_sesMNTD_taxalab, 
+##     fraction == "WholePart"))
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -8.2843 -4.0341 -0.8818  3.3650 15.9739 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)  
+## (Intercept)   -1.022      5.324  -0.192   0.8516  
+## mntd.obs.z    -4.397      1.969  -2.233   0.0496 *
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 7.063 on 10 degrees of freedom
+## Multiple R-squared:  0.3327,	Adjusted R-squared:  0.2659 
+## F-statistic: 4.985 on 1 and 10 DF,  p-value: 0.04962
+```
+
+```r
+plot_unweightedMNTD_prod <- ggplot(filter(unweighted_sesMNTD_taxalab, fraction %in% c("WholePart", "WholeFree")), 
+       aes(x = mntd.obs.z, y = frac_bacprod, color = fraction)) + 
+  geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) + xlim(-4.5, 3.5) +
+  geom_point(size = 3) +
+  xlab("Unweighted Mean Nearest Taxon Dist") + 
+  ylab("Heterotrophic Production \n (μgC/L/hr)") + 
+  scale_color_manual(values = fraction_colors,
+                 breaks=c("WholeFree", "WholePart"), 
+                 labels=c("Free", "Particle")) + 
+  geom_smooth(method = "lm", data = filter(unweighted_sesMNTD_taxalab, fraction == "WholePart")) +
+  theme(legend.position = c(0.87, 0.87), 
+        legend.title = element_blank()) +
+  annotate("text", x = 1.5, y=10,
+           color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(prod_lmPA_unweightedMNTD_taxalab)$adj.r.squared, digits = 2), "\n", 
+                         "p =", round(unname(summary(prod_lmPA_unweightedMNTD_taxalab)$coefficients[,4][2]), digits = 4))) #+
+  #annotate("text", x = -2.4, y=-7.8, 
+  #       color = "cornflowerblue", fontface = "bold",
+  #       label = paste("R2 =", round(summary(prod_lmFL_unweightedMNTD_taxalab)$adj.r.squared, digits = 4), "\n", 
+  #                     "p =", round(unname(summary(prod_lmFL_unweightedMNTD_taxalab)$coefficients[,4][2]), digits = 4))) 
+
+
+####### WEIGHTED MPD ANALYSIS
+# Free-living
+prod_lmFL_weightedMNTD_taxalab <- lm(frac_bacprod~ mntd.obs.z, 
+                                      data = filter(WEIGHTED_sesMNTD_taxalab, fraction == "WholeFree"))
+summary(prod_lmFL_weightedMNTD_taxalab)
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mntd.obs.z, data = filter(WEIGHTED_sesMNTD_taxalab, 
+##     fraction == "WholeFree"))
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -16.274 -11.065  -7.372   8.552  39.459 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)
+## (Intercept)   -13.70      36.15  -0.379    0.713
+## mntd.obs.z    -15.17      14.38  -1.055    0.316
+## 
+## Residual standard error: 17.44 on 10 degrees of freedom
+## Multiple R-squared:  0.1001,	Adjusted R-squared:  0.01013 
+## F-statistic: 1.113 on 1 and 10 DF,  p-value: 0.3163
+```
+
+```r
+# Particle-associated
+prod_lmPA_weightedMNTD_taxalab <- lm(frac_bacprod~ mntd.obs.z, 
+                                      data = filter(WEIGHTED_sesMNTD_taxalab, fraction == "WholePart"))
+summary(prod_lmPA_weightedMNTD_taxalab)
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mntd.obs.z, data = filter(WEIGHTED_sesMNTD_taxalab, 
+##     fraction == "WholePart"))
+## 
+## Residuals:
+##    Min     1Q Median     3Q    Max 
+## -7.358 -5.019 -3.237  3.121 15.358 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)  
+## (Intercept)    6.729      3.070   2.192   0.0532 .
+## mntd.obs.z    -3.492      2.266  -1.541   0.1544  
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 7.772 on 10 degrees of freedom
+## Multiple R-squared:  0.1918,	Adjusted R-squared:  0.111 
+## F-statistic: 2.373 on 1 and 10 DF,  p-value: 0.1544
+```
+
+```r
+###  COMBINE BOTH PARTICLE AND FREE INTO ONE MODEL
+prod_lmALL_weightedMNTD_taxalab <- lm(frac_bacprod~ mntd.obs.z, 
+                                      data = filter(WEIGHTED_sesMNTD_taxalab, fraction %in% c("WholePart", "WholeFree")))
+summary(prod_lmALL_weightedMNTD_taxalab)  # NOT SIGNIFICANT 
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mntd.obs.z, data = filter(WEIGHTED_sesMNTD_taxalab, 
+##     fraction %in% c("WholePart", "WholeFree")))
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -16.099  -8.506  -4.144   7.333  41.069 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)  
+## (Intercept)    5.040      5.120   0.984   0.3357  
+## mntd.obs.z    -7.011      2.536  -2.765   0.0113 *
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 13.4 on 22 degrees of freedom
+## Multiple R-squared:  0.2579,	Adjusted R-squared:  0.2242 
+## F-statistic: 7.646 on 1 and 22 DF,  p-value: 0.01129
+```
+
+```r
+# Residual analysis of the UNWEIGHTED MPD Models: PARTICLE-ASSOCIATED
+ALL_weight_sesMNTD_df <- dplyr::filter(WEIGHTED_sesMNTD_taxalab, 
+                                      fraction %in% c("WholePart", "WholeFree") & !is.na(fracprod_per_cell_noinf))
+
+
+plot_weightedMNTD_prod <- ggplot(filter(WEIGHTED_sesMNTD_taxalab, fraction %in% c("WholePart", "WholeFree")), 
+       aes(x = mntd.obs.z, y = frac_bacprod, color = fraction)) + 
+  geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) + xlim(-4.5, 3.5) +
+  geom_point(size = 3) +
+  xlab("Weighted Mean Nearest Taxon Dist") + 
+  ylab("Heterotrophic Production \n (μgC/L/hr)") + 
+  scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
+  #geom_smooth(method = "lm", data = filter(WEIGHTED_sesMNTD_taxalab, fraction == "WholeFree")) +
+  theme(legend.position = "none", legend.title = element_blank()) 
+  #annotate("text", x = -2.5, y=-5.9,
+  #         color = "firebrick3", fontface = "bold",
+  #         label = paste("R2 =", round(summary(prod_lmPA_weightedMNTD_taxalab)$adj.r.squared, digits = 4), "\n", 
+  #                       "p =", round(unname(summary(prod_lmPA_weightedMNTD_taxalab)$coefficients[,4][2]), digits = 4))) +
+  #annotate("text", x = 1.5, y=50, 
+  #       color = "cornflowerblue", fontface = "bold",
+  #       label = paste("R2 =", round(summary(prod_lmFL_weightedMNTD_taxalab)$adj.r.squared, digits = 2), "\n", 
+  #                     "p =", round(unname(summary(prod_lmFL_weightedMNTD_taxalab)$coefficients[,4][2]), digits = 4))) 
+
+
+
+
+
+
+plot_grid(plot_unweightedMPD_prod, plot_unweightedMNTD_prod,
+          plot_weightedMPD_prod, plot_weightedMNTD_prod,
+  labels = c("A", "B", "C", "D"),
+  nrow= 1, ncol = 4
+)
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <ce>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <bc>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <ce>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <bc>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <ce>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <bc>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <ce>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <bc>
+```
+
+<img src="Rarefied_Figures/taxalab-production-BEF-1.png" style="display: block; margin: auto;" />
+
+
+
 ```r
 ##########  MPD ANALYSIS 
 # Free-Living Model
@@ -2778,6 +3235,33 @@ summary(percell_lmPA_unweightedMPD_taxalab)
 ##   (1 observation deleted due to missingness)
 ## Multiple R-squared:  0.5952,	Adjusted R-squared:  0.5502 
 ## F-statistic: 13.23 on 1 and 9 DF,  p-value: 0.005421
+```
+
+```r
+summary(lm(fracprod_per_cell_noinf ~ mpd.obs.z, data = filter(unweighted_sesMPD_taxalab, fraction == "WholePart")))
+```
+
+```
+## 
+## Call:
+## lm(formula = fracprod_per_cell_noinf ~ mpd.obs.z, data = filter(unweighted_sesMPD_taxalab, 
+##     fraction == "WholePart"))
+## 
+## Residuals:
+##        Min         1Q     Median         3Q        Max 
+## -7.624e-07 -4.800e-07 -1.210e-07  1.282e-07  2.166e-06 
+## 
+## Coefficients:
+##               Estimate Std. Error t value Pr(>|t|)  
+## (Intercept)  6.569e-07  2.768e-07   2.374   0.0417 *
+## mpd.obs.z   -3.716e-07  1.968e-07  -1.889   0.0915 .
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 8.648e-07 on 9 degrees of freedom
+##   (1 observation deleted due to missingness)
+## Multiple R-squared:  0.2838,	Adjusted R-squared:  0.2042 
+## F-statistic: 3.567 on 1 and 9 DF,  p-value: 0.09155
 ```
 
 ```r
@@ -3315,7 +3799,7 @@ plot_grid(taxlab_unweight_mpd + ylim(-4.5, 3.5) + xlab("") + coord_flip() +
           plot_weightedMPD_percell_TOGETHER + xlim(-4.5, 3.5), 
           plot_weightedMNTD_percell + xlim(-4.5, 3.5), 
           labels = c("A", "B", "C", "D", "E", "F", "G", "H"),
-          ncol = 4, nrow = 2)
+          ncol = 4, nrow = 3)
 ```
 
 ```
@@ -3379,6 +3863,132 @@ plot_grid(taxlab_unweight_mpd + ylim(-4.5, 3.5) + xlab("") + coord_flip() +
 ```
 
 <img src="Rarefied_Figures/fig-3-2.png" style="display: block; margin: auto;" />
+
+
+
+```r
+plot_grid(taxlab_unweight_mpd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
+            annotate("text", x=1.55, y=(max(mpd_nums1$b)-0.5), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("NS")) +
+            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
+          taxlab_unweight_mntd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
+            annotate("text", x=1.55, y=(max(mntd_nums1$b)-0.5), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("NS")) + 
+            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
+          taxlab_weight_mpd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
+            annotate("text", x=1.55, y=(max(mpd_nums2$b)-1), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("***\np =", round(weight_MPD_wilcox$p.value, digits = 6))) + 
+            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
+          taxlab_weight_mntd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
+            annotate("text", x=1.55, y=(max(mntd_nums2$b)+1.2), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("***\np =", round(weight_MNTD_wilcox$p.value, digits = 3))) + 
+            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
+          plot_unweightedMPD_prod, 
+          plot_unweightedMNTD_prod,
+          plot_weightedMPD_prod, 
+          plot_weightedMNTD_prod,
+          plot_unweightedMPD_percell + xlim(-4.5, 3.5), 
+          plot_unweightedMNTD_percell + xlim(-4.5, 3.5), 
+          plot_weightedMPD_percell_TOGETHER + xlim(-4.5, 3.5), 
+          plot_weightedMNTD_percell + xlim(-4.5, 3.5), 
+          labels = c("A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L"),
+          ncol = 4, nrow = 3)
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <ce>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <bc>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <ce>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <bc>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <ce>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <bc>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <ce>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <bc>
+```
+
+```
+## Warning: Removed 1 rows containing non-finite values (stat_smooth).
+```
+
+```
+## Warning: Removed 1 rows containing missing values (geom_point).
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <ce>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <bc>
+```
+
+```
+## Warning: Removed 1 rows containing non-finite values (stat_smooth).
+```
+
+```
+## Warning: Removed 1 rows containing missing values (geom_point).
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <ce>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <bc>
+```
+
+```
+## Warning: Removed 1 rows containing non-finite values (stat_smooth).
+```
+
+```
+## Warning: Removed 1 rows containing missing values (geom_point).
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <ce>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <bc>
+```
+
+```
+## Warning: Removed 1 rows containing missing values (geom_point).
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <ce>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <bc>
+```
+
+<img src="Rarefied_Figures/super-fig3-1.png" style="display: block; margin: auto;" />
+
 
 
 ## Residual Analysis 
