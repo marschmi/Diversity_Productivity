@@ -1742,8 +1742,6 @@ plot_grid(poster_rich1 + xlab("\n Fraction \n") + ylab("Observed Richness") +
 
 
 
-
-
 ```r
 plot_grid(poster_shannon1 + xlab("\n Fraction  \n") + ylab("Shannon Entropy") + 
                 theme(legend.position = c(0.78, 0.90), axis.text.y = element_blank()) +
@@ -2228,8 +2226,6 @@ ggplot(meta_data_PD, aes(y = PD, x = SR)) +
 ```
 
 <img src="Rarefied_Figures/faiths-pd-1.png" style="display: block; margin: auto;" />
-
-
 
 
 ##Taxa.Labels
@@ -3175,7 +3171,7 @@ plot_grid(plot_unweightedMPD_prod, plot_unweightedMNTD_prod,
 
 <img src="Rarefied_Figures/taxalab-production-BEF-1.png" style="display: block; margin: auto;" />
 
-
+### Per-Cell Productivity
 
 ```r
 ##########  MPD ANALYSIS 
@@ -3991,6 +3987,566 @@ plot_grid(taxlab_unweight_mpd + ylim(-4.5, 3.5) + xlab("") + coord_flip() +
 
 
 
+# Phylogenetic Diversity vs Richness/Evenness
+
+
+```r
+### Richness DF
+combined_rich_unweightedMPD <- ML_otu_rich_stats %>%
+  dplyr::select(norep_filter_name, mean, sd, measure) %>%
+  dplyr::left_join(unweighted_sesMPD_taxalab, by = "norep_filter_name") 
+```
+
+```
+## Warning in left_join_impl(x, y, by$x, by$y, suffix$x, suffix$y): joining character vector and factor, coercing into character vector
+```
+
+```r
+summary(lm(mean ~ mpd.obs.z, data = dplyr::filter(combined_rich_unweightedMPD, fraction == "WholePart")))
+```
+
+```
+## 
+## Call:
+## lm(formula = mean ~ mpd.obs.z, data = dplyr::filter(combined_rich_unweightedMPD, 
+##     fraction == "WholePart"))
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -146.30  -49.68  -10.46   44.76  255.56 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)   499.64      35.60  14.033 6.62e-08 ***
+## mpd.obs.z     -73.09      23.92  -3.056   0.0121 *  
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 112.3 on 10 degrees of freedom
+## Multiple R-squared:  0.483,	Adjusted R-squared:  0.4313 
+## F-statistic: 9.341 on 1 and 10 DF,  p-value: 0.01212
+```
+
+```r
+summary(lm(mean ~ mpd.obs.z, data = dplyr::filter(combined_rich_unweightedMPD, fraction == "WholeFree")))
+```
+
+```
+## 
+## Call:
+## lm(formula = mean ~ mpd.obs.z, data = dplyr::filter(combined_rich_unweightedMPD, 
+##     fraction == "WholeFree"))
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -124.586  -52.262    2.255   48.438  120.001 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)   345.22      38.31   9.012 4.09e-06 ***
+## mpd.obs.z     -51.58      25.96  -1.987    0.075 .  
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 72.3 on 10 degrees of freedom
+## Multiple R-squared:  0.283,	Adjusted R-squared:  0.2113 
+## F-statistic: 3.947 on 1 and 10 DF,  p-value: 0.07504
+```
+
+```r
+summary(lm(mean ~ mpd.obs.z, data = combined_rich_unweightedMPD))
+```
+
+```
+## 
+## Call:
+## lm(formula = mean ~ mpd.obs.z, data = combined_rich_unweightedMPD)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -209.26  -85.08   12.01   46.34  308.12 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)   444.67      29.34  15.155 3.99e-13 ***
+## mpd.obs.z     -82.74      19.80  -4.179  0.00039 ***
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 112.2 on 22 degrees of freedom
+## Multiple R-squared:  0.4425,	Adjusted R-squared:  0.4172 
+## F-statistic: 17.46 on 1 and 22 DF,  p-value: 0.0003896
+```
+
+```r
+divs_p1 <- ggplot(combined_rich_unweightedMPD, aes(y = mean, x = mpd.obs.z)) + 
+  geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) + xlim(-4.5, 3.5) +
+  geom_point(size = 3, aes(color = fraction)) + 
+  scale_color_manual(values = fraction_colors) + 
+  geom_smooth(method = "lm", color = "black") +
+  xlab("Unweighted MPD") + ylab("Observed Richness") +
+  theme(legend.position = c(0.85, 0.9),
+        legend.title = element_blank()) +
+  annotate("text", x = -3, y=200, 
+         color = "black", fontface = "bold",
+         label = paste("R2 =", round(summary(lm(mean ~ mpd.obs.z, data = combined_rich_unweightedMPD))$adj.r.squared, 
+                                     digits = 2), "\n", 
+                       "p =", round(unname(summary(lm(mean ~ mpd.obs.z, data = combined_rich_unweightedMPD))$coefficients[,4][2]), 
+                                    digits = 4))) 
+
+# Plot both of the models 
+divs_p2 <- ggplot(combined_rich_unweightedMPD, aes(y = mean, x = mpd.obs.z, color = fraction)) + 
+  geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) + xlim(-4.5, 3.5) +
+  geom_point(size = 3) + 
+  scale_color_manual(values = fraction_colors) + 
+  geom_smooth(method = "lm", data = dplyr::filter(combined_rich_unweightedMPD, fraction == "WholePart")) +
+  xlab("Unweighted MPD") + ylab("Observed Richness") +
+  theme(legend.position = c(0.85, 0.9),
+        legend.title = element_blank()) +
+  annotate("text", x = -3, y=400, 
+         color = "firebrick3", fontface = "bold",
+         label = paste("R2 =", round(summary(lm(mean ~ mpd.obs.z, 
+                                                data = dplyr::filter(combined_rich_unweightedMPD, fraction == "WholePart")))$adj.r.squared, 
+                                     digits = 2), "\n", 
+                       "p =", round(unname(summary(lm(mean ~ mpd.obs.z, 
+                                                      data = dplyr::filter(combined_rich_unweightedMPD, fraction == "WholePart")))$coefficients[,4][2]), 
+                                    digits = 3))) +
+  annotate("text", x = -3, y=200, 
+         color = "cornflowerblue", fontface = "bold",
+         label = paste("R2 =", round(summary(lm(mean ~ mpd.obs.z, 
+                                                data = dplyr::filter(combined_rich_unweightedMPD, fraction == "WholeFree")))$adj.r.squared, 
+                                     digits = 2), "\n", 
+                       "p =", round(unname(summary(lm(mean ~ mpd.obs.z, 
+                                                      data = dplyr::filter(combined_rich_unweightedMPD, fraction == "WholeFree")))$coefficients[,4][2]), 
+                                    digits = 3))) 
+
+
+
+
+# Try it with SES MNTD
+combined_rich_unweightedMNTD <- ML_otu_rich_stats %>%
+  dplyr::select(norep_filter_name, mean, sd, measure) %>%
+  dplyr::left_join(unweighted_sesMNTD_taxalab, by = "norep_filter_name") 
+```
+
+```
+## Warning in left_join_impl(x, y, by$x, by$y, suffix$x, suffix$y): joining character vector and factor, coercing into character vector
+```
+
+```r
+summary(lm(mean ~ mntd.obs.z, data = dplyr::filter(combined_rich_unweightedMNTD, fraction == "WholePart")))  # NS
+```
+
+```
+## 
+## Call:
+## lm(formula = mean ~ mntd.obs.z, data = dplyr::filter(combined_rich_unweightedMNTD, 
+##     fraction == "WholePart"))
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -181.93  -70.75  -14.30   90.82  213.47 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)  
+## (Intercept)   273.47     100.06   2.733   0.0211 *
+## mntd.obs.z    -72.55      37.01  -1.960   0.0784 .
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 132.7 on 10 degrees of freedom
+## Multiple R-squared:  0.2775,	Adjusted R-squared:  0.2053 
+## F-statistic: 3.841 on 1 and 10 DF,  p-value: 0.07844
+```
+
+```r
+summary(lm(mean ~ mntd.obs.z, data = dplyr::filter(combined_rich_unweightedMNTD, fraction == "WholeFree"))) # 
+```
+
+```
+## 
+## Call:
+## lm(formula = mean ~ mntd.obs.z, data = dplyr::filter(combined_rich_unweightedMNTD, 
+##     fraction == "WholeFree"))
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -80.928 -55.126   1.412  23.634 109.041 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)   517.93      93.08   5.564 0.000239 ***
+## mntd.obs.z     79.35      30.57   2.596 0.026679 *  
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 65.99 on 10 degrees of freedom
+## Multiple R-squared:  0.4026,	Adjusted R-squared:  0.3428 
+## F-statistic: 6.739 on 1 and 10 DF,  p-value: 0.02668
+```
+
+```r
+summary(lm(mean ~ mntd.obs.z, data = combined_rich_unweightedMNTD))
+```
+
+```
+## 
+## Call:
+## lm(formula = mean ~ mntd.obs.z, data = combined_rich_unweightedMNTD)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -176.40 -102.13  -25.31   64.10  401.54 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)   
+## (Intercept)  359.272     99.447   3.613  0.00154 **
+## mntd.obs.z    -3.196     34.537  -0.093  0.92710   
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 150.2 on 22 degrees of freedom
+## Multiple R-squared:  0.0003892,	Adjusted R-squared:  -0.04505 
+## F-statistic: 0.008566 on 1 and 22 DF,  p-value: 0.9271
+```
+
+```r
+ggplot(combined_rich_unweightedMNTD, aes(y = mean, x = mntd.obs.z)) + 
+  geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) + xlim(-4.5, 3.5) +
+  geom_point(size = 3, aes(color = fraction)) + 
+  scale_color_manual(values = fraction_colors) + 
+  geom_smooth(method = "lm", data = dplyr::filter(combined_rich_unweightedMNTD, fraction == "WholeFree"), color = "cornflowerblue") +
+  xlab("Unweighted MNTD") + ylab("Observed Richness") +
+  theme(legend.position = c(0.85, 0.85),
+        legend.title = element_blank()) +
+  annotate("text", x = 2, y=200, 
+       color = "cornflowerblue", fontface = "bold",
+       label = paste("R2 =", round(summary(lm(mean ~ mntd.obs.z, 
+                                              data = dplyr::filter(combined_rich_unweightedMNTD, fraction == "WholeFree")))$adj.r.squared, 
+                                   digits = 2), "\n", 
+                     "p =", round(unname(summary(lm(mean ~ mntd.obs.z, 
+                                                    data = dplyr::filter(combined_rich_unweightedMNTD, fraction == "WholeFree")))$coefficients[,4][2]), 
+                                  digits = 3))) 
+```
+
+<img src="Rarefied_Figures/diversity-vs-diversity-1.png" style="display: block; margin: auto;" />
+
+```r
+### INVERSE SIMPS
+combined_invsimps_weightedMPD <- ML_otu_invsimps_stats %>%
+  dplyr::select(norep_filter_name, mean, sd, measure) %>%
+  dplyr::left_join(WEIGHTED_sesMPD_taxalab, by = "norep_filter_name") 
+```
+
+```
+## Warning in left_join_impl(x, y, by$x, by$y, suffix$x, suffix$y): joining character vector and factor, coercing into character vector
+```
+
+```r
+summary(lm(mean ~ mpd.obs.z, data = dplyr::filter(combined_invsimps_weightedMPD, fraction == "WholePart")))
+```
+
+```
+## 
+## Call:
+## lm(formula = mean ~ mpd.obs.z, data = dplyr::filter(combined_invsimps_weightedMPD, 
+##     fraction == "WholePart"))
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -26.487 -14.735  -7.326  14.049  39.165 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)   54.592      9.788   5.577 0.000235 ***
+## mpd.obs.z    -23.249     10.099  -2.302 0.044098 *  
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 22.12 on 10 degrees of freedom
+## Multiple R-squared:  0.3464,	Adjusted R-squared:  0.281 
+## F-statistic:   5.3 on 1 and 10 DF,  p-value: 0.0441
+```
+
+```r
+summary(lm(mean ~ mpd.obs.z, data = dplyr::filter(combined_invsimps_weightedMPD, fraction == "WholeFree")))
+```
+
+```
+## 
+## Call:
+## lm(formula = mean ~ mpd.obs.z, data = dplyr::filter(combined_invsimps_weightedMPD, 
+##     fraction == "WholeFree"))
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -8.0877 -3.0675 -0.1259  1.2521 12.4002 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)   40.827      3.872  10.543 9.77e-07 ***
+## mpd.obs.z      8.600      1.910   4.504  0.00114 ** 
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 5.386 on 10 degrees of freedom
+## Multiple R-squared:  0.6698,	Adjusted R-squared:  0.6367 
+## F-statistic: 20.28 on 1 and 10 DF,  p-value: 0.001137
+```
+
+```r
+summary(lm(mean ~ mpd.obs.z, data = combined_invsimps_weightedMPD))
+```
+
+```
+## 
+## Call:
+## lm(formula = mean ~ mpd.obs.z, data = combined_invsimps_weightedMPD)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -22.327 -12.446  -4.046   4.739  52.266 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)   32.810      4.383   7.486 1.75e-07 ***
+## mpd.obs.z      2.898      2.758   1.051    0.305    
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 20.09 on 22 degrees of freedom
+## Multiple R-squared:  0.04778,	Adjusted R-squared:  0.004495 
+## F-statistic: 1.104 on 1 and 22 DF,  p-value: 0.3048
+```
+
+```r
+# All points together
+evendivs_p1 <- ggplot(combined_invsimps_weightedMPD, aes(y = mean, x = mpd.obs.z)) + 
+  geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) + xlim(-4.5, 3.5) +
+  geom_point(size = 3, aes( color = fraction)) + 
+  scale_color_manual(values = fraction_colors) + 
+  geom_smooth(color = "black") +
+  xlab("Weighted MPD") + ylab("Inverse Simpson") +
+  theme(legend.position = c(0.85, 0.85),
+        legend.title = element_blank())
+
+# Models separately
+evendivs_p2 <- ggplot(combined_invsimps_weightedMPD, aes(y = mean, x = mpd.obs.z, color = fraction)) + 
+  geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) + xlim(-4.5, 3.5) +
+  geom_point(size = 3) + 
+  scale_color_manual(values = fraction_colors) + 
+  geom_smooth(method = "lm") +
+  xlab("Weighted MPD") + ylab("Inverse Simpson") +
+  theme(legend.position = c(0.85, 0.85),
+        legend.title = element_blank()) +
+  annotate("text", x = -3, y=70, 
+     color = "cornflowerblue", fontface = "bold",
+     label = paste("R2 =", round(summary(lm(mean ~ mpd.obs.z, 
+                                            data = dplyr::filter(combined_invsimps_weightedMPD, fraction == "WholeFree")))$adj.r.squared, 
+                                 digits = 2), "\n", 
+                   "p =", round(unname(summary(lm(mean ~ mpd.obs.z, 
+                                                  data = dplyr::filter(combined_invsimps_weightedMPD, fraction == "WholeFree")))$coefficients[,4][2]), 
+                                digits = 4))) +
+    annotate("text", x = 2.6, y=48, 
+     color = "firebrick3", fontface = "bold",
+     label = paste("R2 =", round(summary(lm(mean ~ mpd.obs.z, 
+                                            data = dplyr::filter(combined_invsimps_weightedMPD, fraction == "WholePart")))$adj.r.squared, 
+                                 digits = 2), "\n", 
+                   "p =", round(unname(summary(lm(mean ~ mpd.obs.z, 
+                                                  data = dplyr::filter(combined_invsimps_weightedMPD, fraction == "WholePart")))$coefficients[,4][2]), 
+                                digits = 3))) 
+
+####  WEIGHTED MNTD: NEAREST TAXON
+combined_invsimps_weightedMNTD <- ML_otu_invsimps_stats %>%
+  dplyr::select(norep_filter_name, mean, sd, measure) %>%
+  dplyr::left_join(WEIGHTED_sesMNTD_taxalab, by = "norep_filter_name") 
+```
+
+```
+## Warning in left_join_impl(x, y, by$x, by$y, suffix$x, suffix$y): joining character vector and factor, coercing into character vector
+```
+
+```r
+summary(lm(mean ~ mntd.obs.z, data = dplyr::filter(combined_invsimps_weightedMNTD, fraction == "WholePart"))) # NS
+```
+
+```
+## 
+## Call:
+## lm(formula = mean ~ mntd.obs.z, data = dplyr::filter(combined_invsimps_weightedMNTD, 
+##     fraction == "WholePart"))
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -24.067 -18.830  -7.237   7.596  55.300 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)  
+## (Intercept)   30.384     10.291   2.953   0.0145 *
+## mntd.obs.z    -7.708      7.596  -1.015   0.3341  
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 26.05 on 10 degrees of freedom
+## Multiple R-squared:  0.09336,	Adjusted R-squared:  0.002701 
+## F-statistic:  1.03 on 1 and 10 DF,  p-value: 0.3341
+```
+
+```r
+summary(lm(mean ~ mntd.obs.z, data = dplyr::filter(combined_invsimps_weightedMNTD, fraction == "WholeFree"))) # NS
+```
+
+```
+## 
+## Call:
+## lm(formula = mean ~ mntd.obs.z, data = dplyr::filter(combined_invsimps_weightedMNTD, 
+##     fraction == "WholeFree"))
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -11.067  -5.867  -2.202   6.588  17.253 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)
+## (Intercept)    6.700     18.541   0.361    0.725
+## mntd.obs.z    -7.293      7.375  -0.989    0.346
+## 
+## Residual standard error: 8.945 on 10 degrees of freedom
+## Multiple R-squared:  0.08907,	Adjusted R-squared:  -0.002026 
+## F-statistic: 0.9778 on 1 and 10 DF,  p-value: 0.3461
+```
+
+```r
+summary(lm(mean ~ mntd.obs.z, data = combined_invsimps_weightedMNTD)) # NS
+```
+
+```
+## 
+## Call:
+## lm(formula = mean ~ mntd.obs.z, data = combined_invsimps_weightedMNTD)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -18.943 -13.512  -6.706   7.473  54.435 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)  32.2506     7.8630   4.102 0.000471 ***
+## mntd.obs.z    0.6248     3.8939   0.160 0.873980    
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 20.57 on 22 degrees of freedom
+## Multiple R-squared:  0.001169,	Adjusted R-squared:  -0.04423 
+## F-statistic: 0.02575 on 1 and 22 DF,  p-value: 0.874
+```
+
+```r
+### SIMPS EVENESS
+combined_simpseven_weightedMPD <- ML_otu_simpseven_stats %>%
+  dplyr::select(norep_filter_name, mean, sd, measure) %>%
+  dplyr::left_join(WEIGHTED_sesMPD_taxalab, by = "norep_filter_name") 
+```
+
+```
+## Warning in left_join_impl(x, y, by$x, by$y, suffix$x, suffix$y): joining character vector and factor, coercing into character vector
+```
+
+```r
+# Very similar to inverse simpson and MPD 
+summary(lm(mean ~ mpd.obs.z, data = dplyr::filter(combined_simpseven_weightedMPD, fraction == "WholePart"))) # R2 = 0.25, pval = 0.058
+```
+
+```
+## 
+## Call:
+## lm(formula = mean ~ mpd.obs.z, data = dplyr::filter(combined_simpseven_weightedMPD, 
+##     fraction == "WholePart"))
+## 
+## Residuals:
+##       Min        1Q    Median        3Q       Max 
+## -0.031052 -0.023671 -0.002144  0.025433  0.039327 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)  0.09498    0.01217   7.807 1.46e-05 ***
+## mpd.obs.z   -0.02692    0.01255  -2.144   0.0576 .  
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 0.02749 on 10 degrees of freedom
+## Multiple R-squared:  0.315,	Adjusted R-squared:  0.2465 
+## F-statistic: 4.599 on 1 and 10 DF,  p-value: 0.0576
+```
+
+```r
+summary(lm(mean ~ mpd.obs.z, data = dplyr::filter(combined_simpseven_weightedMPD, fraction == "WholeFree"))) # R2 = 0.64, pval = 0.001
+```
+
+```
+## 
+## Call:
+## lm(formula = mean ~ mpd.obs.z, data = dplyr::filter(combined_simpseven_weightedMPD, 
+##     fraction == "WholeFree"))
+## 
+## Residuals:
+##        Min         1Q     Median         3Q        Max 
+## -0.0186732 -0.0084896  0.0008693  0.0068502  0.0173858 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)    
+## (Intercept) 0.125949   0.008935  14.096 6.34e-08 ***
+## mpd.obs.z   0.020113   0.004406   4.565  0.00103 ** 
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 0.01243 on 10 degrees of freedom
+## Multiple R-squared:  0.6757,	Adjusted R-squared:  0.6433 
+## F-statistic: 20.84 on 1 and 10 DF,  p-value: 0.001035
+```
+
+```r
+summary(lm(mean ~ mpd.obs.z, data = combined_simpseven_weightedMPD)) # NS
+```
+
+```
+## 
+## Call:
+## lm(formula = mean ~ mpd.obs.z, data = combined_simpseven_weightedMPD)
+## 
+## Residuals:
+##       Min        1Q    Median        3Q       Max 
+## -0.037089 -0.025492 -0.002485  0.020732  0.056532 
+## 
+## Coefficients:
+##              Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)  0.080024   0.005935  13.484 4.11e-12 ***
+## mpd.obs.z   -0.003343   0.003734  -0.895     0.38    
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 0.0272 on 22 degrees of freedom
+## Multiple R-squared:  0.03514,	Adjusted R-squared:  -0.008716 
+## F-statistic: 0.8013 on 1 and 22 DF,  p-value: 0.3804
+```
+
+```r
+# PLOT
+# Richness vs UNweighted MPD
+plot_grid(divs_p1, divs_p2, nrow = 1, ncol = 2)
+```
+
+<img src="Rarefied_Figures/diversity-vs-diversity-2.png" style="display: block; margin: auto;" />
+
+```r
+# Inverse Simpson vs Weighted MPD 
+plot_grid(evendivs_p1, evendivs_p2, nrow = 1, ncol = 2)
+```
+
+<img src="Rarefied_Figures/diversity-vs-diversity-3.png" style="display: block; margin: auto;" />
+
+
+
 ## Residual Analysis 
 
 ```r
@@ -4047,7 +4603,6 @@ plot_residuals(lm_model = percell_lmFL_weightedMNTD_taxalab,
 ```
 
 <img src="Rarefied_Figures/check-lm-phylogenetic-residuals-4.png" style="display: block; margin: auto;" />
-
 
 
 
@@ -4144,7 +4699,14 @@ ggplot(combined_rich_df, aes(x=WholePart, y=WholeFree)) +
 <img src="Rarefied_Figures/frac-congruency-1.png" style="display: block; margin: auto;" />
 
 
+
+
+
+
 <!-- # Total Production  --> 
+
+
+
 
 
 
@@ -4230,8 +4792,6 @@ adonis(productivity_bray ~ frac_bacprod, data = sampledf)
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ```
-
-
 
 
 
@@ -4370,7 +4930,6 @@ bray_box <- ggplot(bray_try, aes(y = value, x = filter_match, color = filter_mat
   ggtitle("Bray-Curtis") + 
   theme(legend.position = "none")
 ```
-
 
 
 

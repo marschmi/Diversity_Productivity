@@ -1000,8 +1000,6 @@ plot_grid(poster_rich1 + xlab("\n Fraction \n") + ylab("Observed Richness") +
 ```
 
 
-
-
 ```{r shannon-and-simpseven-BEF, warning=FALSE, fig.width = 8, fig.height = 10, dependson= c("boxplot-diversity-comparison","plot-vegan-fracprod", "fracprod_percell-vs-div")}
 plot_grid(poster_shannon1 + xlab("\n Fraction  \n") + ylab("Shannon Entropy") + 
                 theme(legend.position = c(0.78, 0.90), axis.text.y = element_blank()) +
@@ -1253,8 +1251,6 @@ ggplot(meta_data_PD, aes(y = PD, x = SR)) +
            label = paste("R2 =", round(summary(lm_PD_vs_SR)$adj.r.squared, digits = 2), "\n", 
                          "p =", round(unname(summary(lm_PD_vs_SR)$coefficients[,4][2]), digits = 35))) 
 ```
-
-
 
 
 ##Taxa.Labels
@@ -1789,7 +1785,7 @@ plot_grid(plot_unweightedMPD_prod, plot_unweightedMNTD_prod,
 
 ```
 
-
+### Per-Cell Productivity
 ```{r taxalab-percell, fig.width= 15, fig.height = 4, dependson = "taxa-labels"}
 ##########  MPD ANALYSIS 
 # Free-Living Model
@@ -2066,6 +2062,169 @@ plot_grid(taxlab_unweight_mpd + ylim(-4.5, 3.5) + xlab("") + coord_flip() +
 
 
 
+# Phylogenetic Diversity vs Richness/Evenness
+
+```{r diversity-vs-diversity, fig.width = 8, fig.height = 4, dependson = c("subset-diversity","load-data","vean-otu-alphadiv-calc", "taxa-labels")}
+### Richness DF
+combined_rich_unweightedMPD <- ML_otu_rich_stats %>%
+  dplyr::select(norep_filter_name, mean, sd, measure) %>%
+  dplyr::left_join(unweighted_sesMPD_taxalab, by = "norep_filter_name") 
+
+summary(lm(mean ~ mpd.obs.z, data = dplyr::filter(combined_rich_unweightedMPD, fraction == "WholePart")))
+summary(lm(mean ~ mpd.obs.z, data = dplyr::filter(combined_rich_unweightedMPD, fraction == "WholeFree")))
+summary(lm(mean ~ mpd.obs.z, data = combined_rich_unweightedMPD))
+
+divs_p1 <- ggplot(combined_rich_unweightedMPD, aes(y = mean, x = mpd.obs.z)) + 
+  geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) + xlim(-4.5, 3.5) +
+  geom_point(size = 3, aes(color = fraction)) + 
+  scale_color_manual(values = fraction_colors) + 
+  geom_smooth(method = "lm", color = "black") +
+  xlab("Unweighted MPD") + ylab("Observed Richness") +
+  theme(legend.position = c(0.85, 0.9),
+        legend.title = element_blank()) +
+  annotate("text", x = -3, y=200, 
+         color = "black", fontface = "bold",
+         label = paste("R2 =", round(summary(lm(mean ~ mpd.obs.z, data = combined_rich_unweightedMPD))$adj.r.squared, 
+                                     digits = 2), "\n", 
+                       "p =", round(unname(summary(lm(mean ~ mpd.obs.z, data = combined_rich_unweightedMPD))$coefficients[,4][2]), 
+                                    digits = 4))) 
+
+# Plot both of the models 
+divs_p2 <- ggplot(combined_rich_unweightedMPD, aes(y = mean, x = mpd.obs.z, color = fraction)) + 
+  geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) + xlim(-4.5, 3.5) +
+  geom_point(size = 3) + 
+  scale_color_manual(values = fraction_colors) + 
+  geom_smooth(method = "lm", data = dplyr::filter(combined_rich_unweightedMPD, fraction == "WholePart")) +
+  xlab("Unweighted MPD") + ylab("Observed Richness") +
+  theme(legend.position = c(0.85, 0.9),
+        legend.title = element_blank()) +
+  annotate("text", x = -3, y=400, 
+         color = "firebrick3", fontface = "bold",
+         label = paste("R2 =", round(summary(lm(mean ~ mpd.obs.z, 
+                                                data = dplyr::filter(combined_rich_unweightedMPD, fraction == "WholePart")))$adj.r.squared, 
+                                     digits = 2), "\n", 
+                       "p =", round(unname(summary(lm(mean ~ mpd.obs.z, 
+                                                      data = dplyr::filter(combined_rich_unweightedMPD, fraction == "WholePart")))$coefficients[,4][2]), 
+                                    digits = 3))) +
+  annotate("text", x = -3, y=200, 
+         color = "cornflowerblue", fontface = "bold",
+         label = paste("R2 =", round(summary(lm(mean ~ mpd.obs.z, 
+                                                data = dplyr::filter(combined_rich_unweightedMPD, fraction == "WholeFree")))$adj.r.squared, 
+                                     digits = 2), "\n", 
+                       "p =", round(unname(summary(lm(mean ~ mpd.obs.z, 
+                                                      data = dplyr::filter(combined_rich_unweightedMPD, fraction == "WholeFree")))$coefficients[,4][2]), 
+                                    digits = 3))) 
+
+
+
+
+# Try it with SES MNTD
+combined_rich_unweightedMNTD <- ML_otu_rich_stats %>%
+  dplyr::select(norep_filter_name, mean, sd, measure) %>%
+  dplyr::left_join(unweighted_sesMNTD_taxalab, by = "norep_filter_name") 
+
+summary(lm(mean ~ mntd.obs.z, data = dplyr::filter(combined_rich_unweightedMNTD, fraction == "WholePart")))  # NS
+summary(lm(mean ~ mntd.obs.z, data = dplyr::filter(combined_rich_unweightedMNTD, fraction == "WholeFree"))) # 
+summary(lm(mean ~ mntd.obs.z, data = combined_rich_unweightedMNTD))
+
+ggplot(combined_rich_unweightedMNTD, aes(y = mean, x = mntd.obs.z)) + 
+  geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) + xlim(-4.5, 3.5) +
+  geom_point(size = 3, aes(color = fraction)) + 
+  scale_color_manual(values = fraction_colors) + 
+  geom_smooth(method = "lm", data = dplyr::filter(combined_rich_unweightedMNTD, fraction == "WholeFree"), color = "cornflowerblue") +
+  xlab("Unweighted MNTD") + ylab("Observed Richness") +
+  theme(legend.position = c(0.85, 0.85),
+        legend.title = element_blank()) +
+  annotate("text", x = 2, y=200, 
+       color = "cornflowerblue", fontface = "bold",
+       label = paste("R2 =", round(summary(lm(mean ~ mntd.obs.z, 
+                                              data = dplyr::filter(combined_rich_unweightedMNTD, fraction == "WholeFree")))$adj.r.squared, 
+                                   digits = 2), "\n", 
+                     "p =", round(unname(summary(lm(mean ~ mntd.obs.z, 
+                                                    data = dplyr::filter(combined_rich_unweightedMNTD, fraction == "WholeFree")))$coefficients[,4][2]), 
+                                  digits = 3))) 
+
+
+
+
+
+### INVERSE SIMPS
+combined_invsimps_weightedMPD <- ML_otu_invsimps_stats %>%
+  dplyr::select(norep_filter_name, mean, sd, measure) %>%
+  dplyr::left_join(WEIGHTED_sesMPD_taxalab, by = "norep_filter_name") 
+
+summary(lm(mean ~ mpd.obs.z, data = dplyr::filter(combined_invsimps_weightedMPD, fraction == "WholePart")))
+summary(lm(mean ~ mpd.obs.z, data = dplyr::filter(combined_invsimps_weightedMPD, fraction == "WholeFree")))
+summary(lm(mean ~ mpd.obs.z, data = combined_invsimps_weightedMPD))
+
+
+# All points together
+evendivs_p1 <- ggplot(combined_invsimps_weightedMPD, aes(y = mean, x = mpd.obs.z)) + 
+  geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) + xlim(-4.5, 3.5) +
+  geom_point(size = 3, aes( color = fraction)) + 
+  scale_color_manual(values = fraction_colors) + 
+  geom_smooth(color = "black") +
+  xlab("Weighted MPD") + ylab("Inverse Simpson") +
+  theme(legend.position = c(0.85, 0.85),
+        legend.title = element_blank())
+
+# Models separately
+evendivs_p2 <- ggplot(combined_invsimps_weightedMPD, aes(y = mean, x = mpd.obs.z, color = fraction)) + 
+  geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) + xlim(-4.5, 3.5) +
+  geom_point(size = 3) + 
+  scale_color_manual(values = fraction_colors) + 
+  geom_smooth(method = "lm") +
+  xlab("Weighted MPD") + ylab("Inverse Simpson") +
+  theme(legend.position = c(0.85, 0.85),
+        legend.title = element_blank()) +
+  annotate("text", x = -3, y=70, 
+     color = "cornflowerblue", fontface = "bold",
+     label = paste("R2 =", round(summary(lm(mean ~ mpd.obs.z, 
+                                            data = dplyr::filter(combined_invsimps_weightedMPD, fraction == "WholeFree")))$adj.r.squared, 
+                                 digits = 2), "\n", 
+                   "p =", round(unname(summary(lm(mean ~ mpd.obs.z, 
+                                                  data = dplyr::filter(combined_invsimps_weightedMPD, fraction == "WholeFree")))$coefficients[,4][2]), 
+                                digits = 4))) +
+    annotate("text", x = 2.6, y=48, 
+     color = "firebrick3", fontface = "bold",
+     label = paste("R2 =", round(summary(lm(mean ~ mpd.obs.z, 
+                                            data = dplyr::filter(combined_invsimps_weightedMPD, fraction == "WholePart")))$adj.r.squared, 
+                                 digits = 2), "\n", 
+                   "p =", round(unname(summary(lm(mean ~ mpd.obs.z, 
+                                                  data = dplyr::filter(combined_invsimps_weightedMPD, fraction == "WholePart")))$coefficients[,4][2]), 
+                                digits = 3))) 
+
+####  WEIGHTED MNTD: NEAREST TAXON
+combined_invsimps_weightedMNTD <- ML_otu_invsimps_stats %>%
+  dplyr::select(norep_filter_name, mean, sd, measure) %>%
+  dplyr::left_join(WEIGHTED_sesMNTD_taxalab, by = "norep_filter_name") 
+
+summary(lm(mean ~ mntd.obs.z, data = dplyr::filter(combined_invsimps_weightedMNTD, fraction == "WholePart"))) # NS
+summary(lm(mean ~ mntd.obs.z, data = dplyr::filter(combined_invsimps_weightedMNTD, fraction == "WholeFree"))) # NS
+summary(lm(mean ~ mntd.obs.z, data = combined_invsimps_weightedMNTD)) # NS
+
+
+
+
+### SIMPS EVENESS
+combined_simpseven_weightedMPD <- ML_otu_simpseven_stats %>%
+  dplyr::select(norep_filter_name, mean, sd, measure) %>%
+  dplyr::left_join(WEIGHTED_sesMPD_taxalab, by = "norep_filter_name") 
+# Very similar to inverse simpson and MPD 
+summary(lm(mean ~ mpd.obs.z, data = dplyr::filter(combined_simpseven_weightedMPD, fraction == "WholePart"))) # R2 = 0.25, pval = 0.058
+summary(lm(mean ~ mpd.obs.z, data = dplyr::filter(combined_simpseven_weightedMPD, fraction == "WholeFree"))) # R2 = 0.64, pval = 0.001
+summary(lm(mean ~ mpd.obs.z, data = combined_simpseven_weightedMPD)) # NS
+
+# PLOT
+# Richness vs UNweighted MPD
+plot_grid(divs_p1, divs_p2, nrow = 1, ncol = 2)
+
+# Inverse Simpson vs Weighted MPD 
+plot_grid(evendivs_p1, evendivs_p2, nrow = 1, ncol = 2)
+```
+
+
+
 ## Residual Analysis 
 ```{r check-lm-phylogenetic-residuals, fig.width = 12, fig.height = 4, dependson = "plot-vegan-fracprod"}
 ##########################################################################
@@ -2106,7 +2265,6 @@ plot_residuals(lm_model = percell_lmFL_weightedMNTD_taxalab,
                lm_observed_y = log10(FL_unweight_sesMNTD_df$fracprod_per_cell_noinf),
                main_title = "Free-Living Weighted MNTD")
 ```
-
 
 
 ```{r old-fig3, fig.width = 8.5, fig.height = 7, dependson = c("taxa-labels","taxalab-vs-fracprod", "taxalab-comparison")}
@@ -2159,6 +2317,10 @@ ggplot(combined_rich_df, aes(x=WholePart, y=WholeFree)) +
   geom_point(size = 3.5) +
   geom_abline(intercept = 0, slope = 1)
 ```
+
+
+
+
 
 
 <!-- # Total Production  --> 
@@ -2215,6 +2377,9 @@ ggplot(ML_otu_simpseven_stats, aes(x = mean, y = tot_bacprod)) +
 
 
 
+
+
+
 # Beta Diversity Analysis
 
 ```{r scale-reads, dependson = "load-data"}
@@ -2257,8 +2422,6 @@ sampledf <- data.frame(sample_data(productivity_scale))
 # Adonis test
 adonis(productivity_bray ~ frac_bacprod, data = sampledf)
 ```
-
-
 
 
 ```{r calculate-bray-curtis, fig.width=10, fig.height=4, dependson = "scale-reads"}
@@ -2361,7 +2524,6 @@ bray_box <- ggplot(bray_try, aes(y = value, x = filter_match, color = filter_mat
   ggtitle("Bray-Curtis") + 
   theme(legend.position = "none")
 ```
-
 
 
 ```{r soren-prod, fig.width=10, fig.height=4, dependson = "scale-reads"}

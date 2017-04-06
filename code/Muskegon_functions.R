@@ -394,13 +394,13 @@ show_otu <- function(dataframe, nrow = 10, ncol = 10){
 
 #################################################################################### 8
 #################################################################################### 8
-# This function was originally written by Ruben Props and further modified by marian
+# This function was originally written by Ruben Props and further modified by Marian
 
 # This function takes in a linear model output and a dataframe to do an analysis of 
 # the residual and predicted values.
       # INPUT
-      # 1. Linear model object from lm() 
-      # 2. vector of observed values (y-variable)
+      # 1. Linear model object from lm() function
+      # 2. vector of observed y values (y-variable)
       # 3. Title in quotes for figure
 
 plot_residuals <- function(lm_model, lm_observed_y, main_title){
