@@ -2716,6 +2716,15 @@ plot_grid(taxlab_unweight_mpd + ylim(-4.5, 3.5) +
 
 
 
+# Bulk Productivity
+  
+  
+- Linear Models with **BULK** Productivity:  
+      - Both PA and FL together:  
+              - Unweighted MPD:  **NS**
+              - Weighted MPD: **NS** (p = 0.066)
+              - Unweighted MNTD:  **NS** (p = 0.089)
+              - Weighted MNTD: **Significant** (p = 0.01129, R2 = 0.2242)
 
 
 ```r
@@ -2775,6 +2784,35 @@ summary(prod_lmPA_unweightedMPD_taxalab)
 ## Residual standard error: 6.725 on 10 degrees of freedom
 ## Multiple R-squared:  0.3949,	Adjusted R-squared:  0.3344 
 ## F-statistic: 6.525 on 1 and 10 DF,  p-value: 0.02864
+```
+
+```r
+# BOTH FRACRTIONS TOGETHER
+prod_lmTOGET_unweightedMPD_taxalab <- lm(frac_bacprod~ mpd.obs.z, 
+                                      data = filter(unweighted_sesMPD_taxalab, fraction %in% c("WholePart", "WholeFree")))
+summary(prod_lmTOGET_unweightedMPD_taxalab)
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mpd.obs.z, data = filter(unweighted_sesMPD_taxalab, 
+##     fraction %in% c("WholePart", "WholeFree")))
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -21.512  -8.136  -4.701   4.089  41.057 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)   21.040      3.827   5.497  1.6e-05 ***
+## mpd.obs.z     -4.352      2.583  -1.685    0.106    
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 14.64 on 22 degrees of freedom
+## Multiple R-squared:  0.1143,	Adjusted R-squared:  0.07407 
+## F-statistic:  2.84 on 1 and 22 DF,  p-value: 0.1061
 ```
 
 ```r
@@ -2858,9 +2896,9 @@ summary(prod_lmPA_weightedMPD_taxalab)
 
 ```r
 ###  COMBINE BOTH PARTICLE AND FREE INTO ONE MODEL
-prod_lmALL_weightedMPD_taxalab <- lm(frac_bacprod~ mpd.obs.z, 
+prod_lmTOGET_weightedMPD_taxalab <- lm(frac_bacprod~ mpd.obs.z, 
                                       data = filter(WEIGHTED_sesMPD_taxalab, fraction %in% c("WholePart", "WholeFree")))
-summary(prod_lmALL_weightedMPD_taxalab)
+summary(prod_lmTOGET_weightedMPD_taxalab)
 ```
 
 ```
@@ -2896,7 +2934,7 @@ plot_residuals(lm_model = prod_lmALL_weightedMPD_taxalab,
 ```
 
 ```
-## Error in xy.coords(x, y, xlabel, ylabel, log): 'x' and 'y' lengths differ
+## Error in qqPlot(lm_model, col = "blue", reps = 10000, ylab = "Studentized residuals", : object 'prod_lmALL_weightedMPD_taxalab' not found
 ```
 
 ```r
@@ -2913,8 +2951,13 @@ plot_weightedMPD_prod_TOGETHER <- ggplot(filter(WEIGHTED_sesMPD_taxalab, fractio
            color = "black", fontface = "bold",
            label = paste("R2 =", round(summary(prod_lmALL_weightedMPD_taxalab)$adj.r.squared, digits = 3), "\n", 
                          "p =", round(unname(summary(prod_lmALL_weightedMPD_taxalab)$coefficients[,4][2]), digits = 3)))
+```
 
+```
+## Error in summary(prod_lmALL_weightedMPD_taxalab): object 'prod_lmALL_weightedMPD_taxalab' not found
+```
 
+```r
 plot_weightedMPD_prod <- ggplot(filter(WEIGHTED_sesMPD_taxalab, fraction %in% c("WholePart", "WholeFree")), 
        aes(x = mpd.obs.z, y =frac_bacprod, color = fraction)) + 
   geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) + xlim(-4.5, 3.5) +
@@ -2991,6 +3034,35 @@ summary(prod_lmPA_unweightedMNTD_taxalab)
 ## Residual standard error: 7.063 on 10 degrees of freedom
 ## Multiple R-squared:  0.3327,	Adjusted R-squared:  0.2659 
 ## F-statistic: 4.985 on 1 and 10 DF,  p-value: 0.04962
+```
+
+```r
+# TOGETHER
+prod_lmTOGET_unweightedMNTD_taxalab <- lm(frac_bacprod~ mntd.obs.z, 
+                                      data = filter(unweighted_sesMNTD_taxalab, fraction %in% c("WholePart", "WholeFree")))
+summary(prod_lmTOGET_unweightedMNTD_taxalab)
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mntd.obs.z, data = filter(unweighted_sesMNTD_taxalab, 
+##     fraction %in% c("WholePart", "WholeFree")))
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -14.681  -8.792  -4.899   6.265  46.355 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)  
+## (Intercept)   0.7407     9.6265   0.077   0.9394  
+## mntd.obs.z   -5.9391     3.3432  -1.776   0.0895 .
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 14.54 on 22 degrees of freedom
+## Multiple R-squared:  0.1255,	Adjusted R-squared:  0.0857 
+## F-statistic: 3.156 on 1 and 22 DF,  p-value: 0.08949
 ```
 
 ```r
@@ -3074,9 +3146,9 @@ summary(prod_lmPA_weightedMNTD_taxalab)
 
 ```r
 ###  COMBINE BOTH PARTICLE AND FREE INTO ONE MODEL
-prod_lmALL_weightedMNTD_taxalab <- lm(frac_bacprod~ mntd.obs.z, 
+prod_lmTOGET_weightedMNTD_taxalab <- lm(frac_bacprod~ mntd.obs.z, 
                                       data = filter(WEIGHTED_sesMNTD_taxalab, fraction %in% c("WholePart", "WholeFree")))
-summary(prod_lmALL_weightedMNTD_taxalab)  # NOT SIGNIFICANT 
+summary(prod_lmTOGET_weightedMNTD_taxalab)  # p = 0.01129, R2 = 0.2242
 ```
 
 ```
@@ -3108,11 +3180,12 @@ ALL_weight_sesMNTD_df <- dplyr::filter(WEIGHTED_sesMNTD_taxalab,
 
 
 plot_weightedMNTD_prod <- ggplot(filter(WEIGHTED_sesMNTD_taxalab, fraction %in% c("WholePart", "WholeFree")), 
-       aes(x = mntd.obs.z, y = frac_bacprod, color = fraction)) + 
+       aes(x = mntd.obs.z, y = frac_bacprod)) + 
   geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) + xlim(-4.5, 3.5) +
-  geom_point(size = 3) +
+  geom_point(size = 3, aes( color = fraction)) +
   xlab("Weighted Mean Nearest Taxon Dist") + 
   ylab("Heterotrophic Production \n (μgC/L/hr)") + 
+  geom_smooth(method = "lm") + 
   scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
   #geom_smooth(method = "lm", data = filter(WEIGHTED_sesMNTD_taxalab, fraction == "WholeFree")) +
   theme(legend.position = "none", legend.title = element_blank()) 
@@ -3172,6 +3245,14 @@ plot_grid(plot_unweightedMPD_prod, plot_unweightedMNTD_prod,
 <img src="Rarefied_Figures/taxalab-production-BEF-1.png" style="display: block; margin: auto;" />
 
 ### Per-Cell Productivity
+
+- Linear Models with **per cell** Productivity:  
+      - Both PA and FL together:  
+              - Unweighted MPD:  **Significant** (R2 = 0.5245, p = 5.631e-05)
+              - Weighted MPD: **Significant** (R2 = 0.2976, p = 0.004181)
+              - Unweighted MNTD:  **NS**
+              - Weighted MNTD: **NS**
+
 
 ```r
 ##########  MPD ANALYSIS 
@@ -3261,6 +3342,36 @@ summary(lm(fracprod_per_cell_noinf ~ mpd.obs.z, data = filter(unweighted_sesMPD_
 ```
 
 ```r
+# BOTH FRACTIONS TOGETHER 
+percell_lmTOGET_unweightedMPD_taxalab <- lm(log10(fracprod_per_cell_noinf) ~ mpd.obs.z, 
+                                      data = filter(unweighted_sesMPD_taxalab, fraction %in% c("WholeFree","WholePart")))
+summary(percell_lmTOGET_unweightedMPD_taxalab)
+```
+
+```
+## 
+## Call:
+## lm(formula = log10(fracprod_per_cell_noinf) ~ mpd.obs.z, data = filter(unweighted_sesMPD_taxalab, 
+##     fraction %in% c("WholeFree", "WholePart")))
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -0.83100 -0.25664 -0.09356  0.30489  0.78689 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)    
+## (Intercept) -6.82500    0.11332 -60.226  < 2e-16 ***
+## mpd.obs.z   -0.39479    0.07854  -5.026 5.63e-05 ***
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 0.4333 on 21 degrees of freedom
+##   (1 observation deleted due to missingness)
+## Multiple R-squared:  0.5461,	Adjusted R-squared:  0.5245 
+## F-statistic: 25.27 on 1 and 21 DF,  p-value: 5.631e-05
+```
+
+```r
 plot_unweightedMPD_percell <- ggplot(filter(unweighted_sesMPD_taxalab, fraction %in% c("WholePart", "WholeFree")), 
        aes(x = mpd.obs.z, y =log10(fracprod_per_cell_noinf), color = fraction)) + 
   geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) + xlim(-4.5, 3.5) +
@@ -3342,9 +3453,9 @@ summary(percell_lmPA_weightedMPD_taxalab)
 
 ```r
 ###  COMBINE BOTH PARTICLE AND FREE INTO ONE MODEL
-percell_lmALL_weightedMPD_taxalab <- lm(log10(fracprod_per_cell_noinf) ~ mpd.obs.z, 
+percell_lmTOGET_weightedMPD_taxalab <- lm(log10(fracprod_per_cell_noinf) ~ mpd.obs.z, 
                                       data = filter(WEIGHTED_sesMPD_taxalab, fraction %in% c("WholePart", "WholeFree")))
-summary(percell_lmALL_weightedMPD_taxalab)
+summary(percell_lmTOGET_weightedMPD_taxalab)
 ```
 
 ```
@@ -3375,7 +3486,7 @@ summary(percell_lmALL_weightedMPD_taxalab)
 ALL_weight_sesMPD_df <- dplyr::filter(WEIGHTED_sesMPD_taxalab, 
                                       fraction %in% c("WholePart", "WholeFree") & !is.na(fracprod_per_cell_noinf))
 
-plot_residuals(lm_model = percell_lmALL_weightedMPD_taxalab, 
+plot_residuals(lm_model = percell_lmTOGET_weightedMPD_taxalab, 
                lm_observed_y = log10(ALL_weight_sesMPD_df$fracprod_per_cell_noinf),
                main_title = "Both Fractions Weighted MPD")
 ```
@@ -3396,8 +3507,13 @@ plot_weightedMPD_percell_TOGETHER <- ggplot(filter(WEIGHTED_sesMPD_taxalab, frac
            color = "black", fontface = "bold",
            label = paste("R2 =", round(summary(percell_lmALL_weightedMPD_taxalab)$adj.r.squared, digits = 3), "\n", 
                          "p =", round(unname(summary(percell_lmALL_weightedMPD_taxalab)$coefficients[,4][2]), digits = 3)))
+```
 
+```
+## Error in summary(percell_lmALL_weightedMPD_taxalab): object 'percell_lmALL_weightedMPD_taxalab' not found
+```
 
+```r
 plot_weightedMPD_percell <- ggplot(filter(WEIGHTED_sesMPD_taxalab, fraction %in% c("WholePart", "WholeFree")), 
        aes(x = mpd.obs.z, y =log10(fracprod_per_cell_noinf), color = fraction)) + 
   geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) + xlim(-4.5, 3.5) +
@@ -3477,6 +3593,36 @@ summary(percell_lmPA_unweightedMNTD_taxalab)
 ##   (1 observation deleted due to missingness)
 ## Multiple R-squared:  0.5211,	Adjusted R-squared:  0.4679 
 ## F-statistic: 9.793 on 1 and 9 DF,  p-value: 0.01213
+```
+
+```r
+# BOTH FRACTIONS TOGETHER
+percell_lmTOGET_unweightedMNTD_taxalab <- lm(log10(fracprod_per_cell_noinf) ~ mntd.obs.z, 
+                                      data = filter(unweighted_sesMNTD_taxalab, fraction %in% c("WholePart", "WholeFree")))
+summary(percell_lmTOGET_unweightedMNTD_taxalab)
+```
+
+```
+## 
+## Call:
+## lm(formula = log10(fracprod_per_cell_noinf) ~ mntd.obs.z, data = filter(unweighted_sesMNTD_taxalab, 
+##     fraction %in% c("WholePart", "WholeFree")))
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -1.00487 -0.37368 -0.06439  0.37655  1.65170 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)    
+## (Intercept) -7.29766    0.44300 -16.473 1.74e-13 ***
+## mntd.obs.z  -0.04818    0.15801  -0.305    0.763    
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 0.6417 on 21 degrees of freedom
+##   (1 observation deleted due to missingness)
+## Multiple R-squared:  0.004408,	Adjusted R-squared:  -0.043 
+## F-statistic: 0.09298 on 1 and 21 DF,  p-value: 0.7634
 ```
 
 ```r
@@ -3563,9 +3709,9 @@ summary(percell_lmPA_weightedMNTD_taxalab)
 
 ```r
 ###  COMBINE BOTH PARTICLE AND FREE INTO ONE MODEL
-percell_lmALL_weightedMNTD_taxalab <- lm(log10(fracprod_per_cell_noinf) ~ mntd.obs.z, 
+percell_lmTOGET_weightedMNTD_taxalab <- lm(log10(fracprod_per_cell_noinf) ~ mntd.obs.z, 
                                       data = filter(WEIGHTED_sesMNTD_taxalab, fraction %in% c("WholePart", "WholeFree")))
-summary(percell_lmALL_weightedMNTD_taxalab)  # NOT SIGNIFICANT 
+summary(percell_lmTOGET_weightedMNTD_taxalab)  # NOT SIGNIFICANT 
 ```
 
 ```
@@ -3799,66 +3945,8 @@ plot_grid(taxlab_unweight_mpd + ylim(-4.5, 3.5) + xlab("") + coord_flip() +
 ```
 
 ```
-## Warning: Removed 1 rows containing non-finite values (stat_smooth).
+## Error in plot_grid(taxlab_unweight_mpd + ylim(-4.5, 3.5) + xlab("") + : object 'plot_weightedMPD_percell_TOGETHER' not found
 ```
-
-```
-## Warning: Removed 1 rows containing missing values (geom_point).
-```
-
-```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <ce>
-```
-
-```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <bc>
-```
-
-```
-## Warning: Removed 1 rows containing non-finite values (stat_smooth).
-```
-
-```
-## Warning: Removed 1 rows containing missing values (geom_point).
-```
-
-```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <ce>
-```
-
-```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <bc>
-```
-
-```
-## Warning: Removed 1 rows containing non-finite values (stat_smooth).
-```
-
-```
-## Warning: Removed 1 rows containing missing values (geom_point).
-```
-
-```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <ce>
-```
-
-```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <bc>
-```
-
-```
-## Warning: Removed 1 rows containing missing values (geom_point).
-```
-
-```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <ce>
-```
-
-```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <bc>
-```
-
-<img src="Rarefied_Figures/fig-3-2.png" style="display: block; margin: auto;" />
 
 
 
@@ -3892,98 +3980,8 @@ plot_grid(taxlab_unweight_mpd + ylim(-4.5, 3.5) + xlab("") + coord_flip() +
 ```
 
 ```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <ce>
+## Error in plot_grid(taxlab_unweight_mpd + ylim(-4.5, 3.5) + xlab("") + : object 'plot_weightedMPD_percell_TOGETHER' not found
 ```
-
-```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <bc>
-```
-
-```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <ce>
-```
-
-```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <bc>
-```
-
-```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <ce>
-```
-
-```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <bc>
-```
-
-```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <ce>
-```
-
-```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <bc>
-```
-
-```
-## Warning: Removed 1 rows containing non-finite values (stat_smooth).
-```
-
-```
-## Warning: Removed 1 rows containing missing values (geom_point).
-```
-
-```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <ce>
-```
-
-```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <bc>
-```
-
-```
-## Warning: Removed 1 rows containing non-finite values (stat_smooth).
-```
-
-```
-## Warning: Removed 1 rows containing missing values (geom_point).
-```
-
-```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <ce>
-```
-
-```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <bc>
-```
-
-```
-## Warning: Removed 1 rows containing non-finite values (stat_smooth).
-```
-
-```
-## Warning: Removed 1 rows containing missing values (geom_point).
-```
-
-```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <ce>
-```
-
-```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <bc>
-```
-
-```
-## Warning: Removed 1 rows containing missing values (geom_point).
-```
-
-```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <ce>
-```
-
-```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <bc>
-```
-
-<img src="Rarefied_Figures/super-fig3-1.png" style="display: block; margin: auto;" />
 
 
 
@@ -4897,31 +4895,92 @@ bray_kruskal
 
 ```r
 library(pgirmess)
-library(multcompView)
+```
 
+```
+## Error in library(pgirmess): there is no package called 'pgirmess'
+```
+
+```r
+library(multcompView)
+```
+
+```
+## Error in library(multcompView): there is no package called 'multcompView'
+```
+
+```r
 bray_kruskal_MC <- kruskalmc(bray_final$value ~ bray_final$filter_match)  ## Defaults to P < 0.05
+```
+
+```
+## Error in eval(expr, envir, enclos): could not find function "kruskalmc"
+```
+
+```r
 #print(bray_prod_KW_MC)
 ### Time to figure out letters to represent significance in a plot
 bray_test <- bray_kruskal_MC$dif.com$difference # select logical vector
+```
+
+```
+## Error in eval(expr, envir, enclos): object 'bray_kruskal_MC' not found
+```
+
+```r
 names(bray_test) <- row.names(bray_kruskal_MC$dif.com) # add comparison names
+```
+
+```
+## Error in row.names(bray_kruskal_MC$dif.com): object 'bray_kruskal_MC' not found
+```
+
+```r
 # create a list with "homogenous groups" coded by letter
 bray_letters <- multcompLetters(bray_test, compare="<", threshold=0.05, 
                                  Letters=c(letters, LETTERS, "."), reversed = FALSE)
+```
+
+```
+## Error in eval(expr, envir, enclos): could not find function "multcompLetters"
+```
+
+```r
 ###  Extract the values from the multcompLetters object
 bray_sigs_dataframe <-  data.frame(as.vector(names(bray_letters$Letters)), as.vector(bray_letters$Letters))
+```
+
+```
+## Error in as.vector(names(bray_letters$Letters)): object 'bray_letters' not found
+```
+
+```r
 colnames(bray_sigs_dataframe) <- c("filter_match", "siglabel")
+```
+
+```
+## Error in colnames(bray_sigs_dataframe) <- c("filter_match", "siglabel"): object 'bray_sigs_dataframe' not found
+```
+
+```r
 bray_try <- left_join(bray_final, bray_sigs_dataframe, by = "filter_match")
 ```
 
 ```
-## Warning in left_join_impl(x, y, by$x, by$y, suffix$x, suffix$y): joining factor and character vector, coercing into character vector
+## Error in is.data.frame(y): object 'bray_sigs_dataframe' not found
 ```
 
 ```r
 bray_sigs <- bray_try %>%
   dplyr::select(filter_match, siglabel) %>%
   distinct()
+```
 
+```
+## Error in eval(expr, envir, enclos): object 'bray_try' not found
+```
+
+```r
 bray_box <- ggplot(bray_try, aes(y = value, x = filter_match, color = filter_match, fill = filter_match)) +
   geom_boxplot(alpha = 0.3) + geom_jitter(size = 3) + 
   scale_y_continuous(limits = c(0.1, 0.95), breaks = c(0.1, 0.3, 0.5, 0.7, 0.9)) +
@@ -4929,6 +4988,10 @@ bray_box <- ggplot(bray_try, aes(y = value, x = filter_match, color = filter_mat
   ylab("Bray-Curtis Dissimilarity") + xlab("Filter Comparison") +
   ggtitle("Bray-Curtis") + 
   theme(legend.position = "none")
+```
+
+```
+## Error in ggplot(bray_try, aes(y = value, x = filter_match, color = filter_match, : object 'bray_try' not found
 ```
 
 
@@ -5033,28 +5096,76 @@ soren_kruskal
 
 ```r
 soren_kruskal_MC <- kruskalmc(soren_final$value ~ soren_final$filter_match)  ## Defaults to P < 0.05
+```
+
+```
+## Error in eval(expr, envir, enclos): could not find function "kruskalmc"
+```
+
+```r
 #print(soren_prod_KW_MC)
 ### Time to figure out letters to represent significance in a plot
 soren_test <- soren_kruskal_MC$dif.com$difference # select logical vector
+```
+
+```
+## Error in eval(expr, envir, enclos): object 'soren_kruskal_MC' not found
+```
+
+```r
 names(soren_test) <- row.names(soren_kruskal_MC$dif.com) # add comparison names
+```
+
+```
+## Error in row.names(soren_kruskal_MC$dif.com): object 'soren_kruskal_MC' not found
+```
+
+```r
 # create a list with "homogenous groups" coded by letter
 soren_letters <- multcompLetters(soren_test, compare="<", threshold=0.05, 
                                  Letters=c(letters, LETTERS, "."), reversed = FALSE)
+```
+
+```
+## Error in eval(expr, envir, enclos): could not find function "multcompLetters"
+```
+
+```r
 ###  Extract the values from the multcompLetters object
 soren_sigs_dataframe <-  data.frame(as.vector(names(soren_letters$Letters)), as.vector(soren_letters$Letters))
+```
+
+```
+## Error in as.vector(names(soren_letters$Letters)): object 'soren_letters' not found
+```
+
+```r
 colnames(soren_sigs_dataframe) <- c("filter_match", "siglabel")
+```
+
+```
+## Error in colnames(soren_sigs_dataframe) <- c("filter_match", "siglabel"): object 'soren_sigs_dataframe' not found
+```
+
+```r
 soren_try <- left_join(soren_final, soren_sigs_dataframe, by = "filter_match")
 ```
 
 ```
-## Warning in left_join_impl(x, y, by$x, by$y, suffix$x, suffix$y): joining factor and character vector, coercing into character vector
+## Error in is.data.frame(y): object 'soren_sigs_dataframe' not found
 ```
 
 ```r
 soren_sigs <- soren_try %>%
   dplyr::select(filter_match, siglabel) %>%
   distinct()
+```
 
+```
+## Error in eval(expr, envir, enclos): object 'soren_try' not found
+```
+
+```r
 soren_box <- ggplot(soren_try, aes(y = value, x = filter_match, color = filter_match, fill = filter_match)) +
   geom_boxplot(alpha = 0.3) + geom_jitter(size = 3) + 
   scale_y_continuous(limits = c(0.1, 0.95), breaks = c(0.1, 0.3, 0.5, 0.7, 0.9)) +
@@ -5062,9 +5173,13 @@ soren_box <- ggplot(soren_try, aes(y = value, x = filter_match, color = filter_m
   ylab("Sørensen Dissimilarity") + xlab("Filter Comparison") +
   ggtitle("Sørensen") + 
   theme(legend.position = "none"); 
+```
 
+```
+## Error in ggplot(soren_try, aes(y = value, x = filter_match, color = filter_match, : object 'soren_try' not found
+```
 
-
+```r
 soren_box <- ggplot(soren_try, aes(y = value, x = filter_match, color = filter_match, fill = filter_match)) +
   geom_boxplot(alpha = 0.3) + geom_jitter(size = 3) + 
   scale_y_continuous(limits = c(0.1, 0.95), breaks = c(0.1, 0.3, 0.5, 0.7, 0.9)) +
@@ -5074,6 +5189,10 @@ soren_box <- ggplot(soren_try, aes(y = value, x = filter_match, color = filter_m
   theme(legend.position = "none")
 ```
 
+```
+## Error in ggplot(soren_try, aes(y = value, x = filter_match, color = filter_match, : object 'soren_try' not found
+```
+
 
 
 
@@ -5081,7 +5200,9 @@ soren_box <- ggplot(soren_try, aes(y = value, x = filter_match, color = filter_m
 plot_grid(soren_box, bray_box, labels = c("A", "B"), ncol = 2)
 ```
 
-<img src="Rarefied_Figures/beta-box-1.png" style="display: block; margin: auto;" />
+```
+## Error in plot_grid(soren_box, bray_box, labels = c("A", "B"), ncol = 2): object 'soren_box' not found
+```
 
 <!-- # Prefiltered Fraction Diversity-Production Analysis --> 
 

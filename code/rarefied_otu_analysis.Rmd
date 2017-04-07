@@ -1602,6 +1602,15 @@ plot_grid(taxlab_unweight_mpd + ylim(-4.5, 3.5) +
 
 
 
+# Bulk Productivity
+  
+  
+- Linear Models with **BULK** Productivity:  
+      - Both PA and FL together:  
+              - Unweighted MPD:  **NS**
+              - Weighted MPD: **NS** (p = 0.066)
+              - Unweighted MNTD:  **NS** (p = 0.089)
+              - Weighted MNTD: **Significant** (p = 0.01129, R2 = 0.2242)
 
 ```{r taxalab-production-BEF, fig.width= 15, fig.height = 4, dependson = "taxa-labels"}
 ##########  MPD ANALYSIS 
@@ -1614,6 +1623,11 @@ summary(prod_lmFL_unweightedMPD_taxalab)
 prod_lmPA_unweightedMPD_taxalab <- lm(frac_bacprod~ mpd.obs.z, 
                                       data = filter(unweighted_sesMPD_taxalab, fraction == "WholePart"))
 summary(prod_lmPA_unweightedMPD_taxalab)
+
+# BOTH FRACRTIONS TOGETHER
+prod_lmTOGET_unweightedMPD_taxalab <- lm(frac_bacprod~ mpd.obs.z, 
+                                      data = filter(unweighted_sesMPD_taxalab, fraction %in% c("WholePart", "WholeFree")))
+summary(prod_lmTOGET_unweightedMPD_taxalab)
 
 
 plot_unweightedMPD_prod <- ggplot(filter(unweighted_sesMPD_taxalab, fraction %in% c("WholePart", "WholeFree")), 
@@ -1649,9 +1663,9 @@ summary(prod_lmPA_weightedMPD_taxalab)
 
 
 ###  COMBINE BOTH PARTICLE AND FREE INTO ONE MODEL
-prod_lmALL_weightedMPD_taxalab <- lm(frac_bacprod~ mpd.obs.z, 
+prod_lmTOGET_weightedMPD_taxalab <- lm(frac_bacprod~ mpd.obs.z, 
                                       data = filter(WEIGHTED_sesMPD_taxalab, fraction %in% c("WholePart", "WholeFree")))
-summary(prod_lmALL_weightedMPD_taxalab)
+summary(prod_lmTOGET_weightedMPD_taxalab)
 
 # Residual analysis of the UNWEIGHTED MPD Models: PARTICLE-ASSOCIATED
 ALL_weight_sesMPD_df <- dplyr::filter(WEIGHTED_sesMPD_taxalab, 
@@ -1711,6 +1725,12 @@ prod_lmPA_unweightedMNTD_taxalab <- lm(frac_bacprod~ mntd.obs.z,
                                       data = filter(unweighted_sesMNTD_taxalab, fraction == "WholePart"))
 summary(prod_lmPA_unweightedMNTD_taxalab)
 
+# TOGETHER
+prod_lmTOGET_unweightedMNTD_taxalab <- lm(frac_bacprod~ mntd.obs.z, 
+                                      data = filter(unweighted_sesMNTD_taxalab, fraction %in% c("WholePart", "WholeFree")))
+summary(prod_lmTOGET_unweightedMNTD_taxalab)
+
+
 
 plot_unweightedMNTD_prod <- ggplot(filter(unweighted_sesMNTD_taxalab, fraction %in% c("WholePart", "WholeFree")), 
        aes(x = mntd.obs.z, y = frac_bacprod, color = fraction)) + 
@@ -1745,9 +1765,9 @@ prod_lmPA_weightedMNTD_taxalab <- lm(frac_bacprod~ mntd.obs.z,
 summary(prod_lmPA_weightedMNTD_taxalab)
 
 ###  COMBINE BOTH PARTICLE AND FREE INTO ONE MODEL
-prod_lmALL_weightedMNTD_taxalab <- lm(frac_bacprod~ mntd.obs.z, 
+prod_lmTOGET_weightedMNTD_taxalab <- lm(frac_bacprod~ mntd.obs.z, 
                                       data = filter(WEIGHTED_sesMNTD_taxalab, fraction %in% c("WholePart", "WholeFree")))
-summary(prod_lmALL_weightedMNTD_taxalab)  # NOT SIGNIFICANT 
+summary(prod_lmTOGET_weightedMNTD_taxalab)  # p = 0.01129, R2 = 0.2242
 
 # Residual analysis of the UNWEIGHTED MPD Models: PARTICLE-ASSOCIATED
 ALL_weight_sesMNTD_df <- dplyr::filter(WEIGHTED_sesMNTD_taxalab, 
@@ -1755,11 +1775,12 @@ ALL_weight_sesMNTD_df <- dplyr::filter(WEIGHTED_sesMNTD_taxalab,
 
 
 plot_weightedMNTD_prod <- ggplot(filter(WEIGHTED_sesMNTD_taxalab, fraction %in% c("WholePart", "WholeFree")), 
-       aes(x = mntd.obs.z, y = frac_bacprod, color = fraction)) + 
+       aes(x = mntd.obs.z, y = frac_bacprod)) + 
   geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) + xlim(-4.5, 3.5) +
-  geom_point(size = 3) +
+  geom_point(size = 3, aes( color = fraction)) +
   xlab("Weighted Mean Nearest Taxon Dist") + 
   ylab("Heterotrophic Production \n (μgC/L/hr)") + 
+  geom_smooth(method = "lm") + 
   scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
   #geom_smooth(method = "lm", data = filter(WEIGHTED_sesMNTD_taxalab, fraction == "WholeFree")) +
   theme(legend.position = "none", legend.title = element_blank()) 
@@ -1786,6 +1807,14 @@ plot_grid(plot_unweightedMPD_prod, plot_unweightedMNTD_prod,
 ```
 
 ### Per-Cell Productivity
+
+- Linear Models with **per cell** Productivity:  
+      - Both PA and FL together:  
+              - Unweighted MPD:  **Significant** (R2 = 0.5245, p = 5.631e-05)
+              - Weighted MPD: **Significant** (R2 = 0.2976, p = 0.004181)
+              - Unweighted MNTD:  **NS**
+              - Weighted MNTD: **NS**
+
 ```{r taxalab-percell, fig.width= 15, fig.height = 4, dependson = "taxa-labels"}
 ##########  MPD ANALYSIS 
 # Free-Living Model
@@ -1799,6 +1828,11 @@ percell_lmPA_unweightedMPD_taxalab <- lm(log10(fracprod_per_cell_noinf) ~ mpd.ob
 summary(percell_lmPA_unweightedMPD_taxalab)
 
 summary(lm(fracprod_per_cell_noinf ~ mpd.obs.z, data = filter(unweighted_sesMPD_taxalab, fraction == "WholePart")))
+
+# BOTH FRACTIONS TOGETHER 
+percell_lmTOGET_unweightedMPD_taxalab <- lm(log10(fracprod_per_cell_noinf) ~ mpd.obs.z, 
+                                      data = filter(unweighted_sesMPD_taxalab, fraction %in% c("WholeFree","WholePart")))
+summary(percell_lmTOGET_unweightedMPD_taxalab)
 
 
 plot_unweightedMPD_percell <- ggplot(filter(unweighted_sesMPD_taxalab, fraction %in% c("WholePart", "WholeFree")), 
@@ -1834,15 +1868,15 @@ summary(percell_lmPA_weightedMPD_taxalab)
 
 
 ###  COMBINE BOTH PARTICLE AND FREE INTO ONE MODEL
-percell_lmALL_weightedMPD_taxalab <- lm(log10(fracprod_per_cell_noinf) ~ mpd.obs.z, 
+percell_lmTOGET_weightedMPD_taxalab <- lm(log10(fracprod_per_cell_noinf) ~ mpd.obs.z, 
                                       data = filter(WEIGHTED_sesMPD_taxalab, fraction %in% c("WholePart", "WholeFree")))
-summary(percell_lmALL_weightedMPD_taxalab)
+summary(percell_lmTOGET_weightedMPD_taxalab)
 
 # Residual analysis of the UNWEIGHTED MPD Models: PARTICLE-ASSOCIATED
 ALL_weight_sesMPD_df <- dplyr::filter(WEIGHTED_sesMPD_taxalab, 
                                       fraction %in% c("WholePart", "WholeFree") & !is.na(fracprod_per_cell_noinf))
 
-plot_residuals(lm_model = percell_lmALL_weightedMPD_taxalab, 
+plot_residuals(lm_model = percell_lmTOGET_weightedMPD_taxalab, 
                lm_observed_y = log10(ALL_weight_sesMPD_df$fracprod_per_cell_noinf),
                main_title = "Both Fractions Weighted MPD")
 
@@ -1896,6 +1930,11 @@ percell_lmPA_unweightedMNTD_taxalab <- lm(log10(fracprod_per_cell_noinf) ~ mntd.
                                       data = filter(unweighted_sesMNTD_taxalab, fraction == "WholePart"))
 summary(percell_lmPA_unweightedMNTD_taxalab)
 
+# BOTH FRACTIONS TOGETHER
+percell_lmTOGET_unweightedMNTD_taxalab <- lm(log10(fracprod_per_cell_noinf) ~ mntd.obs.z, 
+                                      data = filter(unweighted_sesMNTD_taxalab, fraction %in% c("WholePart", "WholeFree")))
+summary(percell_lmTOGET_unweightedMNTD_taxalab)
+
 
 plot_unweightedMNTD_percell <- ggplot(filter(unweighted_sesMNTD_taxalab, fraction %in% c("WholePart", "WholeFree")), 
        aes(x = mntd.obs.z, y = log10(fracprod_per_cell_noinf), color = fraction)) + 
@@ -1930,9 +1969,9 @@ percell_lmPA_weightedMNTD_taxalab <- lm(log10(fracprod_per_cell_noinf) ~ mntd.ob
 summary(percell_lmPA_weightedMNTD_taxalab)
 
 ###  COMBINE BOTH PARTICLE AND FREE INTO ONE MODEL
-percell_lmALL_weightedMNTD_taxalab <- lm(log10(fracprod_per_cell_noinf) ~ mntd.obs.z, 
+percell_lmTOGET_weightedMNTD_taxalab <- lm(log10(fracprod_per_cell_noinf) ~ mntd.obs.z, 
                                       data = filter(WEIGHTED_sesMNTD_taxalab, fraction %in% c("WholePart", "WholeFree")))
-summary(percell_lmALL_weightedMNTD_taxalab)  # NOT SIGNIFICANT 
+summary(percell_lmTOGET_weightedMNTD_taxalab)  # NOT SIGNIFICANT 
 
 # Residual analysis of the UNWEIGHTED MPD Models: PARTICLE-ASSOCIATED
 ALL_weight_sesMNTD_df <- dplyr::filter(WEIGHTED_sesMNTD_taxalab, 
