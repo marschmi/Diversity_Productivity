@@ -24,6 +24,7 @@ library(cowplot)
 library(picante) # Will also include ape and vegan 
 library(car) # For residual analysis
 library(sandwich) # for vcovHC function in post-hoc test
+library(MASS) # For studres in plot_residuals function
 source("Muskegon_functions.R")
 source("set_colors.R")
 ```
@@ -1100,6 +1101,10 @@ plot_residuals(lm_model = partprod_MLotu_rich,
                main_title = "Particle-Associated Richness")
 ```
 
+```
+## [1] "WARNING:You have 1 high-leverage point(s)!"
+```
+
 <img src="Rarefied_Figures/check-lm-residuals-1.png" style="display: block; margin: auto;" />
 
 ```r
@@ -1108,6 +1113,10 @@ plot_residuals(lm_model = partprod_MLotu_rich,
 plot_residuals(lm_model = partprod_MLotu_shannon, 
                lm_observed_y = filter(ML_otu_shannon_stats, fraction == "WholePart")$frac_bacprod,
                main_title = "Particle-Associated Shannon")
+```
+
+```
+## [1] "WARNING:You have 1 high-leverage point(s)!"
 ```
 
 <img src="Rarefied_Figures/check-lm-residuals-2.png" style="display: block; margin: auto;" />
@@ -1120,6 +1129,10 @@ plot_residuals(lm_model = partprod_MLotu_invsimps,
                main_title = "Particle-Associated Inverse Simpson")
 ```
 
+```
+## [1] "There are no high leverage points in this model."
+```
+
 <img src="Rarefied_Figures/check-lm-residuals-3.png" style="display: block; margin: auto;" />
 
 ```r
@@ -1128,6 +1141,10 @@ plot_residuals(lm_model = partprod_MLotu_invsimps,
 plot_residuals(lm_model = partprod_MLotu_simpseven, 
                lm_observed_y = filter(ML_otu_simpseven_stats, fraction == "WholePart")$frac_bacprod,
                main_title = "Particle-Associated Simpson's Evenness")
+```
+
+```
+## [1] "WARNING:You have 1 high-leverage point(s)!"
 ```
 
 <img src="Rarefied_Figures/check-lm-residuals-4.png" style="display: block; margin: auto;" />
@@ -2816,6 +2833,64 @@ summary(prod_lmTOGET_unweightedMPD_taxalab)
 ```
 
 ```r
+lm_3 <- lm(frac_bacprod~ mpd.obs.z/fraction, 
+                                      data = filter(unweighted_sesMPD_taxalab, fraction %in% c("WholePart", "WholeFree")))
+summary(lm_3)
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mpd.obs.z/fraction, data = filter(unweighted_sesMPD_taxalab, 
+##     fraction %in% c("WholePart", "WholeFree")))
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -21.686  -8.221  -4.439   4.790  42.880 
+## 
+## Coefficients:
+##                             Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)                   20.034      3.997   5.012 5.83e-05 ***
+## mpd.obs.z                     -5.832      3.058  -1.907   0.0703 .  
+## mpd.obs.z:fractionWholeFree    3.843      4.211   0.913   0.3718    
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 14.69 on 21 degrees of freedom
+## Multiple R-squared:  0.1481,	Adjusted R-squared:  0.06698 
+## F-statistic: 1.826 on 2 and 21 DF,  p-value: 0.1858
+```
+
+```r
+lm_3_minus1 <- lm(frac_bacprod~ mpd.obs.z/fraction - 1, 
+                                      data = filter(unweighted_sesMPD_taxalab, fraction %in% c("WholePart", "WholeFree")))
+summary(lm_3_minus1)
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mpd.obs.z/fraction - 1, data = filter(unweighted_sesMPD_taxalab, 
+##     fraction %in% c("WholePart", "WholeFree")))
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -15.099   3.019   9.149  16.036  66.845 
+## 
+## Coefficients: (1 not defined because of singularities)
+##                             Estimate Std. Error t value Pr(>|t|)  
+## mpd.obs.z                      9.398      4.162   2.258   0.0342 *
+## mpd.obs.z:fractionWholePart   -9.665      5.860  -1.649   0.1133  
+## mpd.obs.z:fractionWholeFree       NA         NA      NA       NA  
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 21.27 on 22 degrees of freedom
+## Multiple R-squared:  0.1883,	Adjusted R-squared:  0.1145 
+## F-statistic: 2.551 on 2 and 22 DF,  p-value: 0.1008
+```
+
+```r
 plot_unweightedMPD_prod <-   ggplot(filter(unweighted_sesMPD_taxalab, fraction %in% c("WholePart", "WholeFree")), 
        aes(x = mpd.obs.z, y =frac_bacprod, color = fraction)) + 
   geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) + xlim(-4.5, 3.5) +
@@ -2834,6 +2909,31 @@ plot_unweightedMPD_prod <-   ggplot(filter(unweighted_sesMPD_taxalab, fraction %
          label = paste("R2 =", round(summary(prod_lmFL_unweightedMPD_taxalab)$adj.r.squared, digits = 2), "\n", 
                        "p =", round(unname(summary(prod_lmFL_unweightedMPD_taxalab)$coefficients[,4][2]), digits = 3))) + 
   annotate("text", x = -3, y=-1, color = "black", fontface = "bold", label = paste("Combined = NS"))
+
+
+ggplot(filter(unweighted_sesMPD_taxalab, fraction %in% c("WholePart", "WholeFree")), 
+       aes(x = mpd.obs.z, y =frac_bacprod, color = fraction)) + 
+  geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) + xlim(-4.5, 3.5) +
+  geom_point(size = 3) +
+  xlab("Unweighted Mean Pairwise Dist") + 
+  ylab("Heterotrophic Production \n (μgC/L/hr)") + 
+  scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
+  geom_smooth(method = "lm", formula = y ~ x -1) +
+  theme(legend.position = "none", legend.title = element_blank()) #+
+```
+
+<img src="Rarefied_Figures/taxalab-production-BEF-1.png" style="display: block; margin: auto;" />
+
+```r
+  #annotate("text", x = -3, y=20, 
+  #         color = "firebrick3", fontface = "bold",
+  #         label = paste("R2 =", round(summary(prod_lmPA_unweightedMPD_taxalab)$adj.r.squared, digits = 2), "\n", 
+  #                       "p =", round(unname(summary(prod_lmPA_unweightedMPD_taxalab)$coefficients[,4][2]), digits = 3))) +
+  #annotate("text", x = -3, y=60, 
+  #       color = "cornflowerblue", fontface = "bold",
+  #       label = paste("R2 =", round(summary(prod_lmFL_unweightedMPD_taxalab)$adj.r.squared, digits = 2), "\n", 
+  #                     "p =", round(unname(summary(prod_lmFL_unweightedMPD_taxalab)$coefficients[,4][2]), digits = 3))) + 
+  #annotate("text", x = -3, y=-1, color = "black", fontface = "bold", label = paste("Combined = NS"))
 
 
 ############ WEIGHTED MPD
@@ -3239,7 +3339,7 @@ plot_grid(plot_unweightedMPD_prod, plot_unweightedMNTD_prod,
 ## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <bc>
 ```
 
-<img src="Rarefied_Figures/taxalab-production-BEF-1.png" style="display: block; margin: auto;" />
+<img src="Rarefied_Figures/taxalab-production-BEF-2.png" style="display: block; margin: auto;" />
 
 
 ### Per-Cell Productivity
@@ -3472,6 +3572,10 @@ ALL_weight_sesMPD_df <- dplyr::filter(WEIGHTED_sesMPD_taxalab,
 plot_residuals(lm_model = percell_lmTOGET_weightedMPD_taxalab, 
                lm_observed_y = log10(ALL_weight_sesMPD_df$fracprod_per_cell_noinf),
                main_title = "Both Fractions Weighted MPD")
+```
+
+```
+## [1] "WARNING:You have 1 high-leverage point(s)!"
 ```
 
 <img src="Rarefied_Figures/taxalab-percell-1.png" style="display: block; margin: auto;" />
@@ -3823,32 +3927,104 @@ unweightMPD_fraction_dat <- filter(unweighted_sesMPD_taxalab,
                        fraction %in% c("WholePart", "WholeFree")) %>%
   dplyr::select(norep_filter_name, mpd.obs.z, fraction, frac_bacprod, fracprod_per_cell_noinf) 
 
-
-# Double check values from above models
-lm_unweightMPD_by_fraction <- lm(frac_bacprod ~ mpd.obs.z/fraction, data = unweightMPD_fraction_dat)
-summary(lm_unweightMPD_by_fraction)
+# Help from:  http://r-eco-evo.blogspot.com/2011/08/comparing-two-regression-slopes-by.html
+# WITH an interaction term 
+lm2_bulk_interaction <- lm(frac_bacprod ~ mpd.obs.z * fraction, data = unweightMPD_fraction_dat)
+summary(lm2_bulk_interaction)
 ```
 
 ```
 ## 
 ## Call:
-## lm(formula = frac_bacprod ~ mpd.obs.z/fraction, data = unweightMPD_fraction_dat)
+## lm(formula = frac_bacprod ~ mpd.obs.z * fraction, data = unweightMPD_fraction_dat)
 ## 
 ## Residuals:
 ##     Min      1Q  Median      3Q     Max 
-## -21.686  -8.221  -4.439   4.790  42.880 
+## -20.349  -5.134  -1.204   2.779  20.900 
 ## 
 ## Coefficients:
 ##                             Estimate Std. Error t value Pr(>|t|)    
-## (Intercept)                   20.034      3.997   5.012 5.83e-05 ***
-## mpd.obs.z                     -5.832      3.058  -1.907   0.0703 .  
-## mpd.obs.z:fractionWholeFree    3.843      4.211   0.913   0.3718    
+## (Intercept)                   12.211      3.343   3.652 0.001584 ** 
+## mpd.obs.z                     -3.659      2.246  -1.629 0.118935    
+## fractionWholeFree             29.670      6.511   4.557 0.000192 ***
+## mpd.obs.z:fractionWholeFree  -10.747      4.403  -2.441 0.024080 *  
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
-## Residual standard error: 14.69 on 21 degrees of freedom
-## Multiple R-squared:  0.1481,	Adjusted R-squared:  0.06698 
-## F-statistic: 1.826 on 2 and 21 DF,  p-value: 0.1858
+## Residual standard error: 10.55 on 20 degrees of freedom
+## Multiple R-squared:  0.582,	Adjusted R-squared:  0.5193 
+## F-statistic: 9.283 on 3 and 20 DF,  p-value: 0.0004739
+```
+
+```r
+# Check the residuals
+plot_residuals(lm_model = lm2_bulk_interaction, 
+               lm_observed_y = unweightMPD_fraction_dat$frac_bacprod,
+               main_title = "Unweighted MPD with Interaction Term")
+```
+
+```
+## [1] "There are no high leverage points in this model."
+```
+
+<img src="Rarefied_Figures/post-hoc-unweightedMPD-bulk-1.png" style="display: block; margin: auto;" />
+
+```r
+# WITHOUT an interaction term 
+lm2_bulk <- lm(frac_bacprod ~ mpd.obs.z + fraction, data = unweightMPD_fraction_dat)
+summary(lm2_bulk)
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mpd.obs.z + fraction, data = unweightMPD_fraction_dat)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -16.082  -8.064  -1.599   7.223  29.327 
+## 
+## Coefficients:
+##                   Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)         13.932      3.634   3.834 0.000965 ***
+## mpd.obs.z           -6.455      2.148  -3.006 0.006736 ** 
+## fractionWholeFree   18.112      4.969   3.645 0.001513 ** 
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 11.72 on 21 degrees of freedom
+## Multiple R-squared:  0.4575,	Adjusted R-squared:  0.4059 
+## F-statistic: 8.856 on 2 and 21 DF,  p-value: 0.001626
+```
+
+```r
+# Check the residuals
+plot_residuals(lm_model = lm2_bulk, 
+               lm_observed_y = unweightMPD_fraction_dat$frac_bacprod,
+               main_title = "Unweighted MPD with Interaction Term")
+```
+
+```
+## [1] "WARNING:You have 1 high-leverage point(s)!"
+```
+
+<img src="Rarefied_Figures/post-hoc-unweightedMPD-bulk-2.png" style="display: block; margin: auto;" />
+
+```r
+# Does the interaction term include important information not accounted for already?
+anova(lm2_bulk_interaction, lm2_bulk)
+```
+
+```
+## Analysis of Variance Table
+## 
+## Model 1: frac_bacprod ~ mpd.obs.z * fraction
+## Model 2: frac_bacprod ~ mpd.obs.z + fraction
+##   Res.Df    RSS Df Sum of Sq      F  Pr(>F)  
+## 1     20 2224.1                              
+## 2     21 2886.6 -1   -662.52 5.9577 0.02408 *
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ```
 
 ```r
@@ -3902,52 +4078,6 @@ summary(lm(frac_bacprod ~ mpd.obs.z, data = dplyr::filter(unweightMPD_fraction_d
 ## Residual standard error: 13.31 on 10 degrees of freedom
 ## Multiple R-squared:  0.4759,	Adjusted R-squared:  0.4235 
 ## F-statistic: 9.082 on 1 and 10 DF,  p-value: 0.01304
-```
-
-```r
-# Help from:  http://r-eco-evo.blogspot.com/2011/08/comparing-two-regression-slopes-by.html
-mod1_bulk <- aov(frac_bacprod ~ mpd.obs.z*fraction, data = unweightMPD_fraction_dat)
-summary(mod1_bulk) # With interaction term 
-```
-
-```
-##                    Df Sum Sq Mean Sq F value   Pr(>F)    
-## mpd.obs.z           1  608.3   608.3   5.470 0.029834 *  
-## fraction            1 1826.2  1826.2  16.422 0.000622 ***
-## mpd.obs.z:fraction  1  662.5   662.5   5.958 0.024080 *  
-## Residuals          20 2224.1   111.2                     
-## ---
-## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-```
-
-```r
-mod2_bulk <- aov(frac_bacprod ~ mpd.obs.z+fraction, data = unweightMPD_fraction_dat)
-summary(mod2_bulk) # Without interaction term 
-```
-
-```
-##             Df Sum Sq Mean Sq F value  Pr(>F)   
-## mpd.obs.z    1  608.3   608.3   4.426 0.04763 * 
-## fraction     1 1826.2  1826.2  13.286 0.00151 **
-## Residuals   21 2886.6   137.5                   
-## ---
-## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-```
-
-```r
-anova(mod1_bulk, mod2_bulk) # Does the interaction term have a significant effect?
-```
-
-```
-## Analysis of Variance Table
-## 
-## Model 1: frac_bacprod ~ mpd.obs.z * fraction
-## Model 2: frac_bacprod ~ mpd.obs.z + fraction
-##   Res.Df    RSS Df Sum of Sq      F  Pr(>F)  
-## 1     20 2224.1                              
-## 2     21 2886.6 -1   -662.52 5.9577 0.02408 *
-## ---
-## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ```
 
 ```r
@@ -4080,61 +4210,6 @@ anova(mod1_percell, mod2_percell) # Does the interaction term have a significant
 ## 2     20 7.3664e-12 -1 -6.2845e-13 1.7721 0.1989
 ```
 
-```r
-# Run a post-hoc test
-library(multcomp)
-#BULK MEASURE
-post_hoc_measure_byfraction <- glht(lm_unweightMPD_by_fraction, 
-                                    linfct = mcp(fraction = "Tukey", interaction_average=TRUE),
-                vcov=vcovHC(lm_unweightMPD_by_fraction, type = "HC0"))
-summary(post_hoc_measure_byfraction)
-```
-
-```
-## 
-## 	 Simultaneous Tests for General Linear Hypotheses
-## 
-## Multiple Comparisons of Means: Tukey Contrasts
-## 
-## 
-## Fit: lm(formula = frac_bacprod ~ mpd.obs.z/fraction, data = unweightMPD_fraction_dat)
-## 
-## Linear Hypotheses:
-##                            Estimate Std. Error t value Pr(>|t|)
-## WholeFree - WholePart == 0    3.843      2.979    1.29    0.211
-## (Adjusted p values reported -- single-step method)
-```
-
-```r
-# PER CELL
-post_hoc_measure_byfraction_percell <- glht(lm_unweightMPD_by_fraction_percell, 
-                                    linfct = mcp(fraction = "Tukey", interaction_average=TRUE),
-                vcov=vcovHC(lm_unweightMPD_by_fraction_percell, type = "HC0"))
-summary(post_hoc_measure_byfraction_percell)
-```
-
-```
-## 
-## 	 Simultaneous Tests for General Linear Hypotheses
-## 
-## Multiple Comparisons of Means: Tukey Contrasts
-## 
-## 
-## Fit: lm(formula = log10(fracprod_per_cell_noinf) ~ mpd.obs.z/fraction, 
-##     data = unweightMPD_fraction_dat)
-## 
-## Linear Hypotheses:
-##                            Estimate Std. Error t value Pr(>|t|)   
-## WholeFree - WholePart == 0 -0.31403    0.08305  -3.781  0.00117 **
-## ---
-## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-## (Adjusted p values reported -- single-step method)
-```
-
-```r
-detach("package:multcomp", unload=TRUE) # This package masks the dplyr select function = :(
-```
-
 
 ### Weighted MPD slopes
 
@@ -4226,32 +4301,58 @@ summary(lm(frac_bacprod ~ mpd.obs.z, data = dplyr::filter(weightMPD_fraction_dat
 
 ```r
 # Help from:  http://r-eco-evo.blogspot.com/2011/08/comparing-two-regression-slopes-by.html
-mod1_bulk <- aov(frac_bacprod ~ mpd.obs.z*fraction, data = weightMPD_fraction_dat)
+mod1_bulk <- lm(frac_bacprod ~ mpd.obs.z*fraction, data = weightMPD_fraction_dat)
 summary(mod1_bulk) # With interaction term 
 ```
 
 ```
-##                    Df Sum Sq Mean Sq F value Pr(>F)  
-## mpd.obs.z           1    772   771.6   4.097 0.0565 .
-## fraction            1    444   443.7   2.356 0.1405  
-## mpd.obs.z:fraction  1    339   338.7   1.798 0.1949  
-## Residuals          20   3767   188.4                 
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mpd.obs.z * fraction, data = weightMPD_fraction_dat)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -21.159  -6.465  -2.936   4.316  37.417 
+## 
+## Coefficients:
+##                             Estimate Std. Error t value Pr(>|t|)  
+## (Intercept)                   13.859      6.074   2.282   0.0336 *
+## mpd.obs.z                     -5.310      6.267  -0.847   0.4068  
+## fractionWholeFree             20.099     11.587   1.735   0.0982 .
+## mpd.obs.z:fractionWholeFree   10.640      7.934   1.341   0.1949  
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 13.72 on 20 degrees of freedom
+## Multiple R-squared:  0.2921,	Adjusted R-squared:  0.1859 
+## F-statistic:  2.75 on 3 and 20 DF,  p-value: 0.06964
 ```
 
 ```r
-mod2_bulk <- aov(frac_bacprod ~ mpd.obs.z+fraction, data = weightMPD_fraction_dat)
+mod2_bulk <- lm(frac_bacprod ~ mpd.obs.z+fraction, data = weightMPD_fraction_dat)
 summary(mod2_bulk) # Without interaction term 
 ```
 
 ```
-##             Df Sum Sq Mean Sq F value Pr(>F)  
-## mpd.obs.z    1    772   771.6   3.947 0.0602 .
-## fraction     1    444   443.7   2.269 0.1468  
-## Residuals   21   4106   195.5                 
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mpd.obs.z + fraction, data = weightMPD_fraction_dat)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -19.663  -7.610  -2.083   3.455  39.012 
+## 
+## Coefficients:
+##                   Estimate Std. Error t value Pr(>|t|)  
+## (Intercept)          8.983      4.957   1.812   0.0843 .
+## mpd.obs.z            1.328      3.916   0.339   0.7379  
+## fractionWholeFree   17.542     11.644   1.506   0.1468  
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 13.98 on 21 degrees of freedom
+## Multiple R-squared:  0.2284,	Adjusted R-squared:  0.1549 
+## F-statistic: 3.108 on 2 and 21 DF,  p-value: 0.06571
 ```
 
 ```r
@@ -4354,30 +4455,62 @@ summary(lm(log10(fracprod_per_cell_noinf) ~ mpd.obs.z,
 ```
 
 ```r
-mod1_percell <- aov(fracprod_per_cell_noinf ~ mpd.obs.z*fraction, data = weightMPD_fraction_dat)
+mod1_percell <- lm(fracprod_per_cell_noinf ~ mpd.obs.z*fraction, data = weightMPD_fraction_dat)
 summary(mod1_percell) # With interaction term 
 ```
 
 ```
-##                    Df    Sum Sq   Mean Sq F value Pr(>F)
-## mpd.obs.z           1 3.590e-13 3.592e-13   0.833  0.373
-## fraction            1 1.172e-12 1.172e-12   2.720  0.116
-## mpd.obs.z:fraction  1 8.190e-13 8.192e-13   1.901  0.184
-## Residuals          19 8.190e-12 4.310e-13               
-## 1 observation deleted due to missingness
+## 
+## Call:
+## lm(formula = fracprod_per_cell_noinf ~ mpd.obs.z * fraction, 
+##     data = weightMPD_fraction_dat)
+## 
+## Residuals:
+##        Min         1Q     Median         3Q        Max 
+## -1.031e-06 -1.254e-07 -1.456e-08  9.060e-09  2.529e-06 
+## 
+## Coefficients:
+##                               Estimate Std. Error t value Pr(>|t|)   
+## (Intercept)                  8.400e-07  2.905e-07   2.891  0.00936 **
+## mpd.obs.z                   -5.229e-07  3.103e-07  -1.685  0.10835   
+## fractionWholeFree           -7.792e-07  5.543e-07  -1.406  0.17595   
+## mpd.obs.z:fractionWholeFree  5.348e-07  3.879e-07   1.379  0.18403   
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 6.565e-07 on 19 degrees of freedom
+##   (1 observation deleted due to missingness)
+## Multiple R-squared:  0.223,	Adjusted R-squared:  0.1004 
+## F-statistic: 1.818 on 3 and 19 DF,  p-value: 0.1781
 ```
 
 ```r
-mod2_percell <- aov(fracprod_per_cell_noinf ~ mpd.obs.z+fraction, data = weightMPD_fraction_dat)
+mod2_percell <- lm(fracprod_per_cell_noinf ~ mpd.obs.z+fraction, data = weightMPD_fraction_dat)
 summary(mod2_percell) # Without interaction term 
 ```
 
 ```
-##             Df    Sum Sq   Mean Sq F value Pr(>F)
-## mpd.obs.z    1 3.590e-13 3.592e-13   0.797  0.382
-## fraction     1 1.172e-12 1.172e-12   2.603  0.122
-## Residuals   20 9.009e-12 4.504e-13               
-## 1 observation deleted due to missingness
+## 
+## Call:
+## lm(formula = fracprod_per_cell_noinf ~ mpd.obs.z + fraction, 
+##     data = weightMPD_fraction_dat)
+## 
+## Residuals:
+##        Min         1Q     Median         3Q        Max 
+## -5.701e-07 -3.149e-07 -7.637e-08  4.920e-08  2.754e-06 
+## 
+## Coefficients:
+##                     Estimate Std. Error t value Pr(>|t|)  
+## (Intercept)        6.054e-07  2.408e-07   2.515   0.0206 *
+## mpd.obs.z         -1.806e-07  1.904e-07  -0.949   0.3540  
+## fractionWholeFree -9.023e-07  5.592e-07  -1.613   0.1223  
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 6.711e-07 on 20 degrees of freedom
+##   (1 observation deleted due to missingness)
+## Multiple R-squared:  0.1453,	Adjusted R-squared:  0.05984 
+## F-statistic:   1.7 on 2 and 20 DF,  p-value: 0.208
 ```
 
 ```r
@@ -4392,61 +4525,6 @@ anova(mod1_percell, mod2_percell) # Does the interaction term have a significant
 ##   Res.Df        RSS Df  Sum of Sq      F Pr(>F)
 ## 1     19 8.1896e-12                            
 ## 2     20 9.0088e-12 -1 -8.192e-13 1.9006  0.184
-```
-
-```r
-# Run a post-hoc test
-library(multcomp)
-#BULK MEASURE
-post_hoc_WEIGHTEDMPD_byfraction <- glht(lm_WEIGHTED_MPD_by_fraction, 
-                                    linfct = mcp(fraction = "Tukey", interaction_average=TRUE),
-                vcov=vcovHC(lm_WEIGHTED_MPD_by_fraction, type = "HC0"))
-summary(post_hoc_WEIGHTEDMPD_byfraction)
-```
-
-```
-## 
-## 	 Simultaneous Tests for General Linear Hypotheses
-## 
-## Multiple Comparisons of Means: Tukey Contrasts
-## 
-## 
-## Fit: lm(formula = frac_bacprod ~ mpd.obs.z/fraction, data = weightMPD_fraction_dat)
-## 
-## Linear Hypotheses:
-##                            Estimate Std. Error t value Pr(>|t|)
-## WholeFree - WholePart == 0    8.376      6.586   1.272    0.217
-## (Adjusted p values reported -- single-step method)
-```
-
-```r
-# PER CELL
-post_hoc_WEIGHTEDMPD_byfraction_percell <- glht(lm_WEIGHTED_MPD_by_fraction_percell, 
-                                    linfct = mcp(fraction = "Tukey", interaction_average=TRUE),
-                vcov=vcovHC(lm_WEIGHTED_MPD_by_fraction_percell, type = "HC0"))
-summary(post_hoc_WEIGHTEDMPD_byfraction_percell)
-```
-
-```
-## 
-## 	 Simultaneous Tests for General Linear Hypotheses
-## 
-## Multiple Comparisons of Means: Tukey Contrasts
-## 
-## 
-## Fit: lm(formula = log10(fracprod_per_cell_noinf) ~ mpd.obs.z/fraction, 
-##     data = weightMPD_fraction_dat)
-## 
-## Linear Hypotheses:
-##                            Estimate Std. Error t value Pr(>|t|)  
-## WholeFree - WholePart == 0   0.6132     0.2597   2.361   0.0285 *
-## ---
-## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-## (Adjusted p values reported -- single-step method)
-```
-
-```r
-detach("package:multcomp", unload=TRUE) # This package masks the dplyr select function = :(
 ```
 
 
@@ -5389,6 +5467,10 @@ plot_residuals(lm_model = percell_lmFL_unweightedMPD_taxalab,
                main_title = "Free-Living Unweighted MPD")
 ```
 
+```
+## [1] "There are no high leverage points in this model."
+```
+
 <img src="Rarefied_Figures/check-lm-phylogenetic-residuals-1.png" style="display: block; margin: auto;" />
 
 ```r
@@ -5404,6 +5486,10 @@ plot_residuals(lm_model = percell_lmPA_unweightedMPD_taxalab,
 ## Warning in rlm.default(x, y, weights, method = method, wt.method = wt.method, : 'rlm' failed to converge in 20 steps
 ```
 
+```
+## [1] "WARNING:You have 1 high-leverage point(s)!"
+```
+
 <img src="Rarefied_Figures/check-lm-phylogenetic-residuals-2.png" style="display: block; margin: auto;" />
 
 ```r
@@ -5416,6 +5502,10 @@ plot_residuals(lm_model = percell_lmPA_unweightedMNTD_taxalab,
                main_title = "Particle-Associated Unweighted MNTD")
 ```
 
+```
+## [1] "WARNING:You have 1 high-leverage point(s)!"
+```
+
 <img src="Rarefied_Figures/check-lm-phylogenetic-residuals-3.png" style="display: block; margin: auto;" />
 
 ```r
@@ -5426,6 +5516,10 @@ FL_unweight_sesMNTD_df <- filter(WEIGHTED_sesMNTD_taxalab, fraction == "WholeFre
 plot_residuals(lm_model = percell_lmFL_weightedMNTD_taxalab, 
                lm_observed_y = log10(FL_unweight_sesMNTD_df$fracprod_per_cell_noinf),
                main_title = "Free-Living Weighted MNTD")
+```
+
+```
+## [1] "WARNING:You have 1 high-leverage point(s)!"
 ```
 
 <img src="Rarefied_Figures/check-lm-phylogenetic-residuals-4.png" style="display: block; margin: auto;" />

@@ -417,11 +417,20 @@ plot_residuals <- function(lm_model, lm_observed_y, main_title){
          xlab="Theoretical quantiles (t-distribution)",
          cex=1.5, las=1)
   
-  # 2nd plot: Predicted values vs pearson residuals
-  plot(y=residuals(lm_model,"pearson"), x=predict(lm_model), col="blue",
-       las=1,ylab="Pearson residuals", xlab="Predicted values", cex=1.5)
+  # 2nd plot: Predicted values vs Studentized residuals
+  plot(y=studres(lm_model), x=predict(lm_model), col="blue",
+       las=1,ylab="Studentized residuals", xlab="Fitted Values", cex=1.5)
   # Draw a line at y=0
-  lines(x=c(0,25), y=c(0,0), lty=2)
+  lines(x=c(-10,60), y=c(0,0), lty=2)
+  
+  # If you studentized residuals is greater than 3, state that there's an outlier
+  ifelse(sum(studres(lm_model) > 3) >= 1, 
+         # Do this if the length of the studentized residuals is equal to or greater than 1
+         print(paste("WARNING:You have", 
+               length(studres(lm_model)[studres(lm_model) > 3]), 
+               "high-leverage point(s)!")), 
+         # Do this if the length of the studentized residuals is equal to or greater than 1
+         print("There are no high leverage points in this model.")) 
   
   # Add a title to all the plots
   mtext(text = main_title, side = 3, line = 2, outer = FALSE)
@@ -430,7 +439,7 @@ plot_residuals <- function(lm_model, lm_observed_y, main_title){
   # 3rd plot: Predicted values vs. Observed Variables
   plot(y=lm_observed_y, x=predict(lm_model), col="blue",
        ylab="Observed values",
-       xlab="Predicted values", cex=1.5,
+       xlab="Fitted Values", cex=1.5,
        las=1)
   # draw a 1:1 line
   abline(a = 0, b = 1, lty=2)
