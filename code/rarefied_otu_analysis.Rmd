@@ -1630,7 +1630,7 @@ prod_lmTOGET_unweightedMPD_taxalab <- lm(frac_bacprod~ mpd.obs.z,
 summary(prod_lmTOGET_unweightedMPD_taxalab)
 
 
-plot_unweightedMPD_prod <- ggplot(filter(unweighted_sesMPD_taxalab, fraction %in% c("WholePart", "WholeFree")), 
+plot_unweightedMPD_prod <-   ggplot(filter(unweighted_sesMPD_taxalab, fraction %in% c("WholePart", "WholeFree")), 
        aes(x = mpd.obs.z, y =frac_bacprod, color = fraction)) + 
   geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) + xlim(-4.5, 3.5) +
   geom_point(size = 3) +
@@ -2019,7 +2019,10 @@ plot_grid(plot_unweightedMPD_percell, plot_unweightedMNTD_percell,
 
 ```
 
+
+## Differences in slopes and interaction terms?
 ```{r post-hoc-unweightedMPD-bulk, dependson = c("taxalab-production-BEF", "taxa-labels")}
+# UNWEIGHTED MPD 
 # Are the slopes of the fraction linear models different from each other in predicting fraction production?
 unweightMPD_fraction_dat <- filter(unweighted_sesMPD_taxalab, 
                        fraction %in% c("WholePart", "WholeFree")) %>%
@@ -2029,6 +2032,8 @@ unweightMPD_fraction_dat <- filter(unweighted_sesMPD_taxalab,
 # Double check values from above models
 lm_unweightMPD_by_fraction <- lm(frac_bacprod ~ mpd.obs.z/fraction, data = unweightMPD_fraction_dat)
 summary(lm_unweightMPD_by_fraction)
+
+summary(lm(frac_bacprod ~ mpd.obs.z/fraction - 1, data = unweightMPD_fraction_dat))
 
 summary(lm(frac_bacprod ~ mpd.obs.z, data = dplyr::filter(unweightMPD_fraction_dat,fraction == "WholePart")))
 summary(lm(frac_bacprod ~ mpd.obs.z, data = dplyr::filter(unweightMPD_fraction_dat,fraction == "WholeFree")))
@@ -2058,10 +2063,6 @@ summary(mod2_percell) # Without interaction term
 
 anova(mod1_percell, mod2_percell) # Does the interaction term have a significant effect?
 
-
-
-
-
 # Run a post-hoc test
 library(multcomp)
 #BULK MEASURE
@@ -2075,6 +2076,63 @@ post_hoc_measure_byfraction_percell <- glht(lm_unweightMPD_by_fraction_percell,
                                     linfct = mcp(fraction = "Tukey", interaction_average=TRUE),
                 vcov=vcovHC(lm_unweightMPD_by_fraction_percell, type = "HC0"))
 summary(post_hoc_measure_byfraction_percell)
+
+detach("package:multcomp", unload=TRUE) # This package masks the dplyr select function = :(
+
+
+
+####  WEIGHTED MPD
+weightMPD_fraction_dat <- filter(WEIGHTED_sesMPD_taxalab, 
+                       fraction %in% c("WholePart", "WholeFree")) %>%
+  dplyr::select(norep_filter_name, mpd.obs.z, fraction, frac_bacprod, fracprod_per_cell_noinf) 
+
+
+# Double check values from above models
+lm_WEIGHTED_MPD_by_fraction <- lm(frac_bacprod ~ mpd.obs.z/fraction, data = weightMPD_fraction_dat)
+summary(lm_WEIGHTED_MPD_by_fraction)
+
+summary(lm(frac_bacprod ~ mpd.obs.z, data = dplyr::filter(weightMPD_fraction_dat,fraction == "WholePart")))
+summary(lm(frac_bacprod ~ mpd.obs.z, data = dplyr::filter(weightMPD_fraction_dat,fraction == "WholeFree")))
+
+# Help from:  http://r-eco-evo.blogspot.com/2011/08/comparing-two-regression-slopes-by.html
+mod1_bulk <- aov(frac_bacprod ~ mpd.obs.z*fraction, data = weightMPD_fraction_dat)
+summary(mod1_bulk) # With interaction term 
+mod2_bulk <- aov(frac_bacprod ~ mpd.obs.z+fraction, data = weightMPD_fraction_dat)
+summary(mod2_bulk) # Without interaction term 
+
+anova(mod1_bulk, mod2_bulk) # Does the interaction term have a significant effect?
+
+
+## PER CELL
+lm_WEIGHTED_MPD_by_fraction_percell <- lm(log10(fracprod_per_cell_noinf) ~ mpd.obs.z/fraction, data = weightMPD_fraction_dat)
+summary(lm_WEIGHTED_MPD_by_fraction_percell)
+
+summary(lm(log10(fracprod_per_cell_noinf) ~ mpd.obs.z, 
+           data = dplyr::filter(weightMPD_fraction_dat,fraction == "WholePart")))
+summary(lm(log10(fracprod_per_cell_noinf) ~ mpd.obs.z, 
+           data = dplyr::filter(weightMPD_fraction_dat,fraction == "WholeFree")))
+
+mod1_percell <- aov(fracprod_per_cell_noinf ~ mpd.obs.z*fraction, data = weightMPD_fraction_dat)
+summary(mod1_percell) # With interaction term 
+mod2_percell <- aov(fracprod_per_cell_noinf ~ mpd.obs.z+fraction, data = weightMPD_fraction_dat)
+summary(mod2_percell) # Without interaction term 
+
+anova(mod1_percell, mod2_percell) # Does the interaction term have a significant effect?
+
+
+# Run a post-hoc test
+library(multcomp)
+#BULK MEASURE
+post_hoc_WEIGHTEDMPD_byfraction <- glht(lm_WEIGHTED_MPD_by_fraction, 
+                                    linfct = mcp(fraction = "Tukey", interaction_average=TRUE),
+                vcov=vcovHC(lm_WEIGHTED_MPD_by_fraction, type = "HC0"))
+summary(post_hoc_WEIGHTEDMPD_byfraction)
+
+# PER CELL
+post_hoc_WEIGHTEDMPD_byfraction_percell <- glht(lm_WEIGHTED_MPD_by_fraction_percell, 
+                                    linfct = mcp(fraction = "Tukey", interaction_average=TRUE),
+                vcov=vcovHC(lm_WEIGHTED_MPD_by_fraction_percell, type = "HC0"))
+summary(post_hoc_WEIGHTEDMPD_byfraction_percell)
 
 detach("package:multcomp", unload=TRUE) # This package masks the dplyr select function = :(
 ```
