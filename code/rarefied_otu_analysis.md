@@ -2721,9 +2721,9 @@ plot_grid(taxlab_unweight_mpd + ylim(-4.5, 3.5) +
   
 - Linear Models with **BULK** Productivity:  
       - Both PA and FL together:  
-              - Unweighted MPD:  **NS**
-              - Weighted MPD: **NS** (p = 0.066)
-              - Unweighted MNTD:  **NS** (p = 0.089)
+              - Unweighted MPD:  **NS**  
+              - Weighted MPD: **NS** (R2 = 0.1061, p = 0.066)  
+              - Unweighted MNTD:  **NS** (p = 0.089)  
               - Weighted MNTD: **Significant** (p = 0.01129, R2 = 0.2242)
 
 
@@ -2832,7 +2832,9 @@ plot_unweightedMPD_prod <- ggplot(filter(unweighted_sesMPD_taxalab, fraction %in
   annotate("text", x = -3, y=60, 
          color = "cornflowerblue", fontface = "bold",
          label = paste("R2 =", round(summary(prod_lmFL_unweightedMPD_taxalab)$adj.r.squared, digits = 2), "\n", 
-                       "p =", round(unname(summary(prod_lmFL_unweightedMPD_taxalab)$coefficients[,4][2]), digits = 3))) 
+                       "p =", round(unname(summary(prod_lmFL_unweightedMPD_taxalab)$coefficients[,4][2]), digits = 3))) + 
+  annotate("text", x = -3, y=-1, color = "black", fontface = "bold", label = paste("Combined = NS"))
+
 
 
 ############ WEIGHTED MPD
@@ -2945,19 +2947,15 @@ plot_weightedMPD_prod_TOGETHER <- ggplot(filter(WEIGHTED_sesMPD_taxalab, fractio
   xlab("Weighted Mean Pairwise Dist") + 
   ylab("Heterotrophic Production \n (μgC/L/hr)") + 
   scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
-  geom_smooth(method = "lm", color = "black") +
+  geom_smooth(method = "lm", color = "black", linetype = "dashed") +
   theme(legend.position = "none") +
-  annotate("text", x = -3, y=-6, 
+  annotate("text", x = -3, y=54, 
            color = "black", fontface = "bold",
-           label = paste("R2 =", round(summary(prod_lmALL_weightedMPD_taxalab)$adj.r.squared, digits = 3), "\n", 
-                         "p =", round(unname(summary(prod_lmALL_weightedMPD_taxalab)$coefficients[,4][2]), digits = 3)))
-```
+           label = paste("R2 =", round(summary(prod_lmTOGET_weightedMPD_taxalab)$adj.r.squared, digits = 3), "\n", 
+                         "p =", round(unname(summary(prod_lmTOGET_weightedMPD_taxalab)$coefficients[,4][2]), digits = 3))) +
+  annotate("text", x = -3, y=-1, color = "#CCBB51", fontface = "bold", label = paste("Separate = NS"))
 
-```
-## Error in summary(prod_lmALL_weightedMPD_taxalab): object 'prod_lmALL_weightedMPD_taxalab' not found
-```
 
-```r
 plot_weightedMPD_prod <- ggplot(filter(WEIGHTED_sesMPD_taxalab, fraction %in% c("WholePart", "WholeFree")), 
        aes(x = mpd.obs.z, y =frac_bacprod, color = fraction)) + 
   geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) + xlim(-4.5, 3.5) +
@@ -3248,9 +3246,9 @@ plot_grid(plot_unweightedMPD_prod, plot_unweightedMNTD_prod,
 
 - Linear Models with **per cell** Productivity:  
       - Both PA and FL together:  
-              - Unweighted MPD:  **Significant** (R2 = 0.5245, p = 5.631e-05)
-              - Weighted MPD: **Significant** (R2 = 0.2976, p = 0.004181)
-              - Unweighted MNTD:  **NS**
+              - Unweighted MPD:  **Significant** (R2 = 0.5245, p = 5.631e-05)  
+              - Weighted MPD: **Significant** (R2 = 0.2976, p = 0.004181)  
+              - Unweighted MNTD:  **NS**  
               - Weighted MNTD: **NS**
 
 
@@ -3388,7 +3386,11 @@ plot_unweightedMPD_percell <- ggplot(filter(unweighted_sesMPD_taxalab, fraction 
   annotate("text", x = -3, y=-7, 
          color = "cornflowerblue", fontface = "bold",
          label = paste("R2 =", round(summary(percell_lmFL_unweightedMPD_taxalab)$adj.r.squared, digits = 2), "\n", 
-                       "p =", round(unname(summary(percell_lmFL_unweightedMPD_taxalab)$coefficients[,4][2]), digits = 3))) 
+                       "p =", round(unname(summary(percell_lmFL_unweightedMPD_taxalab)$coefficients[,4][2]), digits = 3))) +
+    annotate("text", x = -2.8, y=-8, 
+         color = "black", fontface = "bold",
+         label = paste("Combined: R2 =", round(summary(percell_lmTOGET_unweightedMPD_taxalab)$adj.r.squared, digits = 2), "\n", 
+                       "Combined: p =", round(unname(summary(percell_lmTOGET_unweightedMPD_taxalab)$coefficients[,4][2]), digits = 4)))
 
 
 ############ WEIGHTED MPD
@@ -3505,15 +3507,12 @@ plot_weightedMPD_percell_TOGETHER <- ggplot(filter(WEIGHTED_sesMPD_taxalab, frac
   theme(legend.position = "none") +
   annotate("text", x = -3, y=-6, 
            color = "black", fontface = "bold",
-           label = paste("R2 =", round(summary(percell_lmALL_weightedMPD_taxalab)$adj.r.squared, digits = 3), "\n", 
-                         "p =", round(unname(summary(percell_lmALL_weightedMPD_taxalab)$coefficients[,4][2]), digits = 3)))
-```
+           label = paste("R2 =", round(summary(percell_lmTOGET_weightedMPD_taxalab)$adj.r.squared, digits = 3), "\n", 
+                         "p =", round(unname(summary(percell_lmTOGET_weightedMPD_taxalab)$coefficients[,4][2]), digits = 3)))+
+  annotate("text", x = -3, y=-6.5, color = "#CCBB51", fontface = "bold", label = paste("Separate = NS"))
 
-```
-## Error in summary(percell_lmALL_weightedMPD_taxalab): object 'percell_lmALL_weightedMPD_taxalab' not found
-```
 
-```r
+
 plot_weightedMPD_percell <- ggplot(filter(WEIGHTED_sesMPD_taxalab, fraction %in% c("WholePart", "WholeFree")), 
        aes(x = mpd.obs.z, y =log10(fracprod_per_cell_noinf), color = fraction)) + 
   geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) + xlim(-4.5, 3.5) +
@@ -3945,8 +3944,66 @@ plot_grid(taxlab_unweight_mpd + ylim(-4.5, 3.5) + xlab("") + coord_flip() +
 ```
 
 ```
-## Error in plot_grid(taxlab_unweight_mpd + ylim(-4.5, 3.5) + xlab("") + : object 'plot_weightedMPD_percell_TOGETHER' not found
+## Warning: Removed 1 rows containing non-finite values (stat_smooth).
 ```
+
+```
+## Warning: Removed 1 rows containing missing values (geom_point).
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <ce>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <bc>
+```
+
+```
+## Warning: Removed 1 rows containing non-finite values (stat_smooth).
+```
+
+```
+## Warning: Removed 1 rows containing missing values (geom_point).
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <ce>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <bc>
+```
+
+```
+## Warning: Removed 1 rows containing non-finite values (stat_smooth).
+```
+
+```
+## Warning: Removed 1 rows containing missing values (geom_point).
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <ce>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <bc>
+```
+
+```
+## Warning: Removed 1 rows containing missing values (geom_point).
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <ce>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <bc>
+```
+
+<img src="Rarefied_Figures/fig-3-2.png" style="display: block; margin: auto;" />
 
 
 
@@ -3980,8 +4037,167 @@ plot_grid(taxlab_unweight_mpd + ylim(-4.5, 3.5) + xlab("") + coord_flip() +
 ```
 
 ```
-## Error in plot_grid(taxlab_unweight_mpd + ylim(-4.5, 3.5) + xlab("") + : object 'plot_weightedMPD_percell_TOGETHER' not found
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <ce>
 ```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <bc>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <ce>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <bc>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <ce>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <bc>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <ce>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <bc>
+```
+
+```
+## Warning: Removed 1 rows containing non-finite values (stat_smooth).
+```
+
+```
+## Warning: Removed 1 rows containing missing values (geom_point).
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <ce>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <bc>
+```
+
+```
+## Warning: Removed 1 rows containing non-finite values (stat_smooth).
+```
+
+```
+## Warning: Removed 1 rows containing missing values (geom_point).
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <ce>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <bc>
+```
+
+```
+## Warning: Removed 1 rows containing non-finite values (stat_smooth).
+```
+
+```
+## Warning: Removed 1 rows containing missing values (geom_point).
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <ce>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <bc>
+```
+
+```
+## Warning: Removed 1 rows containing missing values (geom_point).
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <ce>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <bc>
+```
+
+<img src="Rarefied_Figures/super-fig3-1.png" style="display: block; margin: auto;" />
+
+
+
+```r
+plot_grid(taxlab_unweight_mpd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
+            annotate("text", x=1.55, y=(max(mpd_nums1$b)-0.5), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("NS")) +
+            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
+          taxlab_weight_mpd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
+            annotate("text", x=1.55, y=(max(mpd_nums2$b)-1), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("***\np =", round(weight_MPD_wilcox$p.value, digits = 6)))  + 
+            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
+          plot_unweightedMPD_prod, 
+          plot_weightedMPD_prod_TOGETHER, 
+          plot_unweightedMPD_percell + xlim(-4.5, 3.5),  
+          plot_weightedMPD_percell_TOGETHER + xlim(-4.5, 3.5),
+          labels = c("A", "B", "C", "D", "E", "F"),
+          ncol = 2, nrow = 3)
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <ce>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <bc>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <ce>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <bc>
+```
+
+```
+## Warning: Removed 1 rows containing non-finite values (stat_smooth).
+```
+
+```
+## Warning: Removed 1 rows containing missing values (geom_point).
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <ce>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <bc>
+```
+
+```
+## Warning: Removed 1 rows containing non-finite values (stat_smooth).
+```
+
+```
+## Warning: Removed 1 rows containing missing values (geom_point).
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <ce>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <bc>
+```
+
+<img src="Rarefied_Figures/fig3-subsetted-1.png" style="display: block; margin: auto;" />
 
 
 
@@ -4528,22 +4744,16 @@ summary(lm(mean ~ mpd.obs.z, data = combined_simpseven_weightedMPD)) # NS
 ## F-statistic: 0.8013 on 1 and 22 DF,  p-value: 0.3804
 ```
 
+
 ```r
 # PLOT
-# Richness vs UNweighted MPD
-plot_grid(divs_p1, divs_p2, nrow = 1, ncol = 2)
+plot_grid(divs_p1, divs_p2, # Richness vs UNweighted MPD
+          evendivs_p1, evendivs_p2, # Inverse Simpson vs Weighted MPD 
+          nrow = 2, ncol = 2,
+          labels = c("A", "B", "C", "D"))
 ```
 
-<img src="Rarefied_Figures/diversity-vs-diversity-2.png" style="display: block; margin: auto;" />
-
-```r
-# Inverse Simpson vs Weighted MPD 
-plot_grid(evendivs_p1, evendivs_p2, nrow = 1, ncol = 2)
-```
-
-<img src="Rarefied_Figures/diversity-vs-diversity-3.png" style="display: block; margin: auto;" />
-
-
+<img src="Rarefied_Figures/figure-4-1.png" style="display: block; margin: auto;" />
 
 ## Residual Analysis 
 

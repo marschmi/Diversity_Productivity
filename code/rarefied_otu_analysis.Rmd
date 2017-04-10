@@ -1607,9 +1607,9 @@ plot_grid(taxlab_unweight_mpd + ylim(-4.5, 3.5) +
   
 - Linear Models with **BULK** Productivity:  
       - Both PA and FL together:  
-              - Unweighted MPD:  **NS**
-              - Weighted MPD: **NS** (p = 0.066)
-              - Unweighted MNTD:  **NS** (p = 0.089)
+              - Unweighted MPD:  **NS**  
+              - Weighted MPD: **NS** (R2 = 0.1061, p = 0.066)  
+              - Unweighted MNTD:  **NS** (p = 0.089)  
               - Weighted MNTD: **Significant** (p = 0.01129, R2 = 0.2242)
 
 ```{r taxalab-production-BEF, fig.width= 15, fig.height = 4, dependson = "taxa-labels"}
@@ -1646,7 +1646,9 @@ plot_unweightedMPD_prod <- ggplot(filter(unweighted_sesMPD_taxalab, fraction %in
   annotate("text", x = -3, y=60, 
          color = "cornflowerblue", fontface = "bold",
          label = paste("R2 =", round(summary(prod_lmFL_unweightedMPD_taxalab)$adj.r.squared, digits = 2), "\n", 
-                       "p =", round(unname(summary(prod_lmFL_unweightedMPD_taxalab)$coefficients[,4][2]), digits = 3))) 
+                       "p =", round(unname(summary(prod_lmFL_unweightedMPD_taxalab)$coefficients[,4][2]), digits = 3))) + 
+  annotate("text", x = -3, y=-1, color = "black", fontface = "bold", label = paste("Combined = NS"))
+
 
 
 ############ WEIGHTED MPD
@@ -1684,12 +1686,13 @@ plot_weightedMPD_prod_TOGETHER <- ggplot(filter(WEIGHTED_sesMPD_taxalab, fractio
   xlab("Weighted Mean Pairwise Dist") + 
   ylab("Heterotrophic Production \n (μgC/L/hr)") + 
   scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
-  geom_smooth(method = "lm", color = "black") +
+  geom_smooth(method = "lm", color = "black", linetype = "dashed") +
   theme(legend.position = "none") +
-  annotate("text", x = -3, y=-6, 
+  annotate("text", x = -3, y=54, 
            color = "black", fontface = "bold",
-           label = paste("R2 =", round(summary(prod_lmALL_weightedMPD_taxalab)$adj.r.squared, digits = 3), "\n", 
-                         "p =", round(unname(summary(prod_lmALL_weightedMPD_taxalab)$coefficients[,4][2]), digits = 3)))
+           label = paste("R2 =", round(summary(prod_lmTOGET_weightedMPD_taxalab)$adj.r.squared, digits = 3), "\n", 
+                         "p =", round(unname(summary(prod_lmTOGET_weightedMPD_taxalab)$coefficients[,4][2]), digits = 3))) +
+  annotate("text", x = -3, y=-1, color = "#CCBB51", fontface = "bold", label = paste("Separate = NS"))
 
 
 plot_weightedMPD_prod <- ggplot(filter(WEIGHTED_sesMPD_taxalab, fraction %in% c("WholePart", "WholeFree")), 
@@ -1806,13 +1809,14 @@ plot_grid(plot_unweightedMPD_prod, plot_unweightedMNTD_prod,
 
 ```
 
+
 ### Per-Cell Productivity
 
 - Linear Models with **per cell** Productivity:  
       - Both PA and FL together:  
-              - Unweighted MPD:  **Significant** (R2 = 0.5245, p = 5.631e-05)
-              - Weighted MPD: **Significant** (R2 = 0.2976, p = 0.004181)
-              - Unweighted MNTD:  **NS**
+              - Unweighted MPD:  **Significant** (R2 = 0.5245, p = 5.631e-05)  
+              - Weighted MPD: **Significant** (R2 = 0.2976, p = 0.004181)  
+              - Unweighted MNTD:  **NS**  
               - Weighted MNTD: **NS**
 
 ```{r taxalab-percell, fig.width= 15, fig.height = 4, dependson = "taxa-labels"}
@@ -1851,7 +1855,11 @@ plot_unweightedMPD_percell <- ggplot(filter(unweighted_sesMPD_taxalab, fraction 
   annotate("text", x = -3, y=-7, 
          color = "cornflowerblue", fontface = "bold",
          label = paste("R2 =", round(summary(percell_lmFL_unweightedMPD_taxalab)$adj.r.squared, digits = 2), "\n", 
-                       "p =", round(unname(summary(percell_lmFL_unweightedMPD_taxalab)$coefficients[,4][2]), digits = 3))) 
+                       "p =", round(unname(summary(percell_lmFL_unweightedMPD_taxalab)$coefficients[,4][2]), digits = 3))) +
+    annotate("text", x = -2.8, y=-8, 
+         color = "black", fontface = "bold",
+         label = paste("Combined: R2 =", round(summary(percell_lmTOGET_unweightedMPD_taxalab)$adj.r.squared, digits = 2), "\n", 
+                       "Combined: p =", round(unname(summary(percell_lmTOGET_unweightedMPD_taxalab)$coefficients[,4][2]), digits = 4)))
 
 
 ############ WEIGHTED MPD
@@ -1893,8 +1901,10 @@ plot_weightedMPD_percell_TOGETHER <- ggplot(filter(WEIGHTED_sesMPD_taxalab, frac
   theme(legend.position = "none") +
   annotate("text", x = -3, y=-6, 
            color = "black", fontface = "bold",
-           label = paste("R2 =", round(summary(percell_lmALL_weightedMPD_taxalab)$adj.r.squared, digits = 3), "\n", 
-                         "p =", round(unname(summary(percell_lmALL_weightedMPD_taxalab)$coefficients[,4][2]), digits = 3)))
+           label = paste("R2 =", round(summary(percell_lmTOGET_weightedMPD_taxalab)$adj.r.squared, digits = 3), "\n", 
+                         "p =", round(unname(summary(percell_lmTOGET_weightedMPD_taxalab)$coefficients[,4][2]), digits = 3)))+
+  annotate("text", x = -3, y=-6.5, color = "#CCBB51", fontface = "bold", label = paste("Separate = NS"))
+
 
 
 plot_weightedMPD_percell <- ggplot(filter(WEIGHTED_sesMPD_taxalab, fraction %in% c("WholePart", "WholeFree")), 
@@ -2009,6 +2019,65 @@ plot_grid(plot_unweightedMPD_percell, plot_unweightedMNTD_percell,
 
 ```
 
+```{r post-hoc-unweightedMPD-bulk, dependson = c("taxalab-production-BEF", "taxa-labels")}
+# Are the slopes of the fraction linear models different from each other in predicting fraction production?
+unweightMPD_fraction_dat <- filter(unweighted_sesMPD_taxalab, 
+                       fraction %in% c("WholePart", "WholeFree")) %>%
+  dplyr::select(norep_filter_name, mpd.obs.z, fraction, frac_bacprod, fracprod_per_cell_noinf) 
+
+
+# Double check values from above models
+lm_unweightMPD_by_fraction <- lm(frac_bacprod ~ mpd.obs.z/fraction, data = unweightMPD_fraction_dat)
+summary(lm_unweightMPD_by_fraction)
+
+summary(lm(frac_bacprod ~ mpd.obs.z, data = dplyr::filter(unweightMPD_fraction_dat,fraction == "WholePart")))
+summary(lm(frac_bacprod ~ mpd.obs.z, data = dplyr::filter(unweightMPD_fraction_dat,fraction == "WholeFree")))
+
+# Help from:  http://r-eco-evo.blogspot.com/2011/08/comparing-two-regression-slopes-by.html
+mod1_bulk <- aov(frac_bacprod ~ mpd.obs.z*fraction, data = unweightMPD_fraction_dat)
+summary(mod1_bulk) # With interaction term 
+mod2_bulk <- aov(frac_bacprod ~ mpd.obs.z+fraction, data = unweightMPD_fraction_dat)
+summary(mod2_bulk) # Without interaction term 
+
+anova(mod1_bulk, mod2_bulk) # Does the interaction term have a significant effect?
+
+
+## PER CELL
+lm_unweightMPD_by_fraction_percell <- lm(log10(fracprod_per_cell_noinf) ~ mpd.obs.z/fraction, data = unweightMPD_fraction_dat)
+summary(lm_unweightMPD_by_fraction_percell)
+
+summary(lm(log10(fracprod_per_cell_noinf) ~ mpd.obs.z, 
+           data = dplyr::filter(unweightMPD_fraction_dat,fraction == "WholePart")))
+summary(lm(log10(fracprod_per_cell_noinf) ~ mpd.obs.z, 
+           data = dplyr::filter(unweightMPD_fraction_dat,fraction == "WholeFree")))
+
+mod1_percell <- aov(fracprod_per_cell_noinf ~ mpd.obs.z*fraction, data = unweightMPD_fraction_dat)
+summary(mod1_percell) # With interaction term 
+mod2_percell <- aov(fracprod_per_cell_noinf ~ mpd.obs.z+fraction, data = unweightMPD_fraction_dat)
+summary(mod2_percell) # Without interaction term 
+
+anova(mod1_percell, mod2_percell) # Does the interaction term have a significant effect?
+
+
+
+
+
+# Run a post-hoc test
+library(multcomp)
+#BULK MEASURE
+post_hoc_measure_byfraction <- glht(lm_unweightMPD_by_fraction, 
+                                    linfct = mcp(fraction = "Tukey", interaction_average=TRUE),
+                vcov=vcovHC(lm_unweightMPD_by_fraction, type = "HC0"))
+summary(post_hoc_measure_byfraction)
+
+# PER CELL
+post_hoc_measure_byfraction_percell <- glht(lm_unweightMPD_by_fraction_percell, 
+                                    linfct = mcp(fraction = "Tukey", interaction_average=TRUE),
+                vcov=vcovHC(lm_unweightMPD_by_fraction_percell, type = "HC0"))
+summary(post_hoc_measure_byfraction_percell)
+
+detach("package:multcomp", unload=TRUE) # This package masks the dplyr select function = :(
+```
 
 
 # Figure 3
@@ -2095,6 +2164,26 @@ plot_grid(taxlab_unweight_mpd + ylim(-4.5, 3.5) + xlab("") + coord_flip() +
           plot_weightedMNTD_percell + xlim(-4.5, 3.5), 
           labels = c("A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L"),
           ncol = 4, nrow = 3)
+
+
+```
+
+
+```{r fig3-subsetted, fig.width= 8.5, fig.height = 10, dependson=c("taxalab-comparison", "taxalab-percell", "taxalab-production-BEF")}
+plot_grid(taxlab_unweight_mpd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
+            annotate("text", x=1.55, y=(max(mpd_nums1$b)-0.5), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("NS")) +
+            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
+          taxlab_weight_mpd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
+            annotate("text", x=1.55, y=(max(mpd_nums2$b)-1), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("***\np =", round(weight_MPD_wilcox$p.value, digits = 6)))  + 
+            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
+          plot_unweightedMPD_prod, 
+          plot_weightedMPD_prod_TOGETHER, 
+          plot_unweightedMPD_percell + xlim(-4.5, 3.5),  
+          plot_weightedMPD_percell_TOGETHER + xlim(-4.5, 3.5),
+          labels = c("A", "B", "C", "D", "E", "F"),
+          ncol = 2, nrow = 3)
 
 
 ```
@@ -2254,15 +2343,15 @@ summary(lm(mean ~ mpd.obs.z, data = dplyr::filter(combined_simpseven_weightedMPD
 summary(lm(mean ~ mpd.obs.z, data = dplyr::filter(combined_simpseven_weightedMPD, fraction == "WholeFree"))) # R2 = 0.64, pval = 0.001
 summary(lm(mean ~ mpd.obs.z, data = combined_simpseven_weightedMPD)) # NS
 
-# PLOT
-# Richness vs UNweighted MPD
-plot_grid(divs_p1, divs_p2, nrow = 1, ncol = 2)
-
-# Inverse Simpson vs Weighted MPD 
-plot_grid(evendivs_p1, evendivs_p2, nrow = 1, ncol = 2)
 ```
 
-
+```{r figure-4, fig.width = 7, fig.height = 6, dependson = c("subset-diversity","load-data","vean-otu-alphadiv-calc", "taxa-labels", "diversity-vs-diversity")}
+# PLOT
+plot_grid(divs_p1, divs_p2, # Richness vs UNweighted MPD
+          evendivs_p1, evendivs_p2, # Inverse Simpson vs Weighted MPD 
+          nrow = 2, ncol = 2,
+          labels = c("A", "B", "C", "D"))
+```
 
 ## Residual Analysis 
 ```{r check-lm-phylogenetic-residuals, fig.width = 12, fig.height = 4, dependson = "plot-vegan-fracprod"}
