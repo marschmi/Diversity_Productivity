@@ -1650,7 +1650,6 @@ plot_unweightedMPD_prod <-   ggplot(filter(unweighted_sesMPD_taxalab, fraction %
   annotate("text", x = -3, y=-1, color = "black", fontface = "bold", label = paste("Combined = NS"))
 
 
-
 ############ WEIGHTED MPD
 ##########  MPD ANALYSIS 
 # Free-Living Model
@@ -1831,7 +1830,9 @@ percell_lmPA_unweightedMPD_taxalab <- lm(log10(fracprod_per_cell_noinf) ~ mpd.ob
                                       data = filter(unweighted_sesMPD_taxalab, fraction == "WholePart"))
 summary(percell_lmPA_unweightedMPD_taxalab)
 
-summary(lm(fracprod_per_cell_noinf ~ mpd.obs.z, data = filter(unweighted_sesMPD_taxalab, fraction == "WholePart")))
+anova(percell_lmFL_unweightedMPD_taxalab, percell_lmPA_unweightedMPD_taxalab)
+
+
 
 # BOTH FRACTIONS TOGETHER 
 percell_lmTOGET_unweightedMPD_taxalab <- lm(log10(fracprod_per_cell_noinf) ~ mpd.obs.z, 
@@ -2021,6 +2022,8 @@ plot_grid(plot_unweightedMPD_percell, plot_unweightedMNTD_percell,
 
 
 ## Differences in slopes and interaction terms?
+
+### Unweighted MPD slopes
 ```{r post-hoc-unweightedMPD-bulk, dependson = c("taxalab-production-BEF", "taxa-labels")}
 # UNWEIGHTED MPD 
 # Are the slopes of the fraction linear models different from each other in predicting fraction production?
@@ -2033,8 +2036,7 @@ unweightMPD_fraction_dat <- filter(unweighted_sesMPD_taxalab,
 lm_unweightMPD_by_fraction <- lm(frac_bacprod ~ mpd.obs.z/fraction, data = unweightMPD_fraction_dat)
 summary(lm_unweightMPD_by_fraction)
 
-summary(lm(frac_bacprod ~ mpd.obs.z/fraction - 1, data = unweightMPD_fraction_dat))
-
+# Separate Linear Models with subsetted data
 summary(lm(frac_bacprod ~ mpd.obs.z, data = dplyr::filter(unweightMPD_fraction_dat,fraction == "WholePart")))
 summary(lm(frac_bacprod ~ mpd.obs.z, data = dplyr::filter(unweightMPD_fraction_dat,fraction == "WholeFree")))
 
@@ -2078,9 +2080,11 @@ post_hoc_measure_byfraction_percell <- glht(lm_unweightMPD_by_fraction_percell,
 summary(post_hoc_measure_byfraction_percell)
 
 detach("package:multcomp", unload=TRUE) # This package masks the dplyr select function = :(
+```
 
 
-
+### Weighted MPD slopes
+```{r post-hoc-WEIGHTEDMPD-bulk, dependson = c("taxalab-production-BEF", "taxa-labels")}
 ####  WEIGHTED MPD
 weightMPD_fraction_dat <- filter(WEIGHTED_sesMPD_taxalab, 
                        fraction %in% c("WholePart", "WholeFree")) %>%

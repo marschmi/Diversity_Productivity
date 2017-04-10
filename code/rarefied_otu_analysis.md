@@ -2816,7 +2816,7 @@ summary(prod_lmTOGET_unweightedMPD_taxalab)
 ```
 
 ```r
-plot_unweightedMPD_prod <- ggplot(filter(unweighted_sesMPD_taxalab, fraction %in% c("WholePart", "WholeFree")), 
+plot_unweightedMPD_prod <-   ggplot(filter(unweighted_sesMPD_taxalab, fraction %in% c("WholePart", "WholeFree")), 
        aes(x = mpd.obs.z, y =frac_bacprod, color = fraction)) + 
   geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) + xlim(-4.5, 3.5) +
   geom_point(size = 3) +
@@ -2834,7 +2834,6 @@ plot_unweightedMPD_prod <- ggplot(filter(unweighted_sesMPD_taxalab, fraction %in
          label = paste("R2 =", round(summary(prod_lmFL_unweightedMPD_taxalab)$adj.r.squared, digits = 2), "\n", 
                        "p =", round(unname(summary(prod_lmFL_unweightedMPD_taxalab)$coefficients[,4][2]), digits = 3))) + 
   annotate("text", x = -3, y=-1, color = "black", fontface = "bold", label = paste("Combined = NS"))
-
 
 
 ############ WEIGHTED MPD
@@ -3314,30 +3313,11 @@ summary(percell_lmPA_unweightedMPD_taxalab)
 ```
 
 ```r
-summary(lm(fracprod_per_cell_noinf ~ mpd.obs.z, data = filter(unweighted_sesMPD_taxalab, fraction == "WholePart")))
+anova(percell_lmFL_unweightedMPD_taxalab, percell_lmPA_unweightedMPD_taxalab)
 ```
 
 ```
-## 
-## Call:
-## lm(formula = fracprod_per_cell_noinf ~ mpd.obs.z, data = filter(unweighted_sesMPD_taxalab, 
-##     fraction == "WholePart"))
-## 
-## Residuals:
-##        Min         1Q     Median         3Q        Max 
-## -7.624e-07 -4.800e-07 -1.210e-07  1.282e-07  2.166e-06 
-## 
-## Coefficients:
-##               Estimate Std. Error t value Pr(>|t|)  
-## (Intercept)  6.569e-07  2.768e-07   2.374   0.0417 *
-## mpd.obs.z   -3.716e-07  1.968e-07  -1.889   0.0915 .
-## ---
-## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-## 
-## Residual standard error: 8.648e-07 on 9 degrees of freedom
-##   (1 observation deleted due to missingness)
-## Multiple R-squared:  0.2838,	Adjusted R-squared:  0.2042 
-## F-statistic: 3.567 on 1 and 9 DF,  p-value: 0.09155
+## Error in anova.lmlist(object, ...): models were not all fitted to the same size of dataset
 ```
 
 ```r
@@ -3834,6 +3814,8 @@ plot_grid(plot_unweightedMPD_percell, plot_unweightedMNTD_percell,
 
 ## Differences in slopes and interaction terms?
 
+### Unweighted MPD slopes
+
 ```r
 # UNWEIGHTED MPD 
 # Are the slopes of the fraction linear models different from each other in predicting fraction production?
@@ -3870,6 +3852,7 @@ summary(lm_unweightMPD_by_fraction)
 ```
 
 ```r
+# Separate Linear Models with subsetted data
 summary(lm(frac_bacprod ~ mpd.obs.z, data = dplyr::filter(unweightMPD_fraction_dat,fraction == "WholePart")))
 ```
 
@@ -4150,9 +4133,12 @@ summary(post_hoc_measure_byfraction_percell)
 
 ```r
 detach("package:multcomp", unload=TRUE) # This package masks the dplyr select function = :(
+```
 
 
+### Weighted MPD slopes
 
+```r
 ####  WEIGHTED MPD
 weightMPD_fraction_dat <- filter(WEIGHTED_sesMPD_taxalab, 
                        fraction %in% c("WholePart", "WholeFree")) %>%
