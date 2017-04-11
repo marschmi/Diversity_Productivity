@@ -2059,15 +2059,25 @@ plot_grid(plot_unweightedMPD_percell, plot_unweightedMNTD_percell,
 # Are the slopes of the fraction linear models different from each other in predicting fraction production?
 unweightMPD_fraction_dat <- filter(unweighted_sesMPD_taxalab, 
                        fraction %in% c("WholePart", "WholeFree")) %>%
+  mutate(fraction = factor(fraction, levels = c("WholePart", "WholeFree"))) %>%
   dplyr::select(norep_filter_name, mpd.obs.z, fraction, frac_bacprod, fracprod_per_cell_noinf) 
 
 # Help from:  http://r-eco-evo.blogspot.com/2011/08/comparing-two-regression-slopes-by.html
+            # https://biologyforfun.wordpress.com/2014/04/08/interpreting-interaction-coefficient-in-r-part1-lm/
 # WITH an interaction term 
 lm2_bulk_interaction <- lm(frac_bacprod ~ mpd.obs.z * fraction, data = unweightMPD_fraction_dat)
 summary(lm2_bulk_interaction)
 
+
+
+# Separate Linear Models with subsetted data
+summary(lm(frac_bacprod ~ mpd.obs.z, data = dplyr::filter(unweightMPD_fraction_dat,fraction == "WholePart")))
+summary(lm(frac_bacprod ~ mpd.obs.z, data = dplyr::filter(unweightMPD_fraction_dat,fraction == "WholeFree")))
+
+
 # Anova was run from this tutorial: http://rcompanion.org/rcompanion/e_04.html
-Anova(lm2_bulk_interaction, type="II") # Since the interaction is significant, the slops across the groups *ARE* different 
+Anova(lm2_bulk_interaction, type="II") 
+          # Since the interaction is significant, the slopes across the groups *ARE* different and cross at some point! 
 
 # Check the residuals
 plot_residuals(lm_model = lm2_bulk_interaction, 
@@ -2079,7 +2089,8 @@ lm2_bulk <- lm(frac_bacprod ~ mpd.obs.z + fraction, data = unweightMPD_fraction_
 summary(lm2_bulk)
 
 # Anova was run from this tutorial: http://rcompanion.org/rcompanion/e_04.html
-Anova(lm2_bulk, type="II") # Since the interaction is significant, the slope across the groups *ARE* different 
+Anova(lm2_bulk, type="II") 
+           # Since fraction is significant, the intercepts among the groups are ALSO different!
 
 # Check the residuals
 plot_residuals(lm_model = lm2_bulk, 
@@ -2089,9 +2100,9 @@ plot_residuals(lm_model = lm2_bulk,
 # Does the interaction term include important information not accounted for already?
 Anova(lm2_bulk_interaction, lm2_bulk)
 
-# Separate Linear Models with subsetted data
-summary(lm(frac_bacprod ~ mpd.obs.z, data = dplyr::filter(unweightMPD_fraction_dat,fraction == "WholePart")))
-summary(lm(frac_bacprod ~ mpd.obs.z, data = dplyr::filter(unweightMPD_fraction_dat,fraction == "WholeFree")))
+
+
+
 
 
 ## PER CELL
@@ -2104,7 +2115,7 @@ lm2_percell_interaction <- lm(log10(fracprod_per_cell_noinf) ~ mpd.obs.z * fract
 summary(lm2_percell_interaction)
 
 # Anova was run from this tutorial: http://rcompanion.org/rcompanion/e_04.html
-Anova(lm2_percell_interaction, type="II") # Since the interaction is NOT significant, the slopes across the groups *ARE NOT* different!
+Anova(lm2_percell_interaction, type="II") # Since the interaction is NOT significant, the slopes across the two groups *ARE NOT* different!
 
 # Check the residuals
 plot_residuals(lm_model = lm2_percell_interaction, 
