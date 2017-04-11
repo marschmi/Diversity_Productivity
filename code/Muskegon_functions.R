@@ -403,6 +403,12 @@ show_otu <- function(dataframe, nrow = 10, ncol = 10){
       # 2. vector of observed y values (y-variable)
       # 3. Title in quotes for figure
 
+      # OUTPUT
+      # 3 plots:
+      # Plot 1: QQPlot: Theoretical quantiles (x-axis) vs studentized residuals (y-axis) 
+      # Plot 2:  Fitted values (x-axis) vs studentized residuals (y-axis) 
+      # Plot 3:  Fitted values (x-axis) vs observed values (y-axis) 
+
 plot_residuals <- function(lm_model, lm_observed_y, main_title){
   
   # set seed
@@ -411,13 +417,13 @@ plot_residuals <- function(lm_model, lm_observed_y, main_title){
   # Make a 3 paneled plot
   par(mfrow=c(1,3), oma=c(0,0,0,0)) # c(bottom, left, top, right) 
   
-  # 1st plot:  A qqplot
+  # 1st plot:  A qqplot; Theoretical quantiles (x-axis) vs studentized residuals (y-axis) 
   qqPlot(lm_model, col="blue", reps=10000, 
          ylab="Studentized residuals", 
          xlab="Theoretical quantiles (t-distribution)",
          cex=1.5, las=1)
   
-  # 2nd plot: Predicted values vs Studentized residuals
+  # 2nd plot:  Fitted values (x-axis) vs studentized residuals (y-axis) 
   plot(y=studres(lm_model), x=predict(lm_model), col="blue",
        las=1,ylab="Studentized residuals", xlab="Fitted Values", cex=1.5)
   # Draw a line at y=0
@@ -436,7 +442,7 @@ plot_residuals <- function(lm_model, lm_observed_y, main_title){
   mtext(text = main_title, side = 3, line = 2, outer = FALSE)
   #  side:  1=bottom, 2=left, 3=top, 4=right
   
-  # 3rd plot: Predicted values vs. Observed Variables
+  # 3rd plot: Fitted values (x-axis) vs observed values (y-axis) 
   plot(y=lm_observed_y, x=predict(lm_model), col="blue",
        ylab="Observed values",
        xlab="Fitted Values", cex=1.5,
