@@ -2065,6 +2065,10 @@ unweightMPD_fraction_dat <- filter(unweighted_sesMPD_taxalab,
 # WITH an interaction term 
 lm2_bulk_interaction <- lm(frac_bacprod ~ mpd.obs.z * fraction, data = unweightMPD_fraction_dat)
 summary(lm2_bulk_interaction)
+
+# Anova was run from this tutorial: http://rcompanion.org/rcompanion/e_04.html
+Anova(lm2_bulk_interaction, type="II") # Since the interaction is significant, the slops across the groups *ARE* different 
+
 # Check the residuals
 plot_residuals(lm_model = lm2_bulk_interaction, 
                lm_observed_y = unweightMPD_fraction_dat$frac_bacprod,
@@ -2089,6 +2093,31 @@ summary(lm(frac_bacprod ~ mpd.obs.z, data = dplyr::filter(unweightMPD_fraction_d
 ## PER CELL
 lm_unweightMPD_by_fraction_percell <- lm(log10(fracprod_per_cell_noinf) ~ mpd.obs.z/fraction, data = unweightMPD_fraction_dat)
 summary(lm_unweightMPD_by_fraction_percell)
+
+# Help from:  http://r-eco-evo.blogspot.com/2011/08/comparing-two-regression-slopes-by.html
+# WITH an interaction term 
+lm2_percell_interaction <- lm(log10(fracprod_per_cell_noinf) ~ mpd.obs.z * fraction, data = unweightMPD_fraction_dat)
+summary(lm2_percell_interaction)
+
+# Anova was run from this tutorial: http://rcompanion.org/rcompanion/e_04.html
+Anova(lm2_percell_interaction, type="II") # Since the interaction is NOT significant, the slopes across the groups *ARE NOT* different!
+
+# Check the residuals
+plot_residuals(lm_model = lm2_percell_interaction, 
+               lm_observed_y = unweightMPD_fraction_dat$log10(fracprod_per_cell_noinf) ,
+               main_title = "Unweighted MPD with Interaction Term")
+
+# WITHOUT an interaction term 
+lm2_bulk <- lm(frac_bacprod ~ mpd.obs.z + fraction, data = unweightMPD_fraction_dat)
+summary(lm2_bulk)
+# Check the residuals
+plot_residuals(lm_model = lm2_bulk, 
+               lm_observed_y = unweightMPD_fraction_dat$frac_bacprod,
+               main_title = "Unweighted MPD with Interaction Term")
+
+
+
+
 
 summary(lm(log10(fracprod_per_cell_noinf) ~ mpd.obs.z, 
            data = dplyr::filter(unweightMPD_fraction_dat,fraction == "WholePart")))
