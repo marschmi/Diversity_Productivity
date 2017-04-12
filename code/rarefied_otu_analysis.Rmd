@@ -2148,50 +2148,6 @@ anova(mod1_percell, mod2_percell) # Does the interaction term have a significant
 ```
 
 
-### Weighted MPD slopes
-```{r post-hoc-WEIGHTEDMPD-bulk, dependson = c("taxalab-production-BEF", "taxa-labels")}
-####  WEIGHTED MPD
-weightMPD_fraction_dat <- filter(WEIGHTED_sesMPD_taxalab, 
-                       fraction %in% c("WholePart", "WholeFree")) %>%
-  dplyr::select(norep_filter_name, mpd.obs.z, fraction, frac_bacprod, fracprod_per_cell_noinf) 
-
-
-# Double check values from above models
-lm_WEIGHTED_MPD_by_fraction <- lm(frac_bacprod ~ mpd.obs.z/fraction, data = weightMPD_fraction_dat)
-summary(lm_WEIGHTED_MPD_by_fraction)
-
-summary(lm(frac_bacprod ~ mpd.obs.z, data = dplyr::filter(weightMPD_fraction_dat,fraction == "WholePart")))
-summary(lm(frac_bacprod ~ mpd.obs.z, data = dplyr::filter(weightMPD_fraction_dat,fraction == "WholeFree")))
-
-# Help from:  http://r-eco-evo.blogspot.com/2011/08/comparing-two-regression-slopes-by.html
-mod1_bulk <- lm(frac_bacprod ~ mpd.obs.z*fraction, data = weightMPD_fraction_dat)
-summary(mod1_bulk) # With interaction term 
-
-
-
-mod2_bulk <- lm(frac_bacprod ~ mpd.obs.z+fraction, data = weightMPD_fraction_dat)
-summary(mod2_bulk) # Without interaction term 
-
-anova(mod1_bulk, mod2_bulk) # Does the interaction term have a significant effect?
-
-
-## PER CELL
-lm_WEIGHTED_MPD_by_fraction_percell <- lm(log10(fracprod_per_cell_noinf) ~ mpd.obs.z/fraction, data = weightMPD_fraction_dat)
-summary(lm_WEIGHTED_MPD_by_fraction_percell)
-
-summary(lm(log10(fracprod_per_cell_noinf) ~ mpd.obs.z, 
-           data = dplyr::filter(weightMPD_fraction_dat,fraction == "WholePart")))
-summary(lm(log10(fracprod_per_cell_noinf) ~ mpd.obs.z, 
-           data = dplyr::filter(weightMPD_fraction_dat,fraction == "WholeFree")))
-
-mod1_percell <- lm(fracprod_per_cell_noinf ~ mpd.obs.z*fraction, data = weightMPD_fraction_dat)
-summary(mod1_percell) # With interaction term 
-mod2_percell <- lm(fracprod_per_cell_noinf ~ mpd.obs.z+fraction, data = weightMPD_fraction_dat)
-summary(mod2_percell) # Without interaction term 
-
-anova(mod1_percell, mod2_percell) # Does the interaction term have a significant effect?
-```
-
 
 # Figure 3
 ```{r fig-3, fig.width= 16, fig.height = 8, dependson=c("taxalab-comparison", "taxalab-percell")}
@@ -2311,9 +2267,22 @@ combined_rich_unweightedMPD <- ML_otu_rich_stats %>%
   dplyr::select(norep_filter_name, mean, sd, measure) %>%
   dplyr::left_join(unweighted_sesMPD_taxalab, by = "norep_filter_name") 
 
-summary(lm(mean ~ mpd.obs.z, data = dplyr::filter(combined_rich_unweightedMPD, fraction == "WholePart")))
-summary(lm(mean ~ mpd.obs.z, data = dplyr::filter(combined_rich_unweightedMPD, fraction == "WholeFree")))
-summary(lm(mean ~ mpd.obs.z, data = combined_rich_unweightedMPD))
+lm_part_divs_rich_vs_unweight <- lm(mean ~ mpd.obs.z, data = dplyr::filter(combined_rich_unweightedMPD, fraction == "WholePart"))
+summary(lm_part_divs_rich_vs_unweight)
+lm_free_divs_rich_vs_unweight <- lm(mean ~ mpd.obs.z, data = dplyr::filter(combined_rich_unweightedMPD, fraction == "WholeFree"))
+summary(lm_free_divs_rich_vs_unweight)
+
+lm_divs_rich_vs_unweight <- lm(mean ~ mpd.obs.z, data = combined_rich_unweightedMPD)
+summary(lm_divs_rich_vs_unweight)
+
+lm_divs_test_interaction <- lm(mean ~ mpd.obs.z * fraction, data = combined_rich_unweightedMPD)
+Anova(lm_divs_test_interaction, type = "II")
+
+lm_divs_test <- lm(mean ~ mpd.obs.z + fraction, data = combined_rich_unweightedMPD)
+
+anova(lm_divs_test, lm_divs_test_interaction)
+
+
 
 divs_p1 <- ggplot(combined_rich_unweightedMPD, aes(y = mean, x = mpd.obs.z)) + 
   geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) + xlim(-4.5, 3.5) +
@@ -2341,19 +2310,15 @@ divs_p2 <- ggplot(combined_rich_unweightedMPD, aes(y = mean, x = mpd.obs.z, colo
         legend.title = element_blank()) +
   annotate("text", x = -3, y=400, 
          color = "firebrick3", fontface = "bold",
-         label = paste("R2 =", round(summary(lm(mean ~ mpd.obs.z, 
-                                                data = dplyr::filter(combined_rich_unweightedMPD, fraction == "WholePart")))$adj.r.squared, 
+         label = paste("R2 =", round(summary(lm_part_divs_rich_vs_unweight)$adj.r.squared, 
                                      digits = 2), "\n", 
-                       "p =", round(unname(summary(lm(mean ~ mpd.obs.z, 
-                                                      data = dplyr::filter(combined_rich_unweightedMPD, fraction == "WholePart")))$coefficients[,4][2]), 
+                       "p =", round(unname(summary(lm_part_divs_rich_vs_unweight)$coefficients[,4][2]), 
                                     digits = 3))) +
   annotate("text", x = -3, y=200, 
          color = "cornflowerblue", fontface = "bold",
-         label = paste("R2 =", round(summary(lm(mean ~ mpd.obs.z, 
-                                                data = dplyr::filter(combined_rich_unweightedMPD, fraction == "WholeFree")))$adj.r.squared, 
+         label = paste("R2 =", round(summary(lm_free_divs_rich_vs_unweight)$adj.r.squared, 
                                      digits = 2), "\n", 
-                       "p =", round(unname(summary(lm(mean ~ mpd.obs.z, 
-                                                      data = dplyr::filter(combined_rich_unweightedMPD, fraction == "WholeFree")))$coefficients[,4][2]), 
+                       "p =", round(unname(summary(lm_free_divs_rich_vs_unweight)$coefficients[,4][2]), 
                                     digits = 3))) 
 
 
