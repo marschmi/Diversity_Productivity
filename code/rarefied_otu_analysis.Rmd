@@ -978,26 +978,53 @@ detach("package:multcomp", unload=TRUE) # This package masks the dplyr select fu
 
 
 # Figure 2
-```{r rich-and-invsimps-BEF, warning=FALSE, fig.width = 8, fig.height = 10, dependson= c("boxplot-diversity-comparison","plot-vegan-fracprod", "fracprod_percell-vs-div")}
-plot_grid(poster_rich1 + xlab("\n Fraction \n") + ylab("Observed Richness") + 
-                theme(legend.position = "none", axis.text.y = element_blank()) +coord_flip() +
+```{r rich-and-invsimps-BEF, warning=FALSE, fig.width = 8, fig.height = 9, dependson= c("boxplot-diversity-comparison","plot-vegan-fracprod", "fracprod_percell-vs-div")}
+fig2_plot1 <- poster_rich1 + xlab("\n Fraction \n") + ylab("Observed Richness") + 
+                theme(axis.text.y = element_blank(), 
+                      legend.title = element_blank()) +
+                coord_flip() +
                 annotate("text", x=1.5, y=700, fontface = "bold",  size = 4, color = "gray40",
-                          label= paste("***\np =", round(rich_wilcox$p.value, digits = 3))), 
-          poster_invsimps1 + xlab("\n Fraction \n") + ylab("Inverse Simpson") + 
+                          label= paste("***\np =", round(rich_wilcox$p.value, digits = 3)))
+
+fig2_plot2 <- poster_invsimps1 + xlab("\n Fraction \n") + ylab("Inverse Simpson") + 
                 theme(legend.position = c(0.78, 0.90), 
                       axis.text.y = element_blank(), 
                       legend.title = element_blank()) +
                 coord_flip() +
                 annotate("text", x=1.5, y=78, fontface = "bold",  size = 4, color = "gray40",
-                          label= paste("NS\np =", round(simpson_wilcox$p.value, digits = 2))), 
-          otu_rich_vegan +  ylab("Heterotrophic Production \n(μgC/L/hr)") + 
-                theme(legend.position = "none"), 
+                          label= paste("NS\np =", round(simpson_wilcox$p.value, digits = 2)))
+
+
+# Shared legends: https://cran.r-project.org/web/packages/cowplot/vignettes/shared_legends.html
+legend_fig2 <- get_legend(fig2_plot2 + theme(legend.position="top"))
+
+
+# Top figure
+rich_even_boxplots_nolegend <- plot_grid(fig2_plot1 + 
+                                           theme(legend.position = "none", plot.margin = unit(c(0,2,0,0), "pt")), #top, right, bottom, and left
+                                fig2_plot2 + theme(legend.position = "none", plot.margin = unit(c(0,2,0,0), "pt")),
+                                labels = c("A", "B"), ncol = 2, nrow = 1)
+                      
+rich_even_boxplots_yeslegend <- plot_grid(legend_fig2,                   # Draw the legend first 
+                                         rich_even_boxplots_nolegend,   # Draw the plots second
+                                         ncol = 1, rel_heights = c(0.1, 1))
+
+# Bottom 4 Figures 
+rich_even_BEFs <- plot_grid(otu_rich_vegan +  ylab("Heterotrophic Production \n(μgC/L/hr)") + 
+                theme(legend.position = "none", plot.margin = unit(c(0,2,0,0), "pt")), 
           otu_invsimps_vegan + ylab("Heterotrophic Production \n(μgC/L/hr)") +
-                theme(legend.position = c(0.7, 0.80)), 
-          rich_vs_fracprod_percell + theme(legend.position= "none"), 
-          invsimps_vs_fracprod_percell + theme(legend.position= "none"), 
-          labels = c("A", "B", "C", "D", "E", "F"),
-          ncol = 2, nrow = 3)
+                theme(legend.position = "none", plot.margin = unit(c(0,2,0,0), "pt")), 
+          rich_vs_fracprod_percell + theme(legend.position= "none", plot.margin = unit(c(0,2,0,0), "pt")), 
+          invsimps_vs_fracprod_percell + theme(legend.position= "none", plot.margin = unit(c(0,2,0,0), "pt")), 
+          labels = c("C", "D", "E", "F"),
+          ncol = 2, nrow = 2)
+
+
+final_fig2 <- plot_grid(rich_even_boxplots_yeslegend, 
+                        rich_even_BEFs, ncol = 1,
+                        rel_heights = c(0.35, 1))
+
+final_fig2
 ```
 
 
@@ -1874,6 +1901,7 @@ plot_unweightedMPD_percell <- ggplot(filter(unweighted_sesMPD_taxalab, fraction 
        aes(x = mpd.obs.z, y =log10(fracprod_per_cell_noinf), color = fraction)) + 
   geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) + xlim(-4.5, 3.5) +
   geom_point(size = 3) +
+  scale_y_continuous(limits = c(-8.25, -5.4), breaks = c(-8, -7,  -6)) +
   xlab("Unweighted Mean Pairwise Dist") + 
   ylab("log10(Production/Cell)\n (μgC/cell/hr)") + 
   scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
@@ -1923,11 +1951,15 @@ plot_residuals(lm_model = percell_lmTOGET_weightedMPD_taxalab,
 
 plot_weightedMPD_percell_TOGETHER <- ggplot(filter(WEIGHTED_sesMPD_taxalab, fraction %in% c("WholePart", "WholeFree")), 
        aes(x = mpd.obs.z, y =log10(fracprod_per_cell_noinf))) + 
-  geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) + xlim(-4.5, 3.5) +
+  geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) + 
+  xlim(-4.5, 3.5) + 
+  scale_y_continuous(limits = c(-8.25, -5.4), breaks = c(-8, -7,  -6)) +
   geom_point(size = 3,  aes(color = fraction)) +
   xlab("Weighted Mean Pairwise Dist") + 
   ylab("log10(Production/Cell)\n (μgC/cell/hr)") + 
-  scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
+  scale_color_manual(values = fraction_colors,
+                 breaks=c("WholeFree", "WholePart"), 
+                 labels=c("Free-Living", "Particle-Associated")) + 
   geom_smooth(method = "lm", color = "black") +
   theme(legend.position = "none") +
   annotate("text", x = -3, y=-6, 
@@ -2148,117 +2180,6 @@ anova(mod1_percell, mod2_percell) # Does the interaction term have a significant
 ```
 
 
-
-# Figure 3
-```{r fig-3, fig.width= 16, fig.height = 8, dependson=c("taxalab-comparison", "taxalab-percell")}
-plot_grid(taxlab_unweight_mpd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
-            annotate("text", x=1.55, y=(max(mpd_nums1$b)-0.5), fontface = "bold",  size = 3.5, color = "gray40",
-                       label= paste("NS")) +
-            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
-          taxlab_unweight_mntd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
-            annotate("text", x=1.55, y=(max(mntd_nums1$b)-0.5), fontface = "bold",  size = 3.5, color = "gray40",
-                       label= paste("NS")) + 
-            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
-          taxlab_weight_mpd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
-            annotate("text", x=1.55, y=(max(mpd_nums2$b)-1), fontface = "bold",  size = 3.5, color = "gray40",
-                       label= paste("***\np =", round(weight_MPD_wilcox$p.value, digits = 6))) + 
-            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
-          taxlab_weight_mntd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
-            annotate("text", x=1.55, y=(max(mntd_nums2$b)+1.2), fontface = "bold",  size = 3.5, color = "gray40",
-                       label= paste("***\np =", round(weight_MNTD_wilcox$p.value, digits = 3))) + 
-            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
-          plot_unweightedMPD_percell + xlim(-4.5, 3.5), 
-          plot_unweightedMNTD_percell + xlim(-4.5, 3.5), 
-          plot_weightedMPD_percell + xlim(-4.5, 3.5), 
-          plot_weightedMNTD_percell + xlim(-4.5, 3.5), 
-          labels = c("A", "B", "C", "D", "E", "F", "G", "H"),
-          ncol = 4, nrow = 2)
-
-
-
-###  COMBINE TOGETHER FRACTIONS FOR FIGURE G
-plot_grid(taxlab_unweight_mpd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
-            annotate("text", x=1.55, y=(max(mpd_nums1$b)-0.5), fontface = "bold",  size = 3.5, color = "gray40",
-                       label= paste("NS")) +
-            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
-          taxlab_unweight_mntd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
-            annotate("text", x=1.55, y=(max(mntd_nums1$b)-0.5), fontface = "bold",  size = 3.5, color = "gray40",
-                       label= paste("NS")) + 
-            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
-          taxlab_weight_mpd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
-            annotate("text", x=1.55, y=(max(mpd_nums2$b)-1), fontface = "bold",  size = 3.5, color = "gray40",
-                       label= paste("***\np =", round(weight_MPD_wilcox$p.value, digits = 6))) + 
-            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
-          taxlab_weight_mntd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
-            annotate("text", x=1.55, y=(max(mntd_nums2$b)+1.2), fontface = "bold",  size = 3.5, color = "gray40",
-                       label= paste("***\np =", round(weight_MNTD_wilcox$p.value, digits = 3))) + 
-            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
-          plot_unweightedMPD_percell + xlim(-4.5, 3.5), 
-          plot_unweightedMNTD_percell + xlim(-4.5, 3.5), 
-          plot_weightedMPD_percell_TOGETHER + xlim(-4.5, 3.5), 
-          plot_weightedMNTD_percell + xlim(-4.5, 3.5), 
-          labels = c("A", "B", "C", "D", "E", "F", "G", "H"),
-          ncol = 4, nrow = 3)
-
-
-
-
-```
-
-
-```{r super-fig3, fig.width= 16, fig.height = 12, dependson=c("taxalab-comparison", "taxalab-percell", "taxalab-production-BEF")}
-plot_grid(taxlab_unweight_mpd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
-            annotate("text", x=1.55, y=(max(mpd_nums1$b)-0.5), fontface = "bold",  size = 3.5, color = "gray40",
-                       label= paste("NS")) +
-            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
-          taxlab_unweight_mntd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
-            annotate("text", x=1.55, y=(max(mntd_nums1$b)-0.5), fontface = "bold",  size = 3.5, color = "gray40",
-                       label= paste("NS")) + 
-            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
-          taxlab_weight_mpd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
-            annotate("text", x=1.55, y=(max(mpd_nums2$b)-1), fontface = "bold",  size = 3.5, color = "gray40",
-                       label= paste("***\np =", round(weight_MPD_wilcox$p.value, digits = 6))) + 
-            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
-          taxlab_weight_mntd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
-            annotate("text", x=1.55, y=(max(mntd_nums2$b)+1.2), fontface = "bold",  size = 3.5, color = "gray40",
-                       label= paste("***\np =", round(weight_MNTD_wilcox$p.value, digits = 3))) + 
-            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
-          plot_unweightedMPD_prod, 
-          plot_unweightedMNTD_prod,
-          plot_weightedMPD_prod, 
-          plot_weightedMNTD_prod,
-          plot_unweightedMPD_percell + xlim(-4.5, 3.5), 
-          plot_unweightedMNTD_percell + xlim(-4.5, 3.5), 
-          plot_weightedMPD_percell_TOGETHER + xlim(-4.5, 3.5), 
-          plot_weightedMNTD_percell + xlim(-4.5, 3.5), 
-          labels = c("A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L"),
-          ncol = 4, nrow = 3)
-
-
-```
-
-
-```{r fig3-subsetted, fig.width= 8.5, fig.height = 10, dependson=c("taxalab-comparison", "taxalab-percell", "taxalab-production-BEF")}
-plot_grid(taxlab_unweight_mpd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
-            annotate("text", x=1.55, y=(max(mpd_nums1$b)-0.5), fontface = "bold",  size = 3.5, color = "gray40",
-                       label= paste("NS")) +
-            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
-          taxlab_weight_mpd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
-            annotate("text", x=1.55, y=(max(mpd_nums2$b)-1), fontface = "bold",  size = 3.5, color = "gray40",
-                       label= paste("***\np =", round(weight_MPD_wilcox$p.value, digits = 6)))  + 
-            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
-          plot_unweightedMPD_prod, 
-          plot_weightedMPD_prod_TOGETHER, 
-          plot_unweightedMPD_percell + xlim(-4.5, 3.5),  
-          plot_weightedMPD_percell_TOGETHER + xlim(-4.5, 3.5),
-          labels = c("A", "B", "C", "D", "E", "F"),
-          ncol = 2, nrow = 3)
-
-
-```
-
-
-
 # Phylogenetic Diversity vs Richness/Evenness
 
 ```{r diversity-vs-diversity, fig.width = 8, fig.height = 4, dependson = c("subset-diversity","load-data","vean-otu-alphadiv-calc", "taxa-labels")}
@@ -2286,8 +2207,7 @@ anova(lm_divs_test, lm_divs_test_interaction)
 
 divs_p1 <- ggplot(combined_rich_unweightedMPD, aes(y = mean, x = mpd.obs.z)) + 
   geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) + xlim(-4.5, 3.5) +
-  geom_point(size = 3, aes(color = fraction)) + 
-  scale_color_manual(values = fraction_colors) + 
+  geom_point(size = 3) + 
   geom_smooth(method = "lm", color = "black") +
   xlab("Unweighted MPD") + ylab("Observed Richness") +
   theme(legend.position = c(0.85, 0.9),
@@ -2352,8 +2272,6 @@ ggplot(combined_rich_unweightedMNTD, aes(y = mean, x = mntd.obs.z)) +
 
 
 
-
-
 ### INVERSE SIMPS
 combined_invsimps_weightedMPD <- ML_otu_invsimps_stats %>%
   dplyr::select(norep_filter_name, mean, sd, measure) %>%
@@ -2367,8 +2285,7 @@ summary(lm(mean ~ mpd.obs.z, data = combined_invsimps_weightedMPD))
 # All points together
 evendivs_p1 <- ggplot(combined_invsimps_weightedMPD, aes(y = mean, x = mpd.obs.z)) + 
   geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) + xlim(-4.5, 3.5) +
-  geom_point(size = 3, aes( color = fraction)) + 
-  scale_color_manual(values = fraction_colors) + 
+  geom_point(size = 3) +  
   geom_smooth(color = "black") +
   xlab("Weighted MPD") + ylab("Inverse Simpson") +
   theme(legend.position = c(0.85, 0.85),
@@ -2423,13 +2340,238 @@ summary(lm(mean ~ mpd.obs.z, data = combined_simpseven_weightedMPD)) # NS
 
 ```
 
-```{r figure-4, fig.width = 7, fig.height = 6, dependson = c("subset-diversity","load-data","vean-otu-alphadiv-calc", "taxa-labels", "diversity-vs-diversity")}
+
+# Figure 3
+```{r figure-3, fig.width = 8, fig.height = 5.5, dependson = c("subset-diversity","load-data","vean-otu-alphadiv-calc", "taxa-labels", "diversity-vs-diversity")}
+
+# Shared legends: https://cran.r-project.org/web/packages/cowplot/vignettes/shared_legends.html
+legend_fig3 <- get_legend(taxlab_unweight_mpd + theme(legend.position="top", legend.title = element_blank()))
+
+
+MPD_boxplots_nolegend <- plot_grid(
+          # Plot 1: Unweighted MPD 
+          taxlab_unweight_mpd + ylim(-4.5, 3.5) + xlab("Fraction \n") + coord_flip() + 
+            annotate("text", x=1.55, y=(max(mpd_nums1$b)-0.5), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("NS")) +
+            theme(axis.text.y = element_blank(), 
+                  plot.margin = unit(c(5,2,0,5), "pt")),  #top, right, bottom, and left
+          # Plot 2: Weighted MPD 
+           taxlab_weight_mpd + ylim(-4.5, 3.5) + xlab("Fraction \n") + coord_flip() + 
+            annotate("text", x=1.75, y=(max(mpd_nums2$b)-1), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("***\np =", round(weight_MPD_wilcox$p.value, digits = 6))) + 
+            theme(axis.text.y = element_blank(), 
+                  plot.margin = unit(c(5,2,0,5), "pt")),
+          ncol = 2, nrow = 1, labels = c("A", "B"))
+
+
+
+MPD_boxplots_yeslegend <- plot_grid(legend_fig3,             # Draw the legend first 
+                                    MPD_boxplots_nolegend,   # Draw the plots second
+                                    ncol = 1, rel_heights = c(0.1, 1))
+
 # PLOT
-plot_grid(divs_p1, divs_p2, # Richness vs UNweighted MPD
-          evendivs_p1, evendivs_p2, # Inverse Simpson vs Weighted MPD 
-          nrow = 2, ncol = 2,
-          labels = c("A", "B", "C", "D"))
+div_vs_div_plots <- plot_grid(divs_p2 + theme(legend.position = "none", plot.margin = unit(c(0,2,0,0), "pt")) +
+            xlab("Unweighted Mean Pairwise Dist"), # Richness vs UNweighted MPD
+          evendivs_p2 + theme(legend.position = "none", plot.margin = unit(c(0,2,0,0), "pt")) +
+             xlab("Weighted Mean Pairwise Dist"), # Inverse Simpson vs Weighted MPD 
+          nrow = 1, ncol = 2,
+          labels = c("C", "D"))
+
+
+
+final_fig3 <- plot_grid(MPD_boxplots_yeslegend, 
+                        div_vs_div_plots, ncol = 1,
+                        rel_heights = c(1.2, 2))
+
+final_fig3
+
+
+
+
+
+
+#### REMOVE X AXIS FOR TOP FIGURE 
+MPD_boxplots_nolegend_noX <- plot_grid(
+          # Plot 1: Unweighted MPD 
+          taxlab_unweight_mpd + ylim(-4.5, 3.5) + xlab("Fraction \n") + coord_flip() + 
+            annotate("text", x=1.55, y=(max(mpd_nums1$b)-0.5), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("NS")) +
+            theme(axis.text.y = element_blank(), 
+                  plot.margin = unit(c(5,2,10,3), "pt"),  #top, right, bottom, and left
+                  axis.title.x=element_blank(), axis.line.x = element_blank(), 
+                  axis.text.x=element_blank(), axis.ticks.x=element_blank()), 
+          # Plot 2: Weighted MPD 
+           taxlab_weight_mpd + ylim(-4.5, 3.5) + xlab("Fraction \n") + coord_flip() + 
+            annotate("text", x=1.75, y=(max(mpd_nums2$b)-1), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("***\np =", round(weight_MPD_wilcox$p.value, digits = 6))) + 
+            theme(axis.text.y = element_blank(), 
+                  plot.margin = unit(c(5,7,10,10), "pt"),  #top, right, bottom, and left
+                  axis.title.x=element_blank(), axis.line.x = element_blank(), 
+                  axis.text.x=element_blank(), axis.ticks.x=element_blank()), 
+          ncol = 2, nrow = 1, labels = c("A", "B"))
+
+
+MPD_boxplots_yeslegend_noX <- plot_grid(legend_fig3,             # Draw the legend first 
+                                    MPD_boxplots_nolegend_noX,   # Draw the plots second
+                                    ncol = 1, rel_heights = c(0.1, 1))
+
+
+final_fig3_noX <- plot_grid(MPD_boxplots_yeslegend_noX, 
+                        div_vs_div_plots, ncol = 1,
+                        rel_heights = c(1.2, 2))
+
+final_fig3_noX
+
+
 ```
+
+```{r supplemental-figure-3, fig.width = 8, fig.height = 4, dependson = c("subset-diversity","load-data","vean-otu-alphadiv-calc", "taxa-labels", "diversity-vs-diversity")}
+
+# PLOT
+plot_grid(
+          # Plot 1
+          divs_p1 + theme(legend.position = "none", plot.margin = unit(c(5,2,0,0), "pt")) +  #top, right, bottom, and left
+            xlab("Unweighted Mean Pairwise Dist"), # Richness vs UNweighted MPD
+          # Plot 2
+          evendivs_p1 + theme(legend.position = "none", plot.margin = unit(c(5,2,0,0), "pt")) +
+             xlab("Weighted Mean Pairwise Dist"), # Inverse Simpson vs Weighted MPD 
+          nrow = 1, ncol = 2,
+          labels = c("A", "B"))
+
+```
+
+# Figure 4
+```{r all-phylo-BEFs, fig.width= 16, fig.height = 8, dependson=c("taxalab-comparison", "taxalab-percell")}
+plot_grid(taxlab_unweight_mpd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
+            annotate("text", x=1.55, y=(max(mpd_nums1$b)-0.5), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("NS")) +
+            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
+          taxlab_unweight_mntd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
+            annotate("text", x=1.55, y=(max(mntd_nums1$b)-0.5), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("NS")) + 
+            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
+          taxlab_weight_mpd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
+            annotate("text", x=1.55, y=(max(mpd_nums2$b)-1), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("***\np =", round(weight_MPD_wilcox$p.value, digits = 6))) + 
+            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
+          taxlab_weight_mntd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
+            annotate("text", x=1.55, y=(max(mntd_nums2$b)+1.2), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("***\np =", round(weight_MNTD_wilcox$p.value, digits = 3))) + 
+            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
+          plot_unweightedMPD_percell + xlim(-4.5, 3.5), 
+          plot_unweightedMNTD_percell + xlim(-4.5, 3.5), 
+          plot_weightedMPD_percell + xlim(-4.5, 3.5), 
+          plot_weightedMNTD_percell + xlim(-4.5, 3.5), 
+          labels = c("A", "B", "C", "D", "E", "F", "G", "H"),
+          ncol = 4, nrow = 2)
+
+
+
+###  COMBINE TOGETHER FRACTIONS FOR FIGURE G
+plot_grid(taxlab_unweight_mpd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
+            annotate("text", x=1.55, y=(max(mpd_nums1$b)-0.5), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("NS")) +
+            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
+          taxlab_unweight_mntd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
+            annotate("text", x=1.55, y=(max(mntd_nums1$b)-0.5), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("NS")) + 
+            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
+          taxlab_weight_mpd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
+            annotate("text", x=1.55, y=(max(mpd_nums2$b)-1), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("***\np =", round(weight_MPD_wilcox$p.value, digits = 6))) + 
+            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
+          taxlab_weight_mntd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
+            annotate("text", x=1.55, y=(max(mntd_nums2$b)+1.2), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("***\np =", round(weight_MNTD_wilcox$p.value, digits = 3))) + 
+            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
+          plot_unweightedMPD_percell + xlim(-4.5, 3.5), 
+          plot_unweightedMNTD_percell + xlim(-4.5, 3.5), 
+          plot_weightedMPD_percell_TOGETHER + xlim(-4.5, 3.5), 
+          plot_weightedMNTD_percell + xlim(-4.5, 3.5), 
+          labels = c("A", "B", "C", "D", "E", "F", "G", "H"),
+          ncol = 4, nrow = 3)
+
+
+
+
+```
+
+
+```{r all-phylo-BEFs-withpercell, fig.width= 16, fig.height = 12, dependson=c("taxalab-comparison", "taxalab-percell", "taxalab-production-BEF")}
+plot_grid(taxlab_unweight_mpd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
+            annotate("text", x=1.55, y=(max(mpd_nums1$b)-0.5), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("NS")) +
+            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
+          taxlab_unweight_mntd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
+            annotate("text", x=1.55, y=(max(mntd_nums1$b)-0.5), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("NS")) + 
+            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
+          taxlab_weight_mpd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
+            annotate("text", x=1.55, y=(max(mpd_nums2$b)-1), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("***\np =", round(weight_MPD_wilcox$p.value, digits = 6))) + 
+            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
+          taxlab_weight_mntd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
+            annotate("text", x=1.55, y=(max(mntd_nums2$b)+1.2), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("***\np =", round(weight_MNTD_wilcox$p.value, digits = 3))) + 
+            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
+          plot_unweightedMPD_prod, 
+          plot_unweightedMNTD_prod,
+          plot_weightedMPD_prod, 
+          plot_weightedMNTD_prod,
+          plot_unweightedMPD_percell + xlim(-4.5, 3.5), 
+          plot_unweightedMNTD_percell + xlim(-4.5, 3.5), 
+          plot_weightedMPD_percell_TOGETHER + xlim(-4.5, 3.5), 
+          plot_weightedMNTD_percell + xlim(-4.5, 3.5), 
+          labels = c("A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L"),
+          ncol = 4, nrow = 3)
+
+
+```
+
+
+```{r fig4-subsetted, fig.width= 8.5, fig.height = 10, dependson=c("taxalab-comparison", "taxalab-percell", "taxalab-production-BEF")}
+plot_grid(taxlab_unweight_mpd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
+            annotate("text", x=1.55, y=(max(mpd_nums1$b)-0.5), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("NS")) +
+            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
+          taxlab_weight_mpd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
+            annotate("text", x=1.55, y=(max(mpd_nums2$b)-1), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("***\np =", round(weight_MPD_wilcox$p.value, digits = 6)))  + 
+            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
+          plot_unweightedMPD_prod, 
+          plot_weightedMPD_prod_TOGETHER, 
+          plot_unweightedMPD_percell + xlim(-4.5, 3.5),  
+          plot_weightedMPD_percell_TOGETHER + xlim(-4.5, 3.5),
+          labels = c("A", "B", "C", "D", "E", "F"),
+          ncol = 2, nrow = 3)
+```
+
+
+```{r fig-4, fig.width = 8, fig.height = 6.5, dependson=c("taxalab-comparison", "taxalab-percell", "taxalab-production-BEF")}
+# Shared legends: https://cran.r-project.org/web/packages/cowplot/vignettes/shared_legends.html
+legend_fig4 <- get_legend(plot_weightedMPD_percell_TOGETHER + theme(legend.position="top", legend.title = element_blank()))
+
+# Make figure without the legend
+fig4_nolegend <- plot_grid(plot_unweightedMPD_prod + theme(plot.margin = unit(c(0,2,0,0), "pt")),   #top, right, bottom, and left
+          plot_weightedMPD_prod_TOGETHER + theme(plot.margin = unit(c(0,2,0,0), "pt")),  
+          plot_unweightedMPD_percell + xlim(-4.5, 3.5) + theme(plot.margin = unit(c(0,2,0,1), "pt")), 
+          plot_weightedMPD_percell_TOGETHER + xlim(-4.5, 3.5) + theme(plot.margin = unit(c(0,2,0,1), "pt")), 
+          labels = c("A", "B", "C", "D"),
+          ncol = 2, nrow = 2)
+
+# Add the legend 
+fig4_yeslegend <- plot_grid(legend_fig4,             # Draw the legend first 
+                            fig4_nolegend,   # Draw the plots second
+                            ncol = 1, rel_heights = c(0.055, 1))
+
+fig4_yeslegend
+
+```
+
+
+
+
+
 
 ## Residual Analysis 
 ```{r check-lm-phylogenetic-residuals, fig.width = 12, fig.height = 4, dependson = "plot-vegan-fracprod"}
@@ -2473,7 +2615,7 @@ plot_residuals(lm_model = percell_lmFL_weightedMNTD_taxalab,
 ```
 
 
-```{r old-fig3, fig.width = 8.5, fig.height = 7, dependson = c("taxa-labels","taxalab-vs-fracprod", "taxalab-comparison")}
+```{r old-fig4, fig.width = 8.5, fig.height = 7, dependson = c("taxa-labels","taxalab-vs-fracprod", "taxalab-comparison")}
 # Plot it altogether 
 plot_grid(unweightedMPD_vs_fracprod_taxlab + ggtitle("") +
             xlab("Unweighted Mean Pairwise Distance") +

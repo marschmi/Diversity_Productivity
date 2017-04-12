@@ -1734,25 +1734,52 @@ detach("package:multcomp", unload=TRUE) # This package masks the dplyr select fu
 # Figure 2
 
 ```r
-plot_grid(poster_rich1 + xlab("\n Fraction \n") + ylab("Observed Richness") + 
-                theme(legend.position = "none", axis.text.y = element_blank()) +coord_flip() +
+fig2_plot1 <- poster_rich1 + xlab("\n Fraction \n") + ylab("Observed Richness") + 
+                theme(axis.text.y = element_blank(), 
+                      legend.title = element_blank()) +
+                coord_flip() +
                 annotate("text", x=1.5, y=700, fontface = "bold",  size = 4, color = "gray40",
-                          label= paste("***\np =", round(rich_wilcox$p.value, digits = 3))), 
-          poster_invsimps1 + xlab("\n Fraction \n") + ylab("Inverse Simpson") + 
+                          label= paste("***\np =", round(rich_wilcox$p.value, digits = 3)))
+
+fig2_plot2 <- poster_invsimps1 + xlab("\n Fraction \n") + ylab("Inverse Simpson") + 
                 theme(legend.position = c(0.78, 0.90), 
                       axis.text.y = element_blank(), 
                       legend.title = element_blank()) +
                 coord_flip() +
                 annotate("text", x=1.5, y=78, fontface = "bold",  size = 4, color = "gray40",
-                          label= paste("NS\np =", round(simpson_wilcox$p.value, digits = 2))), 
-          otu_rich_vegan +  ylab("Heterotrophic Production \n(μgC/L/hr)") + 
-                theme(legend.position = "none"), 
+                          label= paste("NS\np =", round(simpson_wilcox$p.value, digits = 2)))
+
+
+# Shared legends: https://cran.r-project.org/web/packages/cowplot/vignettes/shared_legends.html
+legend_fig2 <- get_legend(fig2_plot2 + theme(legend.position="top"))
+
+
+# Top figure
+rich_even_boxplots_nolegend <- plot_grid(fig2_plot1 + 
+                                           theme(legend.position = "none", plot.margin = unit(c(0,2,0,0), "pt")), #top, right, bottom, and left
+                                fig2_plot2 + theme(legend.position = "none", plot.margin = unit(c(0,2,0,0), "pt")),
+                                labels = c("A", "B"), ncol = 2, nrow = 1)
+                      
+rich_even_boxplots_yeslegend <- plot_grid(legend_fig2,                   # Draw the legend first 
+                                         rich_even_boxplots_nolegend,   # Draw the plots second
+                                         ncol = 1, rel_heights = c(0.1, 1))
+
+# Bottom 4 Figures 
+rich_even_BEFs <- plot_grid(otu_rich_vegan +  ylab("Heterotrophic Production \n(μgC/L/hr)") + 
+                theme(legend.position = "none", plot.margin = unit(c(0,2,0,0), "pt")), 
           otu_invsimps_vegan + ylab("Heterotrophic Production \n(μgC/L/hr)") +
-                theme(legend.position = c(0.7, 0.80)), 
-          rich_vs_fracprod_percell + theme(legend.position= "none"), 
-          invsimps_vs_fracprod_percell + theme(legend.position= "none"), 
-          labels = c("A", "B", "C", "D", "E", "F"),
-          ncol = 2, nrow = 3)
+                theme(legend.position = "none", plot.margin = unit(c(0,2,0,0), "pt")), 
+          rich_vs_fracprod_percell + theme(legend.position= "none", plot.margin = unit(c(0,2,0,0), "pt")), 
+          invsimps_vs_fracprod_percell + theme(legend.position= "none", plot.margin = unit(c(0,2,0,0), "pt")), 
+          labels = c("C", "D", "E", "F"),
+          ncol = 2, nrow = 2)
+
+
+final_fig2 <- plot_grid(rich_even_boxplots_yeslegend, 
+                        rich_even_BEFs, ncol = 1,
+                        rel_heights = c(0.35, 1))
+
+final_fig2
 ```
 
 <img src="Rarefied_Figures/rich-and-invsimps-BEF-1.png" style="display: block; margin: auto;" />
@@ -3455,6 +3482,7 @@ plot_unweightedMPD_percell <- ggplot(filter(unweighted_sesMPD_taxalab, fraction 
        aes(x = mpd.obs.z, y =log10(fracprod_per_cell_noinf), color = fraction)) + 
   geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) + xlim(-4.5, 3.5) +
   geom_point(size = 3) +
+  scale_y_continuous(limits = c(-8.25, -5.4), breaks = c(-8, -7,  -6)) +
   xlab("Unweighted Mean Pairwise Dist") + 
   ylab("log10(Production/Cell)\n (μgC/cell/hr)") + 
   scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
@@ -3583,11 +3611,15 @@ plot_residuals(lm_model = percell_lmTOGET_weightedMPD_taxalab,
 ```r
 plot_weightedMPD_percell_TOGETHER <- ggplot(filter(WEIGHTED_sesMPD_taxalab, fraction %in% c("WholePart", "WholeFree")), 
        aes(x = mpd.obs.z, y =log10(fracprod_per_cell_noinf))) + 
-  geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) + xlim(-4.5, 3.5) +
+  geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) + 
+  xlim(-4.5, 3.5) + 
+  scale_y_continuous(limits = c(-8.25, -5.4), breaks = c(-8, -7,  -6)) +
   geom_point(size = 3,  aes(color = fraction)) +
   xlab("Weighted Mean Pairwise Dist") + 
   ylab("log10(Production/Cell)\n (μgC/cell/hr)") + 
-  scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
+  scale_color_manual(values = fraction_colors,
+                 breaks=c("WholeFree", "WholePart"), 
+                 labels=c("Free-Living", "Particle-Associated")) + 
   geom_smooth(method = "lm", color = "black") +
   theme(legend.position = "none") +
   annotate("text", x = -3, y=-6, 
@@ -3925,9 +3957,11 @@ plot_grid(plot_unweightedMPD_percell, plot_unweightedMNTD_percell,
 # Are the slopes of the fraction linear models different from each other in predicting fraction production?
 unweightMPD_fraction_dat <- filter(unweighted_sesMPD_taxalab, 
                        fraction %in% c("WholePart", "WholeFree")) %>%
+  mutate(fraction = factor(fraction, levels = c("WholePart", "WholeFree"))) %>%
   dplyr::select(norep_filter_name, mpd.obs.z, fraction, frac_bacprod, fracprod_per_cell_noinf) 
 
 # Help from:  http://r-eco-evo.blogspot.com/2011/08/comparing-two-regression-slopes-by.html
+            # https://biologyforfun.wordpress.com/2014/04/08/interpreting-interaction-coefficient-in-r-part1-lm/
 # WITH an interaction term 
 lm2_bulk_interaction <- lm(frac_bacprod ~ mpd.obs.z * fraction, data = unweightMPD_fraction_dat)
 summary(lm2_bulk_interaction)
@@ -3954,77 +3988,6 @@ summary(lm2_bulk_interaction)
 ## Residual standard error: 10.55 on 20 degrees of freedom
 ## Multiple R-squared:  0.582,	Adjusted R-squared:  0.5193 
 ## F-statistic: 9.283 on 3 and 20 DF,  p-value: 0.0004739
-```
-
-```r
-# Check the residuals
-plot_residuals(lm_model = lm2_bulk_interaction, 
-               lm_observed_y = unweightMPD_fraction_dat$frac_bacprod,
-               main_title = "Unweighted MPD with Interaction Term")
-```
-
-```
-## [1] "There are no high leverage points in this model."
-```
-
-<img src="Rarefied_Figures/post-hoc-unweightedMPD-bulk-1.png" style="display: block; margin: auto;" />
-
-```r
-# WITHOUT an interaction term 
-lm2_bulk <- lm(frac_bacprod ~ mpd.obs.z + fraction, data = unweightMPD_fraction_dat)
-summary(lm2_bulk)
-```
-
-```
-## 
-## Call:
-## lm(formula = frac_bacprod ~ mpd.obs.z + fraction, data = unweightMPD_fraction_dat)
-## 
-## Residuals:
-##     Min      1Q  Median      3Q     Max 
-## -16.082  -8.064  -1.599   7.223  29.327 
-## 
-## Coefficients:
-##                   Estimate Std. Error t value Pr(>|t|)    
-## (Intercept)         13.932      3.634   3.834 0.000965 ***
-## mpd.obs.z           -6.455      2.148  -3.006 0.006736 ** 
-## fractionWholeFree   18.112      4.969   3.645 0.001513 ** 
-## ---
-## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-## 
-## Residual standard error: 11.72 on 21 degrees of freedom
-## Multiple R-squared:  0.4575,	Adjusted R-squared:  0.4059 
-## F-statistic: 8.856 on 2 and 21 DF,  p-value: 0.001626
-```
-
-```r
-# Check the residuals
-plot_residuals(lm_model = lm2_bulk, 
-               lm_observed_y = unweightMPD_fraction_dat$frac_bacprod,
-               main_title = "Unweighted MPD with Interaction Term")
-```
-
-```
-## [1] "WARNING:You have 1 high-leverage point(s)!"
-```
-
-<img src="Rarefied_Figures/post-hoc-unweightedMPD-bulk-2.png" style="display: block; margin: auto;" />
-
-```r
-# Does the interaction term include important information not accounted for already?
-anova(lm2_bulk_interaction, lm2_bulk)
-```
-
-```
-## Analysis of Variance Table
-## 
-## Model 1: frac_bacprod ~ mpd.obs.z * fraction
-## Model 2: frac_bacprod ~ mpd.obs.z + fraction
-##   Res.Df    RSS Df Sum of Sq      F  Pr(>F)  
-## 1     20 2224.1                              
-## 2     21 2886.6 -1   -662.52 5.9577 0.02408 *
-## ---
-## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ```
 
 ```r
@@ -4081,6 +4044,117 @@ summary(lm(frac_bacprod ~ mpd.obs.z, data = dplyr::filter(unweightMPD_fraction_d
 ```
 
 ```r
+# Anova was run from this tutorial: http://rcompanion.org/rcompanion/e_04.html
+Anova(lm2_bulk_interaction, type="II") 
+```
+
+```
+## Anova Table (Type II tests)
+## 
+## Response: frac_bacprod
+##                     Sum Sq Df F value    Pr(>F)    
+## mpd.obs.z          1241.69  1 11.1659 0.0032509 ** 
+## fraction           1826.21  1 16.4221 0.0006224 ***
+## mpd.obs.z:fraction  662.52  1  5.9577 0.0240803 *  
+## Residuals          2224.09 20                      
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+```
+
+```r
+          # Since the interaction is significant, the slopes across the groups *ARE* different and cross at some point! 
+
+# Check the residuals
+plot_residuals(lm_model = lm2_bulk_interaction, 
+               lm_observed_y = unweightMPD_fraction_dat$frac_bacprod,
+               main_title = "Unweighted MPD with Interaction Term")
+```
+
+```
+## [1] "There are no high leverage points in this model."
+```
+
+<img src="Rarefied_Figures/post-hoc-unweightedMPD-1.png" style="display: block; margin: auto;" />
+
+```r
+# WITHOUT an interaction term 
+lm2_bulk <- lm(frac_bacprod ~ mpd.obs.z + fraction, data = unweightMPD_fraction_dat)
+summary(lm2_bulk)
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mpd.obs.z + fraction, data = unweightMPD_fraction_dat)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -16.082  -8.064  -1.599   7.223  29.327 
+## 
+## Coefficients:
+##                   Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)         13.932      3.634   3.834 0.000965 ***
+## mpd.obs.z           -6.455      2.148  -3.006 0.006736 ** 
+## fractionWholeFree   18.112      4.969   3.645 0.001513 ** 
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 11.72 on 21 degrees of freedom
+## Multiple R-squared:  0.4575,	Adjusted R-squared:  0.4059 
+## F-statistic: 8.856 on 2 and 21 DF,  p-value: 0.001626
+```
+
+```r
+# Anova was run from this tutorial: http://rcompanion.org/rcompanion/e_04.html
+Anova(lm2_bulk, type="II") 
+```
+
+```
+## Anova Table (Type II tests)
+## 
+## Response: frac_bacprod
+##           Sum Sq Df F value   Pr(>F)   
+## mpd.obs.z 1241.7  1  9.0333 0.006736 **
+## fraction  1826.2  1 13.2857 0.001513 **
+## Residuals 2886.6 21                    
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+```
+
+```r
+           # Since fraction is significant, the intercepts among the groups are ALSO different!
+
+# Check the residuals
+plot_residuals(lm_model = lm2_bulk, 
+               lm_observed_y = unweightMPD_fraction_dat$frac_bacprod,
+               main_title = "Unweighted MPD with Interaction Term")
+```
+
+```
+## [1] "WARNING:You have 1 high-leverage point(s)!"
+```
+
+<img src="Rarefied_Figures/post-hoc-unweightedMPD-2.png" style="display: block; margin: auto;" />
+
+```r
+# Does the interaction term include important information not accounted for already?
+Anova(lm2_bulk_interaction, lm2_bulk)
+```
+
+```
+## Anova Table (Type II tests)
+## 
+## Response: frac_bacprod
+##                     Sum Sq Df F value   Pr(>F)   
+## mpd.obs.z          1241.69  1  9.0333 0.006736 **
+## fraction           1826.21  1 13.2857 0.001513 **
+## mpd.obs.z:fraction  662.52  1  4.8198 0.039511 * 
+## Residuals          2886.61 21                    
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+```
+
+```r
 ## PER CELL
 lm_unweightMPD_by_fraction_percell <- lm(log10(fracprod_per_cell_noinf) ~ mpd.obs.z/fraction, data = unweightMPD_fraction_dat)
 summary(lm_unweightMPD_by_fraction_percell)
@@ -4109,6 +4183,114 @@ summary(lm_unweightMPD_by_fraction_percell)
 ## Multiple R-squared:  0.669,	Adjusted R-squared:  0.6359 
 ## F-statistic: 20.21 on 2 and 20 DF,  p-value: 1.58e-05
 ```
+
+```r
+# Help from:  http://r-eco-evo.blogspot.com/2011/08/comparing-two-regression-slopes-by.html
+# WITH an interaction term 
+lm2_percell_interaction <- lm(log10(fracprod_per_cell_noinf) ~ mpd.obs.z * fraction, data = unweightMPD_fraction_dat)
+summary(lm2_percell_interaction)
+```
+
+```
+## 
+## Call:
+## lm(formula = log10(fracprod_per_cell_noinf) ~ mpd.obs.z * fraction, 
+##     data = unweightMPD_fraction_dat)
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -0.52158 -0.25945  0.07526  0.19263  0.69006 
+## 
+## Coefficients:
+##                             Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)                 -6.58642    0.10394 -63.370  < 2e-16 ***
+## mpd.obs.z                   -0.29551    0.07390  -3.999 0.000768 ***
+## fractionWholeFree           -0.57771    0.20102  -2.874 0.009720 ** 
+## mpd.obs.z:fractionWholeFree -0.03663    0.13807  -0.265 0.793625    
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 0.3248 on 19 degrees of freedom
+##   (1 observation deleted due to missingness)
+## Multiple R-squared:  0.7693,	Adjusted R-squared:  0.7328 
+## F-statistic: 21.12 on 3 and 19 DF,  p-value: 2.861e-06
+```
+
+```r
+# Anova was run from this tutorial: http://rcompanion.org/rcompanion/e_04.html
+Anova(lm2_percell_interaction, type="II") # Since the interaction is NOT significant, the slopes across the two groups *ARE NOT* different!
+```
+
+```
+## Anova Table (Type II tests)
+## 
+## Response: log10(fracprod_per_cell_noinf)
+##                     Sum Sq Df F value    Pr(>F)    
+## mpd.obs.z          2.53436  1 24.0305 9.897e-05 ***
+## fraction           1.93076  1 18.3073 0.0004056 ***
+## mpd.obs.z:fraction 0.00742  1  0.0704 0.7936252    
+## Residuals          2.00382 19                      
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+```
+
+```r
+# Check the residuals
+plot_residuals(lm_model = lm2_percell_interaction, 
+               lm_observed_y = unweightMPD_fraction_dat$log10(fracprod_per_cell_noinf) ,
+               main_title = "Unweighted MPD with Interaction Term")
+```
+
+```
+## [1] "There are no high leverage points in this model."
+```
+
+```
+## Error in xy.coords(x, y, xlabel, ylabel, log): attempt to apply non-function
+```
+
+```r
+# WITHOUT an interaction term 
+lm2_bulk <- lm(frac_bacprod ~ mpd.obs.z + fraction, data = unweightMPD_fraction_dat)
+summary(lm2_bulk)
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mpd.obs.z + fraction, data = unweightMPD_fraction_dat)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -16.082  -8.064  -1.599   7.223  29.327 
+## 
+## Coefficients:
+##                   Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)         13.932      3.634   3.834 0.000965 ***
+## mpd.obs.z           -6.455      2.148  -3.006 0.006736 ** 
+## fractionWholeFree   18.112      4.969   3.645 0.001513 ** 
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 11.72 on 21 degrees of freedom
+## Multiple R-squared:  0.4575,	Adjusted R-squared:  0.4059 
+## F-statistic: 8.856 on 2 and 21 DF,  p-value: 0.001626
+```
+
+```r
+# Check the residuals
+plot_residuals(lm_model = lm2_bulk, 
+               lm_observed_y = unweightMPD_fraction_dat$frac_bacprod,
+               main_title = "Unweighted MPD with Interaction Term")
+```
+
+<img src="Rarefied_Figures/post-hoc-unweightedMPD-3.png" style="display: block; margin: auto;" />
+
+```
+## [1] "WARNING:You have 1 high-leverage point(s)!"
+```
+
+<img src="Rarefied_Figures/post-hoc-unweightedMPD-4.png" style="display: block; margin: auto;" />
 
 ```r
 summary(lm(log10(fracprod_per_cell_noinf) ~ mpd.obs.z, 
@@ -4211,692 +4393,6 @@ anova(mod1_percell, mod2_percell) # Does the interaction term have a significant
 ```
 
 
-### Weighted MPD slopes
-
-```r
-####  WEIGHTED MPD
-weightMPD_fraction_dat <- filter(WEIGHTED_sesMPD_taxalab, 
-                       fraction %in% c("WholePart", "WholeFree")) %>%
-  dplyr::select(norep_filter_name, mpd.obs.z, fraction, frac_bacprod, fracprod_per_cell_noinf) 
-
-
-# Double check values from above models
-lm_WEIGHTED_MPD_by_fraction <- lm(frac_bacprod ~ mpd.obs.z/fraction, data = weightMPD_fraction_dat)
-summary(lm_WEIGHTED_MPD_by_fraction)
-```
-
-```
-## 
-## Call:
-## lm(formula = frac_bacprod ~ mpd.obs.z/fraction, data = weightMPD_fraction_dat)
-## 
-## Residuals:
-##     Min      1Q  Median      3Q     Max 
-## -17.499 -10.736  -0.878   5.638  42.391 
-## 
-## Coefficients:
-##                             Estimate Std. Error t value Pr(>|t|)   
-## (Intercept)                   19.381      5.414   3.580  0.00177 **
-## mpd.obs.z                     -9.629      6.020  -1.600  0.12464   
-## mpd.obs.z:fractionWholeFree    8.376      8.192   1.022  0.31820   
-## ---
-## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-## 
-## Residual standard error: 14.37 on 21 degrees of freedom
-## Multiple R-squared:  0.1856,	Adjusted R-squared:  0.108 
-## F-statistic: 2.392 on 2 and 21 DF,  p-value: 0.1159
-```
-
-```r
-summary(lm(frac_bacprod ~ mpd.obs.z, data = dplyr::filter(weightMPD_fraction_dat,fraction == "WholePart")))
-```
-
-```
-## 
-## Call:
-## lm(formula = frac_bacprod ~ mpd.obs.z, data = dplyr::filter(weightMPD_fraction_dat, 
-##     fraction == "WholePart"))
-## 
-## Residuals:
-##     Min      1Q  Median      3Q     Max 
-## -9.1294 -6.3948 -0.9037  4.3160 16.8990 
-## 
-## Coefficients:
-##             Estimate Std. Error t value Pr(>|t|)   
-## (Intercept)   13.859      3.463   4.002  0.00251 **
-## mpd.obs.z     -5.310      3.573  -1.486  0.16806   
-## ---
-## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-## 
-## Residual standard error: 7.824 on 10 degrees of freedom
-## Multiple R-squared:  0.1809,	Adjusted R-squared:  0.09901 
-## F-statistic: 2.209 on 1 and 10 DF,  p-value: 0.1681
-```
-
-```r
-summary(lm(frac_bacprod ~ mpd.obs.z, data = dplyr::filter(weightMPD_fraction_dat,fraction == "WholeFree")))
-```
-
-```
-## 
-## Call:
-## lm(formula = frac_bacprod ~ mpd.obs.z, data = dplyr::filter(weightMPD_fraction_dat, 
-##     fraction == "WholeFree"))
-## 
-## Residuals:
-##     Min      1Q  Median      3Q     Max 
-## -21.159  -7.589  -3.981   4.588  37.417 
-## 
-## Coefficients:
-##             Estimate Std. Error t value Pr(>|t|)  
-## (Intercept)   33.958     12.771   2.659   0.0239 *
-## mpd.obs.z      5.330      6.298   0.846   0.4171  
-## ---
-## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-## 
-## Residual standard error: 17.76 on 10 degrees of freedom
-## Multiple R-squared:  0.06685,	Adjusted R-squared:  -0.02647 
-## F-statistic: 0.7164 on 1 and 10 DF,  p-value: 0.4171
-```
-
-```r
-# Help from:  http://r-eco-evo.blogspot.com/2011/08/comparing-two-regression-slopes-by.html
-mod1_bulk <- lm(frac_bacprod ~ mpd.obs.z*fraction, data = weightMPD_fraction_dat)
-summary(mod1_bulk) # With interaction term 
-```
-
-```
-## 
-## Call:
-## lm(formula = frac_bacprod ~ mpd.obs.z * fraction, data = weightMPD_fraction_dat)
-## 
-## Residuals:
-##     Min      1Q  Median      3Q     Max 
-## -21.159  -6.465  -2.936   4.316  37.417 
-## 
-## Coefficients:
-##                             Estimate Std. Error t value Pr(>|t|)  
-## (Intercept)                   13.859      6.074   2.282   0.0336 *
-## mpd.obs.z                     -5.310      6.267  -0.847   0.4068  
-## fractionWholeFree             20.099     11.587   1.735   0.0982 .
-## mpd.obs.z:fractionWholeFree   10.640      7.934   1.341   0.1949  
-## ---
-## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-## 
-## Residual standard error: 13.72 on 20 degrees of freedom
-## Multiple R-squared:  0.2921,	Adjusted R-squared:  0.1859 
-## F-statistic:  2.75 on 3 and 20 DF,  p-value: 0.06964
-```
-
-```r
-mod2_bulk <- lm(frac_bacprod ~ mpd.obs.z+fraction, data = weightMPD_fraction_dat)
-summary(mod2_bulk) # Without interaction term 
-```
-
-```
-## 
-## Call:
-## lm(formula = frac_bacprod ~ mpd.obs.z + fraction, data = weightMPD_fraction_dat)
-## 
-## Residuals:
-##     Min      1Q  Median      3Q     Max 
-## -19.663  -7.610  -2.083   3.455  39.012 
-## 
-## Coefficients:
-##                   Estimate Std. Error t value Pr(>|t|)  
-## (Intercept)          8.983      4.957   1.812   0.0843 .
-## mpd.obs.z            1.328      3.916   0.339   0.7379  
-## fractionWholeFree   17.542     11.644   1.506   0.1468  
-## ---
-## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-## 
-## Residual standard error: 13.98 on 21 degrees of freedom
-## Multiple R-squared:  0.2284,	Adjusted R-squared:  0.1549 
-## F-statistic: 3.108 on 2 and 21 DF,  p-value: 0.06571
-```
-
-```r
-anova(mod1_bulk, mod2_bulk) # Does the interaction term have a significant effect?
-```
-
-```
-## Analysis of Variance Table
-## 
-## Model 1: frac_bacprod ~ mpd.obs.z * fraction
-## Model 2: frac_bacprod ~ mpd.obs.z + fraction
-##   Res.Df    RSS Df Sum of Sq      F Pr(>F)
-## 1     20 3767.1                           
-## 2     21 4105.8 -1   -338.74 1.7984 0.1949
-```
-
-```r
-## PER CELL
-lm_WEIGHTED_MPD_by_fraction_percell <- lm(log10(fracprod_per_cell_noinf) ~ mpd.obs.z/fraction, data = weightMPD_fraction_dat)
-summary(lm_WEIGHTED_MPD_by_fraction_percell)
-```
-
-```
-## 
-## Call:
-## lm(formula = log10(fracprod_per_cell_noinf) ~ mpd.obs.z/fraction, 
-##     data = weightMPD_fraction_dat)
-## 
-## Residuals:
-##      Min       1Q   Median       3Q      Max 
-## -0.78244 -0.25063  0.01181  0.20624  1.23016 
-## 
-## Coefficients:
-##                             Estimate Std. Error t value Pr(>|t|)    
-## (Intercept)                  -6.6989     0.1830 -36.597   <2e-16 ***
-## mpd.obs.z                    -0.1936     0.2120  -0.913   0.3720    
-## mpd.obs.z:fractionWholeFree   0.6132     0.2832   2.165   0.0427 *  
-## ---
-## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-## 
-## Residual standard error: 0.4857 on 20 degrees of freedom
-##   (1 observation deleted due to missingness)
-## Multiple R-squared:  0.4568,	Adjusted R-squared:  0.4025 
-## F-statistic: 8.409 on 2 and 20 DF,  p-value: 0.002238
-```
-
-```r
-summary(lm(log10(fracprod_per_cell_noinf) ~ mpd.obs.z, 
-           data = dplyr::filter(weightMPD_fraction_dat,fraction == "WholePart")))
-```
-
-```
-## 
-## Call:
-## lm(formula = log10(fracprod_per_cell_noinf) ~ mpd.obs.z, data = dplyr::filter(weightMPD_fraction_dat, 
-##     fraction == "WholePart"))
-## 
-## Residuals:
-##      Min       1Q   Median       3Q      Max 
-## -0.58497 -0.30162 -0.04586  0.16599  1.00761 
-## 
-## Coefficients:
-##             Estimate Std. Error t value Pr(>|t|)    
-## (Intercept)  -6.4710     0.2195 -29.475 2.91e-10 ***
-## mpd.obs.z    -0.3718     0.2345  -1.585    0.147    
-## ---
-## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-## 
-## Residual standard error: 0.4961 on 9 degrees of freedom
-##   (1 observation deleted due to missingness)
-## Multiple R-squared:  0.2183,	Adjusted R-squared:  0.1314 
-## F-statistic: 2.513 on 1 and 9 DF,  p-value: 0.1474
-```
-
-```r
-summary(lm(log10(fracprod_per_cell_noinf) ~ mpd.obs.z, 
-           data = dplyr::filter(weightMPD_fraction_dat,fraction == "WholeFree")))
-```
-
-```
-## 
-## Call:
-## lm(formula = log10(fracprod_per_cell_noinf) ~ mpd.obs.z, data = dplyr::filter(weightMPD_fraction_dat, 
-##     fraction == "WholeFree"))
-## 
-## Residuals:
-##      Min       1Q   Median       3Q      Max 
-## -0.63632 -0.15126  0.03025  0.14738  0.69793 
-## 
-## Coefficients:
-##             Estimate Std. Error t value Pr(>|t|)    
-## (Intercept)  -7.3003     0.2820 -25.889  1.7e-10 ***
-## mpd.obs.z     0.1479     0.1391   1.064    0.312    
-## ---
-## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-## 
-## Residual standard error: 0.3922 on 10 degrees of freedom
-## Multiple R-squared:  0.1017,	Adjusted R-squared:  0.01185 
-## F-statistic: 1.132 on 1 and 10 DF,  p-value: 0.3124
-```
-
-```r
-mod1_percell <- lm(fracprod_per_cell_noinf ~ mpd.obs.z*fraction, data = weightMPD_fraction_dat)
-summary(mod1_percell) # With interaction term 
-```
-
-```
-## 
-## Call:
-## lm(formula = fracprod_per_cell_noinf ~ mpd.obs.z * fraction, 
-##     data = weightMPD_fraction_dat)
-## 
-## Residuals:
-##        Min         1Q     Median         3Q        Max 
-## -1.031e-06 -1.254e-07 -1.456e-08  9.060e-09  2.529e-06 
-## 
-## Coefficients:
-##                               Estimate Std. Error t value Pr(>|t|)   
-## (Intercept)                  8.400e-07  2.905e-07   2.891  0.00936 **
-## mpd.obs.z                   -5.229e-07  3.103e-07  -1.685  0.10835   
-## fractionWholeFree           -7.792e-07  5.543e-07  -1.406  0.17595   
-## mpd.obs.z:fractionWholeFree  5.348e-07  3.879e-07   1.379  0.18403   
-## ---
-## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-## 
-## Residual standard error: 6.565e-07 on 19 degrees of freedom
-##   (1 observation deleted due to missingness)
-## Multiple R-squared:  0.223,	Adjusted R-squared:  0.1004 
-## F-statistic: 1.818 on 3 and 19 DF,  p-value: 0.1781
-```
-
-```r
-mod2_percell <- lm(fracprod_per_cell_noinf ~ mpd.obs.z+fraction, data = weightMPD_fraction_dat)
-summary(mod2_percell) # Without interaction term 
-```
-
-```
-## 
-## Call:
-## lm(formula = fracprod_per_cell_noinf ~ mpd.obs.z + fraction, 
-##     data = weightMPD_fraction_dat)
-## 
-## Residuals:
-##        Min         1Q     Median         3Q        Max 
-## -5.701e-07 -3.149e-07 -7.637e-08  4.920e-08  2.754e-06 
-## 
-## Coefficients:
-##                     Estimate Std. Error t value Pr(>|t|)  
-## (Intercept)        6.054e-07  2.408e-07   2.515   0.0206 *
-## mpd.obs.z         -1.806e-07  1.904e-07  -0.949   0.3540  
-## fractionWholeFree -9.023e-07  5.592e-07  -1.613   0.1223  
-## ---
-## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-## 
-## Residual standard error: 6.711e-07 on 20 degrees of freedom
-##   (1 observation deleted due to missingness)
-## Multiple R-squared:  0.1453,	Adjusted R-squared:  0.05984 
-## F-statistic:   1.7 on 2 and 20 DF,  p-value: 0.208
-```
-
-```r
-anova(mod1_percell, mod2_percell) # Does the interaction term have a significant effect?
-```
-
-```
-## Analysis of Variance Table
-## 
-## Model 1: fracprod_per_cell_noinf ~ mpd.obs.z * fraction
-## Model 2: fracprod_per_cell_noinf ~ mpd.obs.z + fraction
-##   Res.Df        RSS Df  Sum of Sq      F Pr(>F)
-## 1     19 8.1896e-12                            
-## 2     20 9.0088e-12 -1 -8.192e-13 1.9006  0.184
-```
-
-
-# Figure 3
-
-```r
-plot_grid(taxlab_unweight_mpd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
-            annotate("text", x=1.55, y=(max(mpd_nums1$b)-0.5), fontface = "bold",  size = 3.5, color = "gray40",
-                       label= paste("NS")) +
-            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
-          taxlab_unweight_mntd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
-            annotate("text", x=1.55, y=(max(mntd_nums1$b)-0.5), fontface = "bold",  size = 3.5, color = "gray40",
-                       label= paste("NS")) + 
-            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
-          taxlab_weight_mpd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
-            annotate("text", x=1.55, y=(max(mpd_nums2$b)-1), fontface = "bold",  size = 3.5, color = "gray40",
-                       label= paste("***\np =", round(weight_MPD_wilcox$p.value, digits = 6))) + 
-            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
-          taxlab_weight_mntd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
-            annotate("text", x=1.55, y=(max(mntd_nums2$b)+1.2), fontface = "bold",  size = 3.5, color = "gray40",
-                       label= paste("***\np =", round(weight_MNTD_wilcox$p.value, digits = 3))) + 
-            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
-          plot_unweightedMPD_percell + xlim(-4.5, 3.5), 
-          plot_unweightedMNTD_percell + xlim(-4.5, 3.5), 
-          plot_weightedMPD_percell + xlim(-4.5, 3.5), 
-          plot_weightedMNTD_percell + xlim(-4.5, 3.5), 
-          labels = c("A", "B", "C", "D", "E", "F", "G", "H"),
-          ncol = 4, nrow = 2)
-```
-
-```
-## Warning: Removed 1 rows containing non-finite values (stat_smooth).
-```
-
-```
-## Warning: Removed 1 rows containing missing values (geom_point).
-```
-
-```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <ce>
-```
-
-```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <bc>
-```
-
-```
-## Warning: Removed 1 rows containing non-finite values (stat_smooth).
-```
-
-```
-## Warning: Removed 1 rows containing missing values (geom_point).
-```
-
-```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <ce>
-```
-
-```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <bc>
-```
-
-```
-## Warning: Removed 1 rows containing missing values (geom_point).
-```
-
-```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <ce>
-```
-
-```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <bc>
-```
-
-```
-## Warning: Removed 1 rows containing missing values (geom_point).
-```
-
-```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <ce>
-```
-
-```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <bc>
-```
-
-<img src="Rarefied_Figures/fig-3-1.png" style="display: block; margin: auto;" />
-
-```r
-###  COMBINE TOGETHER FRACTIONS FOR FIGURE G
-plot_grid(taxlab_unweight_mpd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
-            annotate("text", x=1.55, y=(max(mpd_nums1$b)-0.5), fontface = "bold",  size = 3.5, color = "gray40",
-                       label= paste("NS")) +
-            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
-          taxlab_unweight_mntd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
-            annotate("text", x=1.55, y=(max(mntd_nums1$b)-0.5), fontface = "bold",  size = 3.5, color = "gray40",
-                       label= paste("NS")) + 
-            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
-          taxlab_weight_mpd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
-            annotate("text", x=1.55, y=(max(mpd_nums2$b)-1), fontface = "bold",  size = 3.5, color = "gray40",
-                       label= paste("***\np =", round(weight_MPD_wilcox$p.value, digits = 6))) + 
-            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
-          taxlab_weight_mntd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
-            annotate("text", x=1.55, y=(max(mntd_nums2$b)+1.2), fontface = "bold",  size = 3.5, color = "gray40",
-                       label= paste("***\np =", round(weight_MNTD_wilcox$p.value, digits = 3))) + 
-            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
-          plot_unweightedMPD_percell + xlim(-4.5, 3.5), 
-          plot_unweightedMNTD_percell + xlim(-4.5, 3.5), 
-          plot_weightedMPD_percell_TOGETHER + xlim(-4.5, 3.5), 
-          plot_weightedMNTD_percell + xlim(-4.5, 3.5), 
-          labels = c("A", "B", "C", "D", "E", "F", "G", "H"),
-          ncol = 4, nrow = 3)
-```
-
-```
-## Warning: Removed 1 rows containing non-finite values (stat_smooth).
-```
-
-```
-## Warning: Removed 1 rows containing missing values (geom_point).
-```
-
-```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <ce>
-```
-
-```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <bc>
-```
-
-```
-## Warning: Removed 1 rows containing non-finite values (stat_smooth).
-```
-
-```
-## Warning: Removed 1 rows containing missing values (geom_point).
-```
-
-```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <ce>
-```
-
-```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <bc>
-```
-
-```
-## Warning: Removed 1 rows containing non-finite values (stat_smooth).
-```
-
-```
-## Warning: Removed 1 rows containing missing values (geom_point).
-```
-
-```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <ce>
-```
-
-```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <bc>
-```
-
-```
-## Warning: Removed 1 rows containing missing values (geom_point).
-```
-
-```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <ce>
-```
-
-```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <bc>
-```
-
-<img src="Rarefied_Figures/fig-3-2.png" style="display: block; margin: auto;" />
-
-
-
-```r
-plot_grid(taxlab_unweight_mpd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
-            annotate("text", x=1.55, y=(max(mpd_nums1$b)-0.5), fontface = "bold",  size = 3.5, color = "gray40",
-                       label= paste("NS")) +
-            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
-          taxlab_unweight_mntd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
-            annotate("text", x=1.55, y=(max(mntd_nums1$b)-0.5), fontface = "bold",  size = 3.5, color = "gray40",
-                       label= paste("NS")) + 
-            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
-          taxlab_weight_mpd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
-            annotate("text", x=1.55, y=(max(mpd_nums2$b)-1), fontface = "bold",  size = 3.5, color = "gray40",
-                       label= paste("***\np =", round(weight_MPD_wilcox$p.value, digits = 6))) + 
-            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
-          taxlab_weight_mntd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
-            annotate("text", x=1.55, y=(max(mntd_nums2$b)+1.2), fontface = "bold",  size = 3.5, color = "gray40",
-                       label= paste("***\np =", round(weight_MNTD_wilcox$p.value, digits = 3))) + 
-            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
-          plot_unweightedMPD_prod, 
-          plot_unweightedMNTD_prod,
-          plot_weightedMPD_prod, 
-          plot_weightedMNTD_prod,
-          plot_unweightedMPD_percell + xlim(-4.5, 3.5), 
-          plot_unweightedMNTD_percell + xlim(-4.5, 3.5), 
-          plot_weightedMPD_percell_TOGETHER + xlim(-4.5, 3.5), 
-          plot_weightedMNTD_percell + xlim(-4.5, 3.5), 
-          labels = c("A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L"),
-          ncol = 4, nrow = 3)
-```
-
-```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <ce>
-```
-
-```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <bc>
-```
-
-```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <ce>
-```
-
-```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <bc>
-```
-
-```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <ce>
-```
-
-```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <bc>
-```
-
-```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <ce>
-```
-
-```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <bc>
-```
-
-```
-## Warning: Removed 1 rows containing non-finite values (stat_smooth).
-```
-
-```
-## Warning: Removed 1 rows containing missing values (geom_point).
-```
-
-```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <ce>
-```
-
-```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <bc>
-```
-
-```
-## Warning: Removed 1 rows containing non-finite values (stat_smooth).
-```
-
-```
-## Warning: Removed 1 rows containing missing values (geom_point).
-```
-
-```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <ce>
-```
-
-```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <bc>
-```
-
-```
-## Warning: Removed 1 rows containing non-finite values (stat_smooth).
-```
-
-```
-## Warning: Removed 1 rows containing missing values (geom_point).
-```
-
-```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <ce>
-```
-
-```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <bc>
-```
-
-```
-## Warning: Removed 1 rows containing missing values (geom_point).
-```
-
-```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <ce>
-```
-
-```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <bc>
-```
-
-<img src="Rarefied_Figures/super-fig3-1.png" style="display: block; margin: auto;" />
-
-
-
-```r
-plot_grid(taxlab_unweight_mpd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
-            annotate("text", x=1.55, y=(max(mpd_nums1$b)-0.5), fontface = "bold",  size = 3.5, color = "gray40",
-                       label= paste("NS")) +
-            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
-          taxlab_weight_mpd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
-            annotate("text", x=1.55, y=(max(mpd_nums2$b)-1), fontface = "bold",  size = 3.5, color = "gray40",
-                       label= paste("***\np =", round(weight_MPD_wilcox$p.value, digits = 6)))  + 
-            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
-          plot_unweightedMPD_prod, 
-          plot_weightedMPD_prod_TOGETHER, 
-          plot_unweightedMPD_percell + xlim(-4.5, 3.5),  
-          plot_weightedMPD_percell_TOGETHER + xlim(-4.5, 3.5),
-          labels = c("A", "B", "C", "D", "E", "F"),
-          ncol = 2, nrow = 3)
-```
-
-```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <ce>
-```
-
-```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <bc>
-```
-
-```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <ce>
-```
-
-```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <bc>
-```
-
-```
-## Warning: Removed 1 rows containing non-finite values (stat_smooth).
-```
-
-```
-## Warning: Removed 1 rows containing missing values (geom_point).
-```
-
-```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <ce>
-```
-
-```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <bc>
-```
-
-```
-## Warning: Removed 1 rows containing non-finite values (stat_smooth).
-```
-
-```
-## Warning: Removed 1 rows containing missing values (geom_point).
-```
-
-```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <ce>
-```
-
-```
-## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <bc>
-```
-
-<img src="Rarefied_Figures/fig3-subsetted-1.png" style="display: block; margin: auto;" />
-
-
-
 # Phylogenetic Diversity vs Richness/Evenness
 
 
@@ -4912,7 +4408,8 @@ combined_rich_unweightedMPD <- ML_otu_rich_stats %>%
 ```
 
 ```r
-summary(lm(mean ~ mpd.obs.z, data = dplyr::filter(combined_rich_unweightedMPD, fraction == "WholePart")))
+lm_part_divs_rich_vs_unweight <- lm(mean ~ mpd.obs.z, data = dplyr::filter(combined_rich_unweightedMPD, fraction == "WholePart"))
+summary(lm_part_divs_rich_vs_unweight)
 ```
 
 ```
@@ -4938,7 +4435,8 @@ summary(lm(mean ~ mpd.obs.z, data = dplyr::filter(combined_rich_unweightedMPD, f
 ```
 
 ```r
-summary(lm(mean ~ mpd.obs.z, data = dplyr::filter(combined_rich_unweightedMPD, fraction == "WholeFree")))
+lm_free_divs_rich_vs_unweight <- lm(mean ~ mpd.obs.z, data = dplyr::filter(combined_rich_unweightedMPD, fraction == "WholeFree"))
+summary(lm_free_divs_rich_vs_unweight)
 ```
 
 ```
@@ -4964,7 +4462,8 @@ summary(lm(mean ~ mpd.obs.z, data = dplyr::filter(combined_rich_unweightedMPD, f
 ```
 
 ```r
-summary(lm(mean ~ mpd.obs.z, data = combined_rich_unweightedMPD))
+lm_divs_rich_vs_unweight <- lm(mean ~ mpd.obs.z, data = combined_rich_unweightedMPD)
+summary(lm_divs_rich_vs_unweight)
 ```
 
 ```
@@ -4989,10 +4488,43 @@ summary(lm(mean ~ mpd.obs.z, data = combined_rich_unweightedMPD))
 ```
 
 ```r
+lm_divs_test_interaction <- lm(mean ~ mpd.obs.z * fraction, data = combined_rich_unweightedMPD)
+Anova(lm_divs_test_interaction, type = "II")
+```
+
+```
+## Anova Table (Type II tests)
+## 
+## Response: mean
+##                    Sum Sq Df F value    Pr(>F)    
+## mpd.obs.z          135764  1 15.2230 0.0008853 ***
+## fraction            95942  1 10.7578 0.0037451 ** 
+## mpd.obs.z:fraction   2655  1  0.2977 0.5913536    
+## Residuals          178367 20                      
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+```
+
+```r
+lm_divs_test <- lm(mean ~ mpd.obs.z + fraction, data = combined_rich_unweightedMPD)
+
+anova(lm_divs_test, lm_divs_test_interaction)
+```
+
+```
+## Analysis of Variance Table
+## 
+## Model 1: mean ~ mpd.obs.z + fraction
+## Model 2: mean ~ mpd.obs.z * fraction
+##   Res.Df    RSS Df Sum of Sq      F Pr(>F)
+## 1     21 181022                           
+## 2     20 178367  1    2655.1 0.2977 0.5914
+```
+
+```r
 divs_p1 <- ggplot(combined_rich_unweightedMPD, aes(y = mean, x = mpd.obs.z)) + 
   geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) + xlim(-4.5, 3.5) +
-  geom_point(size = 3, aes(color = fraction)) + 
-  scale_color_manual(values = fraction_colors) + 
+  geom_point(size = 3) + 
   geom_smooth(method = "lm", color = "black") +
   xlab("Unweighted MPD") + ylab("Observed Richness") +
   theme(legend.position = c(0.85, 0.9),
@@ -5015,19 +4547,15 @@ divs_p2 <- ggplot(combined_rich_unweightedMPD, aes(y = mean, x = mpd.obs.z, colo
         legend.title = element_blank()) +
   annotate("text", x = -3, y=400, 
          color = "firebrick3", fontface = "bold",
-         label = paste("R2 =", round(summary(lm(mean ~ mpd.obs.z, 
-                                                data = dplyr::filter(combined_rich_unweightedMPD, fraction == "WholePart")))$adj.r.squared, 
+         label = paste("R2 =", round(summary(lm_part_divs_rich_vs_unweight)$adj.r.squared, 
                                      digits = 2), "\n", 
-                       "p =", round(unname(summary(lm(mean ~ mpd.obs.z, 
-                                                      data = dplyr::filter(combined_rich_unweightedMPD, fraction == "WholePart")))$coefficients[,4][2]), 
+                       "p =", round(unname(summary(lm_part_divs_rich_vs_unweight)$coefficients[,4][2]), 
                                     digits = 3))) +
   annotate("text", x = -3, y=200, 
          color = "cornflowerblue", fontface = "bold",
-         label = paste("R2 =", round(summary(lm(mean ~ mpd.obs.z, 
-                                                data = dplyr::filter(combined_rich_unweightedMPD, fraction == "WholeFree")))$adj.r.squared, 
+         label = paste("R2 =", round(summary(lm_free_divs_rich_vs_unweight)$adj.r.squared, 
                                      digits = 2), "\n", 
-                       "p =", round(unname(summary(lm(mean ~ mpd.obs.z, 
-                                                      data = dplyr::filter(combined_rich_unweightedMPD, fraction == "WholeFree")))$coefficients[,4][2]), 
+                       "p =", round(unname(summary(lm_free_divs_rich_vs_unweight)$coefficients[,4][2]), 
                                     digits = 3))) 
 
 
@@ -5233,8 +4761,7 @@ summary(lm(mean ~ mpd.obs.z, data = combined_invsimps_weightedMPD))
 # All points together
 evendivs_p1 <- ggplot(combined_invsimps_weightedMPD, aes(y = mean, x = mpd.obs.z)) + 
   geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) + xlim(-4.5, 3.5) +
-  geom_point(size = 3, aes( color = fraction)) + 
-  scale_color_manual(values = fraction_colors) + 
+  geom_point(size = 3) +  
   geom_smooth(color = "black") +
   xlab("Weighted MPD") + ylab("Inverse Simpson") +
   theme(legend.position = c(0.85, 0.85),
@@ -5441,15 +4968,568 @@ summary(lm(mean ~ mpd.obs.z, data = combined_simpseven_weightedMPD)) # NS
 ```
 
 
+# Figure 3
+
 ```r
+# Shared legends: https://cran.r-project.org/web/packages/cowplot/vignettes/shared_legends.html
+legend_fig3 <- get_legend(taxlab_unweight_mpd + theme(legend.position="top", legend.title = element_blank()))
+
+
+MPD_boxplots_nolegend <- plot_grid(
+          # Plot 1: Unweighted MPD 
+          taxlab_unweight_mpd + ylim(-4.5, 3.5) + xlab("Fraction \n") + coord_flip() + 
+            annotate("text", x=1.55, y=(max(mpd_nums1$b)-0.5), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("NS")) +
+            theme(axis.text.y = element_blank(), 
+                  plot.margin = unit(c(5,2,0,5), "pt")),  #top, right, bottom, and left
+          # Plot 2: Weighted MPD 
+           taxlab_weight_mpd + ylim(-4.5, 3.5) + xlab("Fraction \n") + coord_flip() + 
+            annotate("text", x=1.75, y=(max(mpd_nums2$b)-1), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("***\np =", round(weight_MPD_wilcox$p.value, digits = 6))) + 
+            theme(axis.text.y = element_blank(), 
+                  plot.margin = unit(c(5,2,0,5), "pt")),
+          ncol = 2, nrow = 1, labels = c("A", "B"))
+
+
+
+MPD_boxplots_yeslegend <- plot_grid(legend_fig3,             # Draw the legend first 
+                                    MPD_boxplots_nolegend,   # Draw the plots second
+                                    ncol = 1, rel_heights = c(0.1, 1))
+
 # PLOT
-plot_grid(divs_p1, divs_p2, # Richness vs UNweighted MPD
-          evendivs_p1, evendivs_p2, # Inverse Simpson vs Weighted MPD 
-          nrow = 2, ncol = 2,
-          labels = c("A", "B", "C", "D"))
+div_vs_div_plots <- plot_grid(divs_p2 + theme(legend.position = "none", plot.margin = unit(c(0,2,0,0), "pt")) +
+            xlab("Unweighted Mean Pairwise Dist"), # Richness vs UNweighted MPD
+          evendivs_p2 + theme(legend.position = "none", plot.margin = unit(c(0,2,0,0), "pt")) +
+             xlab("Weighted Mean Pairwise Dist"), # Inverse Simpson vs Weighted MPD 
+          nrow = 1, ncol = 2,
+          labels = c("C", "D"))
+
+
+
+final_fig3 <- plot_grid(MPD_boxplots_yeslegend, 
+                        div_vs_div_plots, ncol = 1,
+                        rel_heights = c(1.2, 2))
+
+final_fig3
 ```
 
-<img src="Rarefied_Figures/figure-4-1.png" style="display: block; margin: auto;" />
+<img src="Rarefied_Figures/figure-3-1.png" style="display: block; margin: auto;" />
+
+```r
+#### REMOVE X AXIS FOR TOP FIGURE 
+MPD_boxplots_nolegend_noX <- plot_grid(
+          # Plot 1: Unweighted MPD 
+          taxlab_unweight_mpd + ylim(-4.5, 3.5) + xlab("Fraction \n") + coord_flip() + 
+            annotate("text", x=1.55, y=(max(mpd_nums1$b)-0.5), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("NS")) +
+            theme(axis.text.y = element_blank(), 
+                  plot.margin = unit(c(5,2,10,3), "pt"),  #top, right, bottom, and left
+                  axis.title.x=element_blank(), axis.line.x = element_blank(), 
+                  axis.text.x=element_blank(), axis.ticks.x=element_blank()), 
+          # Plot 2: Weighted MPD 
+           taxlab_weight_mpd + ylim(-4.5, 3.5) + xlab("Fraction \n") + coord_flip() + 
+            annotate("text", x=1.75, y=(max(mpd_nums2$b)-1), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("***\np =", round(weight_MPD_wilcox$p.value, digits = 6))) + 
+            theme(axis.text.y = element_blank(), 
+                  plot.margin = unit(c(5,7,10,10), "pt"),  #top, right, bottom, and left
+                  axis.title.x=element_blank(), axis.line.x = element_blank(), 
+                  axis.text.x=element_blank(), axis.ticks.x=element_blank()), 
+          ncol = 2, nrow = 1, labels = c("A", "B"))
+
+
+MPD_boxplots_yeslegend_noX <- plot_grid(legend_fig3,             # Draw the legend first 
+                                    MPD_boxplots_nolegend_noX,   # Draw the plots second
+                                    ncol = 1, rel_heights = c(0.1, 1))
+
+
+final_fig3_noX <- plot_grid(MPD_boxplots_yeslegend_noX, 
+                        div_vs_div_plots, ncol = 1,
+                        rel_heights = c(1.2, 2))
+
+final_fig3_noX
+```
+
+<img src="Rarefied_Figures/figure-3-2.png" style="display: block; margin: auto;" />
+
+
+```r
+# PLOT
+plot_grid(
+          # Plot 1
+          divs_p1 + theme(legend.position = "none", plot.margin = unit(c(5,2,0,0), "pt")) +  #top, right, bottom, and left
+            xlab("Unweighted Mean Pairwise Dist"), # Richness vs UNweighted MPD
+          # Plot 2
+          evendivs_p1 + theme(legend.position = "none", plot.margin = unit(c(5,2,0,0), "pt")) +
+             xlab("Weighted Mean Pairwise Dist"), # Inverse Simpson vs Weighted MPD 
+          nrow = 1, ncol = 2,
+          labels = c("A", "B"))
+```
+
+<img src="Rarefied_Figures/supplemental-figure-3-1.png" style="display: block; margin: auto;" />
+
+# Figure 4
+
+```r
+plot_grid(taxlab_unweight_mpd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
+            annotate("text", x=1.55, y=(max(mpd_nums1$b)-0.5), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("NS")) +
+            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
+          taxlab_unweight_mntd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
+            annotate("text", x=1.55, y=(max(mntd_nums1$b)-0.5), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("NS")) + 
+            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
+          taxlab_weight_mpd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
+            annotate("text", x=1.55, y=(max(mpd_nums2$b)-1), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("***\np =", round(weight_MPD_wilcox$p.value, digits = 6))) + 
+            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
+          taxlab_weight_mntd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
+            annotate("text", x=1.55, y=(max(mntd_nums2$b)+1.2), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("***\np =", round(weight_MNTD_wilcox$p.value, digits = 3))) + 
+            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
+          plot_unweightedMPD_percell + xlim(-4.5, 3.5), 
+          plot_unweightedMNTD_percell + xlim(-4.5, 3.5), 
+          plot_weightedMPD_percell + xlim(-4.5, 3.5), 
+          plot_weightedMNTD_percell + xlim(-4.5, 3.5), 
+          labels = c("A", "B", "C", "D", "E", "F", "G", "H"),
+          ncol = 4, nrow = 2)
+```
+
+```
+## Warning: Removed 1 rows containing non-finite values (stat_smooth).
+```
+
+```
+## Warning: Removed 1 rows containing missing values (geom_point).
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <ce>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <bc>
+```
+
+```
+## Warning: Removed 1 rows containing non-finite values (stat_smooth).
+```
+
+```
+## Warning: Removed 1 rows containing missing values (geom_point).
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <ce>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <bc>
+```
+
+```
+## Warning: Removed 1 rows containing missing values (geom_point).
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <ce>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <bc>
+```
+
+```
+## Warning: Removed 1 rows containing missing values (geom_point).
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <ce>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <bc>
+```
+
+<img src="Rarefied_Figures/all-phylo-BEFs-1.png" style="display: block; margin: auto;" />
+
+```r
+###  COMBINE TOGETHER FRACTIONS FOR FIGURE G
+plot_grid(taxlab_unweight_mpd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
+            annotate("text", x=1.55, y=(max(mpd_nums1$b)-0.5), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("NS")) +
+            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
+          taxlab_unweight_mntd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
+            annotate("text", x=1.55, y=(max(mntd_nums1$b)-0.5), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("NS")) + 
+            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
+          taxlab_weight_mpd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
+            annotate("text", x=1.55, y=(max(mpd_nums2$b)-1), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("***\np =", round(weight_MPD_wilcox$p.value, digits = 6))) + 
+            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
+          taxlab_weight_mntd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
+            annotate("text", x=1.55, y=(max(mntd_nums2$b)+1.2), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("***\np =", round(weight_MNTD_wilcox$p.value, digits = 3))) + 
+            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
+          plot_unweightedMPD_percell + xlim(-4.5, 3.5), 
+          plot_unweightedMNTD_percell + xlim(-4.5, 3.5), 
+          plot_weightedMPD_percell_TOGETHER + xlim(-4.5, 3.5), 
+          plot_weightedMNTD_percell + xlim(-4.5, 3.5), 
+          labels = c("A", "B", "C", "D", "E", "F", "G", "H"),
+          ncol = 4, nrow = 3)
+```
+
+```
+## Warning: Removed 1 rows containing non-finite values (stat_smooth).
+```
+
+```
+## Warning: Removed 1 rows containing missing values (geom_point).
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <ce>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <bc>
+```
+
+```
+## Warning: Removed 1 rows containing non-finite values (stat_smooth).
+```
+
+```
+## Warning: Removed 1 rows containing missing values (geom_point).
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <ce>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <bc>
+```
+
+```
+## Warning: Removed 1 rows containing non-finite values (stat_smooth).
+```
+
+```
+## Warning: Removed 1 rows containing missing values (geom_point).
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <ce>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <bc>
+```
+
+```
+## Warning: Removed 1 rows containing missing values (geom_point).
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <ce>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <bc>
+```
+
+<img src="Rarefied_Figures/all-phylo-BEFs-2.png" style="display: block; margin: auto;" />
+
+
+
+```r
+plot_grid(taxlab_unweight_mpd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
+            annotate("text", x=1.55, y=(max(mpd_nums1$b)-0.5), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("NS")) +
+            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
+          taxlab_unweight_mntd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
+            annotate("text", x=1.55, y=(max(mntd_nums1$b)-0.5), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("NS")) + 
+            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
+          taxlab_weight_mpd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
+            annotate("text", x=1.55, y=(max(mpd_nums2$b)-1), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("***\np =", round(weight_MPD_wilcox$p.value, digits = 6))) + 
+            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
+          taxlab_weight_mntd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
+            annotate("text", x=1.55, y=(max(mntd_nums2$b)+1.2), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("***\np =", round(weight_MNTD_wilcox$p.value, digits = 3))) + 
+            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
+          plot_unweightedMPD_prod, 
+          plot_unweightedMNTD_prod,
+          plot_weightedMPD_prod, 
+          plot_weightedMNTD_prod,
+          plot_unweightedMPD_percell + xlim(-4.5, 3.5), 
+          plot_unweightedMNTD_percell + xlim(-4.5, 3.5), 
+          plot_weightedMPD_percell_TOGETHER + xlim(-4.5, 3.5), 
+          plot_weightedMNTD_percell + xlim(-4.5, 3.5), 
+          labels = c("A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L"),
+          ncol = 4, nrow = 3)
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <ce>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <bc>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <ce>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <bc>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <ce>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <bc>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <ce>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <bc>
+```
+
+```
+## Warning: Removed 1 rows containing non-finite values (stat_smooth).
+```
+
+```
+## Warning: Removed 1 rows containing missing values (geom_point).
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <ce>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <bc>
+```
+
+```
+## Warning: Removed 1 rows containing non-finite values (stat_smooth).
+```
+
+```
+## Warning: Removed 1 rows containing missing values (geom_point).
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <ce>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <bc>
+```
+
+```
+## Warning: Removed 1 rows containing non-finite values (stat_smooth).
+```
+
+```
+## Warning: Removed 1 rows containing missing values (geom_point).
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <ce>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <bc>
+```
+
+```
+## Warning: Removed 1 rows containing missing values (geom_point).
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <ce>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <bc>
+```
+
+<img src="Rarefied_Figures/all-phylo-BEFs-withpercell-1.png" style="display: block; margin: auto;" />
+
+
+
+```r
+plot_grid(taxlab_unweight_mpd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
+            annotate("text", x=1.55, y=(max(mpd_nums1$b)-0.5), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("NS")) +
+            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
+          taxlab_weight_mpd + ylim(-4.5, 3.5) + xlab("") + coord_flip() + 
+            annotate("text", x=1.55, y=(max(mpd_nums2$b)-1), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("***\np =", round(weight_MPD_wilcox$p.value, digits = 6)))  + 
+            theme(axis.text.y = element_text(angle=90, hjust=0.5)), 
+          plot_unweightedMPD_prod, 
+          plot_weightedMPD_prod_TOGETHER, 
+          plot_unweightedMPD_percell + xlim(-4.5, 3.5),  
+          plot_weightedMPD_percell_TOGETHER + xlim(-4.5, 3.5),
+          labels = c("A", "B", "C", "D", "E", "F"),
+          ncol = 2, nrow = 3)
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <ce>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <bc>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <ce>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <bc>
+```
+
+```
+## Warning: Removed 1 rows containing non-finite values (stat_smooth).
+```
+
+```
+## Warning: Removed 1 rows containing missing values (geom_point).
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <ce>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <bc>
+```
+
+```
+## Warning: Removed 1 rows containing non-finite values (stat_smooth).
+```
+
+```
+## Warning: Removed 1 rows containing missing values (geom_point).
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <ce>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <bc>
+```
+
+<img src="Rarefied_Figures/fig4-subsetted-1.png" style="display: block; margin: auto;" />
+
+
+
+```r
+# Shared legends: https://cran.r-project.org/web/packages/cowplot/vignettes/shared_legends.html
+legend_fig4 <- get_legend(plot_weightedMPD_percell_TOGETHER + theme(legend.position="top", legend.title = element_blank()))
+```
+
+```
+## Warning: Removed 1 rows containing non-finite values (stat_smooth).
+```
+
+```
+## Warning: Removed 1 rows containing missing values (geom_point).
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <ce>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <bc>
+```
+
+```r
+# Make figure without the legend
+fig4_nolegend <- plot_grid(plot_unweightedMPD_prod + theme(plot.margin = unit(c(0,2,0,0), "pt")),   #top, right, bottom, and left
+          plot_weightedMPD_prod_TOGETHER + theme(plot.margin = unit(c(0,2,0,0), "pt")),  
+          plot_unweightedMPD_percell + xlim(-4.5, 3.5) + theme(plot.margin = unit(c(0,2,0,1), "pt")), 
+          plot_weightedMPD_percell_TOGETHER + xlim(-4.5, 3.5) + theme(plot.margin = unit(c(0,2,0,1), "pt")), 
+          labels = c("A", "B", "C", "D"),
+          ncol = 2, nrow = 2)
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <ce>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <bc>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <ce>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <bc>
+```
+
+```
+## Warning: Removed 1 rows containing non-finite values (stat_smooth).
+```
+
+```
+## Warning: Removed 1 rows containing missing values (geom_point).
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <ce>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <bc>
+```
+
+```
+## Warning: Removed 1 rows containing non-finite values (stat_smooth).
+```
+
+```
+## Warning: Removed 1 rows containing missing values (geom_point).
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <ce>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <bc>
+```
+
+```r
+# Add the legend 
+fig4_yeslegend <- plot_grid(legend_fig4,             # Draw the legend first 
+                            fig4_nolegend,   # Draw the plots second
+                            ncol = 1, rel_heights = c(0.055, 1))
+
+fig4_yeslegend
+```
+
+<img src="Rarefied_Figures/fig-4-1.png" style="display: block; margin: auto;" />
+
+
+
+
+
 
 ## Residual Analysis 
 
@@ -5566,7 +5646,7 @@ plot_grid(unweightedMPD_vs_fracprod_taxlab + ggtitle("") +
 ## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on '(μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <bc>
 ```
 
-<img src="Rarefied_Figures/old-fig3-1.png" style="display: block; margin: auto;" />
+<img src="Rarefied_Figures/old-fig4-1.png" style="display: block; margin: auto;" />
 
 ## Congruency between fractions 
 
@@ -5617,16 +5697,6 @@ ggplot(combined_rich_df, aes(x=WholePart, y=WholeFree)) +
 ```
 
 <img src="Rarefied_Figures/frac-congruency-1.png" style="display: block; margin: auto;" />
-
-
-
-
-
-
-<!-- # Total Production  --> 
-
-
-
 
 
 
@@ -6125,12 +6195,3 @@ plot_grid(soren_box, bray_box, labels = c("A", "B"), ncol = 2)
 ```
 ## Error in plot_grid(soren_box, bray_box, labels = c("A", "B"), ncol = 2): object 'soren_box' not found
 ```
-
-<!-- # Prefiltered Fraction Diversity-Production Analysis --> 
-
-
-
-<!-- # Does DNA extraction concentration influcence diversity? --> 
-
-
-

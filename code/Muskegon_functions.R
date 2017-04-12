@@ -6,7 +6,8 @@
 # 4. make_metadata_norep = create metadata from sample ID information in $names column without a replicate
 # 5. plot_sample_sums =  Draws a 3 paneled plot including: 1. histogram, 2. density, and 3. boxplot of the total number of sequences per sample.
 # 6. muskegon_lakesite = fixes the name of the Muskegon lakesites (e.g. "MIN" = "Inlet")
-# 7. show_otu = show the top 10 rows and columns of an otu table
+# 7. show_otu = show the top 10 rows and columns of an otu table  
+# 8. grid_arrange_shared_legend = Create one shared legend in a multiplot figure
 
 
 
@@ -459,6 +460,38 @@ plot_residuals <- function(lm_model, lm_observed_y, main_title){
 
 
 
+#################################################################################### 9
+#################################################################################### 9
+# This function is from: http://stackoverflow.com/questions/13649473/add-a-common-legend-for-combined-ggplots/28594060#28594060
+# Downloaded on March 3rd, 2017
 
+grid_arrange_shared_legend <- function(..., nrow = 1, ncol = length(list(...)), position = c("bottom", "right")) {
+  
+  plots <- list(...)
+  position <- match.arg(position)
+  g <- ggplotGrob(plots[[1]] + theme(legend.position = position))$grobs
+  legend <- g[[which(sapply(g, function(x) x$name) == "guide-box")]]
+  lheight <- sum(legend$height)
+  lwidth <- sum(legend$width)
+  gl <- lapply(plots, function(x) x + theme(legend.position = "none"))
+  gl <- c(gl, nrow = nrow, ncol = ncol)
+  
+  combined <- switch(position,
+                     "bottom" = arrangeGrob(do.call(arrangeGrob, gl),
+                                            legend,
+                                            ncol = 1,
+                                            heights = unit.c(unit(1, "npc") - lheight, lheight)),
+                     "right" = arrangeGrob(do.call(arrangeGrob, gl),
+                                           legend,
+                                           ncol = 2,
+                                           widths = unit.c(unit(1, "npc") - lwidth, lwidth)))
+  grid.newpage()
+  grid.draw(combined)
+  
+}
+
+
+#################################################################################### 9
+#################################################################################### 9
 
 
