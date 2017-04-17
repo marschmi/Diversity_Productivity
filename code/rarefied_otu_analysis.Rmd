@@ -2571,8 +2571,6 @@ fig4_yeslegend
 
 
 
-
-
 ## Residual Analysis 
 ```{r check-lm-phylogenetic-residuals, fig.width = 12, fig.height = 4, dependson = "plot-vegan-fracprod"}
 ##########################################################################
@@ -2639,6 +2637,183 @@ plot_grid(unweightedMPD_vs_fracprod_taxlab + ggtitle("") +
           ncol = 2, nrow = 2)
 ```
 
+
+
+
+# Multiple regression
+
+```{r multiple-regression}
+
+prod_data <- unweighted_sesMPD_taxalab %>%
+  dplyr::filter(year == "2015" & fraction %in% c("WholePart", "WholeFree")) %>%
+  dplyr::select(norep_filter_name,frac_bacprod, SD_frac_bacprod, fracprod_per_cell_noinf) 
+
+unweight_phylo_df <- unweighted_sesMPD_taxalab %>%
+  dplyr::filter(year == "2015" & fraction %in% c("WholePart", "WholeFree")) %>%
+  dplyr::select(norep_filter_name,frac_bacprod, SD_frac_bacprod, fracprod_per_cell_noinf, mpd.obs.z) %>%
+  mutate(measure = "Unweighted_MPD") %>%
+  dplyr::rename(mean = mpd.obs.z)
+
+weight_phylo_df <- WEIGHTED_sesMPD_taxalab %>%
+  dplyr::filter(year == "2015" & fraction %in% c("WholePart", "WholeFree")) %>%
+  dplyr::select(norep_filter_name,frac_bacprod, SD_frac_bacprod, fracprod_per_cell_noinf, mpd.obs.z) %>%
+  mutate(measure = "Weighted_MPD") %>%
+  dplyr::rename(mean = mpd.obs.z)
+
+
+rich_df <- ML_otu_rich_stats %>%
+  dplyr::select(norep_filter_name, frac_bacprod, SD_frac_bacprod, fracprod_per_cell_noinf, mean, measure) 
+
+shannon_df <- ML_otu_shannon_stats %>%
+  dplyr::select(norep_filter_name, frac_bacprod, SD_frac_bacprod, fracprod_per_cell_noinf, mean, measure) 
+
+invsimps_df <- ML_otu_invsimps_stats %>%
+  dplyr::select(norep_filter_name, frac_bacprod, SD_frac_bacprod, fracprod_per_cell_noinf, mean, measure) 
+
+simpseven_df <- ML_otu_simpseven_stats %>%
+  dplyr::select(norep_filter_name, frac_bacprod, SD_frac_bacprod, fracprod_per_cell_noinf, mean, measure)  
+
+
+all_div_measures <- rbind(unweight_phylo_df, weight_phylo_df, rich_df, shannon_df, invsimps_df, simpseven_df)
+
+
+all_divs <- all_div_measures %>%
+  dplyr::select(norep_filter_name, mean, measure) %>%
+  tidyr::spread(measure, mean) %>%
+  tibble::remove_rownames() %>%
+  tibble::column_to_rownames(var = "norep_filter_name")
+
+
+# Scale to a mean = 0 and  SD = 1
+scale_all_divs <- scale(all_divs)
+
+# Sanity Check
+colMeans(scale_all_divs)  # faster version of apply(scaled.dat, 2, mean)
+apply(scale_all_divs, 2, sd)
+
+
+# Melt the data frame to be in long format
+gather_scale_all_divs <- as.data.frame(scale_all_divs) %>%   # Make scaled values a dataframe
+  tibble::rownames_to_column(var = "norep_filter_name") %>%   # Add the rownames to keep samplenames
+  gather(measure, mean, 2:7)                                  # Gather 7 columns and put values into 2
+  
+# Put it all together into one dataframe with 4 columns: sample_name, measure, mean, frac_bacprod 
+scale_all_divs_together <- inner_join(gather_scale_all_divs, prod_data, by = "norep_filter_name") %>%
+  mutate(measure = as.factor(measure))
+
+
+# Double check values from above models
+lm_by_all_divs <- lm(frac_bacprod ~ mean/measure, data = scale_all_divs_together)
+summary(lm_by_all_divs)
+
+# Run a post-hoc test
+library(multcomp)
+post_hoc_measure <- glht(lm_by_all_divs, linfct = mcp(measure = "Tukey", interaction_average=TRUE),
+                vcov=vcovHC(lm_by_all_divs, type = "HC0"))
+summary(post_hoc_measure)
+detach("package:multcomp", unload=TRUE) # This package masks the dplyr select function = :(
+
+
+summary(lm(frac_bacprod ~ mean * measure, data = scale_all_divs_together))
+
+wide_all_divs <- as.data.frame(all_divs) %>%   # Make scaled values a dataframe
+  tibble::rownames_to_column(var = "norep_filter_name") %>% 
+  inner_join(prod_data, by = "norep_filter_name") %>%
+  mutate(fraction = substr(norep_filter_name, 5,5),
+         fraction = ifelse(fraction == "J","WholePart","WholeFree")) # 6th letter = filter fraction (e.g. particle, whole, free)
+
+long_all_divs <- all_div_measures %>%
+    mutate(fraction = substr(norep_filter_name, 5,5),
+         fraction = ifelse(fraction == "J","WholePart","WholeFree")) # 6th letter = filter fraction (e.g. particle, whole, free)
+
+
+# Forward selection for particle fraction
+summary(lm(frac_bacprod ~ Richness + Inverse_Simpson  + Simpsons_Evenness , 
+           data = dplyr::filter(wide_all_divs, fraction == "WholePart") %>%
+                  dplyr::select(Richness,Inverse_Simpson, Simpsons_Evenness, frac_bacprod)))
+
+summary(lm(frac_bacprod ~ mean * measure, 
+           data = dplyr::filter(long_all_divs, fraction == "WholePart")))
+
+
+summary(lm(frac_bacprod ~ mean * measure, 
+           data = dplyr::filter(long_all_divs, fraction == "WholePart" & 
+                                  measure %in% c("Richness","Inverse_Simpson", "Simpsons_Evenness", "frac_bacprod"))))
+```
+
+
+
+# Ridge & Lasso
+```{r lasso-ridge, dependson = "multiple-regression", fig.width=8, fig.height=4}
+
+
+PA_wide_all_divs <- dplyr::filter(wide_all_divs, fraction == "WholePart") %>%
+  dplyr::select(-fraction) %>%
+  tibble::column_to_rownames(var = "norep_filter_name")
+
+PA_wide_all_divs_noprod <- PA_wide_all_divs %>%
+  dplyr::select(Inverse_Simpson, Richness, Shannon_Entropy, Unweighted_MPD, Weighted_MPD, frac_bacprod)
+
+library(glmnet)
+
+
+set.seed(777)
+
+# Set model parameters
+x = model.matrix(frac_bacprod ~ ., PA_wide_all_divs_noprod)[,-1]
+y = PA_wide_all_divs$frac_bacprod
+grid = 10^seq(10,-2,length = 100)
+
+# Pull out test and training sets for cross validation
+train <- sample(1:nrow(x), nrow(x)/2)
+test <- -train
+y_test <- y[test]
+
+
+# Run RIDGE regression with alpha = 0
+ridge_divs_train <- glmnet(x[train,], y[train], alpha = 0, lambda = grid, thresh = 1e-12,standardize = TRUE)
+par(mfrow = c(1,2))
+plot(ridge_divs_train)
+
+# Cross validation
+cv_ridge_divs <- cv.glmnet(x[train,], y[train], alpha = 0)
+plot(cv_ridge_divs)
+best_ridge_lambda <- cv_ridge_divs$lambda.min
+ridge_divs_pred <- predict(ridge_divs_train, s = best_ridge_lambda, newx = x[test,])
+mean((ridge_divs_pred - y_test)^2) # Test MSE
+
+
+# Run lasso regression with alpha = 1
+lasso_divs_train <- glmnet(x[train,], y[train], alpha = 1, lambda = grid, standardize = TRUE)
+par(mfrow = c(1,2))
+plot(lasso_divs_train)
+
+# Cross validation
+cv_lasso_divs <- cv.glmnet(x[train,], y[train], alpha = 1)
+plot(cv_lasso_divs)
+best_lasso_lambda <- cv_lasso_divs$lambda.min
+lasso_divs_pred <- predict(lasso_divs_train, s = best_lasso_lambda, newx = x[test,])
+mean((lasso_divs_pred - y_test)^2)
+
+
+## Run lasso on the entire dataset 
+lasso_divs <- glmnet(x, y, alpha = 1, lambda = grid, standardize = TRUE)
+par(mfrow = c(1,1))
+plot(lasso_divs)
+legend("bottomright")
+
+# What are the lasso coefficients?
+predict(lasso_divs, type = "coefficients", s = best_lasso_lambda)
+```
+
+
+The test MSE for ridge regression is `r mean((ridge_divs_pred - y_test)^2)` while the test MSE for lasso is `r mean((lasso_divs_pred - y_test)^2)`.  Therefore, it's best if we use lasso!
+
+
+Additionally, the lasso model uses Inverse Simpson as the **best and only** predictor of production!
+
+
+
 ## Congruency between fractions 
 ```{r frac-congruency, fig.width=4, fig.height=4, dependson="subset-diversity"}
 rich_df <- ML_otu_rich_stats %>%
@@ -2665,6 +2840,51 @@ ggplot(combined_rich_df, aes(x=WholePart, y=WholeFree)) +
   geom_point(size = 3.5) +
   geom_abline(intercept = 0, slope = 1)
 ```
+
+
+
+# Total Productivity 
+
+```{r total-prod}
+colnames(combined_rich_unweightedMPD)
+
+summary(lm(tot_bacprod ~ mean * mpd.obs.z, data = combined_rich_unweightedMPD))
+
+summary(lm(tot_bacprod ~ mean , data = combined_rich_unweightedMPD))
+
+
+
+totprod_fraction_rich <- ggplot(combined_rich_unweightedMPD, aes(y = tot_bacprod, x = mean, color = fraction)) +
+  geom_point(size = 3) +
+  geom_smooth(method = "lm") + theme(legend.position = c(0.85, 0.85)) +
+  scale_color_manual(values = fraction_colors)
+
+totprod_TOGET_rich <- ggplot(combined_rich_unweightedMPD, aes(y = tot_bacprod, x = mean)) +
+  geom_point(size = 3) +
+  geom_smooth(method = "lm") 
+
+plot_grid(totprod_TOGET_rich, totprod_fraction_rich, labels = c("A", "B"), ncol = 2)
+
+
+
+
+summary(lm(tot_bacprod ~ mpd.obs.z , data = combined_rich_unweightedMPD))
+summary(lm(tot_bacprod ~ mpd.obs.z , data = dplyr::filter(combined_rich_unweightedMPD, fraction == "WholePart")))
+summary(lm(tot_bacprod ~ mpd.obs.z , data = dplyr::filter(combined_rich_unweightedMPD, fraction == "WholeFree")))
+
+totprod_fraction_unweightMPD <- ggplot(combined_rich_unweightedMPD, aes(y = tot_bacprod, x = mpd.obs.z, color = fraction)) +
+  geom_point(size = 3) +
+  geom_smooth(method = "lm") + theme(legend.position = c(0.85, 0.85)) +
+  scale_color_manual(values = fraction_colors)
+
+totprod_TOGET_unweightMPD <- ggplot(combined_rich_unweightedMPD, aes(y = tot_bacprod, x = mpd.obs.z)) +
+  geom_point(size = 3) +
+  geom_smooth(method = "lm") 
+
+plot_grid(totprod_TOGET_unweightMPD, totprod_fraction_unweightMPD, labels = c("A", "B"), ncol = 2)
+
+```
+
 
 
 

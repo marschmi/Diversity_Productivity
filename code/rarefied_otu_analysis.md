@@ -5529,8 +5529,6 @@ fig4_yeslegend
 
 
 
-
-
 ## Residual Analysis 
 
 ```r
@@ -5648,6 +5646,435 @@ plot_grid(unweightedMPD_vs_fracprod_taxlab + ggtitle("") +
 
 <img src="Rarefied_Figures/old-fig4-1.png" style="display: block; margin: auto;" />
 
+
+
+
+# Multiple regression
+
+
+```r
+prod_data <- unweighted_sesMPD_taxalab %>%
+  dplyr::filter(year == "2015" & fraction %in% c("WholePart", "WholeFree")) %>%
+  dplyr::select(norep_filter_name,frac_bacprod, SD_frac_bacprod, fracprod_per_cell_noinf) 
+
+unweight_phylo_df <- unweighted_sesMPD_taxalab %>%
+  dplyr::filter(year == "2015" & fraction %in% c("WholePart", "WholeFree")) %>%
+  dplyr::select(norep_filter_name,frac_bacprod, SD_frac_bacprod, fracprod_per_cell_noinf, mpd.obs.z) %>%
+  mutate(measure = "Unweighted_MPD") %>%
+  dplyr::rename(mean = mpd.obs.z)
+
+weight_phylo_df <- WEIGHTED_sesMPD_taxalab %>%
+  dplyr::filter(year == "2015" & fraction %in% c("WholePart", "WholeFree")) %>%
+  dplyr::select(norep_filter_name,frac_bacprod, SD_frac_bacprod, fracprod_per_cell_noinf, mpd.obs.z) %>%
+  mutate(measure = "Weighted_MPD") %>%
+  dplyr::rename(mean = mpd.obs.z)
+
+
+rich_df <- ML_otu_rich_stats %>%
+  dplyr::select(norep_filter_name, frac_bacprod, SD_frac_bacprod, fracprod_per_cell_noinf, mean, measure) 
+
+shannon_df <- ML_otu_shannon_stats %>%
+  dplyr::select(norep_filter_name, frac_bacprod, SD_frac_bacprod, fracprod_per_cell_noinf, mean, measure) 
+
+invsimps_df <- ML_otu_invsimps_stats %>%
+  dplyr::select(norep_filter_name, frac_bacprod, SD_frac_bacprod, fracprod_per_cell_noinf, mean, measure) 
+
+simpseven_df <- ML_otu_simpseven_stats %>%
+  dplyr::select(norep_filter_name, frac_bacprod, SD_frac_bacprod, fracprod_per_cell_noinf, mean, measure)  
+
+
+all_div_measures <- rbind(unweight_phylo_df, weight_phylo_df, rich_df, shannon_df, invsimps_df, simpseven_df)
+
+
+all_divs <- all_div_measures %>%
+  dplyr::select(norep_filter_name, mean, measure) %>%
+  tidyr::spread(measure, mean) %>%
+  tibble::remove_rownames() %>%
+  tibble::column_to_rownames(var = "norep_filter_name")
+
+
+# Scale to a mean = 0 and  SD = 1
+scale_all_divs <- scale(all_divs)
+
+# Sanity Check
+colMeans(scale_all_divs)  # faster version of apply(scaled.dat, 2, mean)
+```
+
+```
+##   Inverse_Simpson          Richness   Shannon_Entropy Simpsons_Evenness    Unweighted_MPD      Weighted_MPD 
+##      4.365721e-17     -1.827242e-16     -3.921921e-16      1.590163e-16      4.394633e-17      0.000000e+00
+```
+
+```r
+apply(scale_all_divs, 2, sd)
+```
+
+```
+##   Inverse_Simpson          Richness   Shannon_Entropy Simpsons_Evenness    Unweighted_MPD      Weighted_MPD 
+##                 1                 1                 1                 1                 1                 1
+```
+
+```r
+# Melt the data frame to be in long format
+gather_scale_all_divs <- as.data.frame(scale_all_divs) %>%   # Make scaled values a dataframe
+  tibble::rownames_to_column(var = "norep_filter_name") %>%   # Add the rownames to keep samplenames
+  gather(measure, mean, 2:7)                                  # Gather 7 columns and put values into 2
+  
+# Put it all together into one dataframe with 4 columns: sample_name, measure, mean, frac_bacprod 
+scale_all_divs_together <- inner_join(gather_scale_all_divs, prod_data, by = "norep_filter_name") %>%
+  mutate(measure = as.factor(measure))
+
+
+# Double check values from above models
+lm_by_all_divs <- lm(frac_bacprod ~ mean/measure, data = scale_all_divs_together)
+summary(lm_by_all_divs)
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mean/measure, data = scale_all_divs_together)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -21.512 -10.074  -4.896   5.521  46.731 
+## 
+## Coefficients:
+##                               Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)                     17.008      1.224  13.893   <2e-16 ***
+## mean                             3.109      3.063   1.015   0.3119    
+## mean:measureRichness            -2.631      4.332  -0.607   0.5447    
+## mean:measureShannon_Entropy     -2.349      4.332  -0.542   0.5885    
+## mean:measureSimpsons_Evenness    2.562      4.332   0.591   0.5553    
+## mean:measureUnweighted_MPD      -8.252      4.332  -1.905   0.0589 .  
+## mean:measureWeighted_MPD        -8.901      4.332  -2.055   0.0418 *  
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 14.69 on 137 degrees of freedom
+## Multiple R-squared:  0.07393,	Adjusted R-squared:  0.03338 
+## F-statistic: 1.823 on 6 and 137 DF,  p-value: 0.09896
+```
+
+```r
+# Run a post-hoc test
+library(multcomp)
+post_hoc_measure <- glht(lm_by_all_divs, linfct = mcp(measure = "Tukey", interaction_average=TRUE),
+                vcov=vcovHC(lm_by_all_divs, type = "HC0"))
+summary(post_hoc_measure)
+```
+
+```
+## 
+## 	 Simultaneous Tests for General Linear Hypotheses
+## 
+## Multiple Comparisons of Means: Tukey Contrasts
+## 
+## 
+## Fit: lm(formula = frac_bacprod ~ mean/measure, data = scale_all_divs_together)
+## 
+## Linear Hypotheses:
+##                                          Estimate Std. Error t value Pr(>|t|)   
+## Richness - Inverse_Simpson == 0           -2.6307     2.6584  -0.990  0.91701   
+## Shannon_Entropy - Inverse_Simpson == 0    -2.3494     2.6039  -0.902  0.94275   
+## Simpsons_Evenness - Inverse_Simpson == 0   2.5617     2.1637   1.184  0.83773   
+## Unweighted_MPD - Inverse_Simpson == 0     -8.2520     3.3277  -2.480  0.13192   
+## Weighted_MPD - Inverse_Simpson == 0       -8.9013     3.1488  -2.827  0.05650 . 
+## Shannon_Entropy - Richness == 0            0.2813     2.8087   0.100  1.00000   
+## Simpsons_Evenness - Richness == 0          5.1925     2.4062   2.158  0.25558   
+## Unweighted_MPD - Richness == 0            -5.6213     3.4903  -1.611  0.58252   
+## Weighted_MPD - Richness == 0              -6.2705     3.3202  -1.889  0.40302   
+## Simpsons_Evenness - Shannon_Entropy == 0   4.9112     2.3459   2.094  0.28749   
+## Unweighted_MPD - Shannon_Entropy == 0     -5.9026     3.4490  -1.711  0.51577   
+## Weighted_MPD - Shannon_Entropy == 0       -6.5518     3.2767  -2.000  0.33796   
+## Unweighted_MPD - Simpsons_Evenness == 0  -10.8138     3.1299  -3.455  0.00887 **
+## Weighted_MPD - Simpsons_Evenness == 0    -11.4630     2.9390  -3.900  0.00192 **
+## Weighted_MPD - Unweighted_MPD == 0        -0.6492     3.8769  -0.167  0.99998   
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## (Adjusted p values reported -- single-step method)
+```
+
+```r
+detach("package:multcomp", unload=TRUE) # This package masks the dplyr select function = :(
+
+
+summary(lm(frac_bacprod ~ mean * measure, data = scale_all_divs_together))
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mean * measure, data = scale_all_divs_together)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -21.512 -10.074  -4.896   5.521  46.731 
+## 
+## Coefficients:
+##                                 Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)                    1.701e+01  3.055e+00   5.567 1.39e-07 ***
+## mean                           3.109e+00  3.121e+00   0.996   0.3209    
+## measureRichness                5.367e-15  4.320e+00   0.000   1.0000    
+## measureShannon_Entropy         4.519e-15  4.320e+00   0.000   1.0000    
+## measureSimpsons_Evenness       5.062e-15  4.320e+00   0.000   1.0000    
+## measureUnweighted_MPD          6.247e-15  4.320e+00   0.000   1.0000    
+## measureWeighted_MPD            6.005e-15  4.320e+00   0.000   1.0000    
+## mean:measureRichness          -2.631e+00  4.413e+00  -0.596   0.5521    
+## mean:measureShannon_Entropy   -2.349e+00  4.413e+00  -0.532   0.5954    
+## mean:measureSimpsons_Evenness  2.562e+00  4.413e+00   0.580   0.5626    
+## mean:measureUnweighted_MPD    -8.252e+00  4.413e+00  -1.870   0.0637 .  
+## mean:measureWeighted_MPD      -8.901e+00  4.413e+00  -2.017   0.0457 *  
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 14.97 on 132 degrees of freedom
+## Multiple R-squared:  0.07393,	Adjusted R-squared:  -0.003238 
+## F-statistic: 0.958 on 11 and 132 DF,  p-value: 0.4878
+```
+
+```r
+wide_all_divs <- as.data.frame(all_divs) %>%   # Make scaled values a dataframe
+  tibble::rownames_to_column(var = "norep_filter_name") %>% 
+  inner_join(prod_data, by = "norep_filter_name") %>%
+  mutate(fraction = substr(norep_filter_name, 5,5),
+         fraction = ifelse(fraction == "J","WholePart","WholeFree")) # 6th letter = filter fraction (e.g. particle, whole, free)
+
+long_all_divs <- all_div_measures %>%
+    mutate(fraction = substr(norep_filter_name, 5,5),
+         fraction = ifelse(fraction == "J","WholePart","WholeFree")) # 6th letter = filter fraction (e.g. particle, whole, free)
+
+
+# Forward selection for particle fraction
+summary(lm(frac_bacprod ~ Richness + Inverse_Simpson  + Simpsons_Evenness , 
+           data = dplyr::filter(wide_all_divs, fraction == "WholePart") %>%
+                  dplyr::select(Richness,Inverse_Simpson, Simpsons_Evenness, frac_bacprod)))
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ Richness + Inverse_Simpson + Simpsons_Evenness, 
+##     data = dplyr::filter(wide_all_divs, fraction == "WholePart") %>% 
+##         dplyr::select(Richness, Inverse_Simpson, Simpsons_Evenness, 
+##             frac_bacprod))
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -5.4820 -1.6437  0.7573  1.9855  5.2822 
+## 
+## Coefficients:
+##                     Estimate Std. Error t value Pr(>|t|)  
+## (Intercept)         34.40823   16.22938   2.120   0.0668 .
+## Richness            -0.08957    0.04244  -2.110   0.0678 .
+## Inverse_Simpson      1.15403    0.41747   2.764   0.0245 *
+## Simpsons_Evenness -359.27528  183.37467  -1.959   0.0858 .
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 4.063 on 8 degrees of freedom
+## Multiple R-squared:  0.8233,	Adjusted R-squared:  0.757 
+## F-statistic: 12.42 on 3 and 8 DF,  p-value: 0.002224
+```
+
+```r
+summary(lm(frac_bacprod ~ mean * measure, 
+           data = dplyr::filter(long_all_divs, fraction == "WholePart")))
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mean * measure, data = dplyr::filter(long_all_divs, 
+##     fraction == "WholePart"))
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -12.1297  -3.1456  -0.3271   2.0846  16.8990 
+## 
+## Coefficients:
+##                                Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)                    -0.11137    3.17359  -0.035 0.972123    
+## mean                            0.26844    0.07042   3.812 0.000328 ***
+## measureRichness                -8.90641    6.67989  -1.333 0.187468    
+## measureShannon_Entropy        -38.36568   14.79275  -2.594 0.011918 *  
+## measureSimpsons_Evenness       -4.94538    5.67387  -0.872 0.386897    
+## measureUnweighted_MPD          12.32215    3.71520   3.317 0.001550 ** 
+## measureWeighted_MPD            13.97038    4.16425   3.355 0.001381 ** 
+## mean:measureRichness           -0.22670    0.07149  -3.171 0.002395 ** 
+## mean:measureShannon_Entropy    10.36291    3.14854   3.291 0.001673 ** 
+## mean:measureSimpsons_Evenness 199.38802   58.00339   3.438 0.001072 ** 
+## mean:measureUnweighted_MPD     -3.92720    1.29939  -3.022 0.003685 ** 
+## mean:measureWeighted_MPD       -5.57832    2.78278  -2.005 0.049527 *  
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 6.092 on 60 degrees of freedom
+## Multiple R-squared:  0.5034,	Adjusted R-squared:  0.4124 
+## F-statistic:  5.53 on 11 and 60 DF,  p-value: 5.021e-06
+```
+
+```r
+summary(lm(frac_bacprod ~ mean * measure, 
+           data = dplyr::filter(long_all_divs, fraction == "WholePart" & 
+                                  measure %in% c("Richness","Inverse_Simpson", "Simpsons_Evenness", "frac_bacprod"))))
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mean * measure, data = dplyr::filter(long_all_divs, 
+##     fraction == "WholePart" & measure %in% c("Richness", "Inverse_Simpson", 
+##         "Simpsons_Evenness", "frac_bacprod")))
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -10.3734  -2.2995  -0.3909   1.7203  11.3728 
+## 
+## Coefficients:
+##                                Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)                    -0.11137    2.75379  -0.040 0.968009    
+## mean                            0.26844    0.06111   4.393 0.000128 ***
+## measureRichness                -8.90641    5.79628  -1.537 0.134879    
+## measureSimpsons_Evenness       -4.94538    4.92333  -1.004 0.323182    
+## mean:measureRichness           -0.22670    0.06204  -3.654 0.000978 ***
+## mean:measureSimpsons_Evenness 199.38802   50.33078   3.962 0.000424 ***
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 5.286 on 30 degrees of freedom
+## Multiple R-squared:  0.6261,	Adjusted R-squared:  0.5638 
+## F-statistic: 10.05 on 5 and 30 DF,  p-value: 1.006e-05
+```
+
+
+
+# Ridge & Lasso
+
+```r
+PA_wide_all_divs <- dplyr::filter(wide_all_divs, fraction == "WholePart") %>%
+  dplyr::select(-fraction) %>%
+  tibble::column_to_rownames(var = "norep_filter_name")
+
+PA_wide_all_divs_noprod <- PA_wide_all_divs %>%
+  dplyr::select(Inverse_Simpson, Richness, Shannon_Entropy, Unweighted_MPD, Weighted_MPD, frac_bacprod)
+
+library(glmnet)
+
+
+set.seed(777)
+
+# Set model parameters
+x = model.matrix(frac_bacprod ~ ., PA_wide_all_divs_noprod)[,-1]
+y = PA_wide_all_divs$frac_bacprod
+grid = 10^seq(10,-2,length = 100)
+
+# Pull out test and training sets for cross validation
+train <- sample(1:nrow(x), nrow(x)/2)
+test <- -train
+y_test <- y[test]
+
+
+# Run RIDGE regression with alpha = 0
+ridge_divs_train <- glmnet(x[train,], y[train], alpha = 0, lambda = grid, thresh = 1e-12,standardize = TRUE)
+par(mfrow = c(1,2))
+plot(ridge_divs_train)
+
+# Cross validation
+cv_ridge_divs <- cv.glmnet(x[train,], y[train], alpha = 0)
+```
+
+```
+## Warning: Option grouped=FALSE enforced in cv.glmnet, since < 3 observations per fold
+```
+
+```r
+plot(cv_ridge_divs)
+```
+
+<img src="Rarefied_Figures/lasso-ridge-1.png" style="display: block; margin: auto;" />
+
+```r
+best_ridge_lambda <- cv_ridge_divs$lambda.min
+ridge_divs_pred <- predict(ridge_divs_train, s = best_ridge_lambda, newx = x[test,])
+mean((ridge_divs_pred - y_test)^2) # Test MSE
+```
+
+```
+## [1] 55.57164
+```
+
+```r
+# Run lasso regression with alpha = 1
+lasso_divs_train <- glmnet(x[train,], y[train], alpha = 1, lambda = grid, standardize = TRUE)
+par(mfrow = c(1,2))
+plot(lasso_divs_train)
+
+# Cross validation
+cv_lasso_divs <- cv.glmnet(x[train,], y[train], alpha = 1)
+```
+
+```
+## Warning: Option grouped=FALSE enforced in cv.glmnet, since < 3 observations per fold
+```
+
+```r
+plot(cv_lasso_divs)
+```
+
+<img src="Rarefied_Figures/lasso-ridge-2.png" style="display: block; margin: auto;" />
+
+```r
+best_lasso_lambda <- cv_lasso_divs$lambda.min
+lasso_divs_pred <- predict(lasso_divs_train, s = best_lasso_lambda, newx = x[test,])
+mean((lasso_divs_pred - y_test)^2)
+```
+
+```
+## [1] 51.09776
+```
+
+```r
+## Run lasso on the entire dataset 
+lasso_divs <- glmnet(x, y, alpha = 1, lambda = grid, standardize = TRUE)
+par(mfrow = c(1,1))
+plot(lasso_divs)
+```
+
+<img src="Rarefied_Figures/lasso-ridge-3.png" style="display: block; margin: auto;" />
+
+```r
+legend("bottomright")
+```
+
+```
+## Error in as.graphicsAnnot(legend): argument "legend" is missing, with no default
+```
+
+```r
+# What are the lasso coefficients?
+predict(lasso_divs, type = "coefficients", s = best_lasso_lambda)
+```
+
+```
+## 6 x 1 sparse Matrix of class "dgCMatrix"
+##                         1
+## (Intercept)     2.5761748
+## Inverse_Simpson 0.1967917
+## Richness        .        
+## Shannon_Entropy .        
+## Unweighted_MPD  .        
+## Weighted_MPD    .
+```
+
+
+The test MSE for ridge regression is 55.5716399 while the test MSE for lasso is 51.0977564.  Therefore, it's best if we use lasso!
+
+
+Additionally, the lasso model uses Inverse Simpson as the **best and only** predictor of production!
+
+
+
 ## Congruency between fractions 
 
 ```r
@@ -5697,6 +6124,187 @@ ggplot(combined_rich_df, aes(x=WholePart, y=WholeFree)) +
 ```
 
 <img src="Rarefied_Figures/frac-congruency-1.png" style="display: block; margin: auto;" />
+
+
+
+# Total Productivity 
+
+
+```r
+colnames(combined_rich_unweightedMPD)
+```
+
+```
+##  [1] "norep_filter_name"        "mean"                     "sd"                       "measure"                  "ntaxa"                    "mpd.obs"                  "mpd.rand.mean"            "mpd.rand.sd"              "mpd.obs.rank"            
+## [10] "mpd.obs.z"                "mpd.obs.p"                "runs"                     "lakesite"                 "limnion"                  "fraction"                 "year"                     "project"                  "season"                  
+## [19] "norep_water_name"         "Date"                     "Sample_depth_m"           "Temp_C"                   "SpCond_uSpercm"           "TDS_mgperL"               "pH"                       "ORP_mV"                   "Chl_Lab_ugperL"          
+## [28] "BGA_cellspermL"           "Cl_mgperL"                "SO4_mgperL"               "NO3_mgperL"               "NH3_mgperL"               "TKN_mgperL"               "SRP_ugperL"               "TP_ugperL"                "Alk_mgperL"              
+## [37] "DO_mgperL"                "DO_percent"               "Turb_NTU"                 "station"                  "total_bac_abund"          "SE_total_bac_abund"       "attached_bac"             "SE_attached_bac"          "perc_attached_abund"     
+## [46] "SE_perc_attached_abund"   "tot_bacprod"              "SD_tot_bacprod"           "frac_bacprod"             "SD_frac_bacprod"          "perc_attached_bacprod"    "SD_perc_attached_bacprod" "Sample"                   "raw_counts"              
+## [55] "HNA_counts"               "LNA_counts"               "volume_uL"                "dilution"                 "counts.sd"                "HNA.sd"                   "LNA.sd"                   "volume.sd"                "Platform"                
+## [64] "Sample_16S"               "cells_per_uL"             "HNA_per_uL"               "HNA_percent"              "LNA_per_uL"               "LNA_percent"              "Nuc_acid_ratio"           "D2_sd"                    "dnaconcrep1"             
+## [73] "dnaconcrep2"              "fraction_bac_abund"       "Sample_TotalSeqs"         "fracprod_per_cell"        "fracprod_per_cell_noinf"  "pval"
+```
+
+```r
+summary(lm(tot_bacprod ~ mean * mpd.obs.z, data = combined_rich_unweightedMPD))
+```
+
+```
+## 
+## Call:
+## lm(formula = tot_bacprod ~ mean * mpd.obs.z, data = combined_rich_unweightedMPD)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -22.451 -11.914  -3.436  12.512  48.674 
+## 
+## Coefficients:
+##                 Estimate Std. Error t value Pr(>|t|)  
+## (Intercept)    39.726447  17.264136   2.301   0.0323 *
+## mean            0.002532   0.035915   0.071   0.9445  
+## mpd.obs.z       1.758659  12.143545   0.145   0.8863  
+## mean:mpd.obs.z -0.038317   0.030491  -1.257   0.2234  
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 18.84 on 20 degrees of freedom
+## Multiple R-squared:  0.4346,	Adjusted R-squared:  0.3498 
+## F-statistic: 5.125 on 3 and 20 DF,  p-value: 0.008597
+```
+
+```r
+summary(lm(tot_bacprod ~ mean , data = combined_rich_unweightedMPD))
+```
+
+```
+## 
+## Call:
+## lm(formula = tot_bacprod ~ mean, data = combined_rich_unweightedMPD)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -30.687 -12.631  -3.510   8.323  58.218 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)  
+## (Intercept)  9.39167   12.20599   0.769   0.4498  
+## mean         0.06542    0.03089   2.118   0.0457 *
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 21.77 on 22 degrees of freedom
+## Multiple R-squared:  0.1693,	Adjusted R-squared:  0.1316 
+## F-statistic: 4.485 on 1 and 22 DF,  p-value: 0.04573
+```
+
+```r
+totprod_fraction_rich <- ggplot(combined_rich_unweightedMPD, aes(y = tot_bacprod, x = mean, color = fraction)) +
+  geom_point(size = 3) +
+  geom_smooth(method = "lm") + theme(legend.position = c(0.85, 0.85)) +
+  scale_color_manual(values = fraction_colors)
+
+totprod_TOGET_rich <- ggplot(combined_rich_unweightedMPD, aes(y = tot_bacprod, x = mean)) +
+  geom_point(size = 3) +
+  geom_smooth(method = "lm") 
+
+plot_grid(totprod_TOGET_rich, totprod_fraction_rich, labels = c("A", "B"), ncol = 2)
+```
+
+<img src="Rarefied_Figures/total-prod-1.png" style="display: block; margin: auto;" />
+
+```r
+summary(lm(tot_bacprod ~ mpd.obs.z , data = combined_rich_unweightedMPD))
+```
+
+```
+## 
+## Call:
+## lm(formula = tot_bacprod ~ mpd.obs.z, data = combined_rich_unweightedMPD)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -24.754 -12.412  -3.220   9.423  45.032 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)   44.904      4.879   9.203 5.35e-09 ***
+## mpd.obs.z    -12.347      3.292  -3.750  0.00111 ** 
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 18.66 on 22 degrees of freedom
+## Multiple R-squared:   0.39,	Adjusted R-squared:  0.3622 
+## F-statistic: 14.06 on 1 and 22 DF,  p-value: 0.001107
+```
+
+```r
+summary(lm(tot_bacprod ~ mpd.obs.z , data = dplyr::filter(combined_rich_unweightedMPD, fraction == "WholePart")))
+```
+
+```
+## 
+## Call:
+## lm(formula = tot_bacprod ~ mpd.obs.z, data = dplyr::filter(combined_rich_unweightedMPD, 
+##     fraction == "WholePart"))
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -18.894 -14.307  -5.489  10.635  38.431 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)   40.186      6.058   6.633 5.83e-05 ***
+## mpd.obs.z    -10.915      4.069  -2.682    0.023 *  
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 19.11 on 10 degrees of freedom
+## Multiple R-squared:  0.4184,	Adjusted R-squared:  0.3603 
+## F-statistic: 7.195 on 1 and 10 DF,  p-value: 0.023
+```
+
+```r
+summary(lm(tot_bacprod ~ mpd.obs.z , data = dplyr::filter(combined_rich_unweightedMPD, fraction == "WholeFree")))
+```
+
+```
+## 
+## Call:
+## lm(formula = tot_bacprod ~ mpd.obs.z, data = dplyr::filter(combined_rich_unweightedMPD, 
+##     fraction == "WholeFree"))
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -31.908  -8.763  -3.789   6.117  28.913 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)   58.343      9.393   6.212 9.99e-05 ***
+## mpd.obs.z    -20.108      6.366  -3.158   0.0102 *  
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 17.73 on 10 degrees of freedom
+## Multiple R-squared:  0.4994,	Adjusted R-squared:  0.4493 
+## F-statistic: 9.976 on 1 and 10 DF,  p-value: 0.01019
+```
+
+```r
+totprod_fraction_unweightMPD <- ggplot(combined_rich_unweightedMPD, aes(y = tot_bacprod, x = mpd.obs.z, color = fraction)) +
+  geom_point(size = 3) +
+  geom_smooth(method = "lm") + theme(legend.position = c(0.85, 0.85)) +
+  scale_color_manual(values = fraction_colors)
+
+totprod_TOGET_unweightMPD <- ggplot(combined_rich_unweightedMPD, aes(y = tot_bacprod, x = mpd.obs.z)) +
+  geom_point(size = 3) +
+  geom_smooth(method = "lm") 
+
+plot_grid(totprod_TOGET_unweightMPD, totprod_fraction_unweightMPD, labels = c("A", "B"), ncol = 2)
+```
+
+<img src="Rarefied_Figures/total-prod-2.png" style="display: block; margin: auto;" />
+
 
 
 
