@@ -2648,7 +2648,7 @@ plot_grid(unweightedMPD_vs_fracprod_taxlab + ggtitle("") +
 
 
 
-## Independent Swap
+# Independent Swap
 ```{r load-indepswap,  fig.width= 14, fig.height = 7, dependson = "faiths-pd"}
 ### UNWEIGHTED
 unweighted_sesMPD_indepswap <- read.csv("PrunedTree/mpd_mntd/unweighted_sesMPD_indepswap.csv", header = TRUE) %>%
@@ -2701,61 +2701,6 @@ plot_grid(p1, p2,
           ncol = 2, nrow = 1)
 ```
 
-```{r indepswap-vs-fracprod, fig.width= 10, fig.height = 10}
-##########  MPD ANALYSIS 
-lmFL_unweightedMPD_indepswap <- lm(frac_bacprod ~ mpd.obs.z, 
-                                      data = filter(unweighted_sesMPD_indepswap, fraction == "WholeFree"))
-lmPA_unweightedMPD_indepswap <- lm(frac_bacprod ~ mpd.obs.z, 
-                                      data = filter(unweighted_sesMPD_indepswap, fraction == "WholePart"))
-
-unweightedMPD_vs_fracprod_indepswap <- ggplot(filter(unweighted_sesMPD_indepswap, fraction %in% c("WholePart", "WholeFree")), 
-       aes(x = mpd.obs.z, y = frac_bacprod, color = fraction)) + 
-  geom_point(size = 3) +
-  xlab("Unweighted Mean Pairwise Distance \n (ses.mpd)") + 
-  ylab("Heterotrophic Production \n(μgC/L/hr)") +
-  ggtitle("Unweighted MPD: Independent Swap") + 
-  scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
-  geom_smooth(method = "lm") +
-  scale_x_continuous(limits = c(-1.5,1.5)) + 
-  theme(legend.position = c(0.2, 0.87), legend.title = element_blank()) +
-    annotate("text", x = -0, y=-2, 
-           color = "firebrick3", fontface = "bold",
-           label = paste("R2 =", round(summary(lmPA_unweightedMPD_indepswap)$adj.r.squared, digits = 4), "\n", 
-                         "p =", round(unname(summary(lmPA_unweightedMPD_indepswap)$coefficients[,4][2]), digits = 4))) +
-  annotate("text", x = 0.7, y=60, 
-         color = "cornflowerblue", fontface = "bold",
-         label = paste("R2 =", round(summary(lmFL_unweightedMPD_indepswap)$adj.r.squared, digits = 4), "\n", 
-                       "p =", round(unname(summary(lmFL_unweightedMPD_indepswap)$coefficients[,4][2]), digits = 4))) 
-
-
-####### WEIGHTED MPD ANALYSIS
-lmFL_weightedMPD_indepswap <- lm(frac_bacprod ~ mpd.obs.z, 
-                                      data = filter(WEIGHTED_sesMPD_indepswap, fraction == "WholeFree"))
-lmPA_weightedMPD_indepswap <- lm(frac_bacprod ~ mpd.obs.z, 
-                                      data = filter(WEIGHTED_sesMPD_indepswap, fraction == "WholePart"))
-
-weightedMPD_vs_fracprod_indepswap <- ggplot(filter(WEIGHTED_sesMPD_indepswap, fraction %in% c("WholePart", "WholeFree")), 
-       aes(x = mpd.obs.z, y = frac_bacprod, color = fraction)) + 
-  geom_point(size = 3) +
-  xlab("Weighted Mean Pairwise Distance  \n (ses.mpd)") + 
-  ylab("Heterotrophic Production \n(μgC/L/hr)") +
-  ggtitle("Weighted MPD: Independent Swap") + 
-  scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
-  theme(legend.position = c(0.2, 0.87), legend.title = element_blank()) +
-  scale_x_continuous(limits = c(-1.15,1.15)) + 
-  annotate("text", x = 1, y=25, 
-           color = "firebrick3", fontface = "bold",
-           label = paste("R2 =", round(summary(lmPA_weightedMPD_indepswap)$adj.r.squared, digits = 4), "\n", 
-                         "p =", round(unname(summary(lmPA_weightedMPD_indepswap)$coefficients[,4][2]), digits = 4))) +
-  annotate("text", x = 0, y=45, 
-         color = "cornflowerblue", fontface = "bold",
-         label = paste("R2 =", round(summary(lmFL_weightedMPD_indepswap)$adj.r.squared, digits = 4), "\n", 
-                       "p =", round(unname(summary(lmFL_weightedMPD_indepswap)$coefficients[,4][2]), digits = 4))) 
-
-# Plot it altogether 
-plot_grid(unweightedMPD_vs_fracprod_indepswap, weightedMPD_vs_fracprod_indepswap,
-          labels = c("A", "B"), ncol = 2, nrow = 1)
-```
 
 ```{r indepswap-comparison, fig.width= 12, fig.height = 5}
 unweight_MPD_wilcox <- wilcox.test(mpd.obs.z ~ fraction, 
@@ -2830,7 +2775,7 @@ plot_grid(indepswap_unweight_mpd +
 
 ## Indepswap vs richness/invsimps
 
-```{r indepswapdiv-vs-diversity, fig.width = 8, fig.height = 4, dependson = c("subset-diversity","load-data","vean-otu-alphadiv-calc", "load-indepswap")}
+```{r indepswapdiv-vs-diversity, fig.width = 8, fig.height = 6.5, dependson = c("subset-diversity","load-data","vean-otu-alphadiv-calc", "load-indepswap")}
 ### Richness DF
 combined_rich_unweightedMPD_indepswap <- ML_otu_rich_stats %>%
   dplyr::select(norep_filter_name, mean, sd, measure) %>%
@@ -2838,7 +2783,9 @@ combined_rich_unweightedMPD_indepswap <- ML_otu_rich_stats %>%
 
 summary(lm(mean ~ mpd.obs.z, data = dplyr::filter(combined_rich_unweightedMPD_indepswap, fraction == "WholePart")))
 summary(lm(mean ~ mpd.obs.z, data = dplyr::filter(combined_rich_unweightedMPD_indepswap, fraction == "WholeFree")))
-summary(lm(mean ~ mpd.obs.z, data = combined_rich_unweightedMPD_indepswap))
+lmALL_unweightMPD_vs_rich_indepswap <- lm(mean ~ mpd.obs.z, data = dplyr::filter(combined_rich_unweightedMPD_indepswap,
+                                                  fraction %in% c("WholePart", "WholeFree")))
+summary(lmALL_unweightMPD_vs_rich_indepswap)
 
 # Test for the interaction between fraction and phylo div
 lm_divs_test_interaction <- lm(mean ~ mpd.obs.z * fraction, data = combined_rich_unweightedMPD_indepswap)
@@ -2860,9 +2807,9 @@ divs_p1_indepswap <- ggplot(combined_rich_unweightedMPD_indepswap, aes(y = mean,
         legend.title = element_blank()) +
   annotate("text", x = -0.8, y=200, 
          color = "black", fontface = "bold",
-         label = paste("R2 =", round(summary(lm(mean ~ mpd.obs.z, data = combined_rich_unweightedMPD_indepswap))$adj.r.squared, 
+         label = paste("R2 =", round(summary(lmALL_unweightMPD_vs_rich_indepswap)$adj.r.squared, 
                                      digits = 2), "\n", 
-                       "p =", round(unname(summary(lm(mean ~ mpd.obs.z, data = combined_rich_unweightedMPD_indepswap))$coefficients[,4][2]), 
+                       "p =", round(unname(summary(lmALL_unweightMPD_vs_rich_indepswap)$coefficients[,4][2]), 
                                     digits = 4))) 
 
 # Plot both of the models 
@@ -2886,7 +2833,14 @@ divs_p2_indepswap <- ggplot(combined_rich_unweightedMPD_indepswap, aes(y = mean,
          label = paste("R2 =", round(summary(lm_free_divs_rich_vs_unweight)$adj.r.squared, 
                                      digits = 2), "\n", 
                        "p =", round(unname(summary(lm_free_divs_rich_vs_unweight)$coefficients[,4][2]), 
-                                    digits = 3))) 
+                                    digits = 3))) +
+    annotate("text", 0.75, y=600,
+         color = "black", fontface = "bold",
+         label = paste("Combined:\nR2 =", round(summary(lmALL_unweightMPD_vs_rich_indepswap)$adj.r.squared, 
+                                     digits = 2), "\n", 
+                       "p =", round(unname(summary(lmALL_unweightMPD_vs_rich_indepswap)$coefficients[,4][2]), 
+                                    digits = 4)))
+  
 
 
 ### INVERSE SIMPS
@@ -2919,7 +2873,7 @@ evendivs_p2_indepswap <- ggplot(combined_invsimps_weightedMPD_indepswap, aes(y =
   xlab("Weighted MPD") + ylab("Inverse Simpson") +
   theme(legend.position = c(0.85, 0.85),
         legend.title = element_blank()) +
-  annotate("text", x = -3, y=70, 
+  annotate("text", x = 0.5, y=70, 
      color = "cornflowerblue", fontface = "bold",
      label = paste("R2 =", round(summary(lm(mean ~ mpd.obs.z, 
                                             data = dplyr::filter(combined_invsimps_weightedMPD_indepswap, fraction == "WholeFree")))$adj.r.squared, 
@@ -2927,7 +2881,7 @@ evendivs_p2_indepswap <- ggplot(combined_invsimps_weightedMPD_indepswap, aes(y =
                    "p =", round(unname(summary(lm(mean ~ mpd.obs.z, 
                                                   data = dplyr::filter(combined_invsimps_weightedMPD_indepswap, fraction == "WholeFree")))$coefficients[,4][2]), 
                                 digits = 4))) +
-    annotate("text", x = 2.6, y=48, 
+    annotate("text", x = 0.5, y=48, 
      color = "firebrick3", fontface = "bold",
      label = paste("R2 =", round(summary(lm(mean ~ mpd.obs.z, 
                                             data = dplyr::filter(combined_invsimps_weightedMPD_indepswap, fraction == "WholePart")))$adj.r.squared, 
@@ -2942,7 +2896,237 @@ plot_grid(divs_p1_indepswap, divs_p2_indepswap, evendivs_p1_indepswap, evendivs_
 ```
 
 
+# Fig 3: Indepswap
+```{r indepswap-fig-3, fig.width = 8, fig.height = 5.5, dependson = c("subset-diversity","load-data","vean-otu-alphadiv-calc", "load-indepswap", "indepswapdiv-vs-diversity")}
 
+# Shared legends: https://cran.r-project.org/web/packages/cowplot/vignettes/shared_legends.html
+indepswap_legend_fig3 <- get_legend(indepswap_unweight_mpd + theme(legend.position="top", legend.title = element_blank()))
+
+
+indepswap_MPD_boxplots_nolegend <- plot_grid(
+          # Plot 1: Unweighted MPD 
+          indepswap_unweight_mpd + xlab("Fraction \n") + coord_flip() + 
+            annotate("text", x=1.55, y=(max(mpd_nums1$b)+0.1), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("NS")) +
+            theme(axis.text.y = element_blank(), 
+                  plot.margin = unit(c(5,2,0,5), "pt")),  #top, right, bottom, and left
+          # Plot 2: Weighted MPD 
+           indepswap_weight_mpd + xlab("Fraction \n") + coord_flip() + 
+            annotate("text", x=1.55, y=(max(mpd_nums2$b)+0.1), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("NS")) + 
+            theme(axis.text.y = element_blank(), 
+                  plot.margin = unit(c(5,2,0,5), "pt")),
+          ncol = 2, nrow = 1, labels = c("A", "B"))
+
+
+
+indepwap_MPD_boxplots_yeslegend <- plot_grid(indepswap_legend_fig3,             # Draw the legend first 
+                                    indepswap_MPD_boxplots_nolegend,   # Draw the plots second
+                                    ncol = 1, rel_heights = c(0.1, 1))
+
+# PLOT
+indepswap_div_vs_div_plots <- 
+  plot_grid(divs_p2_indepswap + theme(legend.position = "none", plot.margin = unit(c(0,2,0,0), "pt")) +
+            xlab("Standardized Effect Size\n Unweighted Mean Pairwise Dist"), # Richness vs UNweighted MPD
+          evendivs_p2_indepswap + theme(legend.position = "none", plot.margin = unit(c(0,2,0,0), "pt")) +
+             xlab("Standardized Effect Size\n Weighted Mean Pairwise Dist"), # Inverse Simpson vs Weighted MPD 
+          nrow = 1, ncol = 2,
+          labels = c("C", "D"))
+
+
+
+indepswap_final_fig3 <- plot_grid(indepswap_MPD_boxplots_nolegend, 
+                        indepswap_div_vs_div_plots, ncol = 1,
+                        rel_heights = c(1.2, 2))
+
+indepswap_final_fig3
+
+
+
+
+
+
+#### REMOVE X AXIS FOR TOP FIGURE 
+MPD_boxplots_nolegend_noX_indepswap <- plot_grid(
+          # Plot 1: Unweighted MPD INDEPSWAP
+          indepswap_unweight_mpd + xlab("Fraction \n") + coord_flip() + 
+            annotate("text", x=1.55, y=(max(mpd_nums1$b)+0.1), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("NS")) +
+            theme(axis.text.y = element_blank(), 
+                  plot.margin = unit(c(5,2,10,3), "pt"),  #top, right, bottom, and left
+                  axis.title.x=element_blank(), axis.line.x = element_blank(), 
+                  axis.text.x=element_blank(), axis.ticks.x=element_blank()), 
+          # Plot 2: Weighted MPD INDEPSWAP
+           indepswap_weight_mpd + xlab("Fraction \n") + coord_flip() + 
+            annotate("text", x=1.55, y=(max(mpd_nums2$b)+0.1), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("NS")) + 
+            theme(axis.text.y = element_blank(), 
+                  plot.margin = unit(c(5,7,10,10), "pt"),  #top, right, bottom, and left
+                  axis.title.x=element_blank(), axis.line.x = element_blank(), 
+                  axis.text.x=element_blank(), axis.ticks.x=element_blank()), 
+          ncol = 2, nrow = 1, labels = c("A", "B"))
+
+
+MPD_boxplots_yeslegend_noX_indepswap <- plot_grid(legend_fig3,             # Draw the legend first 
+                                    MPD_boxplots_nolegend_noX_indepswap,   # Draw the plots second
+                                    ncol = 1, rel_heights = c(0.1, 1))
+
+
+final_fig3_noX_indepswap <- plot_grid(MPD_boxplots_yeslegend_noX_indepswap, 
+                        indepswap_div_vs_div_plots, ncol = 1,
+                        rel_heights = c(1.2, 2))
+
+final_fig3_noX_indepswap
+
+
+```
+
+
+
+
+## Indepswap vs Productivity
+
+```{r indepswap-fig-4, fig.width = 8, fig.height = 6.5, dependson="load-indepswap"}
+##########  MPD ANALYSIS 
+lmFL_unweightedMPD_indepswap <- lm(frac_bacprod ~ mpd.obs.z, 
+                                      data = filter(unweighted_sesMPD_indepswap, fraction == "WholeFree"))
+lmPA_unweightedMPD_indepswap <- lm(frac_bacprod ~ mpd.obs.z, 
+                                      data = filter(unweighted_sesMPD_indepswap, fraction == "WholePart"))
+
+lmALL_unweightedMPD_indepswap <- lm(frac_bacprod ~ mpd.obs.z, 
+                                      data = filter(unweighted_sesMPD_indepswap, fraction %in% c("WholePart", "WholeFree")))
+summary(lmALL_unweightedMPD_indepswap)
+
+
+
+unweightedMPD_vs_fracprod_indepswap <- 
+  ggplot(filter(unweighted_sesMPD_indepswap, fraction %in% c("WholePart", "WholeFree")), 
+       aes(x = mpd.obs.z, y = frac_bacprod, color = fraction)) + 
+  geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) +
+  geom_point(size = 3) +
+  xlab("Standardized Effect Size \nUnweighted Mean Pairwise Dist") + 
+  ylab("Heterotrophic Production \n(μgC/L/hr)") +
+  scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
+  geom_smooth(method = "lm") +
+  scale_x_continuous(limits = c(-1.5,1.5)) + 
+  theme(legend.position = "none", legend.title = element_blank()) +
+    annotate("text", x = -1, y=-2, 
+           color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(lmPA_unweightedMPD_indepswap)$adj.r.squared, digits = 2), "\n", 
+                         "p =", round(unname(summary(lmPA_unweightedMPD_indepswap)$coefficients[,4][2]), digits = 3))) +
+  annotate("text", x = -1, y=50, 
+         color = "cornflowerblue", fontface = "bold",
+         label = paste("R2 =", round(summary(lmFL_unweightedMPD_indepswap)$adj.r.squared, digits = 2), "\n", 
+                       "p =", round(unname(summary(lmFL_unweightedMPD_indepswap)$coefficients[,4][2]), digits = 3))) 
+
+
+### PER CELL
+##########  MPD ANALYSIS 
+lmFL_unweightedMPD_indepswap_PERCELL <- lm(log10(fracprod_per_cell_noinf) ~ mpd.obs.z, 
+                                      data = filter(unweighted_sesMPD_indepswap, fraction == "WholeFree"))
+lmPA_unweightedMPD_indepswap_PERCELL <- lm(log10(fracprod_per_cell_noinf) ~ mpd.obs.z, 
+                                      data = filter(unweighted_sesMPD_indepswap, fraction == "WholePart"))
+lmALL_unweightedMPD_indepswap_PERCELL <- lm(log10(fracprod_per_cell_noinf) ~ mpd.obs.z, 
+                                            data = dplyr::filter(unweighted_sesMPD_indepswap, fraction %in% c("WholePart", "WholeFree")))
+
+unweightedMPD_vs_fracprod_indepswap_PERCELL <- 
+  ggplot(filter(unweighted_sesMPD_indepswap, fraction %in% c("WholePart", "WholeFree")), 
+       aes(x = mpd.obs.z, y = log10(fracprod_per_cell_noinf), color = fraction)) + 
+  geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) +
+  geom_point(size = 3) +
+  scale_x_continuous(limits = c(-1.5,1.5)) + 
+  scale_y_continuous(limits = c(-8.25, -5.4), breaks = c(-8, -7,  -6)) +
+  xlab("Standardized Effect Size \nUnweighted Mean Pairwise Dist") + 
+  ylab("log10(Production/Cell)\n (μgC/cell/hr)") + 
+  scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
+  geom_smooth(method = "lm") +
+  theme(legend.position = "none", legend.title = element_blank()) +
+  annotate("text", x = -1, y=-7.1, 
+           color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(lmPA_unweightedMPD_indepswap_PERCELL)$adj.r.squared, digits = 2), "\n", 
+                         "p =", round(unname(summary(lmPA_unweightedMPD_indepswap_PERCELL)$coefficients[,4][2]), digits = 3))) +
+  annotate("text", x = -1, y=-7.75, 
+         color = "cornflowerblue", fontface = "bold",
+         label = paste("R2 =", round(summary(percell_lmFL_unweightedMPD_taxalab)$adj.r.squared, digits = 2), "\n", 
+                       "p =", round(unname(summary(percell_lmFL_unweightedMPD_taxalab)$coefficients[,4][2]), digits = 3))) +
+    annotate("text", x = 1, y=-6, 
+         color = "black", fontface = "bold",
+         label = paste("Combined:\n", " R2 =", round(summary(lmALL_unweightedMPD_indepswap_PERCELL)$adj.r.squared, digits = 2), "\n", 
+                       "p =", round(unname(summary(lmALL_unweightedMPD_indepswap_PERCELL)$coefficients[,4][2]), digits = 4)))
+
+
+
+
+####### WEIGHTED MPD ANALYSIS
+lmFL_weightedMPD_indepswap <- lm(frac_bacprod ~ mpd.obs.z, 
+                                      data = filter(WEIGHTED_sesMPD_indepswap, fraction == "WholeFree"))
+lmPA_weightedMPD_indepswap <- lm(frac_bacprod ~ mpd.obs.z, 
+                                      data = filter(WEIGHTED_sesMPD_indepswap, fraction == "WholePart"))
+
+weightedMPD_vs_fracprod_indepswap <- ggplot(filter(WEIGHTED_sesMPD_indepswap, fraction %in% c("WholePart", "WholeFree")), 
+       aes(x = mpd.obs.z, y = frac_bacprod, color = fraction)) + 
+  geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) +
+  geom_point(size = 3) +
+  xlab("Standardized Effect Size \nWeighted Mean Pairwise Dist") + 
+  ylab("Heterotrophic Production \n(μgC/L/hr)") +
+  scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
+  theme(legend.position = "none", legend.title = element_blank()) +
+  scale_x_continuous(limits = c(-1.15,1.15)) + 
+  annotate("text", x = 0.75, y=25, 
+           color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(lmPA_weightedMPD_indepswap)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lmPA_weightedMPD_indepswap)$coefficients[,4][2]), digits = 4))) +
+  annotate("text", x = 0.75, y=45, 
+         color = "cornflowerblue", fontface = "bold",
+         label = paste("R2 =", round(summary(lmFL_weightedMPD_indepswap)$adj.r.squared, digits = 4), "\n", 
+                       "p =", round(unname(summary(lmFL_weightedMPD_indepswap)$coefficients[,4][2]), digits = 4))) 
+
+
+### PER CELL
+##########  MPD ANALYSIS 
+lmFL_weightedMPD_indepswap_PERCELL <- lm(log10(fracprod_per_cell_noinf) ~ mpd.obs.z, 
+                                      data = filter(WEIGHTED_sesMPD_indepswap, fraction == "WholeFree"))
+lmPA_weightedMPD_indepswap_PERCELL <- lm(log10(fracprod_per_cell_noinf) ~ mpd.obs.z, 
+                                      data = filter(WEIGHTED_sesMPD_indepswap, fraction == "WholePart"))
+lmALL_weightedMPD_indepswap_PERCELL <- lm(log10(fracprod_per_cell_noinf) ~ mpd.obs.z, 
+                                            data = dplyr::filter(WEIGHTED_sesMPD_indepswap, fraction %in% c("WholePart", "WholeFree")))
+
+
+summary(lm(log10(fracprod_per_cell_noinf) ~ mpd.obs.z * fraction, 
+                                            data = dplyr::filter(WEIGHTED_sesMPD_indepswap, fraction %in% c("WholePart", "WholeFree"))))
+
+
+weightedMPD_vs_fracprod_indepswap_PERCELL <- 
+  ggplot(filter(WEIGHTED_sesMPD_indepswap, fraction %in% c("WholePart", "WholeFree")), 
+       aes(x = mpd.obs.z, y = log10(fracprod_per_cell_noinf), color = fraction)) + 
+  geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) +
+  geom_point(size = 3) +
+  scale_x_continuous(limits = c(-1.5,1.5)) + 
+  scale_y_continuous(limits = c(-8.25, -5.4), breaks = c(-8, -7,  -6)) +
+  xlab("Standardized Effect Size \nWeighted Mean Pairwise Dist") + 
+  ylab("log10(Production/Cell)\n (μgC/cell/hr)") + 
+  scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
+  geom_smooth(method = "lm") +
+  theme(legend.position = "none", legend.title = element_blank()) +
+  annotate("text", x = 0.75, y=-7.1, 
+           color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(lmPA_weightedMPD_indepswap_PERCELL)$adj.r.squared, digits = 2), "\n", 
+                         "p =", round(unname(summary(lmPA_weightedMPD_indepswap_PERCELL)$coefficients[,4][2]), digits = 3))) +
+  annotate("text", x = 0.75, y=-7.75, 
+         color = "cornflowerblue", fontface = "bold",
+         label = paste("R2 =", round(summary(lmFL_weightedMPD_indepswap_PERCELL)$adj.r.squared, digits = 2), "\n", 
+                       "p =", round(unname(summary(lmFL_weightedMPD_indepswap_PERCELL)$coefficients[,4][2]), digits = 3))) +
+    annotate("text", x = 1, y=-5.85, 
+         color = "black", fontface = "bold",
+         label = paste("Combined:\n", " R2 =", round(summary(lmALL_weightedMPD_indepswap_PERCELL)$adj.r.squared, digits = 2), "\n", 
+                       "p =", round(unname(summary(lmALL_weightedMPD_indepswap_PERCELL)$coefficients[,4][2]), digits = 4)))
+
+
+# Plot it altogether 
+plot_grid(unweightedMPD_vs_fracprod_indepswap, weightedMPD_vs_fracprod_indepswap, 
+          unweightedMPD_vs_fracprod_indepswap_PERCELL, weightedMPD_vs_fracprod_indepswap_PERCELL,
+          labels = c("A", "B", "C", "D"), ncol = 2, nrow = 2)
+```
 
 
 

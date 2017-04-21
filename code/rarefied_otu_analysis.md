@@ -2760,6 +2760,11 @@ plot_grid(taxlab_unweight_mpd + ylim(-4.5, 3.5) +
 
 
 
+
+
+
+
+
 # Bulk Productivity
   
   
@@ -3367,6 +3372,10 @@ plot_grid(plot_unweightedMPD_prod, plot_unweightedMNTD_prod,
 ```
 
 <img src="Rarefied_Figures/taxalab-production-BEF-2.png" style="display: block; margin: auto;" />
+
+
+
+
 
 
 ### Per-Cell Productivity
@@ -5645,6 +5654,826 @@ plot_grid(unweightedMPD_vs_fracprod_taxlab + ggtitle("") +
 ```
 
 <img src="Rarefied_Figures/old-fig4-1.png" style="display: block; margin: auto;" />
+
+
+
+# Independent Swap
+
+```r
+### UNWEIGHTED
+unweighted_sesMPD_indepswap <- read.csv("PrunedTree/mpd_mntd/unweighted_sesMPD_indepswap.csv", header = TRUE) %>%
+  dplyr::rename(norep_filter_name = X) %>%
+  left_join(nosed_meta_data, by = "norep_filter_name") %>%
+  # Create discrete pvalues and reorder factors for fraction and lakesite
+  mutate(pval = ifelse(mpd.obs.p > 0.9499, "high_pval",
+                       ifelse(mpd.obs.p < 0.0511, "low_pval",
+                              "insignificant")),
+         fraction = factor(fraction, levels = c("WholePart", "Particle", "WholeFree", "Free")),
+         lakesite = factor(lakesite, levels =c("MOT", "MDP", "MBR", "MIN")))
+```
+
+```
+## Warning in left_join_impl(x, y, by$x, by$y, suffix$x, suffix$y): joining character vector and factor, coercing into character vector
+```
+
+```r
+### WEIGHTED
+WEIGHTED_sesMPD_indepswap <- read.csv("PrunedTree/mpd_mntd/weighted_sesMPD_indepswap.csv", header = TRUE) %>%
+  dplyr::rename(norep_filter_name = X) %>%
+  left_join(nosed_meta_data, by = "norep_filter_name") %>%
+  # Create discrete pvalues and reorder factors for fraction and lakesite
+  mutate(pval = ifelse(mpd.obs.p > 0.9499, "high_pval",
+                       ifelse(mpd.obs.p < 0.0511, "low_pval",
+                              "insignificant")),
+         fraction = factor(fraction, levels = c("WholePart", "Particle", "WholeFree", "Free")),
+         lakesite = factor(lakesite, levels =c("MOT", "MDP", "MBR", "MIN")))
+```
+
+```
+## Warning in left_join_impl(x, y, by$x, by$y, suffix$x, suffix$y): joining character vector and factor, coercing into character vector
+```
+
+```r
+p1 <- ggplot(unweighted_sesMPD_indepswap, 
+             aes(x = lakesite, y = mpd.obs.z, color = pval, fill = fraction)) + 
+  geom_point(size = 3, position = position_jitterdodge()) + 
+  ggtitle("Unweighted MPD") +
+  ylab("Mean Pairwise Distance \n (ses.mpd)") +
+  geom_boxplot(alpha = 0.5, color = "black") +
+  scale_color_manual(values = pd_colors) + 
+  scale_fill_manual(values = fraction_colors) +
+  facet_grid(.~fraction, scale = "free_x") +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
+
+p2 <- ggplot(WEIGHTED_sesMPD_indepswap, 
+             aes(x = lakesite, y = mpd.obs.z, color = pval, fill = fraction)) + 
+  geom_point(size = 3, position = position_jitterdodge()) + 
+  ggtitle("Weighted MPD") +
+  ylab("Mean Pairwise Distance \n (ses.mpd)") +
+  geom_boxplot(alpha = 0.5, color = "black") +
+  scale_color_manual(values = pd_colors) + 
+  scale_fill_manual(values = fraction_colors) +
+  facet_grid(.~fraction, scale = "free_x") +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
+
+# Put all of it together into one plot
+plot_grid(p1, p2,
+          labels = c("A", "B"), 
+          ncol = 2, nrow = 1)
+```
+
+<img src="Rarefied_Figures/load-indepswap-1.png" style="display: block; margin: auto;" />
+
+
+
+```r
+unweight_MPD_wilcox <- wilcox.test(mpd.obs.z ~ fraction, 
+             data = filter(unweighted_sesMPD_indepswap, fraction %in% c("WholePart", "WholeFree")))
+unweight_MPD_wilcox
+```
+
+```
+## 
+## 	Wilcoxon rank sum test
+## 
+## data:  mpd.obs.z by fraction
+## W = 49, p-value = 0.1978
+## alternative hypothesis: true location shift is not equal to 0
+```
+
+```r
+# Make a data frame to draw significance line in boxplot (visually calculated)
+mpd_nums1 <- data.frame(a = c(1.15,1.15,1.85,1.85), b = c(0.9,1,1,0.9)) # WholePart vs WholeFree
+
+indepswap_unweight_mpd <- ggplot(filter(unweighted_sesMPD_indepswap, fraction %in% c("WholePart", "WholeFree")), 
+       aes(y = mpd.obs.z, x = fraction)) +
+  geom_hline(yintercept = 0, linetype = "dashed", size = 1.5) +
+  scale_fill_manual(values = fraction_colors, 
+                    breaks=c("WholeFree", "WholePart"), 
+                    labels=c("Free-Living", "Particle-Associated")) +
+  scale_color_manual(values = fraction_colors,
+                 breaks=c("WholeFree", "WholePart"), 
+                 labels=c("Free-Living", "Particle-Associated")) + 
+  scale_x_discrete(breaks=c("WholeFree", "WholePart"), 
+                 labels=c("Free\nLiving", "Particle\nAssociated")) + 
+  geom_point(size = 3, position = position_jitterdodge(), aes(color = fraction, fill = fraction)) + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(color = fraction, fill = fraction)) +
+  ylab("Unweighted Mean Pairwise Dist") +
+  geom_path(data = mpd_nums1, aes(x = a, y = b), linetype = 1, color = "gray40") +
+  scale_y_continuous(limits = c(-1.15,1.15)) + 
+  theme(legend.position = "none", 
+        axis.title.x = element_blank())
+
+
+
+weight_MPD_wilcox <- wilcox.test(mpd.obs.z ~ fraction, 
+             data = filter(WEIGHTED_sesMPD_indepswap, fraction %in% c("WholePart", "WholeFree")))
+weight_MPD_wilcox
+```
+
+```
+## 
+## 	Wilcoxon rank sum test
+## 
+## data:  mpd.obs.z by fraction
+## W = 88, p-value = 0.3777
+## alternative hypothesis: true location shift is not equal to 0
+```
+
+```r
+filter(WEIGHTED_sesMPD_indepswap, fraction %in% c("WholePart", "WholeFree")) %>%
+  group_by(fraction) %>%
+  summarize(mean(mpd.obs.z),  median(mpd.obs.z), sd(mpd.obs.z))
+```
+
+```
+## # A tibble: 2 × 4
+##    fraction `mean(mpd.obs.z)` `median(mpd.obs.z)` `sd(mpd.obs.z)`
+##      <fctr>             <dbl>               <dbl>           <dbl>
+## 1 WholePart        -0.3220245          -0.3490176       0.3603412
+## 2 WholeFree        -0.4286019          -0.4238257       0.1934867
+```
+
+```r
+# Make a data frame to draw significance line in boxplot (visually calculated)
+mpd_nums2 <- data.frame(a = c(1.15,1.15,1.85,1.85), b = c(0.9,1,1,0.9)) # WholePart vs WholeFree
+
+indepswap_weight_mpd <- ggplot(filter(WEIGHTED_sesMPD_indepswap, fraction %in% c("WholePart", "WholeFree")), 
+       aes(y = mpd.obs.z, x = fraction)) +
+  geom_hline(yintercept = 0, slope = 0, linetype = "dashed", size = 1.5) +
+  scale_fill_manual(values = fraction_colors, 
+                    breaks=c("WholeFree", "WholePart"), 
+                    labels=c("Free-Living", "Particle-Associated")) +
+  scale_color_manual(values = fraction_colors,
+                 breaks=c("WholeFree", "WholePart"), 
+                 labels=c("Free-Living", "Particle-Associated")) + 
+  scale_x_discrete(breaks=c("WholeFree", "WholePart"), 
+                 labels=c("Free\nLiving", "Particle\nAssociated")) + 
+  geom_point(size = 3, position = position_jitterdodge(), aes(color = fraction, fill = fraction)) + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(color = fraction, fill = fraction)) +
+  ylab("Weighted Mean Pairwise Dist") +
+  geom_path(data = mpd_nums2, aes(x = a, y = b), linetype = 1, color = "gray40") +
+  scale_y_continuous(limits = c(-1.15,1.15)) + 
+  theme(legend.position = "none", 
+        axis.title.x = element_blank())
+```
+
+```
+## Warning: Ignoring unknown parameters: slope
+```
+
+```r
+plot_grid(indepswap_unweight_mpd + 
+            annotate("text", x=1.55, y=max(mpd_nums1$b), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("NS\np =", round(unweight_MPD_wilcox$p.value, digits = 2))), 
+          indepswap_weight_mpd +
+            annotate("text", x=1.55, y=max(mpd_nums2$b), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("NS\np =", round(weight_MPD_wilcox$p.value, digits = 2))),
+          labels = c("A", "B"), ncol = 2)
+```
+
+<img src="Rarefied_Figures/indepswap-comparison-1.png" style="display: block; margin: auto;" />
+
+
+## Indepswap vs richness/invsimps
+
+
+```r
+### Richness DF
+combined_rich_unweightedMPD_indepswap <- ML_otu_rich_stats %>%
+  dplyr::select(norep_filter_name, mean, sd, measure) %>%
+  dplyr::left_join(unweighted_sesMPD_indepswap, by = "norep_filter_name") 
+```
+
+```
+## Warning in left_join_impl(x, y, by$x, by$y, suffix$x, suffix$y): joining character vector and factor, coercing into character vector
+```
+
+```r
+summary(lm(mean ~ mpd.obs.z, data = dplyr::filter(combined_rich_unweightedMPD_indepswap, fraction == "WholePart")))
+```
+
+```
+## 
+## Call:
+## lm(formula = mean ~ mpd.obs.z, data = dplyr::filter(combined_rich_unweightedMPD_indepswap, 
+##     fraction == "WholePart"))
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -138.760  -57.829   -9.699   41.438  258.360 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)   442.81      32.43  13.653 8.61e-08 ***
+## mpd.obs.z    -186.90      60.34  -3.097   0.0113 *  
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 111.6 on 10 degrees of freedom
+## Multiple R-squared:  0.4896,	Adjusted R-squared:  0.4386 
+## F-statistic: 9.593 on 1 and 10 DF,  p-value: 0.0113
+```
+
+```r
+summary(lm(mean ~ mpd.obs.z, data = dplyr::filter(combined_rich_unweightedMPD_indepswap, fraction == "WholeFree")))
+```
+
+```
+## 
+## Call:
+## lm(formula = mean ~ mpd.obs.z, data = dplyr::filter(combined_rich_unweightedMPD_indepswap, 
+##     fraction == "WholeFree"))
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -132.119  -51.464    2.329   55.796  126.145 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)   306.08      26.08  11.736  3.6e-07 ***
+## mpd.obs.z    -116.42      68.32  -1.704    0.119    
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 75.16 on 10 degrees of freedom
+## Multiple R-squared:  0.2251,	Adjusted R-squared:  0.1476 
+## F-statistic: 2.904 on 1 and 10 DF,  p-value: 0.1192
+```
+
+```r
+lmALL_unweightMPD_vs_rich_indepswap <- lm(mean ~ mpd.obs.z, data = dplyr::filter(combined_rich_unweightedMPD_indepswap,
+                                                  fraction %in% c("WholePart", "WholeFree")))
+summary(lmALL_unweightMPD_vs_rich_indepswap)
+```
+
+```
+## 
+## Call:
+## lm(formula = mean ~ mpd.obs.z, data = dplyr::filter(combined_rich_unweightedMPD_indepswap, 
+##     fraction %in% c("WholePart", "WholeFree")))
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -227.44  -82.48   10.30   46.63  308.76 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)   383.60      23.05  16.644 5.96e-14 ***
+## mpd.obs.z    -209.68      49.44  -4.241 0.000335 ***
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 111.5 on 22 degrees of freedom
+## Multiple R-squared:  0.4498,	Adjusted R-squared:  0.4248 
+## F-statistic: 17.99 on 1 and 22 DF,  p-value: 0.0003349
+```
+
+```r
+# Test for the interaction between fraction and phylo div
+lm_divs_test_interaction <- lm(mean ~ mpd.obs.z * fraction, data = combined_rich_unweightedMPD_indepswap)
+Anova(lm_divs_test_interaction, type = "II")
+```
+
+```
+## Anova Table (Type II tests)
+## 
+## Response: mean
+##                    Sum Sq Df F value   Pr(>F)   
+## mpd.obs.z          131379  1 14.5197 0.001095 **
+## fraction            87945  1  9.7195 0.005424 **
+## mpd.obs.z:fraction   4440  1  0.4907 0.491674   
+## Residuals          180967 20                    
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+```
+
+```r
+# Not significant
+lm_divs_test <- lm(mean ~ mpd.obs.z + fraction, data = combined_rich_unweightedMPD_indepswap)
+anova(lm_divs_test, lm_divs_test_interaction)
+```
+
+```
+## Analysis of Variance Table
+## 
+## Model 1: mean ~ mpd.obs.z + fraction
+## Model 2: mean ~ mpd.obs.z * fraction
+##   Res.Df    RSS Df Sum of Sq      F Pr(>F)
+## 1     21 185407                           
+## 2     20 180967  1    4440.2 0.4907 0.4917
+```
+
+```r
+divs_p1_indepswap <- ggplot(combined_rich_unweightedMPD_indepswap, aes(y = mean, x = mpd.obs.z)) + 
+  geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) + 
+  geom_point(size = 3) + 
+  scale_x_continuous(limits = c(-1.15,1.15)) + 
+  geom_smooth(method = "lm", color = "black") +
+  xlab("Unweighted MPD") + ylab("Observed Richness") +
+  theme(legend.position = c(0.85, 0.9),
+        legend.title = element_blank()) +
+  annotate("text", x = -0.8, y=200, 
+         color = "black", fontface = "bold",
+         label = paste("R2 =", round(summary(lmALL_unweightMPD_vs_rich_indepswap)$adj.r.squared, 
+                                     digits = 2), "\n", 
+                       "p =", round(unname(summary(lmALL_unweightMPD_vs_rich_indepswap)$coefficients[,4][2]), 
+                                    digits = 4))) 
+
+# Plot both of the models 
+divs_p2_indepswap <- ggplot(combined_rich_unweightedMPD_indepswap, aes(y = mean, x = mpd.obs.z, color = fraction)) + 
+  geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) +
+  geom_point(size = 3) + 
+  scale_x_continuous(limits = c(-1.15,1.15)) + 
+  scale_color_manual(values = fraction_colors) + 
+  geom_smooth(method = "lm", data = dplyr::filter(combined_rich_unweightedMPD_indepswap, fraction == "WholePart")) +
+  xlab("Unweighted MPD") + ylab("Observed Richness") +
+  theme(legend.position = c(0.85, 0.9),
+        legend.title = element_blank()) +
+  annotate("text", -0.8, y=355,  
+         color = "firebrick3", fontface = "bold",
+         label = paste("R2 =", round(summary(lm_part_divs_rich_vs_unweight)$adj.r.squared, 
+                                     digits = 2), "\n", 
+                       "p =", round(unname(summary(lm_part_divs_rich_vs_unweight)$coefficients[,4][2]), 
+                                    digits = 3))) +
+  annotate("text", -0.8, y=200,
+         color = "cornflowerblue", fontface = "bold",
+         label = paste("R2 =", round(summary(lm_free_divs_rich_vs_unweight)$adj.r.squared, 
+                                     digits = 2), "\n", 
+                       "p =", round(unname(summary(lm_free_divs_rich_vs_unweight)$coefficients[,4][2]), 
+                                    digits = 3))) +
+    annotate("text", 0.75, y=600,
+         color = "black", fontface = "bold",
+         label = paste("Combined:\nR2 =", round(summary(lmALL_unweightMPD_vs_rich_indepswap)$adj.r.squared, 
+                                     digits = 2), "\n", 
+                       "p =", round(unname(summary(lmALL_unweightMPD_vs_rich_indepswap)$coefficients[,4][2]), 
+                                    digits = 4)))
+  
+
+
+### INVERSE SIMPS
+combined_invsimps_weightedMPD_indepswap <- ML_otu_invsimps_stats %>%
+  dplyr::select(norep_filter_name, mean, sd, measure) %>%
+  dplyr::left_join(WEIGHTED_sesMPD_indepswap, by = "norep_filter_name") 
+```
+
+```
+## Warning in left_join_impl(x, y, by$x, by$y, suffix$x, suffix$y): joining character vector and factor, coercing into character vector
+```
+
+```r
+summary(lm(mean ~ mpd.obs.z, data = dplyr::filter(combined_invsimps_weightedMPD_indepswap, fraction == "WholePart")))
+```
+
+```
+## 
+## Call:
+## lm(formula = mean ~ mpd.obs.z, data = dplyr::filter(combined_invsimps_weightedMPD_indepswap, 
+##     fraction == "WholePart"))
+## 
+## Residuals:
+##    Min     1Q Median     3Q    Max 
+## -22.59 -18.13 -10.29  19.96  45.62 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)   46.813      9.906   4.726 0.000809 ***
+## mpd.obs.z     28.882     20.990   1.376 0.198854    
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 25.09 on 10 degrees of freedom
+## Multiple R-squared:  0.1592,	Adjusted R-squared:  0.07511 
+## F-statistic: 1.893 on 1 and 10 DF,  p-value: 0.1989
+```
+
+```r
+summary(lm(mean ~ mpd.obs.z, data = dplyr::filter(combined_invsimps_weightedMPD_indepswap, fraction == "WholeFree")))
+```
+
+```
+## 
+## Call:
+## lm(formula = mean ~ mpd.obs.z, data = dplyr::filter(combined_invsimps_weightedMPD_indepswap, 
+##     fraction == "WholeFree"))
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -12.366  -4.654  -1.018   2.253  21.658 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)   
+## (Intercept)   25.626      6.814   3.761  0.00372 **
+## mpd.obs.z      1.799     14.594   0.123  0.90436   
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 9.365 on 10 degrees of freedom
+## Multiple R-squared:  0.001517,	Adjusted R-squared:  -0.09833 
+## F-statistic: 0.01519 on 1 and 10 DF,  p-value: 0.9044
+```
+
+```r
+summary(lm(mean ~ mpd.obs.z, data = combined_invsimps_weightedMPD_indepswap))
+```
+
+```
+## 
+## Call:
+## lm(formula = mean ~ mpd.obs.z, data = combined_invsimps_weightedMPD_indepswap)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -17.251 -13.401  -5.750   0.725  50.734 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)   41.035      6.484   6.329 2.28e-06 ***
+## mpd.obs.z     26.247     13.812   1.900   0.0706 .  
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 19.08 on 22 degrees of freedom
+## Multiple R-squared:  0.141,	Adjusted R-squared:  0.102 
+## F-statistic: 3.611 on 1 and 22 DF,  p-value: 0.07058
+```
+
+```r
+# All points together
+evendivs_p1_indepswap <- ggplot(combined_invsimps_weightedMPD_indepswap, aes(y = mean, x = mpd.obs.z)) + 
+  geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) + 
+  geom_point(size = 3) +  
+  scale_x_continuous(limits = c(-1.15,1.15)) + 
+  geom_smooth(color = "black") +
+  xlab("Weighted MPD") + ylab("Inverse Simpson") +
+  theme(legend.position = c(0.85, 0.85),
+        legend.title = element_blank())
+
+# Models separately
+evendivs_p2_indepswap <- ggplot(combined_invsimps_weightedMPD_indepswap, aes(y = mean, x = mpd.obs.z, color = fraction)) + 
+  geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) +
+  geom_point(size = 3) + 
+  scale_x_continuous(limits = c(-1.15,1.15)) + 
+  scale_color_manual(values = fraction_colors) + 
+  #geom_smooth(method = "lm") +
+  xlab("Weighted MPD") + ylab("Inverse Simpson") +
+  theme(legend.position = c(0.85, 0.85),
+        legend.title = element_blank()) +
+  annotate("text", x = 0.5, y=70, 
+     color = "cornflowerblue", fontface = "bold",
+     label = paste("R2 =", round(summary(lm(mean ~ mpd.obs.z, 
+                                            data = dplyr::filter(combined_invsimps_weightedMPD_indepswap, fraction == "WholeFree")))$adj.r.squared, 
+                                 digits = 2), "\n", 
+                   "p =", round(unname(summary(lm(mean ~ mpd.obs.z, 
+                                                  data = dplyr::filter(combined_invsimps_weightedMPD_indepswap, fraction == "WholeFree")))$coefficients[,4][2]), 
+                                digits = 4))) +
+    annotate("text", x = 0.5, y=48, 
+     color = "firebrick3", fontface = "bold",
+     label = paste("R2 =", round(summary(lm(mean ~ mpd.obs.z, 
+                                            data = dplyr::filter(combined_invsimps_weightedMPD_indepswap, fraction == "WholePart")))$adj.r.squared, 
+                                 digits = 2), "\n", 
+                   "p =", round(unname(summary(lm(mean ~ mpd.obs.z, 
+                                                  data = dplyr::filter(combined_invsimps_weightedMPD_indepswap, fraction == "WholePart")))$coefficients[,4][2]), 
+                                digits = 3))) 
+
+
+plot_grid(divs_p1_indepswap, divs_p2_indepswap, evendivs_p1_indepswap, evendivs_p2_indepswap,
+          labels = c("A", "B", "C", "D"))
+```
+
+<img src="Rarefied_Figures/indepswapdiv-vs-diversity-1.png" style="display: block; margin: auto;" />
+
+
+# Fig 3: Indepswap
+
+```r
+# Shared legends: https://cran.r-project.org/web/packages/cowplot/vignettes/shared_legends.html
+indepswap_legend_fig3 <- get_legend(indepswap_unweight_mpd + theme(legend.position="top", legend.title = element_blank()))
+
+
+indepswap_MPD_boxplots_nolegend <- plot_grid(
+          # Plot 1: Unweighted MPD 
+          indepswap_unweight_mpd + xlab("Fraction \n") + coord_flip() + 
+            annotate("text", x=1.55, y=(max(mpd_nums1$b)+0.1), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("NS")) +
+            theme(axis.text.y = element_blank(), 
+                  plot.margin = unit(c(5,2,0,5), "pt")),  #top, right, bottom, and left
+          # Plot 2: Weighted MPD 
+           indepswap_weight_mpd + xlab("Fraction \n") + coord_flip() + 
+            annotate("text", x=1.55, y=(max(mpd_nums2$b)+0.1), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("NS")) + 
+            theme(axis.text.y = element_blank(), 
+                  plot.margin = unit(c(5,2,0,5), "pt")),
+          ncol = 2, nrow = 1, labels = c("A", "B"))
+
+
+
+indepwap_MPD_boxplots_yeslegend <- plot_grid(indepswap_legend_fig3,             # Draw the legend first 
+                                    indepswap_MPD_boxplots_nolegend,   # Draw the plots second
+                                    ncol = 1, rel_heights = c(0.1, 1))
+
+# PLOT
+indepswap_div_vs_div_plots <- 
+  plot_grid(divs_p2_indepswap + theme(legend.position = "none", plot.margin = unit(c(0,2,0,0), "pt")) +
+            xlab("Standardized Effect Size\n Unweighted Mean Pairwise Dist"), # Richness vs UNweighted MPD
+          evendivs_p2_indepswap + theme(legend.position = "none", plot.margin = unit(c(0,2,0,0), "pt")) +
+             xlab("Standardized Effect Size\n Weighted Mean Pairwise Dist"), # Inverse Simpson vs Weighted MPD 
+          nrow = 1, ncol = 2,
+          labels = c("C", "D"))
+
+
+
+indepswap_final_fig3 <- plot_grid(indepswap_MPD_boxplots_nolegend, 
+                        indepswap_div_vs_div_plots, ncol = 1,
+                        rel_heights = c(1.2, 2))
+
+indepswap_final_fig3
+```
+
+<img src="Rarefied_Figures/indepswap-fig-3-1.png" style="display: block; margin: auto;" />
+
+```r
+#### REMOVE X AXIS FOR TOP FIGURE 
+MPD_boxplots_nolegend_noX_indepswap <- plot_grid(
+          # Plot 1: Unweighted MPD INDEPSWAP
+          indepswap_unweight_mpd + xlab("Fraction \n") + coord_flip() + 
+            annotate("text", x=1.55, y=(max(mpd_nums1$b)+0.1), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("NS")) +
+            theme(axis.text.y = element_blank(), 
+                  plot.margin = unit(c(5,2,10,3), "pt"),  #top, right, bottom, and left
+                  axis.title.x=element_blank(), axis.line.x = element_blank(), 
+                  axis.text.x=element_blank(), axis.ticks.x=element_blank()), 
+          # Plot 2: Weighted MPD INDEPSWAP
+           indepswap_weight_mpd + xlab("Fraction \n") + coord_flip() + 
+            annotate("text", x=1.55, y=(max(mpd_nums2$b)+0.1), fontface = "bold",  size = 3.5, color = "gray40",
+                       label= paste("NS")) + 
+            theme(axis.text.y = element_blank(), 
+                  plot.margin = unit(c(5,7,10,10), "pt"),  #top, right, bottom, and left
+                  axis.title.x=element_blank(), axis.line.x = element_blank(), 
+                  axis.text.x=element_blank(), axis.ticks.x=element_blank()), 
+          ncol = 2, nrow = 1, labels = c("A", "B"))
+
+
+MPD_boxplots_yeslegend_noX_indepswap <- plot_grid(legend_fig3,             # Draw the legend first 
+                                    MPD_boxplots_nolegend_noX_indepswap,   # Draw the plots second
+                                    ncol = 1, rel_heights = c(0.1, 1))
+
+
+final_fig3_noX_indepswap <- plot_grid(MPD_boxplots_yeslegend_noX_indepswap, 
+                        indepswap_div_vs_div_plots, ncol = 1,
+                        rel_heights = c(1.2, 2))
+
+final_fig3_noX_indepswap
+```
+
+<img src="Rarefied_Figures/indepswap-fig-3-2.png" style="display: block; margin: auto;" />
+
+
+
+
+## Indepswap vs Productivity
+
+
+```r
+##########  MPD ANALYSIS 
+lmFL_unweightedMPD_indepswap <- lm(frac_bacprod ~ mpd.obs.z, 
+                                      data = filter(unweighted_sesMPD_indepswap, fraction == "WholeFree"))
+lmPA_unweightedMPD_indepswap <- lm(frac_bacprod ~ mpd.obs.z, 
+                                      data = filter(unweighted_sesMPD_indepswap, fraction == "WholePart"))
+
+lmALL_unweightedMPD_indepswap <- lm(frac_bacprod ~ mpd.obs.z, 
+                                      data = filter(unweighted_sesMPD_indepswap, fraction %in% c("WholePart", "WholeFree")))
+summary(lmALL_unweightedMPD_indepswap)
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mpd.obs.z, data = filter(unweighted_sesMPD_indepswap, 
+##     fraction %in% c("WholePart", "WholeFree")))
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -20.877  -7.986  -4.865   4.795  41.868 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)   17.767      3.051   5.823 7.38e-06 ***
+## mpd.obs.z    -10.211      6.545  -1.560    0.133    
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 14.76 on 22 degrees of freedom
+## Multiple R-squared:  0.09961,	Adjusted R-squared:  0.05868 
+## F-statistic: 2.434 on 1 and 22 DF,  p-value: 0.133
+```
+
+```r
+unweightedMPD_vs_fracprod_indepswap <- 
+  ggplot(filter(unweighted_sesMPD_indepswap, fraction %in% c("WholePart", "WholeFree")), 
+       aes(x = mpd.obs.z, y = frac_bacprod, color = fraction)) + 
+  geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) +
+  geom_point(size = 3) +
+  xlab("Standardized Effect Size \nUnweighted Mean Pairwise Dist") + 
+  ylab("Heterotrophic Production \n(μgC/L/hr)") +
+  scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
+  geom_smooth(method = "lm") +
+  scale_x_continuous(limits = c(-1.5,1.5)) + 
+  theme(legend.position = "none", legend.title = element_blank()) +
+    annotate("text", x = -1, y=-2, 
+           color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(lmPA_unweightedMPD_indepswap)$adj.r.squared, digits = 2), "\n", 
+                         "p =", round(unname(summary(lmPA_unweightedMPD_indepswap)$coefficients[,4][2]), digits = 3))) +
+  annotate("text", x = -1, y=50, 
+         color = "cornflowerblue", fontface = "bold",
+         label = paste("R2 =", round(summary(lmFL_unweightedMPD_indepswap)$adj.r.squared, digits = 2), "\n", 
+                       "p =", round(unname(summary(lmFL_unweightedMPD_indepswap)$coefficients[,4][2]), digits = 3))) 
+
+
+### PER CELL
+##########  MPD ANALYSIS 
+lmFL_unweightedMPD_indepswap_PERCELL <- lm(log10(fracprod_per_cell_noinf) ~ mpd.obs.z, 
+                                      data = filter(unweighted_sesMPD_indepswap, fraction == "WholeFree"))
+lmPA_unweightedMPD_indepswap_PERCELL <- lm(log10(fracprod_per_cell_noinf) ~ mpd.obs.z, 
+                                      data = filter(unweighted_sesMPD_indepswap, fraction == "WholePart"))
+lmALL_unweightedMPD_indepswap_PERCELL <- lm(log10(fracprod_per_cell_noinf) ~ mpd.obs.z, 
+                                            data = dplyr::filter(unweighted_sesMPD_indepswap, fraction %in% c("WholePart", "WholeFree")))
+
+unweightedMPD_vs_fracprod_indepswap_PERCELL <- 
+  ggplot(filter(unweighted_sesMPD_indepswap, fraction %in% c("WholePart", "WholeFree")), 
+       aes(x = mpd.obs.z, y = log10(fracprod_per_cell_noinf), color = fraction)) + 
+  geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) +
+  geom_point(size = 3) +
+  scale_x_continuous(limits = c(-1.5,1.5)) + 
+  scale_y_continuous(limits = c(-8.25, -5.4), breaks = c(-8, -7,  -6)) +
+  xlab("Standardized Effect Size \nUnweighted Mean Pairwise Dist") + 
+  ylab("log10(Production/Cell)\n (μgC/cell/hr)") + 
+  scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
+  geom_smooth(method = "lm") +
+  theme(legend.position = "none", legend.title = element_blank()) +
+  annotate("text", x = -1, y=-7.1, 
+           color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(lmPA_unweightedMPD_indepswap_PERCELL)$adj.r.squared, digits = 2), "\n", 
+                         "p =", round(unname(summary(lmPA_unweightedMPD_indepswap_PERCELL)$coefficients[,4][2]), digits = 3))) +
+  annotate("text", x = -1, y=-7.75, 
+         color = "cornflowerblue", fontface = "bold",
+         label = paste("R2 =", round(summary(percell_lmFL_unweightedMPD_taxalab)$adj.r.squared, digits = 2), "\n", 
+                       "p =", round(unname(summary(percell_lmFL_unweightedMPD_taxalab)$coefficients[,4][2]), digits = 3))) +
+    annotate("text", x = 1, y=-6, 
+         color = "black", fontface = "bold",
+         label = paste("Combined:\n", " R2 =", round(summary(lmALL_unweightedMPD_indepswap_PERCELL)$adj.r.squared, digits = 2), "\n", 
+                       "p =", round(unname(summary(lmALL_unweightedMPD_indepswap_PERCELL)$coefficients[,4][2]), digits = 4)))
+
+
+
+
+####### WEIGHTED MPD ANALYSIS
+lmFL_weightedMPD_indepswap <- lm(frac_bacprod ~ mpd.obs.z, 
+                                      data = filter(WEIGHTED_sesMPD_indepswap, fraction == "WholeFree"))
+lmPA_weightedMPD_indepswap <- lm(frac_bacprod ~ mpd.obs.z, 
+                                      data = filter(WEIGHTED_sesMPD_indepswap, fraction == "WholePart"))
+
+weightedMPD_vs_fracprod_indepswap <- ggplot(filter(WEIGHTED_sesMPD_indepswap, fraction %in% c("WholePart", "WholeFree")), 
+       aes(x = mpd.obs.z, y = frac_bacprod, color = fraction)) + 
+  geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) +
+  geom_point(size = 3) +
+  xlab("Standardized Effect Size \nWeighted Mean Pairwise Dist") + 
+  ylab("Heterotrophic Production \n(μgC/L/hr)") +
+  scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
+  theme(legend.position = "none", legend.title = element_blank()) +
+  scale_x_continuous(limits = c(-1.15,1.15)) + 
+  annotate("text", x = 0.75, y=25, 
+           color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(lmPA_weightedMPD_indepswap)$adj.r.squared, digits = 4), "\n", 
+                         "p =", round(unname(summary(lmPA_weightedMPD_indepswap)$coefficients[,4][2]), digits = 4))) +
+  annotate("text", x = 0.75, y=45, 
+         color = "cornflowerblue", fontface = "bold",
+         label = paste("R2 =", round(summary(lmFL_weightedMPD_indepswap)$adj.r.squared, digits = 4), "\n", 
+                       "p =", round(unname(summary(lmFL_weightedMPD_indepswap)$coefficients[,4][2]), digits = 4))) 
+
+
+### PER CELL
+##########  MPD ANALYSIS 
+lmFL_weightedMPD_indepswap_PERCELL <- lm(log10(fracprod_per_cell_noinf) ~ mpd.obs.z, 
+                                      data = filter(WEIGHTED_sesMPD_indepswap, fraction == "WholeFree"))
+lmPA_weightedMPD_indepswap_PERCELL <- lm(log10(fracprod_per_cell_noinf) ~ mpd.obs.z, 
+                                      data = filter(WEIGHTED_sesMPD_indepswap, fraction == "WholePart"))
+lmALL_weightedMPD_indepswap_PERCELL <- lm(log10(fracprod_per_cell_noinf) ~ mpd.obs.z, 
+                                            data = dplyr::filter(WEIGHTED_sesMPD_indepswap, fraction %in% c("WholePart", "WholeFree")))
+
+
+summary(lm(log10(fracprod_per_cell_noinf) ~ mpd.obs.z * fraction, 
+                                            data = dplyr::filter(WEIGHTED_sesMPD_indepswap, fraction %in% c("WholePart", "WholeFree"))))
+```
+
+```
+## 
+## Call:
+## lm(formula = log10(fracprod_per_cell_noinf) ~ mpd.obs.z * fraction, 
+##     data = dplyr::filter(WEIGHTED_sesMPD_indepswap, fraction %in% 
+##         c("WholePart", "WholeFree")))
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -0.64112 -0.27776  0.02912  0.21094  1.14024 
+## 
+## Coefficients:
+##                             Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)                  -6.4044     0.2239 -28.609  < 2e-16 ***
+## mpd.obs.z                     0.8357     0.4660   1.793  0.08886 .  
+## fractionWholeFree            -1.4297     0.3935  -3.633  0.00177 ** 
+## mpd.obs.z:fractionWholeFree  -1.4400     0.8352  -1.724  0.10093    
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 0.4448 on 19 degrees of freedom
+##   (1 observation deleted due to missingness)
+## Multiple R-squared:  0.5672,	Adjusted R-squared:  0.4988 
+## F-statistic: 8.299 on 3 and 19 DF,  p-value: 0.000988
+```
+
+```r
+weightedMPD_vs_fracprod_indepswap_PERCELL <- 
+  ggplot(filter(WEIGHTED_sesMPD_indepswap, fraction %in% c("WholePart", "WholeFree")), 
+       aes(x = mpd.obs.z, y = log10(fracprod_per_cell_noinf), color = fraction)) + 
+  geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) +
+  geom_point(size = 3) +
+  scale_x_continuous(limits = c(-1.5,1.5)) + 
+  scale_y_continuous(limits = c(-8.25, -5.4), breaks = c(-8, -7,  -6)) +
+  xlab("Standardized Effect Size \nWeighted Mean Pairwise Dist") + 
+  ylab("log10(Production/Cell)\n (μgC/cell/hr)") + 
+  scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
+  geom_smooth(method = "lm") +
+  theme(legend.position = "none", legend.title = element_blank()) +
+  annotate("text", x = 0.75, y=-7.1, 
+           color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(lmPA_weightedMPD_indepswap_PERCELL)$adj.r.squared, digits = 2), "\n", 
+                         "p =", round(unname(summary(lmPA_weightedMPD_indepswap_PERCELL)$coefficients[,4][2]), digits = 3))) +
+  annotate("text", x = 0.75, y=-7.75, 
+         color = "cornflowerblue", fontface = "bold",
+         label = paste("R2 =", round(summary(lmFL_weightedMPD_indepswap_PERCELL)$adj.r.squared, digits = 2), "\n", 
+                       "p =", round(unname(summary(lmFL_weightedMPD_indepswap_PERCELL)$coefficients[,4][2]), digits = 3))) +
+    annotate("text", x = 1, y=-5.85, 
+         color = "black", fontface = "bold",
+         label = paste("Combined:\n", " R2 =", round(summary(lmALL_weightedMPD_indepswap_PERCELL)$adj.r.squared, digits = 2), "\n", 
+                       "p =", round(unname(summary(lmALL_weightedMPD_indepswap_PERCELL)$coefficients[,4][2]), digits = 4)))
+
+
+# Plot it altogether 
+plot_grid(unweightedMPD_vs_fracprod_indepswap, weightedMPD_vs_fracprod_indepswap, 
+          unweightedMPD_vs_fracprod_indepswap_PERCELL, weightedMPD_vs_fracprod_indepswap_PERCELL,
+          labels = c("A", "B", "C", "D"), ncol = 2, nrow = 2)
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on '(μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <ce>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on '(μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <bc>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on '(μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <ce>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on '(μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <bc>
+```
+
+```
+## Warning: Removed 1 rows containing non-finite values (stat_smooth).
+```
+
+```
+## Warning: Removed 1 rows containing missing values (geom_point).
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <ce>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <bc>
+```
+
+```
+## Warning: Removed 1 rows containing non-finite values (stat_smooth).
+```
+
+```
+## Warning: Removed 1 rows containing missing values (geom_point).
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <ce>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <bc>
+```
+
+<img src="Rarefied_Figures/indepswap-fig-4-1.png" style="display: block; margin: auto;" />
 
 
 
