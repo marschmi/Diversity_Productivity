@@ -344,7 +344,7 @@ poster_b <- ggplot(filter(otu_alphadiv,
   scale_fill_manual(values = fraction_colors) +
   geom_jitter(size = 3, aes(color = fraction, fill = fraction), width = 0.2) + 
   geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(color = fraction, fill = fraction)) +
-  ylab("Secondary Production (μgC/L/hr)") +
+  ylab("Heterotrophic Production (μgC/L/hr)") +
   scale_x_discrete(breaks=c("WholePart", "WholeFree"),
                     labels=c("Particle-\nAssociated", "Free-\nLiving")) + 
   #####  WHOLE PARTICLE VS WHOLE FREE TOTAL PRODUCTION 
@@ -6269,7 +6269,7 @@ summary(lmALL_unweightedMPD_indepswap)
 ```
 
 ```r
-unweightedMPD_vs_fracprod_indepswap <- 
+unweightedMPD_vs_fracprod_indepswap <-  
   ggplot(filter(unweighted_sesMPD_indepswap, fraction %in% c("WholePart", "WholeFree")), 
        aes(x = mpd.obs.z, y = frac_bacprod, color = fraction)) + 
   geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) +
@@ -6280,14 +6280,19 @@ unweightedMPD_vs_fracprod_indepswap <-
   geom_smooth(method = "lm") +
   scale_x_continuous(limits = c(-1.5,1.5)) + 
   theme(legend.position = "none", legend.title = element_blank()) +
-    annotate("text", x = -1, y=-2, 
+  annotate("text", x = -0.85, y=-2, 
            color = "firebrick3", fontface = "bold",
            label = paste("R2 =", round(summary(lmPA_unweightedMPD_indepswap)$adj.r.squared, digits = 2), "\n", 
                          "p =", round(unname(summary(lmPA_unweightedMPD_indepswap)$coefficients[,4][2]), digits = 3))) +
-  annotate("text", x = -1, y=50, 
+  annotate("text", x = -0.85, y=50, 
          color = "cornflowerblue", fontface = "bold",
          label = paste("R2 =", round(summary(lmFL_unweightedMPD_indepswap)$adj.r.squared, digits = 2), "\n", 
-                       "p =", round(unname(summary(lmFL_unweightedMPD_indepswap)$coefficients[,4][2]), digits = 3))) 
+                       "p =", round(unname(summary(lmFL_unweightedMPD_indepswap)$coefficients[,4][2]), digits = 3))) +
+  annotate("text", x = 0.85, y=50, 
+         color = "black", fontface = "bold",
+         label = paste("Combined:\n", " R2 =", round(summary(lmALL_unweightedMPD_indepswap)$adj.r.squared, digits = 2), "\n", 
+                       "p =", round(unname(summary(lmALL_unweightedMPD_indepswap)$coefficients[,4][2]), digits = 4)))
+
 
 
 ### PER CELL
@@ -6311,15 +6316,15 @@ unweightedMPD_vs_fracprod_indepswap_PERCELL <-
   scale_color_manual(values = c("firebrick3", "cornflowerblue")) +
   geom_smooth(method = "lm") +
   theme(legend.position = "none", legend.title = element_blank()) +
-  annotate("text", x = -1, y=-7.1, 
+  annotate("text", x = -0.85, y=-7.1, 
            color = "firebrick3", fontface = "bold",
            label = paste("R2 =", round(summary(lmPA_unweightedMPD_indepswap_PERCELL)$adj.r.squared, digits = 2), "\n", 
                          "p =", round(unname(summary(lmPA_unweightedMPD_indepswap_PERCELL)$coefficients[,4][2]), digits = 3))) +
-  annotate("text", x = -1, y=-7.75, 
+  annotate("text", x = -0.85, y=-7.75, 
          color = "cornflowerblue", fontface = "bold",
          label = paste("R2 =", round(summary(percell_lmFL_unweightedMPD_taxalab)$adj.r.squared, digits = 2), "\n", 
                        "p =", round(unname(summary(percell_lmFL_unweightedMPD_taxalab)$coefficients[,4][2]), digits = 3))) +
-    annotate("text", x = 1, y=-6, 
+    annotate("text", x = 0.85, y= -6, 
          color = "black", fontface = "bold",
          label = paste("Combined:\n", " R2 =", round(summary(lmALL_unweightedMPD_indepswap_PERCELL)$adj.r.squared, digits = 2), "\n", 
                        "p =", round(unname(summary(lmALL_unweightedMPD_indepswap_PERCELL)$coefficients[,4][2]), digits = 4)))
@@ -6474,6 +6479,72 @@ plot_grid(unweightedMPD_vs_fracprod_indepswap, weightedMPD_vs_fracprod_indepswap
 ```
 
 <img src="Rarefied_Figures/indepswap-fig-4-1.png" style="display: block; margin: auto;" />
+
+
+
+# Alternate: Fig 3
+
+```r
+# Put all of the plots together 
+
+plot_grid(
+          # Plot 1: Distribution of unweighted MPD INDEPSWAP
+          indepswap_unweight_mpd + xlab("\n Fraction \n") + coord_flip() + 
+            annotate("text", x=1.55, y=(max(mpd_nums1$b)+0.1), fontface = "bold",  size = 3.5, color = "gray40", label= paste("NS")) +
+            scale_y_continuous(limits = c(-1.15,1.15)) + 
+            theme(legend.position = "top", legend.title = element_blank(),
+                  axis.text.y = element_blank(), 
+                  plot.margin = unit(c(3,2,10,9), "pt"),  #top, right, bottom, and left
+                  axis.title.x=element_blank(), axis.text.x=element_blank()),
+          
+          # Plot 2: Unweighted MPD INDEPSWAP
+          divs_p2_indepswap + theme(legend.position = "none", plot.margin = unit(c(0,2,0,0), "pt")) +
+          ylab("Observed Richness \n") +
+          scale_x_continuous(limits = c(-1.15,1.15)) +
+          theme(axis.title.x=element_blank(), axis.text.x=element_blank(),
+                plot.margin = unit(c(3,2,10,3), "pt")),  #top, right, bottom, and left),
+        
+          # Plot 3: Bulk Prod 
+          unweightedMPD_vs_fracprod_indepswap + scale_x_continuous(limits = c(-1.15,1.15)) +
+          theme(axis.title.x=element_blank(), axis.text.x=element_blank(),
+                plot.margin = unit(c(3,2,10,3), "pt")),  #top, right, bottom, and left),
+          
+          # Plot 4:  Percell prod
+          unweightedMPD_vs_fracprod_indepswap_PERCELL + scale_x_continuous(limits = c(-1.15,1.15)) +
+          xlab("Standardized Effect Size\n Unweighted Mean Pairwise Dist") +
+          theme(plot.margin = unit(c(3,2,10,3), "pt")),  #top, right, bottom, and left),
+          
+          # Add labels, rows, and relative heights 
+          labels = c("A", "B", "C", "D"),
+          ncol = 1, nrow = 4,
+          rel_heights = c(1.2, 2, 2, 2.3))
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on '(μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <ce>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on '(μgC/L/hr)' in 'mbcsToSbcs': dot substituted for <bc>
+```
+
+```
+## Warning: Removed 1 rows containing non-finite values (stat_smooth).
+```
+
+```
+## Warning: Removed 1 rows containing missing values (geom_point).
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <ce>
+```
+
+```
+## Warning in grid.Call(L_stringMetric, as.graphicsAnnot(x$label)): conversion failure on ' (μgC/cell/hr)' in 'mbcsToSbcs': dot substituted for <bc>
+```
+
+<img src="Rarefied_Figures/alt-fig3-1.png" style="display: block; margin: auto;" />
 
 
 
