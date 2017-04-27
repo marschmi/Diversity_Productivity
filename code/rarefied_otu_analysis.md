@@ -25,6 +25,7 @@ library(picante) # Will also include ape and vegan
 library(car) # For residual analysis
 library(sandwich) # for vcovHC function in post-hoc test
 library(MASS) # For studres in plot_residuals function
+library(boot) # For cross validation
 source("Muskegon_functions.R")
 source("set_colors.R")
 ```
@@ -1312,6 +1313,276 @@ summary(post_hoc_measure)
 ```r
 detach("package:multcomp", unload=TRUE) # This package masks the dplyr select function = :(
 ```
+
+## Cross Validation: MSE
+#### Here we are using leave one out cross validation as we only have 12 samples in our models 
+
+```r
+######################################################### RICHNESS
+# glm will be used instead of lm b/c it can be used together with cv.glm for cross validation as part of the boot library.
+glm_rich_PA <- glm(frac_bacprod ~ mean, data = filter(ML_otu_rich_stats, fraction == "WholePart"))
+
+# glm function just runs a linear regression without any extras within the function 
+coef(glm_rich_PA)
+```
+
+```
+## (Intercept)        mean 
+## -9.01777931  0.04173861
+```
+
+```r
+coef(partprod_MLotu_rich)
+```
+
+```
+## (Intercept)        mean 
+## -9.01777931  0.04173861
+```
+
+```r
+# Perform Leave One Out Cross Validation (LOOCV)
+cv_err_rich_PA <- cv.glm(data = filter(ML_otu_rich_stats, fraction == "WholePart"), glmfit = glm_rich_PA)
+# Cross validation results: 1st value = standard estmate of MSE; 2nd value = bais corrected MSE
+# These values are important for comparing *between* models
+cv_err_rich_PA$delta
+```
+
+```
+## [1] 50.18692 49.00011
+```
+
+```r
+# 4-fold cross validation
+cv4_err_rich_PA <- cv.glm(data = filter(ML_otu_rich_stats, fraction == "WholePart"), glmfit = glm_rich_PA, K = 4)
+cv4_err_rich_PA$delta
+```
+
+```
+## [1] 34.91373 33.38654
+```
+
+```r
+######################################################### SHANNON ENTROPY
+glm_shannon_PA <- glm(frac_bacprod ~ mean, data = filter(ML_otu_shannon_stats, fraction == "WholePart"))
+coef(glm_shannon_PA)
+```
+
+```
+## (Intercept)        mean 
+##   -38.47705    10.63134
+```
+
+```r
+coef(partprod_MLotu_shannon)
+```
+
+```
+## (Intercept)        mean 
+##   -38.47705    10.63134
+```
+
+```r
+# Perform Leave One Out Cross Validation (LOOCV)
+cv_err_shannon_PA <- cv.glm(data = filter(ML_otu_shannon_stats, fraction == "WholePart"), glmfit = glm_shannon_PA)
+# 4-fold cross validation
+cv4_err_shannon_PA <- cv.glm(data = filter(ML_otu_shannon_stats, fraction == "WholePart"), glmfit = glm_shannon_PA, K = 4)
+
+######################################################### INVERSE SIMPSON
+# Perform Leave One Out Cross Validation (LOOCV)
+glm_invsimps_PA <- glm(frac_bacprod ~ mean, data = filter(ML_otu_invsimps_stats, fraction == "WholePart"))
+
+# glm function just runs a linear regression without any extras within the function 
+coef(glm_invsimps_PA)
+```
+
+```
+## (Intercept)        mean 
+##  -0.1113659   0.2684354
+```
+
+```r
+coef(partprod_MLotu_invsimps)
+```
+
+```
+## (Intercept)        mean 
+##  -0.1113659   0.2684354
+```
+
+```r
+# glm will be used instead of lm b/c it can be used together with cv.glm for cross validation as part of the boot library.
+cv_err_invsimps_PA <- cv.glm(data = filter(ML_otu_invsimps_stats, fraction == "WholePart"), glmfit = glm_invsimps_PA)
+# 4-fold cross validation
+cv4_err_invsimps_PA <- cv.glm(data = filter(ML_otu_invsimps_stats, fraction == "WholePart"), glmfit = glm_invsimps_PA, K = 4)
+
+######################################################### SIMPSON'S EVENNESS
+# Perform Leave One Out Cross Validation (LOOCV)
+glm_simpseven_PA <- glm(frac_bacprod ~ mean, data = filter(ML_otu_simpseven_stats, fraction == "WholePart"))
+
+# glm function just runs a linear regression without any extras within the function 
+coef(glm_simpseven_PA)
+```
+
+```
+## (Intercept)        mean 
+##   -5.056751  199.656458
+```
+
+```r
+coef(partprod_MLotu_simpseven)
+```
+
+```
+## (Intercept)        mean 
+##   -5.056751  199.656458
+```
+
+```r
+# glm will be used instead of lm b/c it can be used together with cv.glm for cross validation as part of the boot library.
+cv_err_simpseven_PA <- cv.glm(data = filter(ML_otu_simpseven_stats, fraction == "WholePart"), glmfit = glm_simpseven_PA)
+# 4-fold cross validation
+cv4_err_simpseven_PA <- cv.glm(data = filter(ML_otu_simpseven_stats, fraction == "WholePart"), glmfit = glm_simpseven_PA, K = 4)
+
+
+# Extract 2nd MSE value that is bias corrected
+LOOCV_MSE1 <- c(cv_err_rich_PA$delta[1], cv_err_shannon_PA$delta[1], cv_err_invsimps_PA$delta[1], cv_err_simpseven_PA$delta[1])
+k4Fold_CV <- c(cv4_err_rich_PA$delta[2], cv4_err_shannon_PA$delta[2], cv4_err_invsimps_PA$delta[2], cv4_err_simpseven_PA$delta[2])
+LOOCV_MSE2_bias <- c(cv_err_rich_PA$delta[2], cv_err_shannon_PA$delta[2], cv_err_invsimps_PA$delta[2], cv_err_simpseven_PA$delta[2])
+cv_divs <- c("Richness", "Shannon", "InvSimps", "SimpsEven")
+
+cv_MSE_df <- data.frame(LOOCV_MSE1, k4Fold_CV, LOOCV_MSE2_bias, cv_divs) %>%
+  gather("CV_type", "MSE",1:3)
+
+# Plot it
+ggplot(cv_MSE_df, aes(x = cv_divs, y = MSE)) +
+  facet_grid(.~CV_type) + 
+  geom_bar(stat = "identity", color = "black", fill = "#FEB41C") + 
+  ylab("Mean Squared Error") + 
+  scale_x_discrete(limits=c("Richness", "Shannon", "InvSimps", "SimpsEven")) +
+  scale_y_continuous(expand = c(0,0), limits = c(0,60)) +
+  theme(axis.title.x = element_blank(),
+        axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
+```
+
+<img src="Rarefied_Figures/LOOCV-MSE-1.png" style="display: block; margin: auto;" />
+
+So, from the analysis above, the model with the best predictive power and lowest error rate is the Inverse Simpson model. 
+
+## Multicollinearity
+
+```r
+# Are the model richness and inverse simpson models different?
+anova(glm_rich_PA, glm_invsimps_PA)
+```
+
+```
+## Analysis of Deviance Table
+## 
+## Model 1: frac_bacprod ~ mean
+## Model 2: frac_bacprod ~ mean
+##   Resid. Df Resid. Dev Df Deviance
+## 1        10     322.56            
+## 2        10     208.15  0   114.41
+```
+
+```r
+rich_invsimps <- data.frame(Richness = filter(ML_otu_rich_stats, fraction == "WholePart")$mean, 
+                            Shannon = filter(ML_otu_shannon_stats, fraction == "WholePart")$mean,
+                            InvSimps = filter(ML_otu_invsimps_stats, fraction == "WholePart")$mean,
+                            SimpsEven = filter(ML_otu_simpseven_stats, fraction == "WholePart")$mean)
+
+
+lm_rich_Shannon <- lm(Richness ~ Shannon, data = rich_invsimps)
+
+plot1 <- ggplot(rich_invsimps, aes(y = Richness, x = Shannon)) +
+  geom_point() + xlab("Shannon") +
+  geom_smooth(method = "lm") +
+  scale_y_continuous(limits = c(200, 800)) +
+  scale_x_continuous(limits = c(3.5, 6.0)) +
+  annotate("text", y = 275, x=5, color = "black", fontface = "bold",
+         label = paste("R2 =", round(summary(lm_rich_Shannon)$adj.r.squared, digits = 2), "\n", 
+                       "p =", round(unname(summary(lm_rich_Shannon)$coefficients[,4][2]), digits = 8)));
+
+lm_rich_invsimps <- lm(Richness ~ InvSimps, data = rich_invsimps)
+
+plot2 <- ggplot(rich_invsimps, aes(y = Richness, x = InvSimps)) +
+  geom_point() + xlab("Inverse Simpson") +
+  geom_smooth(method = "lm") +
+  scale_y_continuous(limits = c(200, 800)) +
+  annotate("text", y= 275, x=60, color = "black", fontface = "bold",
+         label = paste("R2 =", round(summary(lm_rich_invsimps)$adj.r.squared, digits = 2), "\n", 
+                       "p =", round(unname(summary(lm_rich_invsimps)$coefficients[,4][2]), digits = 7)));
+
+
+lm_rich_simpseven <- lm(Richness ~ SimpsEven, data = rich_invsimps)
+
+plot3 <- ggplot(rich_invsimps, aes(y = Richness, x = SimpsEven)) +
+  geom_point() + xlab("Simpson's Evenness") +
+  geom_smooth(method = "lm") +
+  scale_y_continuous(limits = c(200, 800)) +
+  annotate("text", y = 275, x=0.1, color = "black", fontface = "bold",
+         label = paste("R2 =", round(summary(lm_rich_simpseven)$adj.r.squared, digits = 2), "\n", 
+                       "p =", round(unname(summary(lm_rich_simpseven)$coefficients[,4][2]), digits = 4)));
+
+
+plot_grid(plot1, plot2, plot3, align = "h",
+          nrow = 1, ncol = 3,
+          labels = c("A", "B", "C"))
+```
+
+<img src="Rarefied_Figures/unnamed-chunk-1-1.png" style="display: block; margin: auto;" />
+
+```r
+# Take scaled values and specifically look at the difference between richness and inverse simpson
+PA_rich_invsimps_scaled <- dplyr::filter(prod_alpha_fracprod, measure %in% c("Richness", "Inverse_Simpson"))
+
+anova(lm(frac_bacprod ~ mean*measure, data = PA_rich_invsimps_scaled), 
+      lm(frac_bacprod ~ mean+measure, data = PA_rich_invsimps_scaled))
+```
+
+```
+## Analysis of Variance Table
+## 
+## Model 1: frac_bacprod ~ mean * measure
+## Model 2: frac_bacprod ~ mean + measure
+##   Res.Df    RSS Df Sum of Sq      F Pr(>F)
+## 1     20 530.71                           
+## 2     21 534.44 -1   -3.7312 0.1406 0.7116
+```
+
+```r
+summary(lm(frac_bacprod ~ mean*measure, data = PA_rich_invsimps_scaled))
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mean * measure, data = PA_rich_invsimps_scaled)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -7.4641 -2.5167 -0.3221  2.0382 11.3728 
+## 
+## Coefficients:
+##                      Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)            8.2595     1.5341   5.384 2.86e-05 ***
+## mean                   5.4047     1.1989   4.508 0.000215 ***
+## measureRichness       -1.9163     2.3197  -0.826 0.418484    
+## mean:measureRichness   0.7298     1.9462   0.375 0.711623    
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 5.151 on 20 degrees of freedom
+## Multiple R-squared:  0.645,	Adjusted R-squared:  0.5917 
+## F-statistic: 12.11 on 3 and 20 DF,  p-value: 9.682e-05
+```
+
+From the Summary output above, we can conclude that:  
+
+- **3rd line**: The intercept for measureRichness is not significantly different from the intercept of measureInverse_Simpson (p = 0.418).  
+- **4th Line**: The slopes between Richness and Inverse_Simpson are insignificant (p = 0.71) and therefore, the models between richness and inverse_simpson do not differ from each other. 
+
 
 
 
@@ -3957,6 +4228,9 @@ plot_grid(plot_unweightedMPD_percell, plot_unweightedMNTD_percell,
 <img src="Rarefied_Figures/taxalab-percell-2.png" style="display: block; margin: auto;" />
 
 
+
+
+
 ## Differences in slopes and interaction terms?
 
 ### Unweighted MPD slopes
@@ -6489,7 +6763,7 @@ plot_grid(unweightedMPD_vs_fracprod_indepswap, weightedMPD_vs_fracprod_indepswap
 
 plot_grid(
           # Plot 1: Distribution of unweighted MPD INDEPSWAP
-          indepswap_unweight_mpd + xlab("\n Fraction \n") + coord_flip() + 
+          indepswap_unweight_mpd + xlab("Fraction") + coord_flip() + 
             annotate("text", x=1.55, y=(max(mpd_nums1$b)+0.1), fontface = "bold",  size = 3.5, color = "gray40", label= paste("NS")) +
             scale_y_continuous(limits = c(-1.15,1.15)) + 
             theme(legend.position = "top", legend.title = element_blank(),
@@ -6499,7 +6773,7 @@ plot_grid(
           
           # Plot 2: Unweighted MPD INDEPSWAP
           divs_p2_indepswap + theme(legend.position = "none", plot.margin = unit(c(0,2,0,0), "pt")) +
-          ylab("Observed Richness \n") +
+          ylab("Observed Richness") +
           scale_x_continuous(limits = c(-1.15,1.15)) +
           theme(axis.title.x=element_blank(), axis.text.x=element_blank(),
                 plot.margin = unit(c(3,2,10,3), "pt")),  #top, right, bottom, and left),
@@ -6517,6 +6791,7 @@ plot_grid(
           # Add labels, rows, and relative heights 
           labels = c("A", "B", "C", "D"),
           ncol = 1, nrow = 4,
+          align = "v",
           rel_heights = c(1.2, 2, 2, 2.3))
 ```
 
@@ -6549,21 +6824,21 @@ plot_grid(
 
 
 
-# Multiple regression
+# Multiple regression: IndepSwap
 
 
 ```r
-prod_data <- unweighted_sesMPD_taxalab %>%
+prod_data <- unweighted_sesMPD_indepswap %>%
   dplyr::filter(year == "2015" & fraction %in% c("WholePart", "WholeFree")) %>%
   dplyr::select(norep_filter_name,frac_bacprod, SD_frac_bacprod, fracprod_per_cell_noinf) 
 
-unweight_phylo_df <- unweighted_sesMPD_taxalab %>%
+unweight_phylo_df <- unweighted_sesMPD_indepswap %>%
   dplyr::filter(year == "2015" & fraction %in% c("WholePart", "WholeFree")) %>%
   dplyr::select(norep_filter_name,frac_bacprod, SD_frac_bacprod, fracprod_per_cell_noinf, mpd.obs.z) %>%
   mutate(measure = "Unweighted_MPD") %>%
   dplyr::rename(mean = mpd.obs.z)
 
-weight_phylo_df <- WEIGHTED_sesMPD_taxalab %>%
+weight_phylo_df <- WEIGHTED_sesMPD_indepswap %>%
   dplyr::filter(year == "2015" & fraction %in% c("WholePart", "WholeFree")) %>%
   dplyr::select(norep_filter_name,frac_bacprod, SD_frac_bacprod, fracprod_per_cell_noinf, mpd.obs.z) %>%
   mutate(measure = "Weighted_MPD") %>%
@@ -6590,7 +6865,7 @@ all_divs <- all_div_measures %>%
   dplyr::select(norep_filter_name, mean, measure) %>%
   tidyr::spread(measure, mean) %>%
   tibble::remove_rownames() %>%
-  tibble::column_to_rownames(var = "norep_filter_name")
+  tibble::column_to_rownames(var = "norep_filter_name") 
 
 
 # Scale to a mean = 0 and  SD = 1
@@ -6602,7 +6877,7 @@ colMeans(scale_all_divs)  # faster version of apply(scaled.dat, 2, mean)
 
 ```
 ##   Inverse_Simpson          Richness   Shannon_Entropy Simpsons_Evenness    Unweighted_MPD      Weighted_MPD 
-##      4.365721e-17     -1.827242e-16     -3.921921e-16      1.590163e-16      4.394633e-17      0.000000e+00
+##      4.365721e-17     -1.827242e-16     -3.921921e-16      1.590163e-16      2.949030e-17      8.792880e-17
 ```
 
 ```r
@@ -6637,23 +6912,23 @@ summary(lm_by_all_divs)
 ## 
 ## Residuals:
 ##     Min      1Q  Median      3Q     Max 
-## -21.512 -10.074  -4.896   5.521  46.731 
+## -20.877 -10.832  -5.157   5.606  46.731 
 ## 
 ## Coefficients:
 ##                               Estimate Std. Error t value Pr(>|t|)    
-## (Intercept)                     17.008      1.224  13.893   <2e-16 ***
-## mean                             3.109      3.063   1.015   0.3119    
-## mean:measureRichness            -2.631      4.332  -0.607   0.5447    
-## mean:measureShannon_Entropy     -2.349      4.332  -0.542   0.5885    
-## mean:measureSimpsons_Evenness    2.562      4.332   0.591   0.5553    
-## mean:measureUnweighted_MPD      -8.252      4.332  -1.905   0.0589 .  
-## mean:measureWeighted_MPD        -8.901      4.332  -2.055   0.0418 *  
+## (Intercept)                     17.008      1.241  13.703   <2e-16 ***
+## mean                             3.109      3.106   1.001   0.3185    
+## mean:measureRichness            -2.631      4.392  -0.599   0.5502    
+## mean:measureShannon_Entropy     -2.349      4.392  -0.535   0.5936    
+## mean:measureSimpsons_Evenness    2.562      4.392   0.583   0.5607    
+## mean:measureUnweighted_MPD      -7.910      4.392  -1.801   0.0739 .  
+## mean:measureWeighted_MPD        -4.135      4.392  -0.941   0.3481    
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
-## Residual standard error: 14.69 on 137 degrees of freedom
-## Multiple R-squared:  0.07393,	Adjusted R-squared:  0.03338 
-## F-statistic: 1.823 on 6 and 137 DF,  p-value: 0.09896
+## Residual standard error: 14.89 on 137 degrees of freedom
+## Multiple R-squared:  0.04807,	Adjusted R-squared:  0.006381 
+## F-statistic: 1.153 on 6 and 137 DF,  p-value: 0.3352
 ```
 
 ```r
@@ -6675,21 +6950,21 @@ summary(post_hoc_measure)
 ## 
 ## Linear Hypotheses:
 ##                                          Estimate Std. Error t value Pr(>|t|)   
-## Richness - Inverse_Simpson == 0           -2.6307     2.6584  -0.990  0.91701   
-## Shannon_Entropy - Inverse_Simpson == 0    -2.3494     2.6039  -0.902  0.94275   
-## Simpsons_Evenness - Inverse_Simpson == 0   2.5617     2.1637   1.184  0.83773   
-## Unweighted_MPD - Inverse_Simpson == 0     -8.2520     3.3277  -2.480  0.13192   
-## Weighted_MPD - Inverse_Simpson == 0       -8.9013     3.1488  -2.827  0.05650 . 
-## Shannon_Entropy - Richness == 0            0.2813     2.8087   0.100  1.00000   
-## Simpsons_Evenness - Richness == 0          5.1925     2.4062   2.158  0.25558   
-## Unweighted_MPD - Richness == 0            -5.6213     3.4903  -1.611  0.58252   
-## Weighted_MPD - Richness == 0              -6.2705     3.3202  -1.889  0.40302   
-## Simpsons_Evenness - Shannon_Entropy == 0   4.9112     2.3459   2.094  0.28749   
-## Unweighted_MPD - Shannon_Entropy == 0     -5.9026     3.4490  -1.711  0.51577   
-## Weighted_MPD - Shannon_Entropy == 0       -6.5518     3.2767  -2.000  0.33796   
-## Unweighted_MPD - Simpsons_Evenness == 0  -10.8138     3.1299  -3.455  0.00887 **
-## Weighted_MPD - Simpsons_Evenness == 0    -11.4630     2.9390  -3.900  0.00192 **
-## Weighted_MPD - Unweighted_MPD == 0        -0.6492     3.8769  -0.167  0.99998   
+## Richness - Inverse_Simpson == 0           -2.6307     2.6584  -0.990   0.9167   
+## Shannon_Entropy - Inverse_Simpson == 0    -2.3494     2.6039  -0.902   0.9425   
+## Simpsons_Evenness - Inverse_Simpson == 0   2.5617     2.1637   1.184   0.8372   
+## Unweighted_MPD - Inverse_Simpson == 0     -7.9096     3.2232  -2.454   0.1391   
+## Weighted_MPD - Inverse_Simpson == 0       -4.1351     3.4064  -1.214   0.8224   
+## Shannon_Entropy - Richness == 0            0.2813     2.8087   0.100   1.0000   
+## Simpsons_Evenness - Richness == 0          5.1925     2.4062   2.158   0.2549   
+## Unweighted_MPD - Richness == 0            -5.2789     3.3908  -1.557   0.6170   
+## Weighted_MPD - Richness == 0              -1.5044     3.5654  -0.422   0.9982   
+## Simpsons_Evenness - Shannon_Entropy == 0   4.9112     2.3459   2.094   0.2866   
+## Unweighted_MPD - Shannon_Entropy == 0     -5.5602     3.3482  -1.661   0.5484   
+## Weighted_MPD - Shannon_Entropy == 0       -1.7857     3.5250  -0.507   0.9956   
+## Unweighted_MPD - Simpsons_Evenness == 0  -10.4714     3.0186  -3.469   0.0084 **
+## Weighted_MPD - Simpsons_Evenness == 0     -6.6968     3.2135  -2.084   0.2917   
+## Weighted_MPD - Unweighted_MPD == 0         3.7745     4.0043   0.943   0.9313   
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## (Adjusted p values reported -- single-step method)
@@ -6709,28 +6984,28 @@ summary(lm(frac_bacprod ~ mean * measure, data = scale_all_divs_together))
 ## 
 ## Residuals:
 ##     Min      1Q  Median      3Q     Max 
-## -21.512 -10.074  -4.896   5.521  46.731 
+## -20.877 -10.832  -5.157   5.606  46.731 
 ## 
 ## Coefficients:
 ##                                 Estimate Std. Error t value Pr(>|t|)    
-## (Intercept)                    1.701e+01  3.055e+00   5.567 1.39e-07 ***
-## mean                           3.109e+00  3.121e+00   0.996   0.3209    
-## measureRichness                5.367e-15  4.320e+00   0.000   1.0000    
-## measureShannon_Entropy         4.519e-15  4.320e+00   0.000   1.0000    
-## measureSimpsons_Evenness       5.062e-15  4.320e+00   0.000   1.0000    
-## measureUnweighted_MPD          6.247e-15  4.320e+00   0.000   1.0000    
-## measureWeighted_MPD            6.005e-15  4.320e+00   0.000   1.0000    
-## mean:measureRichness          -2.631e+00  4.413e+00  -0.596   0.5521    
-## mean:measureShannon_Entropy   -2.349e+00  4.413e+00  -0.532   0.5954    
-## mean:measureSimpsons_Evenness  2.562e+00  4.413e+00   0.580   0.5626    
-## mean:measureUnweighted_MPD    -8.252e+00  4.413e+00  -1.870   0.0637 .  
-## mean:measureWeighted_MPD      -8.901e+00  4.413e+00  -2.017   0.0457 *  
+## (Intercept)                    1.701e+01  3.097e+00   5.491 1.97e-07 ***
+## mean                           3.109e+00  3.164e+00   0.983   0.3276    
+## measureRichness                9.269e-15  4.380e+00   0.000   1.0000    
+## measureShannon_Entropy         8.828e-15  4.380e+00   0.000   1.0000    
+## measureSimpsons_Evenness       7.137e-15  4.380e+00   0.000   1.0000    
+## measureUnweighted_MPD          8.604e-15  4.380e+00   0.000   1.0000    
+## measureWeighted_MPD            9.519e-15  4.380e+00   0.000   1.0000    
+## mean:measureRichness          -2.631e+00  4.475e+00  -0.588   0.5576    
+## mean:measureShannon_Entropy   -2.349e+00  4.475e+00  -0.525   0.6004    
+## mean:measureSimpsons_Evenness  2.562e+00  4.475e+00   0.573   0.5679    
+## mean:measureUnweighted_MPD    -7.910e+00  4.475e+00  -1.768   0.0794 .  
+## mean:measureWeighted_MPD      -4.135e+00  4.475e+00  -0.924   0.3571    
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
-## Residual standard error: 14.97 on 132 degrees of freedom
-## Multiple R-squared:  0.07393,	Adjusted R-squared:  -0.003238 
-## F-statistic: 0.958 on 11 and 132 DF,  p-value: 0.4878
+## Residual standard error: 15.17 on 132 degrees of freedom
+## Multiple R-squared:  0.04807,	Adjusted R-squared:  -0.03126 
+## F-statistic: 0.606 on 11 and 132 DF,  p-value: 0.8211
 ```
 
 ```r
@@ -6790,28 +7065,28 @@ summary(lm(frac_bacprod ~ mean * measure,
 ## 
 ## Residuals:
 ##      Min       1Q   Median       3Q      Max 
-## -12.1297  -3.1456  -0.3271   2.0846  16.8990 
+## -11.9415  -3.5621  -0.3909   1.8849  20.2389 
 ## 
 ## Coefficients:
 ##                                Estimate Std. Error t value Pr(>|t|)    
-## (Intercept)                    -0.11137    3.17359  -0.035 0.972123    
-## mean                            0.26844    0.07042   3.812 0.000328 ***
-## measureRichness                -8.90641    6.67989  -1.333 0.187468    
-## measureShannon_Entropy        -38.36568   14.79275  -2.594 0.011918 *  
-## measureSimpsons_Evenness       -4.94538    5.67387  -0.872 0.386897    
-## measureUnweighted_MPD          12.32215    3.71520   3.317 0.001550 ** 
-## measureWeighted_MPD            13.97038    4.16425   3.355 0.001381 ** 
-## mean:measureRichness           -0.22670    0.07149  -3.171 0.002395 ** 
-## mean:measureShannon_Entropy    10.36291    3.14854   3.291 0.001673 ** 
-## mean:measureSimpsons_Evenness 199.38802   58.00339   3.438 0.001072 ** 
-## mean:measureUnweighted_MPD     -3.92720    1.29939  -3.022 0.003685 ** 
-## mean:measureWeighted_MPD       -5.57832    2.78278  -2.005 0.049527 *  
+## (Intercept)                    -0.11137    3.23499  -0.034 0.972652    
+## mean                            0.26844    0.07178   3.739 0.000414 ***
+## measureRichness                -8.90641    6.80913  -1.308 0.195859    
+## measureShannon_Entropy        -38.36568   15.07896  -2.544 0.013541 *  
+## measureSimpsons_Evenness       -4.94538    5.78365  -0.855 0.395917    
+## measureUnweighted_MPD           9.47999    3.70463   2.559 0.013039 *  
+## measureWeighted_MPD            11.91463    4.05944   2.935 0.004721 ** 
+## mean:measureRichness           -0.22670    0.07288  -3.111 0.002856 ** 
+## mean:measureShannon_Entropy    10.36291    3.20946   3.229 0.002017 ** 
+## mean:measureSimpsons_Evenness 199.38802   59.12566   3.372 0.001310 ** 
+## mean:measureUnweighted_MPD     -9.58125    3.35961  -2.852 0.005952 ** 
+## mean:measureWeighted_MPD        5.46073    5.19681   1.051 0.297571    
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
-## Residual standard error: 6.092 on 60 degrees of freedom
-## Multiple R-squared:  0.5034,	Adjusted R-squared:  0.4124 
-## F-statistic:  5.53 on 11 and 60 DF,  p-value: 5.021e-06
+## Residual standard error: 6.21 on 60 degrees of freedom
+## Multiple R-squared:  0.484,	Adjusted R-squared:  0.3894 
+## F-statistic: 5.117 on 11 and 60 DF,  p-value: 1.345e-05
 ```
 
 ```r
@@ -6845,6 +7120,35 @@ summary(lm(frac_bacprod ~ mean * measure,
 ## Residual standard error: 5.286 on 30 degrees of freedom
 ## Multiple R-squared:  0.6261,	Adjusted R-squared:  0.5638 
 ## F-statistic: 10.05 on 5 and 30 DF,  p-value: 1.006e-05
+```
+
+
+## Forward/backward selection 
+
+```r
+divs_df <- dplyr::filter(wide_all_divs, fraction == "WholePart") %>%
+  column_to_rownames(var = "norep_filter_name") %>%
+  dplyr::select(-c(fraction))
+```
+
+```
+## Error in function_list[[i]](value): could not find function "column_to_rownames"
+```
+
+```r
+summary(lm(frac_bacprod ~ Inverse_Simpson , data = divs_df))
+```
+
+```
+## Error in is.data.frame(data): object 'divs_df' not found
+```
+
+```r
+summary(lm(frac_bacprod ~ Inverse_Simpson + Unweighted_MPD, data = divs_df))
+```
+
+```
+## Error in is.data.frame(data): object 'divs_df' not found
 ```
 
 
@@ -6901,7 +7205,7 @@ mean((ridge_divs_pred - y_test)^2) # Test MSE
 ```
 
 ```
-## [1] 55.57164
+## [1] 56.09131
 ```
 
 ```r
@@ -6931,7 +7235,7 @@ mean((lasso_divs_pred - y_test)^2)
 ```
 
 ```
-## [1] 51.09776
+## [1] 54.25604
 ```
 
 ```r
@@ -6959,8 +7263,8 @@ predict(lasso_divs, type = "coefficients", s = best_lasso_lambda)
 ```
 ## 6 x 1 sparse Matrix of class "dgCMatrix"
 ##                         1
-## (Intercept)     2.5761748
-## Inverse_Simpson 0.1967917
+## (Intercept)     3.1257879
+## Inverse_Simpson 0.1821402
 ## Richness        .        
 ## Shannon_Entropy .        
 ## Unweighted_MPD  .        
@@ -6968,7 +7272,7 @@ predict(lasso_divs, type = "coefficients", s = best_lasso_lambda)
 ```
 
 
-The test MSE for ridge regression is 55.5716399 while the test MSE for lasso is 51.0977564.  Therefore, it's best if we use lasso!
+The test MSE for ridge regression is 56.0913095 while the test MSE for lasso is 54.2560411.  Therefore, it's best if we use lasso!
 
 
 Additionally, the lasso model uses Inverse Simpson as the **best and only** predictor of production!

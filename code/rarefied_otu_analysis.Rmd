@@ -55,6 +55,7 @@ library(picante) # Will also include ape and vegan
 library(car) # For residual analysis
 library(sandwich) # for vcovHC function in post-hoc test
 library(MASS) # For studres in plot_residuals function
+library(boot) # For cross validation
 source("Muskegon_functions.R")
 source("set_colors.R")
 ```
@@ -565,6 +566,8 @@ summary(partprod_MLotu_rich)
 # Both fractions together
 summary(lm(frac_bacprod ~ mean, data = ML_otu_rich_stats))
  
+
+
 # Plot 
 otu_rich_vegan <-  ggplot(ML_otu_rich_stats, aes(x=mean, y=frac_bacprod, color = fraction)) + 
   geom_point(size = 3.5) + 
@@ -806,6 +809,152 @@ post_hoc_measure <- glht(lm_by_divmeasure, linfct = mcp(measure = "Tukey", inter
 summary(post_hoc_measure)
 detach("package:multcomp", unload=TRUE) # This package masks the dplyr select function = :(
 ```
+
+## Cross Validation: MSE
+#### Here we are using leave one out cross validation as we only have 12 samples in our models 
+```{r LOOCV-MSE, fig.height=4, fig.width=7 , dependson = c("plot-vegan-fracprod")}
+######################################################### RICHNESS
+# glm will be used instead of lm b/c it can be used together with cv.glm for cross validation as part of the boot library.
+glm_rich_PA <- glm(frac_bacprod ~ mean, data = filter(ML_otu_rich_stats, fraction == "WholePart"))
+
+# glm function just runs a linear regression without any extras within the function 
+coef(glm_rich_PA)
+coef(partprod_MLotu_rich)
+
+# Perform Leave One Out Cross Validation (LOOCV)
+cv_err_rich_PA <- cv.glm(data = filter(ML_otu_rich_stats, fraction == "WholePart"), glmfit = glm_rich_PA)
+# Cross validation results: 1st value = standard estmate of MSE; 2nd value = bais corrected MSE
+# These values are important for comparing *between* models
+cv_err_rich_PA$delta
+
+# 4-fold cross validation
+cv4_err_rich_PA <- cv.glm(data = filter(ML_otu_rich_stats, fraction == "WholePart"), glmfit = glm_rich_PA, K = 4)
+cv4_err_rich_PA$delta
+
+
+######################################################### SHANNON ENTROPY
+glm_shannon_PA <- glm(frac_bacprod ~ mean, data = filter(ML_otu_shannon_stats, fraction == "WholePart"))
+coef(glm_shannon_PA)
+coef(partprod_MLotu_shannon)
+
+# Perform Leave One Out Cross Validation (LOOCV)
+cv_err_shannon_PA <- cv.glm(data = filter(ML_otu_shannon_stats, fraction == "WholePart"), glmfit = glm_shannon_PA)
+# 4-fold cross validation
+cv4_err_shannon_PA <- cv.glm(data = filter(ML_otu_shannon_stats, fraction == "WholePart"), glmfit = glm_shannon_PA, K = 4)
+
+######################################################### INVERSE SIMPSON
+# Perform Leave One Out Cross Validation (LOOCV)
+glm_invsimps_PA <- glm(frac_bacprod ~ mean, data = filter(ML_otu_invsimps_stats, fraction == "WholePart"))
+
+# glm function just runs a linear regression without any extras within the function 
+coef(glm_invsimps_PA)
+coef(partprod_MLotu_invsimps)
+
+# glm will be used instead of lm b/c it can be used together with cv.glm for cross validation as part of the boot library.
+cv_err_invsimps_PA <- cv.glm(data = filter(ML_otu_invsimps_stats, fraction == "WholePart"), glmfit = glm_invsimps_PA)
+# 4-fold cross validation
+cv4_err_invsimps_PA <- cv.glm(data = filter(ML_otu_invsimps_stats, fraction == "WholePart"), glmfit = glm_invsimps_PA, K = 4)
+
+######################################################### SIMPSON'S EVENNESS
+# Perform Leave One Out Cross Validation (LOOCV)
+glm_simpseven_PA <- glm(frac_bacprod ~ mean, data = filter(ML_otu_simpseven_stats, fraction == "WholePart"))
+
+# glm function just runs a linear regression without any extras within the function 
+coef(glm_simpseven_PA)
+coef(partprod_MLotu_simpseven)
+
+# glm will be used instead of lm b/c it can be used together with cv.glm for cross validation as part of the boot library.
+cv_err_simpseven_PA <- cv.glm(data = filter(ML_otu_simpseven_stats, fraction == "WholePart"), glmfit = glm_simpseven_PA)
+# 4-fold cross validation
+cv4_err_simpseven_PA <- cv.glm(data = filter(ML_otu_simpseven_stats, fraction == "WholePart"), glmfit = glm_simpseven_PA, K = 4)
+
+
+# Extract 2nd MSE value that is bias corrected
+LOOCV_MSE1 <- c(cv_err_rich_PA$delta[1], cv_err_shannon_PA$delta[1], cv_err_invsimps_PA$delta[1], cv_err_simpseven_PA$delta[1])
+k4Fold_CV <- c(cv4_err_rich_PA$delta[2], cv4_err_shannon_PA$delta[2], cv4_err_invsimps_PA$delta[2], cv4_err_simpseven_PA$delta[2])
+LOOCV_MSE2_bias <- c(cv_err_rich_PA$delta[2], cv_err_shannon_PA$delta[2], cv_err_invsimps_PA$delta[2], cv_err_simpseven_PA$delta[2])
+cv_divs <- c("Richness", "Shannon", "InvSimps", "SimpsEven")
+
+cv_MSE_df <- data.frame(LOOCV_MSE1, k4Fold_CV, LOOCV_MSE2_bias, cv_divs) %>%
+  gather("CV_type", "MSE",1:3)
+
+# Plot it
+ggplot(cv_MSE_df, aes(x = cv_divs, y = MSE)) +
+  facet_grid(.~CV_type) + 
+  geom_bar(stat = "identity", color = "black", fill = "#FEB41C") + 
+  ylab("Mean Squared Error") + 
+  scale_x_discrete(limits=c("Richness", "Shannon", "InvSimps", "SimpsEven")) +
+  scale_y_continuous(expand = c(0,0), limits = c(0,60)) +
+  theme(axis.title.x = element_blank(),
+        axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
+```
+
+So, from the analysis above, the model with the best predictive power and lowest error rate is the Inverse Simpson model. 
+
+## Multicollinearity
+```{r, fig.height=4, fig.width=10 , dependson = c("LOOCV-MSE", "post-hoc")}
+# Are the model richness and inverse simpson models different?
+anova(glm_rich_PA, glm_invsimps_PA)
+
+rich_invsimps <- data.frame(Richness = filter(ML_otu_rich_stats, fraction == "WholePart")$mean, 
+                            Shannon = filter(ML_otu_shannon_stats, fraction == "WholePart")$mean,
+                            InvSimps = filter(ML_otu_invsimps_stats, fraction == "WholePart")$mean,
+                            SimpsEven = filter(ML_otu_simpseven_stats, fraction == "WholePart")$mean)
+
+
+lm_rich_Shannon <- lm(Richness ~ Shannon, data = rich_invsimps)
+
+plot1 <- ggplot(rich_invsimps, aes(y = Richness, x = Shannon)) +
+  geom_point() + xlab("Shannon") +
+  geom_smooth(method = "lm") +
+  scale_y_continuous(limits = c(200, 800)) +
+  scale_x_continuous(limits = c(3.5, 6.0)) +
+  annotate("text", y = 275, x=5, color = "black", fontface = "bold",
+         label = paste("R2 =", round(summary(lm_rich_Shannon)$adj.r.squared, digits = 2), "\n", 
+                       "p =", round(unname(summary(lm_rich_Shannon)$coefficients[,4][2]), digits = 8)));
+
+lm_rich_invsimps <- lm(Richness ~ InvSimps, data = rich_invsimps)
+
+plot2 <- ggplot(rich_invsimps, aes(y = Richness, x = InvSimps)) +
+  geom_point() + xlab("Inverse Simpson") +
+  geom_smooth(method = "lm") +
+  scale_y_continuous(limits = c(200, 800)) +
+  annotate("text", y= 275, x=60, color = "black", fontface = "bold",
+         label = paste("R2 =", round(summary(lm_rich_invsimps)$adj.r.squared, digits = 2), "\n", 
+                       "p =", round(unname(summary(lm_rich_invsimps)$coefficients[,4][2]), digits = 7)));
+
+
+lm_rich_simpseven <- lm(Richness ~ SimpsEven, data = rich_invsimps)
+
+plot3 <- ggplot(rich_invsimps, aes(y = Richness, x = SimpsEven)) +
+  geom_point() + xlab("Simpson's Evenness") +
+  geom_smooth(method = "lm") +
+  scale_y_continuous(limits = c(200, 800)) +
+  annotate("text", y = 275, x=0.1, color = "black", fontface = "bold",
+         label = paste("R2 =", round(summary(lm_rich_simpseven)$adj.r.squared, digits = 2), "\n", 
+                       "p =", round(unname(summary(lm_rich_simpseven)$coefficients[,4][2]), digits = 4)));
+
+
+plot_grid(plot1, plot2, plot3, align = "h",
+          nrow = 1, ncol = 3,
+          labels = c("A", "B", "C"))
+
+
+
+# Take scaled values and specifically look at the difference between richness and inverse simpson
+PA_rich_invsimps_scaled <- dplyr::filter(prod_alpha_fracprod, measure %in% c("Richness", "Inverse_Simpson"))
+
+anova(lm(frac_bacprod ~ mean*measure, data = PA_rich_invsimps_scaled), 
+      lm(frac_bacprod ~ mean+measure, data = PA_rich_invsimps_scaled))
+
+summary(lm(frac_bacprod ~ mean*measure, data = PA_rich_invsimps_scaled))
+```
+
+From the Summary output above, we can conclude that:  
+
+- **3rd line**: The intercept for measureRichness is not significantly different from the intercept of measureInverse_Simpson (p = 0.418).  
+- **4th Line**: The slopes between Richness and Inverse_Simpson are insignificant (p = 0.71) and therefore, the models between richness and inverse_simpson do not differ from each other. 
+
 
 
 
@@ -2092,6 +2241,9 @@ plot_grid(plot_unweightedMPD_percell, plot_unweightedMNTD_percell,
 ```
 
 
+
+
+
 ## Differences in slopes and interaction terms?
 
 ### Unweighted MPD slopes
@@ -3140,7 +3292,7 @@ plot_grid(unweightedMPD_vs_fracprod_indepswap, weightedMPD_vs_fracprod_indepswap
 
 plot_grid(
           # Plot 1: Distribution of unweighted MPD INDEPSWAP
-          indepswap_unweight_mpd + xlab("\n Fraction \n") + coord_flip() + 
+          indepswap_unweight_mpd + xlab("Fraction") + coord_flip() + 
             annotate("text", x=1.55, y=(max(mpd_nums1$b)+0.1), fontface = "bold",  size = 3.5, color = "gray40", label= paste("NS")) +
             scale_y_continuous(limits = c(-1.15,1.15)) + 
             theme(legend.position = "top", legend.title = element_blank(),
@@ -3150,7 +3302,7 @@ plot_grid(
           
           # Plot 2: Unweighted MPD INDEPSWAP
           divs_p2_indepswap + theme(legend.position = "none", plot.margin = unit(c(0,2,0,0), "pt")) +
-          ylab("Observed Richness \n") +
+          ylab("Observed Richness") +
           scale_x_continuous(limits = c(-1.15,1.15)) +
           theme(axis.title.x=element_blank(), axis.text.x=element_blank(),
                 plot.margin = unit(c(3,2,10,3), "pt")),  #top, right, bottom, and left),
@@ -3168,27 +3320,27 @@ plot_grid(
           # Add labels, rows, and relative heights 
           labels = c("A", "B", "C", "D"),
           ncol = 1, nrow = 4,
+          align = "v",
           rel_heights = c(1.2, 2, 2, 2.3))
 ```
 
 
 
 
-# Multiple regression
+# Multiple regression: IndepSwap
 
 ```{r multiple-regression}
-
-prod_data <- unweighted_sesMPD_taxalab %>%
+prod_data <- unweighted_sesMPD_indepswap %>%
   dplyr::filter(year == "2015" & fraction %in% c("WholePart", "WholeFree")) %>%
   dplyr::select(norep_filter_name,frac_bacprod, SD_frac_bacprod, fracprod_per_cell_noinf) 
 
-unweight_phylo_df <- unweighted_sesMPD_taxalab %>%
+unweight_phylo_df <- unweighted_sesMPD_indepswap %>%
   dplyr::filter(year == "2015" & fraction %in% c("WholePart", "WholeFree")) %>%
   dplyr::select(norep_filter_name,frac_bacprod, SD_frac_bacprod, fracprod_per_cell_noinf, mpd.obs.z) %>%
   mutate(measure = "Unweighted_MPD") %>%
   dplyr::rename(mean = mpd.obs.z)
 
-weight_phylo_df <- WEIGHTED_sesMPD_taxalab %>%
+weight_phylo_df <- WEIGHTED_sesMPD_indepswap %>%
   dplyr::filter(year == "2015" & fraction %in% c("WholePart", "WholeFree")) %>%
   dplyr::select(norep_filter_name,frac_bacprod, SD_frac_bacprod, fracprod_per_cell_noinf, mpd.obs.z) %>%
   mutate(measure = "Weighted_MPD") %>%
@@ -3215,7 +3367,7 @@ all_divs <- all_div_measures %>%
   dplyr::select(norep_filter_name, mean, measure) %>%
   tidyr::spread(measure, mean) %>%
   tibble::remove_rownames() %>%
-  tibble::column_to_rownames(var = "norep_filter_name")
+  tibble::column_to_rownames(var = "norep_filter_name") 
 
 
 # Scale to a mean = 0 and  SD = 1
@@ -3273,6 +3425,19 @@ summary(lm(frac_bacprod ~ mean * measure,
 summary(lm(frac_bacprod ~ mean * measure, 
            data = dplyr::filter(long_all_divs, fraction == "WholePart" & 
                                   measure %in% c("Richness","Inverse_Simpson", "Simpsons_Evenness", "frac_bacprod"))))
+```
+
+
+## Forward/backward selection 
+```{r}
+divs_df <- dplyr::filter(wide_all_divs, fraction == "WholePart") %>%
+  column_to_rownames(var = "norep_filter_name") %>%
+  dplyr::select(-c(fraction))
+
+summary(lm(frac_bacprod ~ Inverse_Simpson , data = divs_df))
+
+summary(lm(frac_bacprod ~ Inverse_Simpson + Unweighted_MPD, data = divs_df))
+
 ```
 
 
