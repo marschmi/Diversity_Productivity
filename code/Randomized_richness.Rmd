@@ -1,0 +1,625 @@
+---
+title: "Randomized Richness"
+author: "Marian L. Schmidt"
+date: "May 1st, 2017"
+output:
+  html_document:
+    code_folding: show
+    highlight: haddock
+    keep_md: yes
+    theme: united
+    toc: yes
+    toc_float:
+      collapsed: no
+      smooth_scroll: yes
+      toc_depth: 3
+---
+<style>
+pre code, pre, code {
+  white-space: pre !important;
+  overflow-x: scroll !important;
+  word-break: keep-all !important;
+  word-wrap: initial !important;
+}
+</style>
+
+```{r setup, include=FALSE}
+# For width of code chunks and scroll bar 
+options(width=250)
+
+knitr::opts_chunk$set(eval = TRUE, 
+                      echo = TRUE, 
+                      cache = TRUE,
+                      include = TRUE,
+                      warning = TRUE,
+                      collapse = FALSE,
+                      message = FALSE,
+                      engine = "R", # Chunks will always have R code, unless noted
+                      error = TRUE,
+                      fig.path="Rarefied_Figures/",  # Set the figure options
+                      fig.align = "center", 
+                      fig.width = 7,
+                      fig.height = 7)
+
+```
+
+
+```{r load-libraries, message = FALSE, warning = FALSE}
+library(ggplot2)
+library(devtools)
+library(phyloseq)
+library(tidyr)
+library(dplyr)
+library(cowplot)
+library(picante) # Will also include ape and vegan 
+library(car) # For residual analysis
+library(sandwich) # for vcovHC function in post-hoc test
+library(MASS) # For studres in plot_residuals function
+library(boot) # For cross validation
+source("Muskegon_functions.R")
+source("set_colors.R")
+```
+
+
+# Load data
+```{r load-data, eval = TRUE}
+# Loads a phyloseq object named otu_merged_musk_pruned)
+load("../data/otu_merged_musk_pruned.RData")
+# The name of the phyloseq object is: 
+otu_merged_musk_pruned 
+
+# Productivity measurements are reliable only up to 1 decimal
+df1 <- sample_data(otu_merged_musk_pruned) %>% 
+  dplyr::mutate(tot_bacprod = round(tot_bacprod, digits = 1),
+                SD_tot_bacprod = round(SD_tot_bacprod, digits = 1),
+                frac_bacprod = round(frac_bacprod, digits = 1),
+                SD_frac_bacprod = round(SD_frac_bacprod, digits = 1),
+                fraction_bac_abund = as.numeric(fraction_bac_abund),
+                fracprod_per_cell = frac_bacprod/(1000*fraction_bac_abund),
+                fracprod_per_cell_noinf = ifelse(fracprod_per_cell == Inf, NA, fracprod_per_cell)) %>%
+  dplyr::select(norep_filter_name, lakesite, limnion, fraction, year, season, tot_bacprod, SD_tot_bacprod, frac_bacprod, SD_frac_bacprod, fraction_bac_abund, fracprod_per_cell, fracprod_per_cell_noinf)
+row.names(df1) = df1$norep_filter_name
+# Add new sample data back into phyloseq object 
+sample_data(otu_merged_musk_pruned) <- df1
+
+# Remove MOTHJ715 and MBRHP715 because of low sequencing depth 
+otu_merged_musk_pruned_noMOTHJ715_MBRHP715 <- subset_samples(otu_merged_musk_pruned, norep_filter_name != "MOTHJ715" & norep_filter_name != "MBRHP715")
+otu_merged_musk_pruned_noMOTHJ715_MBRHP715
+
+# Subset only the surface samples for the current study
+musk_surface <- subset_samples(otu_merged_musk_pruned_noMOTHJ715_MBRHP715, limnion == "Top")
+musk_surface_pruned <- prune_taxa(taxa_sums(musk_surface) > 0, musk_surface) 
+musk_surface_pruned
+
+# Remove singletons!
+musk_surface_pruned_rm1 <- prune_taxa(taxa_sums(musk_surface_pruned) > 1, musk_surface_pruned) 
+musk_surface_pruned_rm1
+
+# Remove the tree for less computationally intensive steps
+notree_musk_surface_pruned_rm1 <- phyloseq(tax_table(musk_surface_pruned_rm1), otu_table(musk_surface_pruned_rm1), sample_data(musk_surface_pruned_rm1))
+
+# If taxa with 2 counts are removed 
+prune_taxa(taxa_sums(notree_musk_surface_pruned_rm1) > 2, notree_musk_surface_pruned_rm1) 
+
+# If taxa with 5 counts are removed 
+musk_surface_pruned_rm5 <- prune_taxa(taxa_sums(musk_surface_pruned) > 5, musk_surface_pruned) 
+musk_surface_pruned_rm5
+notree_musk_surface_pruned_rm5 <- phyloseq(tax_table(musk_surface_pruned_rm5), otu_table(musk_surface_pruned_rm5), sample_data(musk_surface_pruned_rm5))
+
+
+# If taxa with 10 counts are removed 
+musk_surface_pruned_rm10 <- prune_taxa(taxa_sums(musk_surface_pruned) > 10, musk_surface_pruned) 
+musk_surface_pruned_rm10
+notree_musk_surface_pruned_rm10 <- phyloseq(tax_table(musk_surface_pruned_rm10), otu_table(musk_surface_pruned_rm10), sample_data(musk_surface_pruned_rm10))
+```
+
+
+# Calculate Diversity 
+
+```{r calc-div}
+# Initialize matrices to store richness and evenness estimates
+# nsamp <- nsamples(notree_musk_surface_pruned_rm1)
+# min_lib <- min(sample_sums(notree_musk_surface_pruned_rm1)) - 1
+# 
+# otu_richness <- matrix(nrow = nsamp, ncol = 100)
+# row.names(otu_richness) <- sample_names(notree_musk_surface_pruned_rm1)
+# 
+# otu_evenness <- matrix(nrow = nsamp, ncol = 100)
+# row.names(otu_evenness) <- sample_names(notree_musk_surface_pruned_rm1)
+# 
+# otu_shannon <- matrix(nrow = nsamp, ncol = 100)
+# row.names(otu_shannon) <- sample_names(notree_musk_surface_pruned_rm1)
+
+
+## Set the seed to have reproducible results
+#set.seed(777)
+
+#for (i in 1:100) {
+#  # Subsample
+#  r <- rarefy_even_depth(notree_musk_surface_pruned_rm1, sample.size = min_lib, verbose = FALSE, replace = TRUE)
+
+  # Calculate richness
+#  rich <- as.numeric(as.matrix(estimate_richness(r, measures = "Observed")))
+#  otu_richness[ ,i] <- rich
+
+  # Calculate evenness
+#  even <- as.numeric(as.matrix(estimate_richness(r, measures = "InvSimpson")))
+#  otu_evenness[ ,i] <- even
+ 
+  # Calculate evenness
+#  shannon <- as.numeric(as.matrix(estimate_richness(r, measures = "Shannon")))
+#  otu_shannon[ ,i] <- shannon
+ 
+#}
+
+#  write.table(otu_evenness, "../data/metadata/otu_evenness100_rm1_rarefy2827", row.names = TRUE)
+#  write.table(otu_richness, "../data/metadata/otu_richness100_rm1_rarefy2827", row.names = TRUE)
+#  write.table(otu_shannon, "../data/metadata/otu_shannon100_rm1_rarefy2827", row.names = TRUE)
+
+
+########################################################  Do the same for rm5 ########################################################  
+########################################################  Do the same for rm5 ########################################################  
+
+# Initialize matrices to store richness and evenness estimates
+# nsamp_rm5 <- nsamples(notree_musk_surface_pruned_rm5)
+# min_lib_rm5 <- min(sample_sums(notree_musk_surface_pruned_rm5)) - 1
+# 
+# otu_richness_rm5 <- matrix(nrow = nsamp_rm5, ncol = 100)
+# row.names(otu_richness_rm5) <- sample_names(notree_musk_surface_pruned_rm5)
+# 
+# otu_evenness_rm5 <- matrix(nrow = nsamp_rm5, ncol = 100)
+# row.names(otu_evenness_rm5) <- sample_names(notree_musk_surface_pruned_rm5)
+# 
+# otu_shannon_rm5 <- matrix(nrow = nsamp_rm5, ncol = 100)
+# row.names(otu_shannon_rm5) <- sample_names(notree_musk_surface_pruned_rm5)
+
+## Set the seed to have reproducible results
+#set.seed(777)
+
+#for (i in 1:100) {
+#  # Subsample
+#  r <- rarefy_even_depth(notree_musk_surface_pruned_rm5, sample.size = min_lib_rm5, verbose = FALSE, replace = TRUE)
+
+  # Calculate richness
+#  rich <- as.numeric(as.matrix(estimate_richness(r, measures = "Observed")))
+#  otu_richness_rm5[ ,i] <- rich
+
+  # Calculate evenness
+#  even <- as.numeric(as.matrix(estimate_richness(r, measures = "InvSimpson")))
+#  otu_evenness_rm5[ ,i] <- even
+ 
+  # Calculate evenness
+#  shannon <- as.numeric(as.matrix(estimate_richness(r, measures = "Shannon")))
+#  otu_shannon_rm5[ ,i] <- shannon
+ 
+#}
+
+#  write.table(otu_evenness_rm5, "../data/metadata/otu_evenness100_rm5_rarefy2827", row.names = TRUE)
+#  write.table(otu_richness_rm5, "../data/metadata/otu_richness100_rm5_rarefy2827", row.names = TRUE)
+#  write.table(otu_shannon_rm5, "../data/metadata/otu_shannon100_rm5_rarefy2827", row.names = TRUE)
+
+
+########################################################  Do the same for rm10 ########################################################  
+########################################################  Do the same for rm10 ########################################################  
+
+# Initialize matrices to store richness and evenness estimates
+# nsamp_rm10 <- nsamples(notree_musk_surface_pruned_rm10)
+# min_lib_rm10 <- min(sample_sums(notree_musk_surface_pruned_rm10)) - 1
+ 
+# otu_richness_rm10 <- matrix(nrow = nsamp_rm10, ncol = 100)
+# row.names(otu_richness_rm10) <- sample_names(notree_musk_surface_pruned_rm10)
+ 
+# otu_evenness_rm10 <- matrix(nrow = nsamp_rm10, ncol = 100)
+# row.names(otu_evenness_rm10) <- sample_names(notree_musk_surface_pruned_rm10)
+ 
+# otu_shannon_rm10 <- matrix(nrow = nsamp_rm10, ncol = 100)
+# row.names(otu_shannon_rm10) <- sample_names(notree_musk_surface_pruned_rm10)
+
+## Set the seed to have reproducible results
+#set.seed(777)
+
+#for (i in 1:100) {
+  # Subsample
+#  r <- rarefy_even_depth(notree_musk_surface_pruned_rm10, sample.size = min_lib_rm10, verbose = FALSE, replace = TRUE)
+
+  # Calculate richness
+#  rich <- as.numeric(as.matrix(estimate_richness(r, measures = "Observed")))
+#  otu_richness_rm10[ ,i] <- rich
+
+  # Calculate evenness
+#  even <- as.numeric(as.matrix(estimate_richness(r, measures = "InvSimpson")))
+#  otu_evenness_rm10[ ,i] <- even
+ 
+  # Calculate evenness
+#  shannon <- as.numeric(as.matrix(estimate_richness(r, measures = "Shannon")))
+#  otu_shannon_rm10[ ,i] <- shannon
+ 
+#}
+
+#  write.table(otu_evenness_rm10, "../data/metadata/otu_evenness100_rm10_rarefy2827", row.names = TRUE)
+#  write.table(otu_richness_rm10, "../data/metadata/otu_richness100_rm10_rarefy2827", row.names = TRUE)
+#  write.table(otu_shannon_rm10, "../data/metadata/otu_shannon100_rm10_rarefy2827", row.names = TRUE)
+```
+
+# Load alpha diversity data
+```{r load-alphadiv}
+# Load values
+nsamp <- nsamples(notree_musk_surface_pruned_rm1)
+min_lib <- min(sample_sums(notree_musk_surface_pruned_rm1)) - 1
+min_lib
+
+# Read in previously calculated values 
+otu_evenness <- read.table("../data/metadata/otu_evenness100_rm1_rarefy2827", header = TRUE)
+otu_richness <- read.table("../data/metadata/otu_richness100_rm1_rarefy2827", header = TRUE)
+otu_shannon <-  read.table("../data/metadata/otu_shannon100_rm1_rarefy2827", header = TRUE)
+
+
+# Create a new dataframe to hold the means and standard deviations of richness estimates
+norep_filter_name <- row.names(otu_richness)
+mean <- apply(otu_richness, 1, mean)
+sd <- apply(otu_richness, 1, sd)
+measure <- rep("Richness", nsamp)
+otu_rich_stats <- data.frame(norep_filter_name, mean, sd, measure)
+
+# Create a new dataframe to hold the means and standard deviations of evenness estimates
+norep_filter_name <- row.names(otu_evenness)
+mean <- apply(otu_evenness, 1, mean)
+sd <- apply(otu_evenness, 1, sd)
+measure <- rep("Inverse_Simpson", nsamp)
+otu_even_stats <- data.frame(norep_filter_name, mean, sd, measure)
+
+# Create a new dataframe to hold the means and standard deviations of shannon entropy estimates
+norep_filter_name <- row.names(otu_shannon)
+mean <- apply(otu_shannon, 1, mean)
+sd <- apply(otu_shannon, 1, sd)
+measure <- rep("Shannon_Entropy", nsamp)
+otu_shan_stats <- data.frame(norep_filter_name, mean, sd, measure)
+
+# Create a new dataframe to hold the means and standard deviations of simpsons evenness estimates
+norep_filter_name <- row.names(otu_evenness)
+mean <- apply(otu_evenness, 1, mean)
+sd <- apply(otu_evenness, 1, sd)
+measure <- rep("Inverse_Simpson", nsamp)
+otu_simpseven_stats <- data.frame(norep_filter_name, mean, sd, measure)
+
+# Calculate Simpson's Evenness into new df called "simps_evenness"
+otu_simps_evenness <- inner_join(otu_rich_stats, otu_even_stats, by = "norep_filter_name") %>%
+  mutate(mean = mean.y/mean.x,
+         sd = sd(mean),
+         measure = "Simpsons_Evenness") %>%
+  dplyr::select(norep_filter_name, mean, sd, measure)
+
+# Combine alpha diversity into one dataframe 
+otu_alpha <- rbind(otu_rich_stats, otu_even_stats, otu_simps_evenness, otu_shan_stats)
+s <- data.frame(sample_data(notree_musk_surface_pruned_rm1))
+otu_alphadiv <- merge(otu_alpha, s, by = "norep_filter_name") %>%
+  mutate(fraction = factor(fraction, levels = c("WholePart", "Particle", "WholeFree", "Free")),
+         lakesite = factor(lakesite,  levels = c("MOT", "MDP", "MBR", "MIN")),
+         measure = factor(measure, levels = c("Richness", "Simpsons_Evenness", "Shannon_Entropy", "Inverse_Simpson"))) 
+
+
+########################################################  Do the same for rm5 ########################################################  
+########################################################  Do the same for rm5 ########################################################  
+# Load values
+nsamp_rm5 <- nsamples(notree_musk_surface_pruned_rm5)
+min_lib_rm5 <- min(sample_sums(notree_musk_surface_pruned_rm5)) - 1
+min_lib_rm5
+
+# Read in previously calculated values 
+otu_evenness_rm5 <- read.table("../data/metadata/otu_evenness100_rm5_rarefy2827", header = TRUE)
+otu_richness_rm5 <- read.table("../data/metadata/otu_richness100_rm5_rarefy2827", header = TRUE)
+otu_shannon_rm5 <-  read.table("../data/metadata/otu_shannon100_rm5_rarefy2827", header = TRUE)
+
+
+# Create a new dataframe to hold the means and standard deviations of richness estimates
+norep_filter_name <- row.names(otu_richness_rm5)
+mean <- apply(otu_richness_rm5, 1, mean)
+sd <- apply(otu_richness_rm5, 1, sd)
+measure <- rep("Richness", nsamp)
+otu_rich_stats_rm5 <- data.frame(norep_filter_name, mean, sd, measure)
+
+# Create a new dataframe to hold the means and standard deviations of evenness estimates
+norep_filter_name <- row.names(otu_evenness_rm5)
+mean <- apply(otu_evenness_rm5, 1, mean)
+sd <- apply(otu_evenness_rm5, 1, sd)
+measure <- rep("Inverse_Simpson", nsamp)
+otu_even_stats_rm5 <- data.frame(norep_filter_name, mean, sd, measure)
+
+# Create a new dataframe to hold the means and standard deviations of shannon entropy estimates
+norep_filter_name <- row.names(otu_shannon_rm5)
+mean <- apply(otu_shannon_rm5, 1, mean)
+sd <- apply(otu_shannon_rm5, 1, sd)
+measure <- rep("Shannon_Entropy", nsamp)
+otu_shan_stats_rm5 <- data.frame(norep_filter_name, mean, sd, measure)
+
+# Create a new dataframe to hold the means and standard deviations of simpsons evenness estimates
+norep_filter_name <- row.names(otu_evenness_rm5)
+mean <- apply(otu_evenness_rm5, 1, mean)
+sd <- apply(otu_evenness_rm5, 1, sd)
+measure <- rep("Inverse_Simpson", nsamp)
+otu_simpseven_stats_rm5 <- data.frame(norep_filter_name, mean, sd, measure)
+
+# Calculate Simpson's Evenness into new df called "simps_evenness"
+otu_simps_evenness_rm5 <- inner_join(otu_rich_stats_rm5, otu_even_stats_rm5, by = "norep_filter_name") %>%
+  mutate(mean = mean.y/mean.x,
+         sd = sd(mean),
+         measure = "Simpsons_Evenness") %>%
+  dplyr::select(norep_filter_name, mean, sd, measure)
+
+# Combine alpha diversity into one dataframe 
+otu_alpha_rm5 <- rbind(otu_rich_stats_rm5, otu_even_stats_rm5, otu_simps_evenness_rm5, otu_shan_stats_rm5)
+otu_alphadiv_rm5 <- merge(otu_alpha, s, by = "norep_filter_name") %>%
+  mutate(fraction = factor(fraction, levels = c("WholePart", "Particle", "WholeFree", "Free")),
+         lakesite = factor(lakesite,  levels = c("MOT", "MDP", "MBR", "MIN")),
+         measure = factor(measure, levels = c("Richness", "Simpsons_Evenness", "Shannon_Entropy", "Inverse_Simpson"))) 
+
+
+
+
+########################################################  Do the same for rm10 ########################################################  
+########################################################  Do the same for rm10 ########################################################  
+# Load values
+nsamp_rm10 <- nsamples(notree_musk_surface_pruned_rm10)
+min_lib_rm10 <- min(sample_sums(notree_musk_surface_pruned_rm10)) - 1
+min_lib_rm10
+
+# Read in previously calculated values 
+otu_evenness_rm10 <- read.table("../data/metadata/otu_evenness100_rm10_rarefy2827", header = TRUE)
+otu_richness_rm10 <- read.table("../data/metadata/otu_richness100_rm10_rarefy2827", header = TRUE)
+otu_shannon_rm10 <-  read.table("../data/metadata/otu_shannon100_rm10_rarefy2827", header = TRUE)
+
+
+# Create a new dataframe to hold the means and standard deviations of richness estimates
+norep_filter_name <- row.names(otu_richness_rm10)
+mean <- apply(otu_richness_rm10, 1, mean)
+sd <- apply(otu_richness_rm10, 1, sd)
+measure <- rep("Richness", nsamp)
+otu_rich_stats_rm10 <- data.frame(norep_filter_name, mean, sd, measure)
+
+# Create a new dataframe to hold the means and standard deviations of evenness estimates
+norep_filter_name <- row.names(otu_evenness_rm10)
+mean <- apply(otu_evenness_rm10, 1, mean)
+sd <- apply(otu_evenness_rm10, 1, sd)
+measure <- rep("Inverse_Simpson", nsamp)
+otu_even_stats_rm10 <- data.frame(norep_filter_name, mean, sd, measure)
+
+# Create a new dataframe to hold the means and standard deviations of shannon entropy estimates
+norep_filter_name <- row.names(otu_shannon_rm10)
+mean <- apply(otu_shannon_rm10, 1, mean)
+sd <- apply(otu_shannon_rm10, 1, sd)
+measure <- rep("Shannon_Entropy", nsamp)
+otu_shan_stats_rm10 <- data.frame(norep_filter_name, mean, sd, measure)
+
+# Create a new dataframe to hold the means and standard deviations of simpsons evenness estimates
+norep_filter_name <- row.names(otu_evenness_rm10)
+mean <- apply(otu_evenness_rm10, 1, mean)
+sd <- apply(otu_evenness_rm10, 1, sd)
+measure <- rep("Inverse_Simpson", nsamp)
+otu_simpseven_stats_rm10 <- data.frame(norep_filter_name, mean, sd, measure)
+
+# Calculate Simpson's Evenness into new df called "simps_evenness"
+otu_simps_evenness_rm10 <- inner_join(otu_rich_stats_rm10, otu_even_stats_rm10, by = "norep_filter_name") %>%
+  mutate(mean = mean.y/mean.x,
+         sd = sd(mean),
+         measure = "Simpsons_Evenness") %>%
+  dplyr::select(norep_filter_name, mean, sd, measure)
+
+# Combine alpha diversity into one dataframe 
+otu_alpha_rm10 <- rbind(otu_rich_stats_rm10, otu_even_stats_rm10, otu_simps_evenness_rm10, otu_shan_stats_rm10)
+otu_alphadiv_rm10 <- merge(otu_alpha, s, by = "norep_filter_name") %>%
+  mutate(fraction = factor(fraction, levels = c("WholePart", "Particle", "WholeFree", "Free")),
+         lakesite = factor(lakesite,  levels = c("MOT", "MDP", "MBR", "MIN")),
+         measure = factor(measure, levels = c("Richness", "Simpsons_Evenness", "Shannon_Entropy", "Inverse_Simpson"))) 
+```
+
+
+# Richness test between subsets of data 
+```{r}
+
+
+all_divs <- bind_rows(rich_rm1, rich_rm5, rich_rm10)
+
+
+# Remove singletons
+rich_rm1 <- dplyr::filter(otu_alphadiv, measure == "Richness" & fraction %in% c("WholePart", "WholeFree") & year == "2015") %>%
+  mutate(Removed = "1-tons")
+# Remove 5-tons
+rich_rm5 <- dplyr::filter(otu_alphadiv_rm5, measure == "Richness" & fraction %in% c("WholePart", "WholeFree") & year == "2015") %>%
+  mutate(Removed = "5-tons")
+# Remove 10-tons
+rich_rm10 <- dplyr::filter(otu_alphadiv_rm10, measure == "Richness" & fraction %in% c("WholePart", "WholeFree") & year == "2015") %>%
+  mutate(Removed = "10-tons")
+
+
+
+### PLOT
+ggplot(all_richness, aes(y = mean, x = Removed, color = Removed, fill = Removed)) +
+  geom_boxplot(alpha = 0.3, outlier.shape = NA) + geom_point(size = 3, position = position_jitter(w = 0.1)) + 
+  scale_color_manual(values = c("#EC4863", "#A73E5C", "#5C2849")) +
+  scale_fill_manual(values = c("#EC4863", "#A73E5C", "#5C2849")) +
+  facet_grid(.~fraction)
+```
+
+
+
+
+
+
+
+## Subset Diversity Data 
+```{r subset-diversity, dependson = c("load-data","vean-otu-alphadiv-calc")}
+######################################################### RICHNESS
+# Subset only richness data 
+ML_rm1_rich_stats <- filter(otu_alphadiv, measure == "Richness" & 
+                              fraction %in% c("WholePart", "WholeFree") & year == "2015")
+
+######################################################### SHANNON ENTROPY
+# Subset only Shannon_Entropy data 
+ML_otu_shannon_stats <- filter(otu_alphadiv, measure == "Shannon_Entropy" & 
+                                 fraction %in% c("WholePart", "WholeFree") & year == "2015")
+
+######################################################### INVERSE SIMPSON
+# Subset only Inverse_Simpson data 
+ML_otu_invsimps_stats <- filter(otu_alphadiv, measure == "Inverse_Simpson" & 
+                                  fraction %in% c("WholePart", "WholeFree") & year == "2015")
+
+######################################################### SIMPSON'S EVENNESS
+# Subset only Simpsons_Evenness data 
+ML_otu_simpseven_stats <- filter(otu_alphadiv, measure == "Simpsons_Evenness" & 
+                                   fraction %in% c("WholePart", "WholeFree") & year == "2015")
+```
+
+
+
+# Diversity vs Fraction Production 
+```{r plot-vegan-fracprod, dependson = "subset-diversity", fig.width = 10, fig.height = 10, warnings = FALSE}
+######################################################### RICHNESS
+# Free-Living Richness vs fractional production 
+freeprod_ML_otu_rich <- lm(frac_bacprod ~ mean, data = filter(ML_otu_rich_stats, fraction == "WholeFree"))
+summary(freeprod_ML_otu_rich) 
+
+# Particle-Associated Richness vs fractional production 
+partprod_MLotu_rich <- lm(frac_bacprod ~ mean, data = filter(ML_otu_rich_stats, fraction == "WholePart"))
+summary(partprod_MLotu_rich) 
+
+# Both fractions together
+summary(lm(frac_bacprod ~ mean, data = ML_otu_rich_stats))
+ 
+# Plot 
+ggplot(ML_otu_rich_stats, aes(x=mean, y=frac_bacprod, color = fraction)) + 
+  geom_point(size = 3.5) + 
+  geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd), alpha = 0.7) + # X-axis errorbars
+  # Y-axis errorbars
+  geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod),  alpha = 0.5) + 
+  scale_color_manual(values = c("firebrick3","cornflowerblue"), 
+                     limits = c("WholePart", "WholeFree"),
+                     breaks=c("WholePart", "WholeFree"),
+                     labels=c("Particle", "Free")) + 
+  ylab("Heterotrophic Production (μgC/L/hr)") + xlab("Observed Richness") +
+  geom_smooth(data=subset(ML_otu_rich_stats, fraction == "WholePart"), method='lm') + 
+  #scale_x_continuous(limits = c(180, 810), breaks = c(200, 400, 600, 800)) + 
+  theme(legend.position=c(0.15,0.9),        
+        legend.title=element_blank()) 
+  #annotate("text", x = 250, y=55, color = "cornflowerblue", fontface = "bold",
+  #         label = paste("R2 =", round(summary(freeprod_ML_otu_rich)$adj.r.squared, digits = 2), "\n", 
+  #                       "p =", round(unname(summary(freeprod_ML_otu_rich)$coefficients[,4][2]), digits = 2))) + 
+  #annotate("text", x = 650, y=3, color = "firebrick3", fontface = "bold",
+  #         label = paste("R2 =", round(summary(partprod_MLotu_rich)$adj.r.squared, digits = 2), "\n", 
+  #                       "p =", round(unname(summary(partprod_MLotu_rich)$coefficients[,4][2]), digits = 4)));
+
+
+######################################################### SHANNON ENTROPY
+# Free-Living Shannon vs fractional production 
+freeprod_ML_otu_shannon <- lm(frac_bacprod ~ mean, data = filter(ML_otu_shannon_stats, fraction == "WholeFree"))
+summary(freeprod_ML_otu_shannon)
+
+# Particle-Associated Shannon vs fractional production 
+partprod_MLotu_shannon <- lm(frac_bacprod ~ mean, data = filter(ML_otu_shannon_stats, fraction == "WholePart"))
+summary(partprod_MLotu_shannon)
+
+# Both fractions together
+summary(lm(frac_bacprod ~ mean, data = ML_otu_shannon_stats))
+
+# Plot 
+otu_shannon_vegan <- ggplot(ML_otu_shannon_stats, aes(x=mean, y=frac_bacprod, color = fraction)) + 
+  geom_point(size = 3.5) + 
+  geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd), alpha = 0.7) + # X-axis errorbars
+  # Y-axis errorbars
+  geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod),  alpha = 0.5) + 
+  scale_color_manual(values = c("firebrick3","cornflowerblue"), 
+                     limits = c("WholePart", "WholeFree"),
+                     breaks=c("WholeFree", "WholePart"),
+                     labels=c("Free-Living", "Particle-Associated")) + 
+  ylab("Secondary Production (μgC/L/hr)") + xlab("Shannon Entropy") +
+  scale_x_continuous(limits = c(3.4, 5.85), breaks = c(3.5, 4, 4.5, 5, 5.5)) + 
+  geom_smooth(data=subset(ML_otu_shannon_stats, fraction == "WholePart"), method='lm') + 
+  theme(legend.position=c(0.15,0.9),        
+        legend.title=element_blank()) +
+  annotate("text", x = 3.75, y=55, color = "cornflowerblue", fontface = "bold",
+           label = paste("R2 =", round(summary(freeprod_ML_otu_shannon)$adj.r.squared, digits = 2), "\n", 
+                         "p =", round(unname(summary(freeprod_ML_otu_shannon)$coefficients[,4][2]), digits = 2))) + 
+  annotate("text", x = 5.35, y=3, color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(partprod_MLotu_shannon)$adj.r.squared, digits = 2), "\n", 
+                         "p =", round(unname(summary(partprod_MLotu_shannon)$coefficients[,4][2]), digits = 4))); 
+
+
+######################################################### INVERSE SIMPSON
+# Free-Living Inverse Simpson vs fractional production 
+freeprod_ML_otu_invsimps <- lm(frac_bacprod ~ mean, data = filter(ML_otu_invsimps_stats, fraction == "WholeFree"))
+summary(freeprod_ML_otu_invsimps)
+
+# Particle-Associated Inverse Simpson vs fractional production 
+partprod_MLotu_invsimps <- lm(frac_bacprod ~ mean, data = filter(ML_otu_invsimps_stats, fraction == "WholePart"))
+summary(partprod_MLotu_invsimps)
+
+# Both fractions together
+summary(lm(frac_bacprod ~ mean, data = ML_otu_invsimps_stats))
+
+# Plot Simpson's Evenness
+otu_invsimps_vegan <- ggplot(ML_otu_invsimps_stats, aes(x=mean, y=frac_bacprod, color = fraction)) + 
+  geom_point(size = 3.5) +  
+  geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd), alpha = 0.7) + # X-axis errorbars
+  # Y-axis errorbars
+  geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod),  alpha = 0.5) + 
+  scale_color_manual(values = c("firebrick3","cornflowerblue"), 
+                     limits = c("WholePart", "WholeFree"),
+                     breaks=c("WholeFree", "WholePart"),
+                     labels=c("Free-Living", "Particle-Associated")) + 
+  scale_x_continuous(limits = c(0,95), breaks = c(0, 20, 40, 60, 80), expand = c(0,0)) + 
+  ylab("Secondary Production (μgC/L/hr)") + xlab("Inverse Simpson") +
+  geom_smooth(data=subset(ML_otu_invsimps_stats, fraction == "WholePart"), method='lm') + 
+  theme(legend.position=c(0.85,0.9),        
+        legend.title=element_blank()) +
+  annotate("text", x = 15, y=55, color = "cornflowerblue", fontface = "bold",
+           label = paste("R2 =", round(summary(freeprod_ML_otu_invsimps)$adj.r.squared, digits = 2), "\n", 
+                         "p =", round(unname(summary(freeprod_ML_otu_invsimps)$coefficients[,4][2]), digits = 2))) + 
+  annotate("text", x = 63, y=3, color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(partprod_MLotu_invsimps)$adj.r.squared, digits = 2), "\n", 
+                         "p =", round(unname(summary(partprod_MLotu_invsimps)$coefficients[,4][2]), digits = 4))); 
+
+
+
+######################################################### SIMPSON'S EVENNESS
+# Free-Living Simpson's Evenness vs fractional production 
+freeprod_ML_otu_simpseven <- lm(frac_bacprod ~ mean, data = filter(ML_otu_simpseven_stats, fraction == "WholeFree"))
+summary(freeprod_ML_otu_simpseven)
+
+# Particle-Associated Simpson's Evenness vs fractional production 
+partprod_MLotu_simpseven <- lm(frac_bacprod ~ mean, data = filter(ML_otu_simpseven_stats, fraction == "WholePart"))
+summary(partprod_MLotu_simpseven)
+
+# Both fractions together
+summary(lm(frac_bacprod ~ mean, data = ML_otu_simpseven_stats))
+
+# Plot 
+otu_simpseven_vegan <- ggplot(ML_otu_simpseven_stats, aes(x=mean, y=frac_bacprod, color = fraction)) + 
+  geom_point(size = 3.5) +  
+  geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd), alpha = 0.7) + # X-axis errorbars
+  # Y-axis errorbars
+  geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod),  alpha = 0.5) + 
+  scale_color_manual(values = c("firebrick3","cornflowerblue"), 
+                     limits = c("WholePart", "WholeFree"),
+                     breaks=c("WholeFree", "WholePart"),
+                     labels=c("Free-Living", "Particle-Associated")) + 
+  scale_x_continuous(limits = c(0.03,0.151), breaks = c(0.05, 0.1, 0.15))  +
+  ylab("Secondary Production (μgC/L/hr)") + xlab("Simpson's Evenness") +
+  geom_smooth(data=subset(ML_otu_simpseven_stats, fraction == "WholePart"), method='lm') + 
+  theme(legend.position=c(0.15,0.9),        
+        legend.title=element_blank()) +
+  annotate("text", x = 0.05, y=55, color = "cornflowerblue", fontface = "bold",
+           label = paste("R2 =", round(summary(freeprod_ML_otu_simpseven)$adj.r.squared, digits = 2), "\n", 
+                         "p =", round(unname(summary(freeprod_ML_otu_simpseven)$coefficients[,4][2]), digits = 2))) + 
+  annotate("text", x = 0.125, y=3, color = "firebrick3", fontface = "bold",
+           label = paste("R2 =", round(summary(partprod_MLotu_simpseven)$adj.r.squared, digits = 2), "\n", 
+                         "p =", round(unname(summary(partprod_MLotu_simpseven)$coefficients[,4][2]), digits = 4))); 
+
+otu_vegan <- plot_grid(otu_rich_vegan, otu_simpseven_vegan, otu_shannon_vegan, otu_invsimps_vegan,
+                       labels = c("A", "B", "C", "D"), 
+                       align = "h", nrow = 2, ncol = 2)
+otu_vegan
+```
+
+
+
+
+
