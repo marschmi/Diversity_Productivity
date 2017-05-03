@@ -495,3 +495,65 @@ grid_arrange_shared_legend <- function(..., nrow = 1, ncol = length(list(...)), 
 #################################################################################### 9
 
 
+#################################################################################### 10
+#################################################################################### 10
+# Calculate Alpha Diversity Values and combine into dataframe 
+
+
+calc_mean_alphadiv <- function(physeq, richness_df, evenness_df, shannon_df){
+  
+  # How many samples?
+  nsamp <- nsamples(physeq)
+  
+  # Check that all sample names are the same
+  stopifnot(row.names(richness_df) == row.names(evenness_df))
+  stopifnot(row.names(richness_df) == row.names(shannon_df))
+  
+  # Create sample names for the dataframes
+  norep_filter_name <- row.names(richness_df)
+  
+  # Create a new dataframe to hold the means and standard deviations of richness estimates
+  mean <- apply(richness_df, 1, mean)
+  sd <- apply(richness_df, 1, sd)
+  measure <- rep("Richness", nsamp)
+  otu_rich_stats <- data.frame(norep_filter_name, mean, sd, measure)
+  
+  # Create a new dataframe to hold the means and standard deviations of evenness estimates
+  mean <- apply(evenness_df, 1, mean)
+  sd <- apply(evenness_df, 1, sd)
+  measure <- rep("Inverse_Simpson", nsamp)
+  otu_even_stats <- data.frame(norep_filter_name, mean, sd, measure)
+  
+  # Create a new dataframe to hold the means and standard deviations of shannon entropy estimates
+  mean <- apply(shannon_df, 1, mean)
+  sd <- apply(shannon_df, 1, sd)
+  measure <- rep("Shannon_Entropy", nsamp)
+  otu_shan_stats <- data.frame(norep_filter_name, mean, sd, measure)
+  
+  # Create a new dataframe to hold the means and standard deviations of simpsons evenness estimates
+  mean <- apply(evenness_df, 1, mean)
+  sd <- apply(evenness_df, 1, sd)
+  measure <- rep("Inverse_Simpson", nsamp)
+  otu_simpseven_stats <- data.frame(norep_filter_name, mean, sd, measure)
+  
+  # Calculate Simpson's Evenness into new df called "simps_evenness"
+  otu_simps_evenness <- inner_join(otu_rich_stats, otu_even_stats, by = "norep_filter_name") %>%
+    mutate(mean = mean.y/mean.x,
+           sd = sd(mean),
+           measure = "Simpsons_Evenness") %>%
+    dplyr::select(norep_filter_name, mean, sd, measure)
+  
+  # Combine alpha diversity into one dataframe 
+  otu_alpha <- rbind(otu_rich_stats, otu_even_stats, otu_simps_evenness, otu_shan_stats)
+  s <- data.frame(sample_data(physeq))
+  otu_alphadiv <- merge(otu_alpha, s, by = "norep_filter_name")
+  
+  # Give us the dataframe, please!
+  return(otu_alphadiv)
+}
+
+
+
+
+#################################################################################### 10
+#################################################################################### 10
