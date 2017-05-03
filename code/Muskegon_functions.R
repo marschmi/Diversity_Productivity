@@ -551,9 +551,54 @@ calc_mean_alphadiv <- function(physeq, richness_df, evenness_df, shannon_df){
   # Give us the dataframe, please!
   return(otu_alphadiv)
 }
-
-
-
-
 #################################################################################### 10
 #################################################################################### 10
+
+
+
+
+#################################################################################### 11
+#################################################################################### 11
+calc_diversity <- function(physeq, iters = 100){
+
+ nsamp <- nsamples(physeq)
+ min_lib <- min(sample_sums(physeq)) - 1
+ 
+ otu_richness <- matrix(nrow = nsamp, ncol = iters)
+ row.names(otu_richness) <- sample_names(physeq)
+ 
+ otu_evenness <- matrix(nrow = nsamp, ncol = iters)
+ row.names(otu_evenness) <- sample_names(physeq)
+ 
+ otu_shannon <- matrix(nrow = nsamp, ncol = iters)
+ row.names(otu_shannon) <- sample_names(physeq)
+
+
+# Set the seed to have reproducible results
+set.seed(777)
+
+for (i in 1:iters) {
+    
+    # Subsample
+    r <- rarefy_even_depth(physeq, sample.size = min_lib, verbose = FALSE, replace = TRUE)
+   
+    # Calculate richness
+    rich <- as.numeric(as.matrix(estimate_richness(r, measures = "Observed")))
+    otu_richness[ ,i] <- rich
+   
+    # Calculate evenness
+    even <- as.numeric(as.matrix(estimate_richness(r, measures = "InvSimpson")))
+    otu_evenness[ ,i] <- even
+   
+    # Calculate evenness
+    shannon <- as.numeric(as.matrix(estimate_richness(r, measures = "Shannon")))
+    otu_shannon[ ,i] <- shannon
+  }
+
+  # Return a list of 3 named dataframes 
+  return(list(Richness = otu_richness, Inverse_Simpson = otu_evenness, Shannon = otu_shannon))
+  #names(div_list) <- c("richness", "Inverse_Simpson", "Shannon")
+  #return(div_list)
+}
+#################################################################################### 11
+#################################################################################### 11

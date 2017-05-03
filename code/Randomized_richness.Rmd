@@ -111,12 +111,31 @@ notree_musk_surface_pruned_rm5 <- phyloseq(tax_table(musk_surface_pruned_rm5), o
 musk_surface_pruned_rm10 <- prune_taxa(taxa_sums(musk_surface_pruned) > 10, musk_surface_pruned) 
 musk_surface_pruned_rm10
 notree_musk_surface_pruned_rm10 <- phyloseq(tax_table(musk_surface_pruned_rm10), otu_table(musk_surface_pruned_rm10), sample_data(musk_surface_pruned_rm10))
+
+# If taxa with 30 counts are removed 
+musk_surface_pruned_rm30 <- prune_taxa(taxa_sums(musk_surface_pruned) > 30, musk_surface_pruned) 
+musk_surface_pruned_rm30
+notree_musk_surface_pruned_rm10 <- phyloseq(tax_table(musk_surface_pruned_rm30), otu_table(musk_surface_pruned_rm30), sample_data(musk_surface_pruned_rm30))
+
+
 ```
 
 
 # Calculate Diversity 
 
 ```{r calc-div}
+erp10 <- calc_diversity(physeq = notree_musk_surface_pruned_rm10)
+
+
+test10 <- calc_mean_alphadiv(physeq = notree_musk_surface_pruned_rm1,
+                           richness_df = erp10$Richness, 
+                           evenness_df = erp10$Inverse_Simpson, 
+                           shannon_df = erp10$Shannon) %>%
+    mutate(fraction = factor(fraction, levels = c("WholePart", "Particle", "WholeFree", "Free")),
+         lakesite = factor(lakesite,  levels = c("MOT", "MDP", "MBR", "MIN")),
+         measure = factor(measure, levels = c("Richness", "Simpsons_Evenness", "Shannon_Entropy", "Inverse_Simpson")),
+         Removed = "1-tons")  
+
 # Initialize matrices to store richness and evenness estimates
 # nsamp <- nsamples(notree_musk_surface_pruned_rm1)
 # min_lib <- min(sample_sums(notree_musk_surface_pruned_rm1)) - 1
@@ -248,15 +267,11 @@ nsamp <- nsamples(notree_musk_surface_pruned_rm1)
 min_lib <- min(sample_sums(notree_musk_surface_pruned_rm1)) - 1
 min_lib
 
-# Read in previously calculated values 
-otu_richness <- read.table("../data/metadata/otu_richness100_rm1_rarefy2827", header = TRUE)
-otu_evenness <- read.table("../data/metadata/otu_evenness100_rm1_rarefy2827", header = TRUE)
-otu_shannon <-  read.table("../data/metadata/otu_shannon100_rm1_rarefy2827", header = TRUE)
-
+# Read in previously calculated alphadiv values and fix factor levels
 otu_alphadiv_rm1 <- calc_mean_alphadiv(physeq = notree_musk_surface_pruned_rm1,
-                           richness_df = otu_richness, 
-                           evenness_df = otu_evenness, 
-                           shannon_df = otu_shannon) %>%
+                           richness_df = read.table("../data/metadata/otu_richness100_rm1_rarefy2827", header = TRUE), 
+                           evenness_df = read.table("../data/metadata/otu_evenness100_rm1_rarefy2827", header = TRUE), 
+                           shannon_df = read.table("../data/metadata/otu_shannon100_rm1_rarefy2827", header = TRUE)) %>%
     mutate(fraction = factor(fraction, levels = c("WholePart", "Particle", "WholeFree", "Free")),
          lakesite = factor(lakesite,  levels = c("MOT", "MDP", "MBR", "MIN")),
          measure = factor(measure, levels = c("Richness", "Simpsons_Evenness", "Shannon_Entropy", "Inverse_Simpson")),
@@ -270,15 +285,11 @@ nsamp_rm5 <- nsamples(notree_musk_surface_pruned_rm5)
 min_lib_rm5 <- min(sample_sums(notree_musk_surface_pruned_rm5)) - 1
 min_lib_rm5
 
-# Read in previously calculated values 
-otu_richness_rm5 <- read.table("../data/metadata/otu_richness100_rm5_rarefy2827", header = TRUE)
-otu_evenness_rm5 <- read.table("../data/metadata/otu_evenness100_rm5_rarefy2827", header = TRUE)
-otu_shannon_rm5 <-  read.table("../data/metadata/otu_shannon100_rm5_rarefy2827", header = TRUE)
-
+# Read in previously calculated alphadiv values and fix factor levels
 otu_alphadiv_rm5 <- calc_mean_alphadiv(physeq = notree_musk_surface_pruned_rm5,
-                           richness_df = otu_richness_rm5, 
-                           evenness_df = otu_evenness_rm5, 
-                           shannon_df = otu_shannon_rm5) %>%
+                           richness_df = read.table("../data/metadata/otu_richness100_rm5_rarefy2827", header = TRUE), 
+                           evenness_df = read.table("../data/metadata/otu_evenness100_rm5_rarefy2827", header = TRUE), 
+                           shannon_df = read.table("../data/metadata/otu_shannon100_rm5_rarefy2827", header = TRUE)) %>%
     mutate(fraction = factor(fraction, levels = c("WholePart", "Particle", "WholeFree", "Free")),
          lakesite = factor(lakesite,  levels = c("MOT", "MDP", "MBR", "MIN")),
          measure = factor(measure, levels = c("Richness", "Simpsons_Evenness", "Shannon_Entropy", "Inverse_Simpson")),
@@ -295,15 +306,10 @@ min_lib_rm10 <- min(sample_sums(notree_musk_surface_pruned_rm10)) - 1
 min_lib_rm10
 
 # Read in previously calculated values 
-otu_richness_rm10 <- read.table("../data/metadata/otu_richness100_rm10_rarefy2827", header = TRUE)
-otu_evenness_rm10 <- read.table("../data/metadata/otu_evenness100_rm10_rarefy2827", header = TRUE)
-otu_shannon_rm10 <-  read.table("../data/metadata/otu_shannon100_rm10_rarefy2827", header = TRUE)
-
-
 otu_alphadiv_rm10 <- calc_mean_alphadiv(physeq = notree_musk_surface_pruned_rm10,
-                           richness_df = otu_richness_rm10, 
-                           evenness_df = otu_evenness_rm10, 
-                           shannon_df = otu_shannon_rm10) %>%
+                           richness_df = read.table("../data/metadata/otu_richness100_rm10_rarefy2827", header = TRUE), 
+                           evenness_df = read.table("../data/metadata/otu_evenness100_rm10_rarefy2827", header = TRUE), 
+                           shannon_df = read.table("../data/metadata/otu_shannon100_rm10_rarefy2827", header = TRUE)) %>%
     mutate(fraction = factor(fraction, levels = c("WholePart", "Particle", "WholeFree", "Free")),
          lakesite = factor(lakesite,  levels = c("MOT", "MDP", "MBR", "MIN")),
          measure = factor(measure, levels = c("Richness", "Simpsons_Evenness", "Shannon_Entropy", "Inverse_Simpson")),
@@ -384,7 +390,12 @@ ggplot(dplyr::filter(all_divs, measure == "Simpsons_Evenness"),
 ```
 
 
+```{r}
+filter(test10, measure == "Richness")$mean
 
+filter(otu_alphadiv_rm10, measure == "Richness")$mean
+
+```
 
 
 
