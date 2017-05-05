@@ -76,6 +76,14 @@ pd_colors <- c(
   "insignificant" = "grey",
   "low_pval" = "blue")
 
-
-
-
+# Set global colors for testing rare taxa
+tons_colors <- c(
+  "1-tons" = "#3B556A", 
+  "5-tons" = "#427276", 
+  "10-tons" = "#3F9A7A", 
+  "30-tons" = "#94C660", 
+  "60-tons" = "#F3E99F", 
+  "90-tons" = "#BFCFBB", 
+  "150-tons" = "#6F755F", 
+  "225-tons" = "#403F33",
+  "300-tons" = "#4D2B2F")

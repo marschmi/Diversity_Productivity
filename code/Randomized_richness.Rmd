@@ -86,13 +86,18 @@ sample_data(otu_merged_musk_pruned) <- df1
 otu_merged_musk_pruned_noMOTHJ715_MBRHP715 <- subset_samples(otu_merged_musk_pruned, norep_filter_name != "MOTHJ715" & norep_filter_name != "MBRHP715")
 otu_merged_musk_pruned_noMOTHJ715_MBRHP715
 
-# Subset only the surface samples for the current study
-musk_surface <- subset_samples(otu_merged_musk_pruned_noMOTHJ715_MBRHP715, limnion == "Top")
+# Subset only the surface samples for the current study!!  
+musk_surface <- subset_samples(otu_merged_musk_pruned_noMOTHJ715_MBRHP715, 
+                               limnion == "Top" & year == "2015" & 
+                                 fraction %in% c("WholePart","WholeFree")) # Surface samples, 2015, and WholePart/WholeFree samples only!
 musk_surface_pruned <- prune_taxa(taxa_sums(musk_surface) > 0, musk_surface) 
 musk_surface_pruned
 
+# Remove tree
+notree_musk_surface_pruned <- phyloseq(tax_table(musk_surface_pruned), otu_table(musk_surface_pruned), sample_data(musk_surface_pruned))
+
 # Remove singletons!
-musk_surface_pruned_rm1 <- prune_taxa(taxa_sums(musk_surface_pruned) > 1, musk_surface_pruned) 
+musk_surface_pruned_rm1 <- prune_taxa(taxa_sums(notree_musk_surface_pruned) > 1, notree_musk_surface_pruned) 
 musk_surface_pruned_rm1
 
 # Remove the tree for less computationally intensive steps
@@ -102,255 +107,311 @@ notree_musk_surface_pruned_rm1 <- phyloseq(tax_table(musk_surface_pruned_rm1), o
 prune_taxa(taxa_sums(notree_musk_surface_pruned_rm1) > 2, notree_musk_surface_pruned_rm1) 
 
 # If taxa with 5 counts are removed 
-musk_surface_pruned_rm5 <- prune_taxa(taxa_sums(musk_surface_pruned) > 5, musk_surface_pruned) 
-musk_surface_pruned_rm5
-notree_musk_surface_pruned_rm5 <- phyloseq(tax_table(musk_surface_pruned_rm5), otu_table(musk_surface_pruned_rm5), sample_data(musk_surface_pruned_rm5))
-
+notree_musk_surface_pruned_rm5 <- prune_taxa(taxa_sums(notree_musk_surface_pruned) > 5, notree_musk_surface_pruned) 
+notree_musk_surface_pruned_rm5
 
 # If taxa with 10 counts are removed 
-musk_surface_pruned_rm10 <- prune_taxa(taxa_sums(musk_surface_pruned) > 10, musk_surface_pruned) 
-musk_surface_pruned_rm10
-notree_musk_surface_pruned_rm10 <- phyloseq(tax_table(musk_surface_pruned_rm10), otu_table(musk_surface_pruned_rm10), sample_data(musk_surface_pruned_rm10))
+notree_musk_surface_pruned_rm10 <- prune_taxa(taxa_sums(notree_musk_surface_pruned) > 10, notree_musk_surface_pruned) 
+notree_musk_surface_pruned_rm10
 
 # If taxa with 30 counts are removed 
-musk_surface_pruned_rm30 <- prune_taxa(taxa_sums(musk_surface_pruned) > 30, musk_surface_pruned) 
-musk_surface_pruned_rm30
-notree_musk_surface_pruned_rm10 <- phyloseq(tax_table(musk_surface_pruned_rm30), otu_table(musk_surface_pruned_rm30), sample_data(musk_surface_pruned_rm30))
+notree_musk_surface_pruned_rm30 <- prune_taxa(taxa_sums(notree_musk_surface_pruned) > 30, notree_musk_surface_pruned) 
+notree_musk_surface_pruned_rm30
 
+# If taxa with 60 counts are removed 
+notree_musk_surface_pruned_rm60 <- prune_taxa(taxa_sums(notree_musk_surface_pruned) > 60, notree_musk_surface_pruned) 
+notree_musk_surface_pruned_rm60
 
+# If taxa with 90 counts are removed 
+notree_musk_surface_pruned_rm90 <- prune_taxa(taxa_sums(notree_musk_surface_pruned) > 90, notree_musk_surface_pruned) 
+notree_musk_surface_pruned_rm90
+
+# If taxa with 150 counts are removed 
+notree_musk_surface_pruned_rm150 <- prune_taxa(taxa_sums(notree_musk_surface_pruned) > 150, notree_musk_surface_pruned) 
+notree_musk_surface_pruned_rm150
+
+# If taxa with 300 counts are removed 
+notree_musk_surface_pruned_rm225 <- prune_taxa(taxa_sums(notree_musk_surface_pruned) > 225, notree_musk_surface_pruned) 
+notree_musk_surface_pruned_rm225
+
+# If taxa with 300 counts are removed 
+notree_musk_surface_pruned_rm300 <- prune_taxa(taxa_sums(notree_musk_surface_pruned) > 300, notree_musk_surface_pruned) 
+notree_musk_surface_pruned_rm300
 ```
 
 
 # Calculate Diversity 
 
 ```{r calc-div}
-erp10 <- calc_diversity(physeq = notree_musk_surface_pruned_rm10)
+set.seed(777)
 
+################## Remove singltons 
+alpha_rm1 <- calc_alpha_diversity(physeq = notree_musk_surface_pruned_rm1)
+min(sample_sums(notree_musk_surface_pruned_rm1)) - 1
 
-test10 <- calc_mean_alphadiv(physeq = notree_musk_surface_pruned_rm1,
-                           richness_df = erp10$Richness, 
-                           evenness_df = erp10$Inverse_Simpson, 
-                           shannon_df = erp10$Shannon) %>%
-    mutate(fraction = factor(fraction, levels = c("WholePart", "Particle", "WholeFree", "Free")),
-         lakesite = factor(lakesite,  levels = c("MOT", "MDP", "MBR", "MIN")),
-         measure = factor(measure, levels = c("Richness", "Simpsons_Evenness", "Shannon_Entropy", "Inverse_Simpson")),
-         Removed = "1-tons")  
-
-# Initialize matrices to store richness and evenness estimates
-# nsamp <- nsamples(notree_musk_surface_pruned_rm1)
-# min_lib <- min(sample_sums(notree_musk_surface_pruned_rm1)) - 1
-# 
-# otu_richness <- matrix(nrow = nsamp, ncol = 100)
-# row.names(otu_richness) <- sample_names(notree_musk_surface_pruned_rm1)
-# 
-# otu_evenness <- matrix(nrow = nsamp, ncol = 100)
-# row.names(otu_evenness) <- sample_names(notree_musk_surface_pruned_rm1)
-# 
-# otu_shannon <- matrix(nrow = nsamp, ncol = 100)
-# row.names(otu_shannon) <- sample_names(notree_musk_surface_pruned_rm1)
-
-
-## Set the seed to have reproducible results
-#set.seed(777)
-
-#for (i in 1:100) {
-#  # Subsample
-#  r <- rarefy_even_depth(notree_musk_surface_pruned_rm1, sample.size = min_lib, verbose = FALSE, replace = TRUE)
-
-  # Calculate richness
-#  rich <- as.numeric(as.matrix(estimate_richness(r, measures = "Observed")))
-#  otu_richness[ ,i] <- rich
-
-  # Calculate evenness
-#  even <- as.numeric(as.matrix(estimate_richness(r, measures = "InvSimpson")))
-#  otu_evenness[ ,i] <- even
- 
-  # Calculate evenness
-#  shannon <- as.numeric(as.matrix(estimate_richness(r, measures = "Shannon")))
-#  otu_shannon[ ,i] <- shannon
- 
-#}
-
-#  write.table(otu_evenness, "../data/metadata/otu_evenness100_rm1_rarefy2827", row.names = TRUE)
-#  write.table(otu_richness, "../data/metadata/otu_richness100_rm1_rarefy2827", row.names = TRUE)
-#  write.table(otu_shannon, "../data/metadata/otu_shannon100_rm1_rarefy2827", row.names = TRUE)
-
-
-########################################################  Do the same for rm5 ########################################################  
-########################################################  Do the same for rm5 ########################################################  
-
-# Initialize matrices to store richness and evenness estimates
-# nsamp_rm5 <- nsamples(notree_musk_surface_pruned_rm5)
-# min_lib_rm5 <- min(sample_sums(notree_musk_surface_pruned_rm5)) - 1
-# 
-# otu_richness_rm5 <- matrix(nrow = nsamp_rm5, ncol = 100)
-# row.names(otu_richness_rm5) <- sample_names(notree_musk_surface_pruned_rm5)
-# 
-# otu_evenness_rm5 <- matrix(nrow = nsamp_rm5, ncol = 100)
-# row.names(otu_evenness_rm5) <- sample_names(notree_musk_surface_pruned_rm5)
-# 
-# otu_shannon_rm5 <- matrix(nrow = nsamp_rm5, ncol = 100)
-# row.names(otu_shannon_rm5) <- sample_names(notree_musk_surface_pruned_rm5)
-
-## Set the seed to have reproducible results
-#set.seed(777)
-
-#for (i in 1:100) {
-#  # Subsample
-#  r <- rarefy_even_depth(notree_musk_surface_pruned_rm5, sample.size = min_lib_rm5, verbose = FALSE, replace = TRUE)
-
-  # Calculate richness
-#  rich <- as.numeric(as.matrix(estimate_richness(r, measures = "Observed")))
-#  otu_richness_rm5[ ,i] <- rich
-
-  # Calculate evenness
-#  even <- as.numeric(as.matrix(estimate_richness(r, measures = "InvSimpson")))
-#  otu_evenness_rm5[ ,i] <- even
- 
-  # Calculate evenness
-#  shannon <- as.numeric(as.matrix(estimate_richness(r, measures = "Shannon")))
-#  otu_shannon_rm5[ ,i] <- shannon
- 
-#}
-
-#  write.table(otu_evenness_rm5, "../data/metadata/otu_evenness100_rm5_rarefy2827", row.names = TRUE)
-#  write.table(otu_richness_rm5, "../data/metadata/otu_richness100_rm5_rarefy2827", row.names = TRUE)
-#  write.table(otu_shannon_rm5, "../data/metadata/otu_shannon100_rm5_rarefy2827", row.names = TRUE)
-
-
-########################################################  Do the same for rm10 ########################################################  
-########################################################  Do the same for rm10 ########################################################  
-
-# Initialize matrices to store richness and evenness estimates
-# nsamp_rm10 <- nsamples(notree_musk_surface_pruned_rm10)
-# min_lib_rm10 <- min(sample_sums(notree_musk_surface_pruned_rm10)) - 1
- 
-# otu_richness_rm10 <- matrix(nrow = nsamp_rm10, ncol = 100)
-# row.names(otu_richness_rm10) <- sample_names(notree_musk_surface_pruned_rm10)
- 
-# otu_evenness_rm10 <- matrix(nrow = nsamp_rm10, ncol = 100)
-# row.names(otu_evenness_rm10) <- sample_names(notree_musk_surface_pruned_rm10)
- 
-# otu_shannon_rm10 <- matrix(nrow = nsamp_rm10, ncol = 100)
-# row.names(otu_shannon_rm10) <- sample_names(notree_musk_surface_pruned_rm10)
-
-## Set the seed to have reproducible results
-#set.seed(777)
-
-#for (i in 1:100) {
-  # Subsample
-#  r <- rarefy_even_depth(notree_musk_surface_pruned_rm10, sample.size = min_lib_rm10, verbose = FALSE, replace = TRUE)
-
-  # Calculate richness
-#  rich <- as.numeric(as.matrix(estimate_richness(r, measures = "Observed")))
-#  otu_richness_rm10[ ,i] <- rich
-
-  # Calculate evenness
-#  even <- as.numeric(as.matrix(estimate_richness(r, measures = "InvSimpson")))
-#  otu_evenness_rm10[ ,i] <- even
- 
-  # Calculate evenness
-#  shannon <- as.numeric(as.matrix(estimate_richness(r, measures = "Shannon")))
-#  otu_shannon_rm10[ ,i] <- shannon
- 
-#}
-
-#  write.table(otu_evenness_rm10, "../data/metadata/otu_evenness100_rm10_rarefy2827", row.names = TRUE)
-#  write.table(otu_richness_rm10, "../data/metadata/otu_richness100_rm10_rarefy2827", row.names = TRUE)
-#  write.table(otu_shannon_rm10, "../data/metadata/otu_shannon100_rm10_rarefy2827", row.names = TRUE)
-```
-
-# Load alpha diversity data
-```{r load-alphadiv}
-# Load values
-nsamp <- nsamples(notree_musk_surface_pruned_rm1)
-min_lib <- min(sample_sums(notree_musk_surface_pruned_rm1)) - 1
-min_lib
-
-# Read in previously calculated alphadiv values and fix factor levels
 otu_alphadiv_rm1 <- calc_mean_alphadiv(physeq = notree_musk_surface_pruned_rm1,
-                           richness_df = read.table("../data/metadata/otu_richness100_rm1_rarefy2827", header = TRUE), 
-                           evenness_df = read.table("../data/metadata/otu_evenness100_rm1_rarefy2827", header = TRUE), 
-                           shannon_df = read.table("../data/metadata/otu_shannon100_rm1_rarefy2827", header = TRUE)) %>%
+                           richness_df = alpha_rm1$Richness, 
+                           evenness_df = alpha_rm1$Inverse_Simpson, 
+                           shannon_df = alpha_rm1$Shannon) %>%
     mutate(fraction = factor(fraction, levels = c("WholePart", "Particle", "WholeFree", "Free")),
          lakesite = factor(lakesite,  levels = c("MOT", "MDP", "MBR", "MIN")),
          measure = factor(measure, levels = c("Richness", "Simpsons_Evenness", "Shannon_Entropy", "Inverse_Simpson")),
          Removed = "1-tons")  
 
+################## Remove 5-tons 
+alpha_rm5 <- calc_alpha_diversity(physeq = notree_musk_surface_pruned_rm5)
+min(sample_sums(notree_musk_surface_pruned_rm5)) - 1
 
-########################################################  Do the same for rm5 ########################################################  
-########################################################  Do the same for rm5 ########################################################  
-# Load values
-nsamp_rm5 <- nsamples(notree_musk_surface_pruned_rm5)
-min_lib_rm5 <- min(sample_sums(notree_musk_surface_pruned_rm5)) - 1
-min_lib_rm5
-
-# Read in previously calculated alphadiv values and fix factor levels
 otu_alphadiv_rm5 <- calc_mean_alphadiv(physeq = notree_musk_surface_pruned_rm5,
-                           richness_df = read.table("../data/metadata/otu_richness100_rm5_rarefy2827", header = TRUE), 
-                           evenness_df = read.table("../data/metadata/otu_evenness100_rm5_rarefy2827", header = TRUE), 
-                           shannon_df = read.table("../data/metadata/otu_shannon100_rm5_rarefy2827", header = TRUE)) %>%
+                           richness_df = alpha_rm5$Richness, 
+                           evenness_df = alpha_rm5$Inverse_Simpson, 
+                           shannon_df = alpha_rm5$Shannon) %>%
     mutate(fraction = factor(fraction, levels = c("WholePart", "Particle", "WholeFree", "Free")),
          lakesite = factor(lakesite,  levels = c("MOT", "MDP", "MBR", "MIN")),
          measure = factor(measure, levels = c("Richness", "Simpsons_Evenness", "Shannon_Entropy", "Inverse_Simpson")),
          Removed = "5-tons")  
 
 
+################## Remove 10-tons 
+alpha_rm10 <- calc_alpha_diversity(physeq = notree_musk_surface_pruned_rm10)
+min(sample_sums(notree_musk_surface_pruned_rm10)) - 1
 
-
-########################################################  Do the same for rm10 ########################################################  
-########################################################  Do the same for rm10 ########################################################  
-# Load values
-nsamp_rm10 <- nsamples(notree_musk_surface_pruned_rm10)
-min_lib_rm10 <- min(sample_sums(notree_musk_surface_pruned_rm10)) - 1
-min_lib_rm10
-
-# Read in previously calculated values 
 otu_alphadiv_rm10 <- calc_mean_alphadiv(physeq = notree_musk_surface_pruned_rm10,
-                           richness_df = read.table("../data/metadata/otu_richness100_rm10_rarefy2827", header = TRUE), 
-                           evenness_df = read.table("../data/metadata/otu_evenness100_rm10_rarefy2827", header = TRUE), 
-                           shannon_df = read.table("../data/metadata/otu_shannon100_rm10_rarefy2827", header = TRUE)) %>%
+                           richness_df = alpha_rm10$Richness, 
+                           evenness_df = alpha_rm10$Inverse_Simpson, 
+                           shannon_df = alpha_rm10$Shannon) %>%
     mutate(fraction = factor(fraction, levels = c("WholePart", "Particle", "WholeFree", "Free")),
          lakesite = factor(lakesite,  levels = c("MOT", "MDP", "MBR", "MIN")),
          measure = factor(measure, levels = c("Richness", "Simpsons_Evenness", "Shannon_Entropy", "Inverse_Simpson")),
          Removed = "10-tons") 
+
+################## Remove 30-tons 
+alpha_rm30 <- calc_alpha_diversity(physeq = notree_musk_surface_pruned_rm30)
+min(sample_sums(notree_musk_surface_pruned_rm30)) - 1
+
+otu_alphadiv_rm30 <- calc_mean_alphadiv(physeq = notree_musk_surface_pruned_rm30,
+                           richness_df = alpha_rm30$Richness, 
+                           evenness_df = alpha_rm30$Inverse_Simpson, 
+                           shannon_df = alpha_rm30$Shannon) %>%
+    mutate(fraction = factor(fraction, levels = c("WholePart", "Particle", "WholeFree", "Free")),
+         lakesite = factor(lakesite,  levels = c("MOT", "MDP", "MBR", "MIN")),
+         measure = factor(measure, levels = c("Richness", "Simpsons_Evenness", "Shannon_Entropy", "Inverse_Simpson")),
+         Removed = "30-tons")  
+
+
+
+################## Remove 60-tons 
+alpha_rm60 <- calc_alpha_diversity(physeq = notree_musk_surface_pruned_rm60)
+min(sample_sums(notree_musk_surface_pruned_rm60)) - 1
+
+otu_alphadiv_rm60 <- calc_mean_alphadiv(physeq = notree_musk_surface_pruned_rm60,
+                           richness_df = alpha_rm60$Richness, 
+                           evenness_df = alpha_rm60$Inverse_Simpson, 
+                           shannon_df = alpha_rm60$Shannon) %>%
+    mutate(fraction = factor(fraction, levels = c("WholePart", "Particle", "WholeFree", "Free")),
+         lakesite = factor(lakesite,  levels = c("MOT", "MDP", "MBR", "MIN")),
+         measure = factor(measure, levels = c("Richness", "Simpsons_Evenness", "Shannon_Entropy", "Inverse_Simpson")),
+         Removed = "60-tons")  
+
+
+################## Remove 90-tons 
+alpha_rm90 <- calc_alpha_diversity(physeq = notree_musk_surface_pruned_rm90)
+min(sample_sums(notree_musk_surface_pruned_rm90)) - 1
+
+otu_alphadiv_rm90 <- calc_mean_alphadiv(physeq = notree_musk_surface_pruned_rm90,
+                           richness_df = alpha_rm90$Richness, 
+                           evenness_df = alpha_rm90$Inverse_Simpson, 
+                           shannon_df = alpha_rm90$Shannon) %>%
+    mutate(fraction = factor(fraction, levels = c("WholePart", "Particle", "WholeFree", "Free")),
+         lakesite = factor(lakesite,  levels = c("MOT", "MDP", "MBR", "MIN")),
+         measure = factor(measure, levels = c("Richness", "Simpsons_Evenness", "Shannon_Entropy", "Inverse_Simpson")),
+         Removed = "90-tons")  
+
+
+################## Remove 90-tons 
+alpha_rm150 <- calc_alpha_diversity(physeq = notree_musk_surface_pruned_rm150)
+min(sample_sums(notree_musk_surface_pruned_rm150)) - 1
+
+otu_alphadiv_rm150 <- calc_mean_alphadiv(physeq = notree_musk_surface_pruned_rm150,
+                           richness_df = alpha_rm150$Richness, 
+                           evenness_df = alpha_rm150$Inverse_Simpson, 
+                           shannon_df = alpha_rm150$Shannon) %>%
+    mutate(fraction = factor(fraction, levels = c("WholePart", "Particle", "WholeFree", "Free")),
+         lakesite = factor(lakesite,  levels = c("MOT", "MDP", "MBR", "MIN")),
+         measure = factor(measure, levels = c("Richness", "Simpsons_Evenness", "Shannon_Entropy", "Inverse_Simpson")),
+         Removed = "150-tons")  
+
+################## Remove 300-tons 
+alpha_rm225 <- calc_alpha_diversity(physeq = notree_musk_surface_pruned_rm225)
+min(sample_sums(notree_musk_surface_pruned_rm225)) - 1
+
+otu_alphadiv_rm225 <- calc_mean_alphadiv(physeq = notree_musk_surface_pruned_rm225,
+                           richness_df = alpha_rm225$Richness, 
+                           evenness_df = alpha_rm225$Inverse_Simpson, 
+                           shannon_df = alpha_rm225$Shannon) %>%
+    mutate(fraction = factor(fraction, levels = c("WholePart", "Particle", "WholeFree", "Free")),
+         lakesite = factor(lakesite,  levels = c("MOT", "MDP", "MBR", "MIN")),
+         measure = factor(measure, levels = c("Richness", "Simpsons_Evenness", "Shannon_Entropy", "Inverse_Simpson")),
+         Removed = "225-tons")  
+
+
+################## Remove 300-tons 
+alpha_rm300 <- calc_alpha_diversity(physeq = notree_musk_surface_pruned_rm300)
+min(sample_sums(notree_musk_surface_pruned_rm300)) - 1
+
+otu_alphadiv_rm300 <- calc_mean_alphadiv(physeq = notree_musk_surface_pruned_rm300,
+                           richness_df = alpha_rm300$Richness, 
+                           evenness_df = alpha_rm300$Inverse_Simpson, 
+                           shannon_df = alpha_rm300$Shannon) %>%
+    mutate(fraction = factor(fraction, levels = c("WholePart", "Particle", "WholeFree", "Free")),
+         lakesite = factor(lakesite,  levels = c("MOT", "MDP", "MBR", "MIN")),
+         measure = factor(measure, levels = c("Richness", "Simpsons_Evenness", "Shannon_Entropy", "Inverse_Simpson")),
+         Removed = "300-tons")  
 ```
 
+```{r}
+min_seqs <- c(min(sample_sums(notree_musk_surface_pruned_rm1)) - 1, min(sample_sums(notree_musk_surface_pruned_rm5)) - 1, 
+  min(sample_sums(notree_musk_surface_pruned_rm10)) - 1, min(sample_sums(notree_musk_surface_pruned_rm30)) - 1,
+  min(sample_sums(notree_musk_surface_pruned_rm60)) - 1, min(sample_sums(notree_musk_surface_pruned_rm90)) - 1,
+  min(sample_sums(notree_musk_surface_pruned_rm150)) - 1, min(sample_sums(notree_musk_surface_pruned_rm225)) - 1,
+  min(sample_sums(notree_musk_surface_pruned_rm300)) - 1)
+
+
+num_otus <- c(ncol(otu_table(notree_musk_surface_pruned_rm1)), ncol(otu_table(notree_musk_surface_pruned_rm5)), ncol(otu_table(notree_musk_surface_pruned_rm10)), 
+              ncol(otu_table(notree_musk_surface_pruned_rm30)), ncol(otu_table(notree_musk_surface_pruned_rm60)), ncol(otu_table(notree_musk_surface_pruned_rm90)),
+              ncol(otu_table(notree_musk_surface_pruned_rm150)), ncol(otu_table(notree_musk_surface_pruned_rm225)), ncol(otu_table(notree_musk_surface_pruned_rm300)))
+
+Removed <- c("1-tons","5-tons", "10-tons", "30-tons", "60-tons", "90-tons", "150-tons", "225-tons","300-tons")
+
+
+statz <- data.frame(cbind(as.numeric(min_seqs), as.numeric(num_otus), Removed)) %>%
+         mutate(Removed = factor(Removed, levels = c("1-tons","5-tons", "10-tons", "30-tons", "60-tons", 
+                                              "90-tons", "150-tons", "225-tons","300-tons")))
+
+ggplot(statz, aes(x = Removed, y = min_seqs, fill = Removed)) +
+  geom_bar(stat = "identity") + 
+  scale_color_manual(values = tons_colors) +
+  scale_fill_manual(values = tons_colors) 
+  
+ggplot(statz, aes(x = Removed, y = as.numeric(num_otus), fill = Removed)) +
+  geom_bar(stat = "identity") + 
+  scale_y_continuous(expand = c(0,0)) +
+  scale_color_manual(values = tons_colors) +
+  scale_fill_manual(values = tons_colors) +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
+        legend.position = c(0.9, 0.8), legend.title = element_blank())
+
+
+
+```
 
 # Richness test between subsets of data 
 ```{r}
 # Combine all div metrics 
-all_divs <- bind_rows(otu_alphadiv_rm1, otu_alphadiv_rm5, otu_alphadiv_rm10) %>%
+all_divs <- bind_rows(otu_alphadiv_rm1, otu_alphadiv_rm5, otu_alphadiv_rm10, otu_alphadiv_rm30, 
+                      otu_alphadiv_rm60, otu_alphadiv_rm90, otu_alphadiv_rm150, 
+                      otu_alphadiv_rm225, otu_alphadiv_rm300) %>%
   dplyr::filter(fraction %in% c("WholePart", "WholeFree") & year == "2015") %>%
-  mutate(Removed = factor(Removed, levels = c("1-tons","5-tons", "10-tons")))
-
+  mutate(Removed = factor(Removed, levels = c("1-tons","5-tons", "10-tons", "30-tons", "60-tons", 
+                                              "90-tons", "150-tons", "225-tons","300-tons")))
 
 
 ### PLOT
 ggplot(dplyr::filter(all_divs, measure == "Richness"), 
        aes(y = mean, x = Removed, color = Removed, fill = Removed)) +
   geom_boxplot(alpha = 0.3, outlier.shape = NA) + geom_point(size = 3, position = position_jitter(w = 0.1)) + 
-  scale_color_manual(values = c("#EC4863", "#A73E5C", "#5C2849")) +
-  scale_fill_manual(values = c("#EC4863", "#A73E5C", "#5C2849")) +
-  facet_grid(.~fraction)
+  scale_color_manual(values = tons_colors) +
+  scale_fill_manual(values = tons_colors) +  
+  facet_grid(.~fraction) +
+  theme(legend.position = "bottom", legend.title = element_blank(),
+        axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
+        axis.title.x = element_blank())
 
-lm_rich_rm1 <- lm(frac_bacprod ~ mean,data = dplyr::filter(all_divs, measure == "Richness" & fraction == "WholePart" & Removed == "1-tons"))
-summary(lm_rich_rm1)
-lm_rich_rm5 <- lm(frac_bacprod ~ mean,data = dplyr::filter(all_divs, measure == "Richness" & fraction == "WholePart" & Removed == "5-tons"))
-summary(lm_rich_rm5)
-lm_rich_rm10 <- lm(frac_bacprod ~ mean,data = dplyr::filter(all_divs, measure == "Richness" & fraction == "WholePart" & Removed == "10-tons"))
-summary(lm_rich_rm10)
+ggplot(dplyr::filter(all_divs, measure == "Richness"), 
+       aes(y = mean, x = fraction, color = Removed, fill = Removed)) +
+  geom_boxplot(alpha = 0.3, outlier.shape = NA) + geom_point(size = 3, position = position_jitter(w = 0.1)) + 
+  scale_color_manual(values = tons_colors) +
+  scale_fill_manual(values = tons_colors) +  
+  facet_grid(.~Removed) +
+  theme(legend.position = "bottom", legend.title = element_blank(),
+        axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
+        axis.title.x = element_blank())
+
+
+summary(lm(frac_bacprod ~ mean + fraction, data = dplyr::filter(all_divs, measure == "Richness" & 
+                                                       Removed == "1-tons")))
+
+
+
+lapply(df[, -1], function(x, dat) lm(crim ~ x, data = dat))
+
+for (i in Removed) {
+  lm(frac_bacprod ~ mean, data = dplyr::filter(all_divs, measure == "Inverse_Simpson" & 
+                                                       Removed == "1-tons" & fraction == "WholePart"))
+}
+
+
+
+summary(lm(frac_bacprod ~ mean/Removed, data = dplyr::filter(all_divs, measure == "Richness" & fraction == "WholePart")))
+
+
+# Are the slopes of Removed different from each other?
+summary(lm(frac_bacprod ~ mean*Removed, data = dplyr::filter(all_divs, measure == "Richness" & fraction == "WholePart")))
+
+
+
+
+
+summary(lm(frac_bacprod ~ mean, data = dplyr::filter(all_divs, measure == "Richness" & 
+                                                       Removed == "1-tons" & fraction == "WholePart")))
+summary(lm(frac_bacprod ~ mean, data = dplyr::filter(all_divs, measure == "Richness" & 
+                                                       Removed == "5-tons" & fraction == "WholePart")))
+summary(lm(frac_bacprod ~ mean, data = dplyr::filter(all_divs, measure == "Richness" & 
+                                                       Removed == "10-tons" & fraction == "WholePart")))
+summary(lm(frac_bacprod ~ mean, data = dplyr::filter(all_divs, measure == "Richness" & 
+                                                       Removed == "30-tons" & fraction == "WholePart")))
+summary(lm(frac_bacprod ~ mean, data = dplyr::filter(all_divs, measure == "Richness" & 
+                                                       Removed == "60-tons" & fraction == "WholePart")))
+summary(lm(frac_bacprod ~ mean, data = dplyr::filter(all_divs, measure == "Richness" & 
+                                                       Removed == "90-tons" & fraction == "WholePart")))
+summary(lm(frac_bacprod ~ mean, data = dplyr::filter(all_divs, measure == "Richness" & 
+                                                       Removed == "150-tons" & fraction == "WholePart")))
+summary(lm(frac_bacprod ~ mean, data = dplyr::filter(all_divs, measure == "Richness" & 
+                                                       Removed == "300-tons" & fraction == "WholePart")))
 
 ggplot(dplyr::filter(all_divs, measure == "Richness"), 
        aes(y = frac_bacprod, x = mean, color = Removed, fill = Removed)) +
   geom_point(size = 3) + 
   ggtitle("Richness") +
   geom_smooth(method = "lm") + 
-  scale_color_manual(values = c("#EC4863", "#A73E5C", "#5C2849")) +
-  scale_fill_manual(values = c("#EC4863", "#A73E5C", "#5C2849")) +
-  facet_grid(Removed~fraction) +
-  theme(legend.position = c(0.15, 0.9), legend.title = element_blank())
+  scale_color_manual(values = tons_colors) +
+  scale_fill_manual(values = tons_colors) +  
+  facet_grid(Removed~fraction, scales = "free") +
+  theme(legend.position = "bottom", legend.title = element_blank())
   
+
+ggplot(dplyr::filter(all_divs, measure == "Richness"), 
+       aes(y = frac_bacprod, x = mean, color = Removed, fill = Removed)) +
+  geom_point(size = 3) + 
+  ggtitle("Richness") +
+  geom_smooth(method = "lm") + 
+  scale_color_manual(values = tons_colors) +
+  scale_fill_manual(values = tons_colors) +  
+  facet_grid(Removed~fraction, scales = "free") +
+  theme(legend.position = "bottom", legend.title = element_blank())
+
+
+summary(lm(frac_bacprod ~ mean, data = dplyr::filter(all_divs, measure == "Richness" & 
+                                                       Removed == "60-tons" & fraction == "WholeFree")))
+
+ggplot(dplyr::filter(all_divs, measure == "Richness" & Removed == "60-tons"),
+       aes(y = frac_bacprod, x = mean, color = Removed, fill = Removed)) +
+  geom_point(size = 3) + ggtitle("Richness") +  geom_smooth(method = "lm") + 
+  facet_grid(Removed~fraction, scales = "free") +
+  theme(legend.position = "bottom", legend.title = element_blank())
+
+
+
   ggplot(dplyr::filter(all_divs, measure == "Shannon_Entropy"), 
        aes(y = frac_bacprod, x = mean, color = Removed, fill = Removed)) +
   geom_point(size = 3) + 

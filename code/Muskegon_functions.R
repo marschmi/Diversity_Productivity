@@ -559,20 +559,35 @@ calc_mean_alphadiv <- function(physeq, richness_df, evenness_df, shannon_df){
 
 #################################################################################### 11
 #################################################################################### 11
-calc_diversity <- function(physeq, iters = 100){
+# Take a phyloseq object and:
+    # 1. Rarefy at the minimum sequencing depth -1
+    # 2. Calculate (1) the observed richness, (2) inverse simpson, (3) Shannon entropy.
+    # 3. Output a list of 3 matrices with data from #2
+
+# Modified from original code written by Michelle Berry.  
+
+# INPUT:
+    # A phyloseq object
+
+# OUTPUT:
+    # A named list of three matrices where:
+          # Matrix 1  = Richness
+          # Matrix 2  = Inverse Simpson
+          # Matrix 3  = Shannon Entropy
+
+calc_alpha_diversity <- function(physeq, iters = 100){
 
  nsamp <- nsamples(physeq)
- min_lib <- min(sample_sums(physeq)) - 1
+ min_seqs <- min(sample_sums(physeq)) - 1
  
- otu_richness <- matrix(nrow = nsamp, ncol = iters)
- row.names(otu_richness) <- sample_names(physeq)
+ richness <- matrix(nrow = nsamp, ncol = iters)
+ row.names(richness) <- sample_names(physeq)
  
- otu_evenness <- matrix(nrow = nsamp, ncol = iters)
- row.names(otu_evenness) <- sample_names(physeq)
+ simpson <- matrix(nrow = nsamp, ncol = iters)
+ row.names(simpson) <- sample_names(physeq)
  
- otu_shannon <- matrix(nrow = nsamp, ncol = iters)
- row.names(otu_shannon) <- sample_names(physeq)
-
+ shannon <- matrix(nrow = nsamp, ncol = iters)
+ row.names(shannon) <- sample_names(physeq)
 
 # Set the seed to have reproducible results
 set.seed(777)
@@ -580,25 +595,24 @@ set.seed(777)
 for (i in 1:iters) {
     
     # Subsample
-    r <- rarefy_even_depth(physeq, sample.size = min_lib, verbose = FALSE, replace = TRUE)
+    r <- rarefy_even_depth(physeq, sample.size = min_seqs, verbose = FALSE, replace = TRUE)
    
     # Calculate richness
-    rich <- as.numeric(as.matrix(estimate_richness(r, measures = "Observed")))
-    otu_richness[ ,i] <- rich
+    calc_rich <- as.numeric(as.matrix(estimate_richness(r, measures = "Observed")))
+    richness[ ,i] <- calc_rich
    
     # Calculate evenness
-    even <- as.numeric(as.matrix(estimate_richness(r, measures = "InvSimpson")))
-    otu_evenness[ ,i] <- even
+    calc_simps <- as.numeric(as.matrix(estimate_richness(r, measures = "InvSimpson")))
+    simpson[ ,i] <- calc_simps
    
     # Calculate evenness
-    shannon <- as.numeric(as.matrix(estimate_richness(r, measures = "Shannon")))
-    otu_shannon[ ,i] <- shannon
+    calc_shan <- as.numeric(as.matrix(estimate_richness(r, measures = "Shannon")))
+    shannon[ ,i] <- calc_shan
   }
 
-  # Return a list of 3 named dataframes 
-  return(list(Richness = otu_richness, Inverse_Simpson = otu_evenness, Shannon = otu_shannon))
-  #names(div_list) <- c("richness", "Inverse_Simpson", "Shannon")
-  #return(div_list)
+  # Return a list of 3 named matrices 
+  return(list(Richness = richness, Inverse_Simpson = simpson, Shannon = shannon))
+
 }
 #################################################################################### 11
 #################################################################################### 11
