@@ -1,5 +1,5 @@
 ---
-title: "Randomized Richness"
+title: "OTU Removal Analysis"
 author: "Marian L. Schmidt"
 date: "May 1st, 2017"
 output:
@@ -36,9 +36,9 @@ knitr::opts_chunk$set(eval = TRUE,
                       message = FALSE,
                       engine = "R", # Chunks will always have R code, unless noted
                       error = TRUE,
-                      fig.path="Rarefied_Figures/",  # Set the figure options
+                      fig.path="OTU_Removal_Analysis_Figs/",  # Set the figure options
                       fig.align = "center", 
-                      fig.width = 7,
+                      fig.width = 7, 
                       fig.height = 7)
 
 ```
@@ -269,7 +269,7 @@ otu_alphadiv_rm300 <- calc_mean_alphadiv(physeq = notree_musk_surface_pruned_rm3
          Removed = "300-tons")  
 ```
 
-```{r}
+```{r min-seqs-plots}
 min_seqs <- c(min(sample_sums(notree_musk_surface_pruned_rm1)) - 1, min(sample_sums(notree_musk_surface_pruned_rm5)) - 1, 
   min(sample_sums(notree_musk_surface_pruned_rm10)) - 1, min(sample_sums(notree_musk_surface_pruned_rm30)) - 1,
   min(sample_sums(notree_musk_surface_pruned_rm60)) - 1, min(sample_sums(notree_musk_surface_pruned_rm90)) - 1,
@@ -286,27 +286,35 @@ Removed <- c("1-tons","5-tons", "10-tons", "30-tons", "60-tons", "90-tons", "150
 
 statz <- data.frame(cbind(as.numeric(min_seqs), as.numeric(num_otus), Removed)) %>%
          mutate(Removed = factor(Removed, levels = c("1-tons","5-tons", "10-tons", "30-tons", "60-tons", 
-                                              "90-tons", "150-tons", "225-tons","300-tons")))
+                                              "90-tons", "150-tons", "225-tons","300-tons"))) %>%
+  mutate(num_otus = as.numeric(num_otus))
 
-ggplot(statz, aes(x = Removed, y = min_seqs, fill = Removed)) +
-  geom_bar(stat = "identity") + 
+p1 <- ggplot(statz, aes(x = Removed, y = min_seqs, fill = Removed)) +
+  geom_bar(stat = "identity") + ylab("Minimum Number of Sequences") +
+  scale_y_continuous(expand = c(0,0), limits = c(0, 8000)) +
   scale_color_manual(values = tons_colors) +
-  scale_fill_manual(values = tons_colors) 
+  scale_fill_manual(values = tons_colors) +
+    theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
+        legend.position = "none")
   
-ggplot(statz, aes(x = Removed, y = as.numeric(num_otus), fill = Removed)) +
-  geom_bar(stat = "identity") + 
+p2 <-ggplot(statz, aes(x = Removed, y = num_otus, fill = Removed)) +
+  geom_bar(stat = "identity") + ylab("Richness") +
   scale_y_continuous(expand = c(0,0)) +
   scale_color_manual(values = tons_colors) +
   scale_fill_manual(values = tons_colors) +
   theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
         legend.position = c(0.9, 0.8), legend.title = element_blank())
 
-
-
+plot_grid(p1, p2, align = "v", labels = c("A", "B"), nrow = 2, ncol =1)
 ```
 
-# Richness test between subsets of data 
-```{r}
+
+
+
+
+
+# Combine all data 
+```{r }
 # Combine all div metrics 
 all_divs <- bind_rows(otu_alphadiv_rm1, otu_alphadiv_rm5, otu_alphadiv_rm10, otu_alphadiv_rm30, 
                       otu_alphadiv_rm60, otu_alphadiv_rm90, otu_alphadiv_rm150, 
@@ -314,8 +322,11 @@ all_divs <- bind_rows(otu_alphadiv_rm1, otu_alphadiv_rm5, otu_alphadiv_rm10, otu
   dplyr::filter(fraction %in% c("WholePart", "WholeFree") & year == "2015") %>%
   mutate(Removed = factor(Removed, levels = c("1-tons","5-tons", "10-tons", "30-tons", "60-tons", 
                                               "90-tons", "150-tons", "225-tons","300-tons")))
+```
 
 
+# Richness 
+```{r rich-plots1, fig.width=7, fig.height=4}
 ### PLOT
 ggplot(dplyr::filter(all_divs, measure == "Richness"), 
        aes(y = mean, x = Removed, color = Removed, fill = Removed)) +
@@ -323,6 +334,7 @@ ggplot(dplyr::filter(all_divs, measure == "Richness"),
   scale_color_manual(values = tons_colors) +
   scale_fill_manual(values = tons_colors) +  
   facet_grid(.~fraction) +
+  ylab("Mean Richness") +
   theme(legend.position = "bottom", legend.title = element_blank(),
         axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
         axis.title.x = element_blank())
@@ -333,6 +345,7 @@ ggplot(dplyr::filter(all_divs, measure == "Richness"),
   scale_color_manual(values = tons_colors) +
   scale_fill_manual(values = tons_colors) +  
   facet_grid(.~Removed) +
+  ylab("Mean Richness") +
   theme(legend.position = "bottom", legend.title = element_blank(),
         axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
         axis.title.x = element_blank())
@@ -343,126 +356,215 @@ summary(lm(frac_bacprod ~ mean + fraction, data = dplyr::filter(all_divs, measur
 
 
 
-lapply(df[, -1], function(x, dat) lm(crim ~ x, data = dat))
-
-for (i in Removed) {
-  lm(frac_bacprod ~ mean, data = dplyr::filter(all_divs, measure == "Inverse_Simpson" & 
-                                                       Removed == "1-tons" & fraction == "WholePart"))
-}
-
-
-
 summary(lm(frac_bacprod ~ mean/Removed, data = dplyr::filter(all_divs, measure == "Richness" & fraction == "WholePart")))
 
 
 # Are the slopes of Removed different from each other?
 summary(lm(frac_bacprod ~ mean*Removed, data = dplyr::filter(all_divs, measure == "Richness" & fraction == "WholePart")))
+```
 
 
+```{r richness-plots, fig.width=8, fig.height=5}
+# Linear Model output
+lm_fraction_output(dataframe = dplyr::filter(all_divs,  measure == "Richness"))
 
-
-
-summary(lm(frac_bacprod ~ mean, data = dplyr::filter(all_divs, measure == "Richness" & 
-                                                       Removed == "1-tons" & fraction == "WholePart")))
-summary(lm(frac_bacprod ~ mean, data = dplyr::filter(all_divs, measure == "Richness" & 
-                                                       Removed == "5-tons" & fraction == "WholePart")))
-summary(lm(frac_bacprod ~ mean, data = dplyr::filter(all_divs, measure == "Richness" & 
-                                                       Removed == "10-tons" & fraction == "WholePart")))
-summary(lm(frac_bacprod ~ mean, data = dplyr::filter(all_divs, measure == "Richness" & 
-                                                       Removed == "30-tons" & fraction == "WholePart")))
-summary(lm(frac_bacprod ~ mean, data = dplyr::filter(all_divs, measure == "Richness" & 
-                                                       Removed == "60-tons" & fraction == "WholePart")))
-summary(lm(frac_bacprod ~ mean, data = dplyr::filter(all_divs, measure == "Richness" & 
-                                                       Removed == "90-tons" & fraction == "WholePart")))
-summary(lm(frac_bacprod ~ mean, data = dplyr::filter(all_divs, measure == "Richness" & 
-                                                       Removed == "150-tons" & fraction == "WholePart")))
-summary(lm(frac_bacprod ~ mean, data = dplyr::filter(all_divs, measure == "Richness" & 
-                                                       Removed == "300-tons" & fraction == "WholePart")))
+sig_rich_lms <- c("1-tons", "5-tons", "10-tons")
 
 ggplot(dplyr::filter(all_divs, measure == "Richness"), 
        aes(y = frac_bacprod, x = mean, color = Removed, fill = Removed)) +
   geom_point(size = 3) + 
-  ggtitle("Richness") +
-  geom_smooth(method = "lm") + 
+  xlab("Richness") +
+  ylab("Bacterial Production by Fraction") +
+  geom_smooth(method = "lm", data = filter(all_divs, 
+                                           measure == "Richness" & fraction == "WholePart" & Removed %in% sig_rich_lms)) + 
   scale_color_manual(values = tons_colors) +
   scale_fill_manual(values = tons_colors) +  
-  facet_grid(Removed~fraction, scales = "free") +
-  theme(legend.position = "bottom", legend.title = element_blank())
-  
+  facet_grid(fraction~Removed, scales = "free") +
+  theme(legend.position = "bottom", legend.title = element_blank(),
+        axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
+```
 
-ggplot(dplyr::filter(all_divs, measure == "Richness"), 
-       aes(y = frac_bacprod, x = mean, color = Removed, fill = Removed)) +
-  geom_point(size = 3) + 
-  ggtitle("Richness") +
-  geom_smooth(method = "lm") + 
+
+# Shannon Entropy
+```{r shannon-plots1, fig.width=7, fig.height=4}
+### PLOT
+ggplot(dplyr::filter(all_divs, measure == "Shannon_Entropy"), 
+       aes(y = mean, x = Removed, color = Removed, fill = Removed)) +
+  geom_boxplot(alpha = 0.3, outlier.shape = NA) + geom_point(size = 3, position = position_jitter(w = 0.1)) + 
   scale_color_manual(values = tons_colors) +
   scale_fill_manual(values = tons_colors) +  
-  facet_grid(Removed~fraction, scales = "free") +
-  theme(legend.position = "bottom", legend.title = element_blank())
+  facet_grid(.~fraction) +
+  ylab("Mean Shannon_Entropy") +
+  theme(legend.position = "bottom", legend.title = element_blank(),
+        axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
+        axis.title.x = element_blank())
+
+ggplot(dplyr::filter(all_divs, measure == "Shannon_Entropy"), 
+       aes(y = mean, x = fraction, color = Removed, fill = Removed)) +
+  geom_boxplot(alpha = 0.3, outlier.shape = NA) + geom_point(size = 3, position = position_jitter(w = 0.1)) + 
+  scale_color_manual(values = tons_colors) +
+  scale_fill_manual(values = tons_colors) +  
+  facet_grid(.~Removed) +
+  ylab("Mean Shannon_Entropy") +
+  theme(legend.position = "bottom", legend.title = element_blank(),
+        axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
+        axis.title.x = element_blank())
 
 
-summary(lm(frac_bacprod ~ mean, data = dplyr::filter(all_divs, measure == "Richness" & 
-                                                       Removed == "60-tons" & fraction == "WholeFree")))
-
-ggplot(dplyr::filter(all_divs, measure == "Richness" & Removed == "60-tons"),
-       aes(y = frac_bacprod, x = mean, color = Removed, fill = Removed)) +
-  geom_point(size = 3) + ggtitle("Richness") +  geom_smooth(method = "lm") + 
-  facet_grid(Removed~fraction, scales = "free") +
-  theme(legend.position = "bottom", legend.title = element_blank())
+summary(lm(frac_bacprod ~ mean + fraction, data = dplyr::filter(all_divs, measure == "Shannon_Entropy" & 
+                                                       Removed == "1-tons")))
 
 
 
-  ggplot(dplyr::filter(all_divs, measure == "Shannon_Entropy"), 
+summary(lm(frac_bacprod ~ mean/Removed, data = dplyr::filter(all_divs, measure == "Shannon_Entropy" & fraction == "WholePart")))
+
+
+# Are the slopes of Removed different from each other?
+summary(lm(frac_bacprod ~ mean*Removed, data = dplyr::filter(all_divs, measure == "Shannon_Entropy" & fraction == "WholePart")))
+```
+
+
+```{r shannon-plots, fig.width=8, fig.height=5}
+# Linear Model output
+lm_fraction_output(dataframe = dplyr::filter(all_divs,  measure == "Shannon_Entropy"))
+
+ggplot(dplyr::filter(all_divs, measure == "Shannon_Entropy"), 
        aes(y = frac_bacprod, x = mean, color = Removed, fill = Removed)) +
   geom_point(size = 3) + 
-  ggtitle("Shannon Entropy") +
-  geom_smooth(method = "lm") + 
-  scale_color_manual(values = c("#EC4863", "#A73E5C", "#5C2849")) +
-  scale_fill_manual(values = c("#EC4863", "#A73E5C", "#5C2849")) +
-  facet_grid(Removed~fraction) +
-  theme(legend.position = c(0.15, 0.9), legend.title = element_blank())
-  
-  
+  xlab("Shannon_Entropy") +
+  ylab("Bacterial Production by Fraction") +
+  geom_smooth(method = "lm", data = filter(all_divs, measure == "Shannon_Entropy" & fraction == "WholePart" )) + 
+  scale_color_manual(values = tons_colors) +
+  scale_fill_manual(values = tons_colors) +  
+  facet_grid(fraction~Removed, scales = "free") +
+  theme(legend.position = "bottom", legend.title = element_blank(),
+        axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
+```
+
+
+# Inverse Simpson
+```{r invsimps-plots1, fig.width=7, fig.height=4}
+### PLOT
+ggplot(dplyr::filter(all_divs, measure == "Inverse_Simpson"), 
+       aes(y = mean, x = Removed, color = Removed, fill = Removed)) +
+  geom_boxplot(alpha = 0.3, outlier.shape = NA) + geom_point(size = 3, position = position_jitter(w = 0.1)) + 
+  scale_color_manual(values = tons_colors) +
+  scale_fill_manual(values = tons_colors) +  
+  facet_grid(.~fraction) +
+  ylab("Mean Inverse_Simpson") +
+  theme(legend.position = "bottom", legend.title = element_blank(),
+        axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
+        axis.title.x = element_blank())
+
+ggplot(dplyr::filter(all_divs, measure == "Inverse_Simpson"), 
+       aes(y = mean, x = fraction, color = Removed, fill = Removed)) +
+  geom_boxplot(alpha = 0.3, outlier.shape = NA) + geom_point(size = 3, position = position_jitter(w = 0.1)) + 
+  scale_color_manual(values = tons_colors) +
+  scale_fill_manual(values = tons_colors) +  
+  facet_grid(.~Removed) +
+  ylab("Mean Inverse_Simpson") +
+  theme(legend.position = "bottom", legend.title = element_blank(),
+        axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
+        axis.title.x = element_blank())
+
+
+summary(lm(frac_bacprod ~ mean + fraction, data = dplyr::filter(all_divs, measure == "Inverse_Simpson" & 
+                                                       Removed == "1-tons")))
+
+
+
+summary(lm(frac_bacprod ~ mean/Removed, data = dplyr::filter(all_divs, measure == "Inverse_Simpson" & fraction == "WholePart")))
+
+
+# Are the slopes of Removed different from each other?
+summary(lm(frac_bacprod ~ mean*Removed, data = dplyr::filter(all_divs, measure == "Inverse_Simpson" & fraction == "WholePart")))
+```
+
+```{r inverse-simpson-plots, fig.width=8, fig.height=5}
+# Linear Model output
+lm_fraction_output(dataframe = dplyr::filter(all_divs,  measure == "Inverse_Simpson"))
 
 ggplot(dplyr::filter(all_divs, measure == "Inverse_Simpson"), 
        aes(y = frac_bacprod, x = mean, color = Removed, fill = Removed)) +
   geom_point(size = 3) + 
-  ggtitle("Inverse Simpson") +
-  geom_smooth(method = "lm") + 
-  scale_color_manual(values = c("#EC4863", "#A73E5C", "#5C2849")) +
-  scale_fill_manual(values = c("#EC4863", "#A73E5C", "#5C2849")) +
-  facet_grid(Removed~fraction) +
-  theme(legend.position = c(0.15, 0.9), legend.title = element_blank())
-  
-  
-  
+  xlab("Inverse_Simpson") +
+  ylab("Bacterial Production by Fraction") +
+  geom_smooth(method = "lm", data = filter(all_divs, measure == "Inverse_Simpson" & fraction == "WholePart" )) + 
+  scale_color_manual(values = tons_colors) +
+  scale_fill_manual(values = tons_colors) +  
+  facet_grid(fraction~Removed, scales = "free") +
+  theme(legend.position = "bottom", legend.title = element_blank(),
+        axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
+```
+
+
+# Simpson's Evenness
+```{r simpseven-plots1, fig.width=7, fig.height=4}
+### PLOT
+ggplot(dplyr::filter(all_divs, measure == "Simpsons_Evenness"), 
+       aes(y = mean, x = Removed, color = Removed, fill = Removed)) +
+  geom_boxplot(alpha = 0.3, outlier.shape = NA) + geom_point(size = 3, position = position_jitter(w = 0.1)) + 
+  scale_color_manual(values = tons_colors) +
+  scale_fill_manual(values = tons_colors) +  
+  facet_grid(.~fraction) +
+  ylab("Mean Simpsons_Evenness") +
+  theme(legend.position = "bottom", legend.title = element_blank(),
+        axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
+        axis.title.x = element_blank())
+
+ggplot(dplyr::filter(all_divs, measure == "Simpsons_Evenness"), 
+       aes(y = mean, x = fraction, color = Removed, fill = Removed)) +
+  geom_boxplot(alpha = 0.3, outlier.shape = NA) + geom_point(size = 3, position = position_jitter(w = 0.1)) + 
+  scale_color_manual(values = tons_colors) +
+  scale_fill_manual(values = tons_colors) +  
+  facet_grid(.~Removed) +
+  ylab("Mean Simpsons_Evenness") +
+  theme(legend.position = "bottom", legend.title = element_blank(),
+        axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
+        axis.title.x = element_blank())
+
+
+summary(lm(frac_bacprod ~ mean + fraction, data = dplyr::filter(all_divs, measure == "Simpsons_Evenness" & 
+                                                       Removed == "1-tons")))
+
+
+
+summary(lm(frac_bacprod ~ mean/Removed, data = dplyr::filter(all_divs, measure == "Simpsons_Evenness" & fraction == "WholePart")))
+
+
+# Are the slopes of Removed different from each other?
+summary(lm(frac_bacprod ~ mean*Removed, data = dplyr::filter(all_divs, measure == "Simpsons_Evenness" & fraction == "WholePart")))
+```
+
+```{r simps-evenness-plots, fig.width=8, fig.height=5}
+# Linear Model output
+lm_fraction_output(dataframe = dplyr::filter(all_divs,  measure == "Simpsons_Evenness"))
+
 ggplot(dplyr::filter(all_divs, measure == "Simpsons_Evenness"), 
        aes(y = frac_bacprod, x = mean, color = Removed, fill = Removed)) +
   geom_point(size = 3) + 
-  ggtitle("Simpson's Evenness") +
-  geom_smooth(method = "lm") + 
-  scale_color_manual(values = c("#EC4863", "#A73E5C", "#5C2849")) +
-  scale_fill_manual(values = c("#EC4863", "#A73E5C", "#5C2849")) +
-  facet_grid(Removed~fraction) +
-  theme(legend.position = c(0.15, 0.9), legend.title = element_blank())
-
-
-
+  xlab("Simpsons_Evenness") +
+  ylab("Bacterial Production by Fraction") +
+  geom_smooth(method = "lm", data = filter(all_divs, measure == "Simpsons_Evenness" & fraction == "WholePart" )) + 
+  scale_color_manual(values = tons_colors) +
+  scale_fill_manual(values = tons_colors) +  
+  facet_grid(fraction~Removed, scales = "free") +
+  theme(legend.position = "bottom", legend.title = element_blank(),
+        axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
 ```
 
 
-```{r}
-filter(test10, measure == "Richness")$mean
 
-filter(otu_alphadiv_rm10, measure == "Richness")$mean
 
-```
+
+
+
 
 
 
 
 ## Subset Diversity Data 
-```{r subset-diversity, dependson = c("load-data","vean-otu-alphadiv-calc")}
+```{r subset-diversity, eval = FALSE, dependson = c("load-data","vean-otu-alphadiv-calc")}
 ######################################################### RICHNESS
 # Subset only richness data 
 ML_rm1_rich_stats <- filter(otu_alphadiv, measure == "Richness" & 
@@ -487,7 +589,7 @@ ML_otu_simpseven_stats <- filter(otu_alphadiv, measure == "Simpsons_Evenness" &
 
 
 # Diversity vs Fraction Production 
-```{r plot-vegan-fracprod, dependson = "subset-diversity", fig.width = 10, fig.height = 10, warnings = FALSE}
+```{r plot-vegan-fracprod, eval = FALSE, dependson = "subset-diversity", fig.width = 10, fig.height = 10, warnings = FALSE}
 ######################################################### RICHNESS
 # Free-Living Richness vs fractional production 
 freeprod_ML_otu_rich <- lm(frac_bacprod ~ mean, data = filter(ML_otu_rich_stats, fraction == "WholeFree"))
