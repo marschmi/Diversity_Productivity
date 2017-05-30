@@ -1,0 +1,29 @@
+####  PBS preamble
+#PBS -N Randomized_Fasttree
+#PBS -M marschmi@umich.edu
+#PBS -m abe
+
+#PBS -l nodes=1:ppn=5,mem=100gb,walltime=80:00:00
+#PBS -V
+
+#PBS -A vdenef_fluxm
+#PBS -l qos=flux
+#PBS -q fluxm
+####  End PBS preamble
+
+#  Show list of CPUs you ran on, if you're running under PBS
+if [ -n "$PBS_NODEFILE" ]; then cat $PBS_NODEFILE; fi
+
+#  Change to the directory you submitted from
+if [ -n "$PBS_O_WORKDIR" ]; then cd $PBS_O_WORKDIR; fi
+pwd
+
+##############################################
+
+# Infer a tree with fasttree with the GTR+CAT 
+### GTR: General time reversible model 
+
+## Input file to fasttree = random_presab_pruned__OTUnames_rmN.fasta
+## Output file to fasttree = newick_tree_randomized_rmN.tre 
+
+FastTree -gtr -nt -fastest  < random_presab_pruned__OTUnames_rmN.fasta > newick_tree_randomized_rmN.tre

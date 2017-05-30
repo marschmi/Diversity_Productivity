@@ -1,0 +1,376 @@
+---
+title: "Phylogenetic Analysis"
+author: "Marian L. Schmidt"
+date: "May 26th, 2017"
+output:
+  html_document:
+    code_folding: show
+    highlight: haddock
+    keep_md: no
+    theme: united
+    toc: yes
+    toc_float:
+      collapsed: no
+      smooth_scroll: yes
+      toc_depth: 3
+---
+<style>
+pre code, pre, code {
+  white-space: pre !important;
+  overflow-x: scroll !important;
+  word-break: keep-all !important;
+  word-wrap: initial !important;
+}
+</style>
+
+```{r setup, include=FALSE}
+# For width of code chunks and scroll bar 
+options(width=250)
+
+knitr::opts_chunk$set(eval = TRUE, 
+                      echo = TRUE, 
+                      cache = TRUE,
+                      include = TRUE,
+                      warning = TRUE,
+                      collapse = FALSE,
+                      message = FALSE,
+                      engine = "R", # Chunks will always have R code, unless noted
+                      error = TRUE,
+                      fig.path="Final_Figures/",  # Set the figure options
+                      fig.align = "center", 
+                      fig.width = 7, 
+                      fig.height = 7)
+
+```
+
+
+```{r load-libraries, message = FALSE, warning = FALSE}
+library(ggplot2)
+library(devtools)
+library(phyloseq)
+library(picante)
+library(tidyr)
+library(forcats)
+library(dplyr)
+library(cowplot)
+library(picante) # Will also include ape and vegan 
+library(car) # For residual analysis
+library(sandwich) # for vcovHC function in post-hoc test
+library(MASS) # For studres in plot_residuals function
+library(boot) # For cross validation
+source("code/Muskegon_functions.R")
+source("code/set_colors.R")
+```
+
+
+# Load data
+```{r load-data, eval = TRUE}
+# Loads a phyloseq object named otu_merged_musk_pruned)
+load("data/surface_PAFL_otu_pruned_raw.RData")
+# The name of the phyloseq object is: 
+surface_PAFL_otu_pruned_raw 
+
+# Remove doubletons!
+surface_PAFL_otu_pruned_rm2 <- prune_taxa(taxa_sums(surface_PAFL_otu_pruned_raw) > 2, surface_PAFL_otu_pruned_raw) 
+surface_PAFL_otu_pruned_rm2
+
+# Remove tree for computational efficiency 
+surface_PAFL_otu_pruned_notree_rm2 <- phyloseq(tax_table(surface_PAFL_otu_pruned_rm2), otu_table(surface_PAFL_otu_pruned_rm2), sample_data(surface_PAFL_otu_pruned_rm2))
+
+
+# Gather the metadata in a dataframe to play with 
+metadata <- data.frame(sample_data(surface_PAFL_otu_pruned_notree_rm2)) %>%
+      mutate(fraction = factor(fraction, levels = c("WholePart","WholeFree")),
+         lakesite = factor(lakesite,  levels = c("MOT", "MDP", "MBR", "MIN")),
+         fraction = fct_recode(fraction, Particle = "WholePart", Free = "WholeFree"))
+
+
+  
+```
+
+
+# Cell Count and Production Rates 
+```{r boxplot-cellcount-prod, eval = TRUE, fig.width = 10, fig.height = 4, warning = FALSE, dependson="load-data"}
+######################################################### Fraction ABUNDANCe 
+frac_abund_wilcox <- wilcox.test(log10(as.numeric(fraction_bac_abund)) ~ fraction, data = metadata)
+frac_abund_wilcox
+
+metadata %>%
+  group_by(fraction) %>%
+  summarize(mean(as.numeric(fraction_bac_abund)))
+
+# Make a data frame to draw significance line in boxplot (visually calculated)
+dat1 <- data.frame(a = c(1.15,1.15,1.85,1.85), b = c(6.45,6.5,6.5,6.45)) # WholePart vs WholeFree
+
+poster_a <- ggplot(filter(metadata, norep_filter_name != "MOTEJ515"), 
+       aes(y = log10(as.numeric(fraction_bac_abund)), x = fraction)) +
+  scale_color_manual(values = fraction_colors) + 
+  scale_fill_manual(values = fraction_colors) +
+  geom_jitter(size = 3, aes(color = fraction, fill = fraction), width = 0.2) + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(color = fraction, fill = fraction)) +
+  ylab("Log10(Bacterial Cells/mL)") +
+  ##### Particle vs free cell abundances 
+  geom_path(data = dat1, aes(x = a, y = b), linetype = 1, color = "gray40") +
+  annotate("text", x=1.5, y=6.5, fontface = "bold",  size = 3.5, color = "gray40",
+           label= paste("***\np =", round(frac_abund_wilcox$p.value, digits = 6))) +
+  theme(legend.position = "none",
+        axis.title.x = element_blank())
+
+
+
+######################################################### TOTAL PRODUCTION 
+totprod_wilcox <- wilcox.test(frac_bacprod ~ fraction, data = metadata)
+totprod_wilcox
+
+metadata %>%
+  group_by(fraction) %>%
+  summarize(mean(frac_bacprod))
+
+# Make a data frame to draw significance line in boxplot (visually calculated)
+dat2 <- data.frame(a = c(1.15,1.15,1.85,1.85), b = c(67,68,68,67)) # WholePart vs WholeFree
+
+
+poster_b <- ggplot(metadata, aes(y = frac_bacprod, x = fraction)) + 
+  scale_color_manual(values = fraction_colors) + 
+  scale_fill_manual(values = fraction_colors) +
+  geom_jitter(size = 3, aes(color = fraction, fill = fraction), width = 0.2) + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(color = fraction, fill = fraction)) +
+  ylab("Heterotrophic Production (μgC/L/hr)") +
+  ##### Particle vs free bulk production  
+  geom_path(data = dat2, aes(x = a, y = b), linetype = 1, color = "gray40") +
+  annotate("text", x=1.5, y=68, fontface = "bold",  size = 3.5, color = "gray40",
+           label= paste("**\np =", round(totprod_wilcox$p.value, digits = 3))) +
+  theme(legend.position = "none",
+        axis.title.x = element_blank())
+
+
+
+######################################################### TOTAL PRODUCTION 
+percellprod_wilcox <- wilcox.test(log10(fracprod_per_cell) ~ fraction, data = filter(metadata, norep_filter_name != "MOTEJ515"))
+percellprod_wilcox
+
+filter(metadata, norep_filter_name != "MOTEJ515") %>%
+  group_by(fraction) %>%
+  summarize(mean(fracprod_per_cell))
+
+
+# Make a data frame to draw significance line in boxplot (visually calculated)
+dat3 <- data.frame(a = c(1.15,1.15,1.85,1.85), b = c(-5.05,-5,-5,-5.05)) # WholePart vs WholeFree
+
+
+poster_c <- ggplot(filter(metadata, norep_filter_name != "MOTEJ515"), 
+       aes(y = log10(fracprod_per_cell), x = fraction)) +
+  scale_color_manual(values = fraction_colors) + 
+  scale_fill_manual(values = fraction_colors) +
+  geom_jitter(size = 3, aes(color = fraction, fill = fraction), width = 0.2) + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(color = fraction, fill = fraction)) +
+  ylim(c(-8.5, -5)) + 
+  ylab("log10(Production/cell) (μgC/cell/hr)") +
+  ##### Particle vs free per-cell production 
+  geom_path(data = dat3, aes(x = a, y = b), linetype = 1, color = "gray40") +
+  annotate("text", x=1.5, y=-5, fontface = "bold",  size = 3.5, color = "gray40",
+           label= paste("***\np =", round(percellprod_wilcox$p.value, digits = 5))) +
+  theme(legend.position = "none",
+        axis.title.x = element_blank())
+
+plot_grid(poster_a, poster_b, poster_c,
+          labels = c("A", "B", "C"),
+          ncol = 3)
+```
+
+
+
+
+
+# Calculate Diversity 
+
+```{r calc-div}
+# Set the seed for reproducibility
+set.seed(777)
+
+# Calculate the alpha diversity with 100 repsampling events
+alpha_calc <- calc_alpha_diversity(physeq = surface_PAFL_otu_pruned_notree_rm2)
+
+# What was the minimum sample size? 
+min(sample_sums(surface_PAFL_otu_pruned_notree_rm2)) - 1
+
+# Put it altogether in a dataframe 
+otu_alphadiv <- calc_mean_alphadiv(physeq = surface_PAFL_otu_pruned_notree_rm2,
+                           richness_df = alpha_calc$Richness, 
+                           evenness_df = alpha_calc$Inverse_Simpson, 
+                           shannon_df = alpha_calc$Shannon) %>%
+    mutate(fraction = factor(fraction, levels = c("WholePart","WholeFree")),
+         lakesite = factor(lakesite,  levels = c("MOT", "MDP", "MBR", "MIN")),
+         measure = factor(measure, levels = c("Richness",  "Shannon_Entropy", "Inverse_Simpson", "Simpsons_Evenness")),
+         fraction = fct_recode(fraction, Particle = "WholePart", Free = "WholeFree"))
+```
+
+
+```{r plot-prod-div, fig.width = 12, fig.height = 4, dependson= "calc-div"}
+ggplot(otu_alphadiv, aes(y = mean, x = fraction)) +
+  ylab("Mean Diversity Value") +
+  facet_wrap(~measure, scale = "free_y", ncol = 4) +
+  geom_jitter(size = 3, aes(color = fraction, fill = fraction), width = 0.2) + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(color = fraction, fill = fraction)) +
+  scale_fill_manual(values = fraction_colors) + 
+  scale_color_manual(values = fraction_colors) + 
+  theme(legend.position = "none", axis.title.x = element_blank()) 
+
+
+# Richness
+summary(lm(frac_bacprod ~ mean, data = filter(otu_alphadiv, measure == "Richness" & fraction == "Particle")))
+summary(lm(frac_bacprod ~ mean, data = filter(otu_alphadiv, measure == "Richness" & fraction == "Free")))
+
+
+# Shannon
+summary(lm(frac_bacprod ~ mean, data = filter(otu_alphadiv, measure == "Shannon_Entropy" & fraction == "Particle")))
+summary(lm(frac_bacprod ~ mean, data = filter(otu_alphadiv, measure == "Shannon_Entropy" & fraction == "Free")))
+
+
+# Inverse Simpson
+summary(lm(frac_bacprod ~ mean, data = filter(otu_alphadiv, measure == "Inverse_Simpson" & fraction == "Particle")))
+summary(lm(frac_bacprod ~ mean, data = filter(otu_alphadiv, measure == "Inverse_Simpson" & fraction == "Free")))
+
+
+# Simpson's Evenness 
+summary(lm(frac_bacprod ~ mean, data = filter(otu_alphadiv, measure == "Simpsons_Evenness" & fraction == "Particle")))
+summary(lm(frac_bacprod ~ mean, data = filter(otu_alphadiv, measure == "Simpsons_Evenness" & fraction == "Free")))
+
+        
+ggplot(otu_alphadiv, aes(x = mean, y = frac_bacprod)) +
+  ylab("Bacterial Production (ug C/L/hr)") +
+  xlab("Mean Diversity Value") +
+  facet_wrap(~measure, scale = "free_x", ncol = 4) +
+  geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod, color = fraction), alpha = 0.7) + # X-axis errorbars
+  geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd, color = fraction), alpha = 0.7) + # X-axis errorbars
+  geom_point(size = 3, aes(color = fraction)) +
+  scale_color_manual(values = fraction_colors) + 
+  theme(legend.position = "none", axis.title.x = element_blank()) +
+  geom_smooth(method = "lm", data = filter(otu_alphadiv, fraction == "Particle"), color = "#FF6600", fill = "#FF6600", alpha = 0.3)
+```
+
+
+
+```{r randomize-richness, dependson = c("load-data", "calc-div")}
+#########################################################  Subset only richness data 
+### These are the richness values for the fake samples 
+#rich_stats <- filter(otu_alphadiv, measure == "Richness") %>%
+#  dplyr::select(1:2) %>%
+#  rename(mean_richness = mean) %>%
+#  mutate(sample = paste("Sample_", seq(1:nrow(filter(otu_alphadiv, measure == "Richness"))), sep = ""),
+#         mean_richness = matround(mean_richness))
+
+## Pick OTUs to match these richness values 
+
+  # List the otus from ALL samples 
+#  all_otus <- taxa_names(surface_PAFL_otu_pruned_rm2)
+  
+  # Obtain the OTU table from the phyloseq object
+#  otutab <- otu_table(surface_PAFL_otu_pruned_rm2)
+  # Make all the counts to be 0
+#  otutab_newvals <- apply(otutab, c(1, 2), function(x) 0)
+
+  # Stop if things are wrong 
+#  stopifnot(colnames(otutab_newvals) == all_otus)                       # Do the OTU names match?
+#  stopifnot(rownames(otutab_newvals) == rich_stats$norep_filter_name)   # Do the sample names match?
+  
+# Make it reproducible!   
+#set.seed(777)
+  
+#for (row in 1:nrow(rich_stats)) {
+  
+  # Pick the richness value 
+#  rich_val <- rich_stats[row, 2]  
+  
+  # Sample the OTUs to represent that richness value 
+#  col_index <- sample(ncol(otutab_newvals), rich_val, replace = FALSE, prob = NULL)
+  
+  # make all other columns 0
+#  otutab_newvals[row, col_index] <- 1
+
+#}
+
+
+## Calculate the tree for those randomized samples 
+# create a new phyloseq object 
+#random_physeq_presab_raw <- phyloseq(otu_table(otutab_newvals, taxa_are_rows = FALSE), 
+#                                 tax_table(surface_PAFL_otu_pruned_rm2), sample_data(surface_PAFL_otu_pruned_rm2))
+#random_physeq_presab_raw
+
+# Remove taxa that are 0!
+#random_physeq_presab_pruned <- prune_taxa(taxa_sums(random_physeq_presab_raw) > 0, random_physeq_presab_raw) 
+#random_physeq_presab_pruned
+
+# Calculate tree 
+# Obtain the OTU names that were retained in the dataset
+#tax <- data.frame(tax_table(random_physeq_presab_pruned))
+#vector_of_otus <- as.vector(tax$OTU)
+
+# Write out the file for processing/fasttree
+# write(vector_of_otus, file = "data/PhyloTree/randomized/random_physeq_presab_pruned_OTUnames.txt", ncolumns = 1, append = FALSE, sep = "\n")
+```
+  
+  
+  
+# Is there a relationship between randomized richness and unweighted SESMPD?  
+```{r, randomized-sesmpd, fig.width = 4, fig.height = 4, dependson = "randomize-richness"}  
+# Read in the tree
+randomized_tree <- read.tree(file = "data/PhyloTree/randomized/newick_tree_randomized_rmN.tre")
+  
+  #random_physeq_presab_pruned_tree <- merge_phyloseq(random_physeq_presab_pruned, randomized_tree)
+  #random_physeq_presab_pruned_tree
+#save(list="random_physeq_presab_pruned_tree", file=paste0("data/PhyloTree/randomized/random_physeq_presab_pruned_tree.RData")) 
+
+load("data/PhyloTree/randomized/random_physeq_presab_pruned_tree.RData")
+random_physeq_presab_pruned_tree
+  
+# First force the OTU 
+randomized_otu <- matrix(otu_table(random_physeq_presab_pruned_tree), nrow = nrow(otu_table(random_physeq_presab_pruned_tree)))
+rownames(randomized_otu) <- sample_names(random_physeq_presab_pruned_tree)
+colnames(randomized_otu) <- taxa_names(random_physeq_presab_pruned_tree)
+    
+  
+## Calculate input for SES_MPD  
+# Convert the presence/absence data to standardized abundanced  vegan function `decostand' , NOTE: method = "pa"
+otu_decostand <- decostand(randomized_otu, method = "pa")
+# check total abundance in each sample
+apply(otu_decostand, 1, sum)
+
+# check for mismatches/missing species between community data and phylo tree
+randomized_matches <- match.phylo.comm(randomized_tree, otu_decostand)
+# the resulting object is a list with $phy and $comm elements.  replace our
+# original data with the sorted/matched data
+phy_randomized_rm2 <- randomized_matches$phy
+comm_randomized_rm2 <- randomized_matches$comm
+
+# Calculate the phylogenetic distances
+phy_dist_randomized_rm2 <- cophenetic(phy_randomized_rm2)
+
+  
+## Calculate SES_MPD
+###################################### INDEPENDENT SWAP ############################################
+# calculate standardized effect size mean pairwise distance (ses.mpd)
+unweighted_sesMPD_indepswap_randomized <- ses.mpd(comm_randomized_rm2, phy_dist_randomized_rm2, null.model = "independentswap", 
+                                     abundance.weighted = FALSE, runs = 999)
+
+df <- unweighted_sesMPD_indepswap_randomized
+
+df$names <- row.names(df)
+df_2 <- make_metadata_norep(df) %>%
+  mutate(fraction = fct_recode(fraction, Particle = "WholePart", Free = "WholeFree"))
+  
+  
+# Is there a relationship between richness and Unweighted Mean Pairwise distance?
+summary(lm(ntaxa ~ mpd.obs.z, data = filter(df_2, fraction == "Particle")))
+summary(lm(ntaxa ~ mpd.obs.z, data = filter(df_2, fraction == "Free")))
+
+
+ggplot(df_2, aes(y = ntaxa, x = mpd.obs.z, color = fraction)) +
+  geom_point(size = 3) + ylab("Randomized Richness") +
+  xlab("Standardized Effect Size \n Unweighted Mean Pairwise Dist") +
+  scale_color_manual(values = fraction_colors) +
+  scale_x_continuous(limits = c(-1,1)) + 
+  theme(legend.title = element_blank(), legend.position = c(0.15, 0.9))
+```
+
+

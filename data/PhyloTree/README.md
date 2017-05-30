@@ -1,7 +1,5 @@
-### This folder was created on May 25h, 2017 
+### This folder was created on May 25th, 2017 
 
-
-## Run RAxML 
 
 1. `surface_PAFL_otu_pruned_RAREFIED_rm2.RData` and `OTUnames_rarefied_rm2.txt` were created with the `Create_Tree.R` script in the main directory.  
 2. I downloaded [bbmap](https://sourceforge.net/projects/bbmap/) and put it in my home directory.  
@@ -10,6 +8,8 @@
     A. `~/bbmap/filterbyname.sh in=rm_pipe_count_16s.fa names=OTUnames_rarefied_rm2.txt out=subset_rarefied_rm2.fasta -include t`
   
     B. `sed 's/N/-/g' subset_rarefied_rm2.fasta > subset_rarefied_rm2_rmN.fasta`  
+
+## Run RAxML 
 
 4. I visited Indra Mullins Website and downloaded the `Fasta2Phylip.pl` perl script.  
 5. `chmod +x Fasta2Phylip.pl`  
