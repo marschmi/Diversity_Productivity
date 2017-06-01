@@ -1678,7 +1678,7 @@ plot_grid(divs_p1_indepswap, divs_p2_indepswap, evendivs_p1_indepswap, evendivs_
 ```
 
 
-# Fig 3: Indepswap
+ # Fig 3: Indepswap
 ```{r indepswap-fig-3, fig.width = 8, fig.height = 5.5, dependson = c("subset-diversity","load-data","vean-otu-alphadiv-calc", "load-indepswap", "indepswapdiv-vs-diversity")}
 
 # Shared legends: https://cran.r-project.org/web/packages/cowplot/vignettes/shared_legends.html

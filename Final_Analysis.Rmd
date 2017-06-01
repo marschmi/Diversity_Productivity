@@ -163,7 +163,7 @@ poster_c <- ggplot(filter(metadata, norep_filter_name != "MOTEJ515"),
   geom_jitter(size = 3, shape = 21, aes(fill = fraction), width = 0.2) + 
   geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(fill = fraction)) +
   ylim(c(-8.5, -5)) + 
-  ylab("log10(Production/cell) (μgC/cell/hr)") +
+  ylab("log10(production/cell) (μgC/cell/hr)") +
   ##### Particle vs free per-cell production 
   geom_path(data = dat3, aes(x = a, y = b), linetype = 1, color = "gray40") +
   annotate("text", x=1.5, y=-5, fontface = "bold",  size = 3.5, color = "gray40",
@@ -178,6 +178,69 @@ plot_grid(poster_a, poster_b, poster_c,
 
 
 
+
+```{r corresponding-cell-prod, fig.width = 10, fig.height = 4, dependson="load-data"}
+
+work_df <- metadata %>%
+  dplyr::select(norep_filter_name, fraction, fraction_bac_abund, frac_bacprod, fracprod_per_cell_noinf) %>%
+  mutate(norep_water_name = paste(substr(norep_filter_name, 1,4), substr(norep_filter_name, 6,9), sep = "")) %>%
+  dplyr::select(-norep_filter_name)
+
+part_work_df <- work_df %>%
+  filter(fraction == "Particle") %>%
+  rename(part_bacabund = fraction_bac_abund,
+         part_prod = frac_bacprod, 
+         part_percell_prod = fracprod_per_cell_noinf) %>%
+  dplyr::select(-fraction)
+
+free_work_df <- work_df %>%
+  filter(fraction == "Free") %>%
+  rename(free_bacabund = fraction_bac_abund,
+         free_prod = frac_bacprod, 
+         free_percell_prod = fracprod_per_cell_noinf) %>%
+  dplyr::select(-fraction)
+
+byfrac_df <- part_work_df %>%
+  left_join(free_work_df, by = "norep_water_name")
+
+summary(lm(log10(part_bacabund) ~ log10(free_bacabund), data = filter(byfrac_df, norep_water_name != "MOTE515")))
+
+plot1 <- ggplot(filter(byfrac_df, norep_water_name != "MOTE515"), 
+       aes(x = log10(free_bacabund), y = log10(part_bacabund))) +
+  xlab("Free") +  ylab("Particle") + 
+  ggtitle("Log10(cells/mL)") +
+  geom_point(size = 3, shape = 21, fill = "grey") 
+
+
+lm_prod_corr <- lm(part_prod ~ free_prod, data = byfrac_df)
+
+plot2 <- ggplot(byfrac_df, aes(x = free_prod, y = part_prod)) +
+  xlab("Free") +  ylab("Particle") + 
+  ggtitle("Heterotrophic Production \n(μgC/L/hr)") +
+  geom_point(size = 3, shape = 21, fill = "grey") +
+  geom_smooth(method = "lm", color = "black")  + 
+  annotate("text", x =20, y= 30, color = "black", fontface = "bold", size = 4,
+       label = paste("R2 =", round(summary(lm_prod_corr)$adj.r.squared, digits = 3), "\n", 
+                     "p =", round(unname(summary(lm_prod_corr)$coefficients[,4][2]), digits = 3))) 
+
+
+lm_percell_corr <- lm(log10(part_percell_prod) ~ log10(free_percell_prod), data = byfrac_df)
+
+plot3 <- ggplot(byfrac_df,
+       aes(x = log10(free_percell_prod), y = log10(part_percell_prod))) +  
+  xlab("Free") +  ylab("Particle") + 
+  ggtitle("log10(production/cell) \n (μgC/cell/hr)") +
+  geom_point(size = 3, shape = 21, fill = "grey") +
+  geom_smooth(method = "lm", color = "black") + 
+  annotate("text", y = -5.8, x=-7.9, color = "black", fontface = "bold", size = 4,
+       label = paste("R2 =", round(summary(lm_percell_corr)$adj.r.squared, digits = 3), "\n", 
+                     "p =", round(unname(summary(lm_percell_corr)$coefficients[,4][2]), digits = 3))) 
+
+plot_grid(plot1, plot2, plot3, 
+          nrow = 1, ncol = 3, 
+          labels = c("A", "B", "C"), 
+          align = "h")
+```
 
 
 # Calculate Diversity 
@@ -248,7 +311,7 @@ ggplot(otu_alphadiv, aes(x = mean, y = frac_bacprod)) +
   geom_smooth(method = "lm", data = filter(otu_alphadiv, fraction == "Particle"), color = "#FF6600", fill = "#FF6600", alpha = 0.3)
 ```
 
-```{r fig2, fig.height=9, fig.width=5}
+```{r fig2-panels, fig.height=8, fig.width=4.5}
 ######################################################### OBSERVED RICHNESS 
 richness <- filter(otu_alphadiv, measure == "Richness")
 
@@ -268,12 +331,12 @@ rich_distribution_plot <-
   scale_fill_manual(values = fraction_colors) +
   geom_jitter(size = 3, shape = 21, aes(fill = fraction), width = 0.2) + 
   geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(fill = fraction)) +
-  scale_y_continuous(limits = c(0,950), breaks = seq(from = 0, to =925, by = 150)) + 
-  ylab("Standardized Effect Size \n Unweighted Mean Pairwise Dist") +
+  scale_y_continuous(limits = c(150,950), breaks = seq(from = 0, to =925, by = 150)) + 
+  xlab("Observed Richness") +
   xlab("Fraction") + 
   ##### Particle vs free per-cell production 
   geom_path(data = rich_nums, aes(x = a, y = b), linetype = 1, color = "#424645") +
-  annotate("text", x=1.5, y=850, fontface = "bold",  size = 4, color = "#424645",
+  annotate("text", x=1.5, y=790, fontface = "bold",  size = 4, color = "#424645",
            label= paste("***\np =", round(rich_fraction_wilcox$p.value, digits = 5))) +
   theme(legend.position = "none",# axis.title.y = element_blank(),
         axis.title.x = element_blank(), axis.text.x = element_blank()) +
@@ -297,16 +360,17 @@ prod_vs_rich_plot <-
   geom_point(size = 3.5, shape = 21, color = "black", aes(fill = fraction)) +
   scale_color_manual(values = fraction_colors) +
   scale_fill_manual(values = fraction_colors) +
-  ylab("Heterotrophic Production (μgC/L/hr)") + xlab("Observed Richness") +
+  ylab("Heterotrophic Production \n (μgC/L/hr)") + 
+  xlab("Observed Richness") +
   geom_smooth(data=filter(richness, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
-  scale_x_continuous(limits = c(0,950), breaks = seq(from = 0, to =925, by = 150)) +
-  annotate("text", x = 750, y=3, color = "#FF6600", fontface = "bold",
+  scale_x_continuous(limits = c(150,950), breaks = seq(from = 0, to =925, by = 150)) + 
+  annotate("text", x = 790, y=45, color = "#FF6600", fontface = "bold", size = 4,
            label = paste("R2 =", round(summary(lm_prod_vs_rich)$adj.r.squared, digits = 2), "\n", 
                          "p =", round(unname(summary(lm_prod_vs_rich)$coefficients[,4][2]), digits = 3))) +
   theme(legend.position = "none", axis.title.x = element_blank(), axis.text.x = element_blank()) 
 
 
-# Richness
+# Richness vs per cell production 
 summary(lm(log10(fracprod_per_cell_noinf) ~ mean, data = richness)) 
 lm_percell_prod_vs_rich <- lm(log10(fracprod_per_cell_noinf) ~ mean, data = filter(richness, fraction == "Particle"))
 summary(lm_percell_prod_vs_rich)
@@ -319,12 +383,12 @@ percell_prod_vs_rich_plot <-
   geom_point(size = 3.5, shape = 21, color = "black", aes(fill = fraction)) +
   scale_color_manual(values = fraction_colors) +
   scale_fill_manual(values = fraction_colors) +
-  ylab("log10(Production/cell)\n (μgC/cell/hr)") +
+  ylab("log10(production/cell)\n (μgC/cell/hr)") +
   xlab("Observed Richness") +
   geom_smooth(data=filter(richness, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
-  scale_x_continuous(limits = c(0,950), breaks = seq(from = 0, to =925, by = 150)) +
+  scale_x_continuous(limits = c(150,950), breaks = seq(from = 0, to =925, by = 150)) + 
   #scale_y_continuous(limits = c(-8e-7,5e-6), breaks = seq(from = 0, to = 6e-7, by = 3e-7)) + 
-  annotate("text", x = 750, y=-7.3, color = "#FF6600", fontface = "bold",
+  annotate("text", x = 790, y=-7.5, color = "#FF6600", fontface = "bold", size = 4,
            label = paste("R2 =", round(summary(lm_prod_vs_rich)$adj.r.squared, digits = 2), "\n", 
                          "p =", round(unname(summary(lm_prod_vs_rich)$coefficients[,4][2]), digits = 3))) + 
   #annotate("text", x = 250, y=55, color = "skyblue", fontface = "bold", label = paste("Free = NS")) +
@@ -333,11 +397,11 @@ percell_prod_vs_rich_plot <-
 
 
 
-plot_grid(rich_distribution_plot, prod_vs_rich_plot, percell_prod_vs_rich_plot,
-          labels = c("A", "B", "C"), ncol = 1, nrow = 3,
-          rel_heights = c(0.5, 0.8, 1.2),
+rich_plots <- plot_grid(rich_distribution_plot, prod_vs_rich_plot, percell_prod_vs_rich_plot,
+          labels = c("A", "C", "E"), ncol = 1, nrow = 3,
+          rel_heights = c(0.5, 0.8, 1.1),
           align = "v")
-
+rich_plots
 
 
 ######################################################### INVERSE SIMPSON
@@ -360,21 +424,101 @@ invsimps_distribution_plot <-
   geom_jitter(size = 3, shape = 21, aes(fill = fraction), width = 0.2) + 
   geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(fill = fraction)) +
   scale_y_continuous(limits = c(0,85), breaks = seq(from = 0, to = 85, by = 20)) + 
-  ylab("Standardized Effect Size \n Unweighted Mean Pairwise Dist") +
+  ylab("Inverse Simpson") +
   xlab("Fraction") + 
   ##### Particle vs free per-cell production 
   geom_path(data = invsimps_nums, aes(x = a, y = b), linetype = 1, color = "#424645") +
-  annotate("text", x=1.5, y=80, fontface = "bold",  size = 3.5, color = "#424645", label= "NS") +
+  annotate("text", x=1.5, y=80, fontface = "bold",  size = 4, color = "#424645", label= "NS") +
   theme(legend.position = "none", #axis.title.y = element_blank(),
         axis.title.x = element_blank(), axis.text.x = element_blank()) +
   coord_flip()
 
 
 
+
+
+# INVERSE SIMPSON VS BULK PRODUCTION
+summary(lm(frac_bacprod ~ mean, data = invsimps)) 
+lm_prod_vs_invsimps <- lm(frac_bacprod ~ mean, data = filter(invsimps, fraction == "Particle"))
+summary(lm_prod_vs_invsimps)
+summary(lm(frac_bacprod ~ mean, data = filter(invsimps, fraction == "Free")))
+
+
+# Plot 
+prod_vs_invsimps_plot <-  
+  ggplot(invsimps, aes(x=mean, y=frac_bacprod)) + 
+  geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd, color = fraction), alpha = 0.7) + # X-axis errorbars
+  geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod, color = fraction)) +  # Y-axis errorbars
+  geom_point(size = 3.5, shape = 21, color = "black", aes(fill = fraction)) +
+  scale_color_manual(values = fraction_colors) +
+  scale_fill_manual(values = fraction_colors) +
+  ylab("Heterotrophic Production \n (μgC/L/hr)") + 
+  xlab("Inverse Simpson") +
+  geom_smooth(data=filter(invsimps, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
+  scale_x_continuous(limits = c(0,85), breaks = seq(from = 0, to = 85, by = 20)) + 
+  annotate("text", x = 70, y=45, color = "#FF6600", fontface = "bold",size = 4,
+           label = paste("R2 =", round(summary(lm_prod_vs_invsimps)$adj.r.squared, digits = 2), "\n", 
+                         "p =", round(unname(summary(lm_prod_vs_invsimps)$coefficients[,4][2]), digits = 4))) +
+  theme(legend.position = "none", axis.title.x = element_blank(), axis.text.x = element_blank()) 
+
+
+
+# Inverse Simpson vs per-cell production
+summary(lm(log10(fracprod_per_cell_noinf) ~ mean, data = invsimps)) 
+lm_percell_prod_vs_invsimps <- lm(log10(fracprod_per_cell_noinf) ~ mean, data = filter(invsimps, fraction == "Particle"))
+summary(lm_percell_prod_vs_invsimps)
+summary(lm(log10(fracprod_per_cell_noinf) ~ mean, data = filter(invsimps, fraction == "Free")))
+
+
+# Plot 
+percell_prod_vs_invsimps_plot <- 
+  ggplot(invsimps, aes(x=mean, y=log10(fracprod_per_cell_noinf))) + 
+  geom_point(size = 3.5, shape = 21, color = "black", aes(fill = fraction)) +
+  scale_color_manual(values = fraction_colors) +
+  scale_fill_manual(values = fraction_colors) +
+  ylab("log10(production/cell)\n (μgC/cell/hr)") +
+  xlab("Inverse Simpson") +
+  geom_smooth(data=filter(invsimps, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
+  scale_x_continuous(limits = c(0,85), breaks = seq(from = 0, to = 85, by = 20)) + 
+  #scale_y_continuous(limits = c(-8e-7,5e-6), breaks = seq(from = 0, to = 6e-7, by = 3e-7)) + 
+  annotate("text", x = 70, y=-7.5, color = "#FF6600", fontface = "bold",size = 4,
+           label = paste("R2 =", round(summary(lm_percell_prod_vs_invsimps)$adj.r.squared, digits = 2), "\n", 
+                         "p =", round(unname(summary(lm_percell_prod_vs_invsimps)$coefficients[,4][2]), digits = 4))) +
+  theme(legend.title = element_blank(), legend.position ="bottom", 
+        legend.text = element_text(size = 14))
+
+
+
+invsimps_plots <- plot_grid(invsimps_distribution_plot, prod_vs_invsimps_plot, percell_prod_vs_invsimps_plot,
+          labels = c("B", "D", "F"), ncol = 1, nrow = 3,
+          rel_heights = c(0.5, 0.8, 1.1),
+          align = "v")
+invsimps_plots
+
+```
+
+```{r fig2, fig.width = 8, fig.height = 8, dependson = "fig2-panels"}
+plot_grid(rich_plots, invsimps_plots,
+          ncol = 2, nrow = 1,
+          align = "h")
 ```
 
 
+```{r fig2-noyaxis, fig.width = 8, fig.height = 8, dependson = "fig2-panels"}
 
+invsimps_plots_noyaxis <- 
+  plot_grid(invsimps_distribution_plot + theme(axis.title.y = element_blank(), axis.text.y = element_blank()), 
+            prod_vs_invsimps_plot + theme(axis.title.y = element_blank()), 
+            percell_prod_vs_invsimps_plot + theme(axis.title.y = element_blank()), 
+          labels = c("B", "D", "F"), ncol = 1, nrow = 3,
+          rel_heights = c(0.5, 0.8, 1.1),
+          align = "v")
+
+
+plot_grid(rich_plots, invsimps_plots_noyaxis,
+          ncol = 2, nrow = 1, rel_widths = c(1, 0.825),
+          align = "h")
+```
 
 # Phylogenetic Diversity
 
