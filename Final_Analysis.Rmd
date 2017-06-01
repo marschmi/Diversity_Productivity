@@ -267,7 +267,32 @@ otu_alphadiv <- calc_mean_alphadiv(physeq = surface_PAFL_otu_pruned_notree_rm2,
 ```
 
 
-```{r plot-prod-div, fig.width = 12, fig.height = 4, dependson= "calc-div"}
+## Correlations between Diversity Measures
+
+```{r correlations, dependson = "plot-vegan-fracprod"}
+##########################################################################
+###########################   CORRELATIONS   #############################
+##########################################################################
+# RICHNESS vs SHANNON
+cor(filter(otu_alphadiv, measure == "Richness" & fraction == "Particle")$mean,
+    filter(otu_alphadiv, measure == "Shannon_Entropy" & fraction == "Particle")$mean) # YES
+
+# SHANNON VS INVERSE SIMPSON
+cor(filter(otu_alphadiv, measure == "Shannon_Entropy" & fraction == "Particle")$mean,
+    filter(otu_alphadiv, measure == "Inverse_Simpson" &  fraction == "Particle")$mean) # YES
+
+# INVERSE SIMPSON VS SIMPSONS EVENNESS
+cor(filter(otu_alphadiv, measure == "Inverse_Simpson" & fraction == "Particle")$mean,
+    filter(otu_alphadiv, measure == "Simpsons_Evenness" & fraction == "Particle")$mean) # YES
+
+# SIMPSONS EVENNESS VS RICHNESS
+cor(filter(otu_alphadiv, measure == "Simpsons_Evenness" & fraction == "Particle")$mean,
+    filter(otu_alphadiv, measure == "Richness" &  fraction == "Particle")$mean) # YES
+
+```
+
+
+```{r plot-div, fig.width = 12, fig.height = 4, dependson= "calc-div"}
 ggplot(otu_alphadiv, aes(y = mean, x = fraction)) +
   ylab("Mean Diversity Value") +
   facet_wrap(~measure, scale = "free_y", ncol = 4) +
@@ -276,7 +301,11 @@ ggplot(otu_alphadiv, aes(y = mean, x = fraction)) +
   scale_fill_manual(values = fraction_colors) + 
   scale_color_manual(values = fraction_colors) + 
   theme(legend.position = "none", axis.title.x = element_blank()) 
+```
 
+
+
+```{r plot-prod-div, fig.width = 8, fig.height = 8, dependson= "calc-div"}
 
 # Richness
 summary(lm(frac_bacprod ~ mean, data = filter(otu_alphadiv, measure == "Richness" & fraction == "Particle")))
@@ -298,8 +327,9 @@ summary(lm(frac_bacprod ~ mean, data = filter(otu_alphadiv, measure == "Simpsons
 summary(lm(frac_bacprod ~ mean, data = filter(otu_alphadiv, measure == "Simpsons_Evenness" & fraction == "Free")))
 
         
-ggplot(otu_alphadiv, aes(x = mean, y = frac_bacprod)) +
-  ylab("Bacterial Production (ug C/L/hr)") +
+prodiv_plot1 <- ggplot(filter(otu_alphadiv, measure %in% c("Shannon_Entropy", "Simpsons_Evenness")),
+       aes(x = mean, y = frac_bacprod)) +
+  ylab("Heterotrophic Production \n(ug C/L/hr)") +
   xlab("Mean Diversity Value") +
   facet_wrap(~measure, scale = "free_x", ncol = 4) +
   geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod, color = fraction), alpha = 0.7) + # X-axis errorbars
@@ -308,7 +338,31 @@ ggplot(otu_alphadiv, aes(x = mean, y = frac_bacprod)) +
   scale_fill_manual(values = fraction_colors) + 
   scale_color_manual(values = fraction_colors) + 
   theme(legend.position = "none", axis.title.x = element_blank()) +
-  geom_smooth(method = "lm", data = filter(otu_alphadiv, fraction == "Particle"), color = "#FF6600", fill = "#FF6600", alpha = 0.3)
+  geom_smooth(method = "lm", 
+              data = filter(otu_alphadiv, measure %in% c("Shannon_Entropy", "Simpsons_Evenness") &
+                              fraction == "Particle"), 
+              color = "#FF6600", fill = "#FF6600", alpha = 0.3)
+
+prodiv_plot2 <- ggplot(filter(otu_alphadiv, measure %in% c("Shannon_Entropy", "Simpsons_Evenness")),
+       aes(x = mean, y = log10(fracprod_per_cell_noinf))) +
+  ylab("log10(production/cell) \n (ug C/cell/hr)") +
+  xlab("Mean Diversity Value") +
+  facet_wrap(~measure, scale = "free_x", ncol = 4) +
+  geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd, color = fraction), alpha = 0.7) + # X-axis errorbars
+  geom_point(size = 3, shape = 21, aes(fill = fraction), color = "black") +
+  scale_fill_manual(values = fraction_colors) + 
+  scale_color_manual(values = fraction_colors) + 
+  theme(legend.position = "none", axis.title.x = element_blank()) +
+  geom_smooth(method = "lm", 
+              data = filter(otu_alphadiv, measure %in% c("Shannon_Entropy", "Simpsons_Evenness") &
+                              fraction == "Particle"), 
+              color = "#FF6600", fill = "#FF6600", alpha = 0.3)
+
+
+plot_grid(prodiv_plot1, prodiv_plot2, 
+          labels = c("A", "B"), 
+          nrow = 2, ncol = 1)
+
 ```
 
 ```{r fig2-panels, fig.height=8, fig.width=4.5}
@@ -592,7 +646,7 @@ weighted_df <- WEIGHTED_sesMPD_indepswap_RAREFIED_rm2 %>%
 
 
 
-```{r plot-sesmpd, fig.width = 5, fig.height = 11, dependson = c("calc-div", "calc-sesmpd")}
+```{r plot-sesmpd, fig.width = 4.5, fig.height = 9.5, dependson = c("calc-div", "calc-sesmpd")}
 ######################################################### SES MPD DISTRIBUTION: UNWEIGHTED  
 unweighted_fraction_wilcox <- wilcox.test(mpd.obs.z ~ fraction, data = unweighted_df)
 unweighted_fraction_wilcox
