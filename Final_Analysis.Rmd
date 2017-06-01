@@ -87,6 +87,57 @@ metadata <- data.frame(sample_data(surface_PAFL_otu_pruned_notree_rm2)) %>%
 ```
 
 
+```{r pcoa}
+
+scaled_surface_PAFLA_pruned_rm2 <- scale_reads(surface_PAFL_otu_pruned_notree_rm2)
+
+set.seed(777)
+
+# Calculate the SOREN distance
+soren_whole_dist <- ordinate(
+  physeq = scaled_surface_PAFLA_pruned_rm2,
+  method = "PCoA",
+  distance = "bray",
+  binary = TRUE) # Make it presence/absence
+ 
+p1 <- plot_ordination(
+  physeq = scaled_surface_PAFLA_pruned_rm2,
+  ordination = soren_whole_dist,
+  color = "fraction",
+  shape = "lakesite",
+  title = "Sørensen") +
+  geom_point(size=5, alpha = 0.7, aes(fill =fraction,  color = fraction)) +
+  scale_colour_manual(values = fraction_colors) +
+  scale_fill_manual(values = fraction_colors) +
+  scale_shape_manual(values = c(21, 22, 23, 24)) +
+  theme(legend.position = "bottom")
+
+
+# Calculate the BRAY-CURTIS distance
+bray_whole_dist <- ordinate(
+  physeq = scaled_surface_PAFLA_pruned_rm2,
+  method = "PCoA",
+  distance = "bray",
+  binary = FALSE) # Make it Abundance weighted 
+ 
+p2 <- plot_ordination(
+  physeq = scaled_surface_PAFLA_pruned_rm2,
+  ordination = bray_whole_dist ,
+  color = "fraction",
+  shape = "lakesite",
+  title = "Bray-Curtis") +
+  geom_point(size=5, alpha = 0.7, aes(fill =fraction,  color = fraction)) +
+  scale_colour_manual(values = fraction_colors) +
+  scale_fill_manual(values = fraction_colors) +
+  scale_shape_manual(values = c(21, 22, 23, 24)) +
+  theme(legend.position = "bottom")
+
+plot_grid(p1, p2, labels = c("A", "B"), align = "h", ncol = 2)
+
+
+```
+
+
 # Cell Count and Production Rates 
 ```{r boxplot-cellcount-prod, eval = TRUE, fig.width = 10, fig.height = 4, warning = FALSE, dependson="load-data"}
 ######################################################### Fraction ABUNDANCe 
@@ -304,29 +355,60 @@ ggplot(otu_alphadiv, aes(y = mean, x = fraction)) +
 ```
 
 
-
-```{r plot-prod-div, fig.width = 8, fig.height = 8, dependson= "calc-div"}
-
+```{r div-prod-lm-models}
+#################################### Bulk Measure Production 
 # Richness
+summary(lm(frac_bacprod ~ mean, data = filter(otu_alphadiv, measure == "Richness")))
 summary(lm(frac_bacprod ~ mean, data = filter(otu_alphadiv, measure == "Richness" & fraction == "Particle")))
 summary(lm(frac_bacprod ~ mean, data = filter(otu_alphadiv, measure == "Richness" & fraction == "Free")))
 
 
 # Shannon
+summary(lm(frac_bacprod ~ mean, data = filter(otu_alphadiv, measure == "Shannon_Entropy")))
 summary(lm(frac_bacprod ~ mean, data = filter(otu_alphadiv, measure == "Shannon_Entropy" & fraction == "Particle")))
 summary(lm(frac_bacprod ~ mean, data = filter(otu_alphadiv, measure == "Shannon_Entropy" & fraction == "Free")))
 
 
 # Inverse Simpson
+summary(lm(frac_bacprod ~ mean, data = filter(otu_alphadiv, measure == "Inverse_Simpson")))
 summary(lm(frac_bacprod ~ mean, data = filter(otu_alphadiv, measure == "Inverse_Simpson" & fraction == "Particle")))
 summary(lm(frac_bacprod ~ mean, data = filter(otu_alphadiv, measure == "Inverse_Simpson" & fraction == "Free")))
 
 
 # Simpson's Evenness 
+summary(lm(frac_bacprod ~ mean, data = filter(otu_alphadiv, measure == "Simpsons_Evenness")))
 summary(lm(frac_bacprod ~ mean, data = filter(otu_alphadiv, measure == "Simpsons_Evenness" & fraction == "Particle")))
 summary(lm(frac_bacprod ~ mean, data = filter(otu_alphadiv, measure == "Simpsons_Evenness" & fraction == "Free")))
 
-        
+
+#################################### Per-Cell Production 
+# Richness
+summary(lm(log10(fracprod_per_cell_noinf) ~ mean, data = filter(otu_alphadiv, measure == "Richness")))
+summary(lm(log10(fracprod_per_cell_noinf) ~ mean, data = filter(otu_alphadiv, measure == "Richness" & fraction == "Particle")))
+summary(lm(log10(fracprod_per_cell_noinf) ~ mean, data = filter(otu_alphadiv, measure == "Richness" & fraction == "Free")))
+
+
+# Shannon
+summary(lm(log10(fracprod_per_cell_noinf) ~ mean, data = filter(otu_alphadiv, measure == "Shannon_Entropy")))
+summary(lm(log10(fracprod_per_cell_noinf) ~ mean, data = filter(otu_alphadiv, measure == "Shannon_Entropy" & fraction == "Particle")))
+summary(lm(log10(fracprod_per_cell_noinf) ~ mean, data = filter(otu_alphadiv, measure == "Shannon_Entropy" & fraction == "Free")))
+
+
+# Inverse Simpson
+summary(lm(log10(fracprod_per_cell_noinf) ~ mean, data = filter(otu_alphadiv, measure == "Inverse_Simpson")))
+summary(lm(log10(fracprod_per_cell_noinf) ~ mean, data = filter(otu_alphadiv, measure == "Inverse_Simpson" & fraction == "Particle")))
+summary(lm(log10(fracprod_per_cell_noinf) ~ mean, data = filter(otu_alphadiv, measure == "Inverse_Simpson" & fraction == "Free")))
+
+
+# Simpson's Evenness 
+summary(lm(log10(fracprod_per_cell_noinf) ~ mean, data = filter(otu_alphadiv, measure == "Simpsons_Evenness")))
+summary(lm(log10(fracprod_per_cell_noinf) ~ mean, data = filter(otu_alphadiv, measure == "Simpsons_Evenness" & fraction == "Particle")))
+summary(lm(log10(fracprod_per_cell_noinf) ~ mean, data = filter(otu_alphadiv, measure == "Simpsons_Evenness" & fraction == "Free")))
+
+
+```
+
+```{r plot-prod-div, fig.width = 8, fig.height = 8, dependson= c("calc-div", "div-prod-lm-models")}
 prodiv_plot1 <- ggplot(filter(otu_alphadiv, measure %in% c("Shannon_Entropy", "Simpsons_Evenness")),
        aes(x = mean, y = frac_bacprod)) +
   ylab("Heterotrophic Production \n(ug C/L/hr)") +
@@ -364,6 +446,29 @@ plot_grid(prodiv_plot1, prodiv_plot2,
           nrow = 2, ncol = 1)
 
 ```
+
+```{r simps-vs-prod, fig.width=4, fig.height=4}
+
+
+lm_simpseven_bulkprod <- lm(frac_bacprod ~ mean, 
+                            data = filter(otu_alphadiv, measure == "Simpsons_Evenness"))
+
+ggplot(filter(otu_alphadiv, measure == "Simpsons_Evenness"), 
+       aes(x = mean, y = frac_bacprod)) + 
+  geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd, color = fraction), alpha = 0.7) + # X-axis errorbars
+  geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod, color = fraction)) +  # Y-axis errorbars
+  ylab("Heterotrophic Production \n(ug C/L/hr)") +
+  xlab("Simpson's Evenness") + 
+  geom_point(size = 3, shape = 21, aes(fill = fraction)) + 
+  geom_smooth(method = "lm", color = "#424645", fill = "#424645", alpha = 0.3) +
+  scale_fill_manual(values = fraction_colors) +
+  scale_color_manual(values = fraction_colors) +
+  theme(legend.position = c(0.15, 0.9), legend.title = element_blank()) +
+  annotate("text", x = 0.115, y=55, color = "#424645", fontface = "bold", size = 4,
+           label = paste("R2 =", round(summary(lm_simpseven_bulkprod)$adj.r.squared, digits = 2), "\n", 
+                         "p =", round(unname(summary(lm_simpseven_bulkprod)$coefficients[,4][2]), digits = 3))) 
+```
+
 
 ```{r fig2-panels, fig.height=8, fig.width=4.5}
 ######################################################### OBSERVED RICHNESS 
@@ -633,7 +738,8 @@ unweighted_df <- unweighted_sesMPD_indepswap_RAREFIED_rm2 %>%
   make_metadata_norep() %>%
   mutate(fraction = fct_recode(fraction, Particle = "WholePart", Free = "WholeFree")) %>%
   rename(norep_filter_name = names) %>%
-  left_join(rich_df, by = "norep_filter_name")
+  left_join(rich_df, by = "norep_filter_name") %>%
+  mutate(lakesite = factor(lakesite, levels = c("MOT", "MDP","MBR", "MIN")))
   
 weighted_df <- WEIGHTED_sesMPD_indepswap_RAREFIED_rm2 %>%
   rownames_to_column("names") %>%
@@ -641,9 +747,52 @@ weighted_df <- WEIGHTED_sesMPD_indepswap_RAREFIED_rm2 %>%
   make_metadata_norep() %>%
   mutate(fraction = fct_recode(fraction, Particle = "WholePart", Free = "WholeFree")) %>%
   rename(norep_filter_name = names) %>%
-  left_join(invsimps_df, by = "norep_filter_name")
+  left_join(invsimps_df, by = "norep_filter_name") %>%
+  mutate(lakesite = factor(lakesite, levels = c("MOT", "MDP","MBR", "MIN")))
 ```
 
+
+```{r plot-station-sesmpd, fig.width = 9, fig.height = 5, dependson = c("calc-div", "calc-sesmpd")}
+# Test by station
+part_unweighted_df <- filter(unweighted_df, fraction == "Particle")
+kruskal.test(mpd.obs.z ~ lakesite, data = filter(unweighted_df, fraction == "Particle"))
+
+unweighted_df %>%
+ filter(fraction == "Particle") %>%
+  group_by(lakesite) %>%
+  summarize(mean(mpd.obs.z))
+
+
+
+# Lakesite 
+plot_part_unweight_lakesite <- ggplot(filter(unweighted_df, fraction == "Particle"),
+       aes(y = mpd.obs.z, x = lakesite)) +
+  ggtitle("Particle-Associated Samples Only") + 
+  scale_fill_manual(values = lakesite_colors) +
+  ylab("Standardized Effect Size \n Unweighted Mean Pairwise Dist") +
+  geom_jitter(size = 3, shape = 21, aes(fill = lakesite), width = 0.2) + 
+  geom_boxplot(aes(fill = lakesite), alpha = 0.5) +
+  scale_x_discrete(breaks=c("MOT", "MDP", "MBR", "MIN"),
+                      labels=c("Outlet", "Deep", "Bear", "River")) + 
+  theme(axis.title.x = element_blank(),
+        legend.position = c(0.85, 0.9))
+
+# Season
+plot_part_unweight_season <- ggplot(filter(unweighted_df, fraction == "Particle"),
+       aes(y = mpd.obs.z, x = season)) +
+  ggtitle("Particle-Associated Samples Only") + 
+  ylab("Standardized Effect Size \n Unweighted Mean Pairwise Dist") +
+  scale_fill_manual(values = season_colors) +
+  geom_jitter(size = 3, shape = 21, aes(fill = season), width = 0.2) + 
+  geom_boxplot(aes(fill = season), alpha = 0.5) + 
+  theme(axis.title.x = element_blank(), axis.title.y = element_blank(),
+        legend.position = c(0.9, 0.9))
+
+plot_grid(plot_part_unweight_lakesite, plot_part_unweight_season, 
+          labels = c("A", "B"), ncol = 2, nrow = 1, align = "h")
+
+
+```
 
 
 ```{r plot-sesmpd, fig.width = 4.5, fig.height = 9.5, dependson = c("calc-div", "calc-sesmpd")}
@@ -651,10 +800,9 @@ weighted_df <- WEIGHTED_sesMPD_indepswap_RAREFIED_rm2 %>%
 unweighted_fraction_wilcox <- wilcox.test(mpd.obs.z ~ fraction, data = unweighted_df)
 unweighted_fraction_wilcox
 
-filter(unweighted_df) %>%
+unweighted_df %>%
   group_by(fraction) %>%
   summarize(mean(mpd.obs.z))
-
 
 # Make a data frame to draw significance line in boxplot (visually calculated)
 dat4 <- data.frame(a = c(1.15,1.15,1.85,1.85), b = c(1.6,1.7,1.7,1.6)) # WholePart vs WholeFree
@@ -721,6 +869,7 @@ summary(lm(mean ~ mpd.obs.z, data = filter(unweighted_df, fraction == "Free")))
 
 unweight_rich_vs_mpd_plot <- 
   ggplot(unweighted_df, aes(y = mean, x = mpd.obs.z)) +
+  geom_errorbar(aes(ymin = mean - sd, ymax = mean + sd, color = fraction), alpha = 0.7) + # X-axis errorbars
   geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) +
   geom_point(size = 3, shape = 21, aes(fill = fraction)) + ylab("Observed  Richness") +
   xlab("Standardized Effect Size \n Unweighted Mean Pairwise Dist") +
@@ -743,6 +892,7 @@ summary(lm(mean ~ mpd.obs.z, data = filter(weighted_df, fraction == "Free")))
 
 weight_invsimps_vs_mpd_plot <- 
   ggplot(weighted_df, aes(y = mean, x = mpd.obs.z, fill = fraction)) +
+  geom_errorbar(aes(ymin = mean - sd, ymax = mean + sd, color = fraction), alpha = 0.7) + # X-axis errorbars
   geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) +
   geom_point(size = 3, shape = 21) + ylab("Inverse Simpson") +
   #xlab("Standardized Effect Size \n Weighted Mean Pairwise Dist") +
@@ -762,6 +912,7 @@ summary(lm(frac_bacprod ~ mpd.obs.z, data = filter(unweighted_df, fraction == "F
 
 unweight_prod_vs_mpd_plot <- 
   ggplot(unweighted_df, aes(y = frac_bacprod, x = mpd.obs.z, fill = fraction)) +
+  geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod, color = fraction), alpha = 0.7) + # X-axis errorbars
   geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) +
   geom_point(size = 3, shape = 21) + 
   ylab("Heterotrophic Production \n (μgC/L/hr)") +
@@ -780,6 +931,7 @@ summary(lm(frac_bacprod ~ mpd.obs.z, data = filter(weighted_df, fraction == "Fre
 
 weight_prod_vs_mpd_plot <- 
   ggplot(weighted_df, aes(y = frac_bacprod, x = mpd.obs.z, fill = fraction)) +
+  geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod, color = fraction), alpha = 0.7) + # X-axis errorbars
   geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) +
   geom_point(size = 3, shape = 21) + 
   ylab("Heterotrophic Production \n (μgC/L/hr)") +
