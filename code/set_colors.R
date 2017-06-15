@@ -55,9 +55,13 @@ depth_colors <- c(
 # Set global colors for the lakesite (i.e. sampling station)
 lakesite_colors <- c(
   MIN = "#C24704",
+    River = "#C24704",
   MBR = "#D9CC3C",
+    Bear = "#D9CC3C",
   MDP = "#A0E0BA",
-  MOT = "#00ADA7")
+    Deep = "#A0E0BA",
+  MOT = "#00ADA7",
+    Outlet = "#00ADA7")
 
 # Set global colors for the season
 season_colors <- c(

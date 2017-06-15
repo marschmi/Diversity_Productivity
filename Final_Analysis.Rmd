@@ -50,7 +50,7 @@ library(devtools)
 library(phyloseq)
 library(picante)
 library(tidyr)
-library(forcats)
+library(forcats) 
 library(dplyr)
 library(tibble)
 library(cowplot)
@@ -61,7 +61,7 @@ library(MASS)       # For studres in plot_residuals function
 library(caret)      # For cross validation
 library(pander)     # For pretty tables 
 source("code/Muskegon_functions.R")
-source("code/set_colors.R")
+source("code/set_colors.R") 
 ```
 
 
@@ -354,38 +354,6 @@ ggplot(otu_alphadiv, aes(y = mean, x = fraction)) +
   theme(legend.position = "none", axis.title.x = element_blank()) 
 ```
 
-
-```{r station-diversity, fig.width=5, fig.height=4, dependson= "calc-div"}
-ggplot(filter(otu_alphadiv, measure == "Richness" & fraction == "Particle"), 
-              aes(x = lakesite, y = mean, fill = lakesite)) + 
-  geom_jitter(size = 3, shape = 21) + 
-  ylab("Observed Richness") + 
-  ggtitle("Particle Fraction Only") +  
-  geom_boxplot(outlier.shape = NA, color = "black", alpha = 0.5) + 
-  scale_fill_manual(values = lakesite_colors)
-  
-
-otu_alphadiv %>%
-  filter(measure == "Richness" & fraction == "Particle") %>%
-  group_by(lakesite) %>%
-  summarize(mean(mean), sd(mean))
-
-
-ggplot(filter(otu_alphadiv, measure == "Inverse_Simpson" & fraction == "Particle"), 
-              aes(x = lakesite, y = mean, fill = lakesite)) + 
-  geom_jitter(size = 3, shape = 21) + 
-  ggtitle("Particle Fraction Only") + 
-  geom_boxplot(outlier.shape = NA, color = "black", alpha = 0.5) + 
-  scale_fill_manual(values = lakesite_colors)
-
-
-otu_alphadiv %>%
-  filter(measure == "Inverse_Simpson" & fraction == "Particle") %>%
-  group_by(lakesite) %>%
-  summarize(mean(mean))
-
-
-```
 
 ## Linear Regression Statistics 
 ```{r div-prod-lm-models, dependson= "calc-div"}
@@ -967,7 +935,7 @@ ggplot(filter(otu_alphadiv, measure == "Simpsons_Evenness"),
 
 
 ## Prepare Figure S3
-```{r figS3, fig.width=12, fig.height=4, dependson= "calc-div"}
+```{r figS3, fig.width=12, fig.height=3.5, dependson= "calc-div"}
 plot_all_rich_percell <- 
   ggplot(richness, aes(x=mean, y=log10(fracprod_per_cell_noinf))) + 
   geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd), color = "grey", alpha = 0.7) + # X-axis errorbars
@@ -1321,10 +1289,45 @@ plot_grid(weight_distribution_plot, weight_invsimps_vs_mpd_plot, weight_prod_vs_
           align = "v")
 ```
 
+
+## Cell counts and Unweighted SESmpd
+```{r cellnum-vs-sesmpd, fig.width=4.5, fig.height=4}
+# Combine the datasets into 
+cell_nums <- otu_alphadiv %>%
+  dplyr::select(norep_filter_name, fraction_bac_abund) %>%
+  distinct()
+
+unweight_cellnums <- cell_nums %>%
+  left_join(unweighted_df, by = "norep_filter_name") %>%
+  dplyr::filter(norep_filter_name != "MOTEJ515")
+
+
+# Is there a relationship between cell numbers and Unweighted Mean Pairwise distance?
+summary(lm(log10(fraction_bac_abund) ~ mpd.obs.z, data = filter(unweight_cellnums)))
+
+summary(lm(log10(fraction_bac_abund) ~ mpd.obs.z, data = filter(unweight_cellnums, fraction == "Particle")))
+summary(lm(log10(fraction_bac_abund) ~ mpd.obs.z, data = filter(unweight_cellnums, fraction == "Free")))
+
+
+ggplot(unweight_cellnums, aes(y = log10(fraction_bac_abund), x = mpd.obs.z)) +
+  geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) +
+  geom_point(size = 3, shape = 21, aes(fill = fraction)) + 
+  ylab("log10(bacterial cells/mL)") +
+  xlab("Standardized Effect Size \n Unweighted Mean Pairwise Dist") +
+  scale_fill_manual(values = fraction_colors) +
+  geom_smooth(method = "lm", color = "#424645", fill = "#424645", alpha = 0.3) + 
+  scale_x_continuous(limits = c(-1.5,1.75), breaks = seq(from = -1.5, to = 1.5, by = 0.5)) + 
+  annotate("text", x = 0.75, y=4.25, color = "#424645", fontface = "bold",
+           label = paste("R2 =", round(summary(lm(log10(fraction_bac_abund) ~ mpd.obs.z, data = unweight_cellnums))$adj.r.squared, digits = 2), "\n", 
+                         "p =", round(unname(summary(lm(log10(fraction_bac_abund) ~ mpd.obs.z, data = unweight_cellnums))$coefficients[,4][2]), digits = 3))) +
+  theme(legend.title = element_blank(), legend.position = c(0.12, 0.9))
+
+```
+
 ## Figure S7
-```{r plot-station-sesmpd, fig.width = 9, fig.height = 5, dependson = c("calc-div", "calc-sesmpd")}
+```{r plot-station-diversity, fig.width = 9, fig.height = 5, dependson = c("calc-div", "calc-sesmpd")}
 # Test by station
-part_unweighted_df <- filter(unweighted_df, fraction == "Particle")
+part_unweighted_df <- filter(unweighted_df, fraction == "Particle")  
 kruskal.test(mpd.obs.z ~ lakesite, data = filter(unweighted_df, fraction == "Particle"))
 
 unweighted_df %>%
@@ -1355,6 +1358,46 @@ plot_part_unweight_season <- ggplot(filter(unweighted_df, fraction == "Particle"
         legend.position = c(0.9, 0.9),  legend.title = element_blank())
 
 plot_grid(plot_part_unweight_lakesite, plot_part_unweight_season, 
+          labels = c("A", "B"), ncol = 2, nrow = 1, align = "h")
+
+
+plot_station_rich <- 
+  ggplot(filter(otu_alphadiv, measure == "Richness" & fraction == "Particle"), 
+              aes(x = lakesite, y = mean, fill = lakesite)) + 
+  geom_jitter(size = 3, shape = 21) + 
+  ylab("Observed Richness") + 
+  ggtitle("Particle Fraction Only") +  
+  geom_boxplot(outlier.shape = NA, color = "black", alpha = 0.5) + 
+  scale_fill_manual(values = lakesite_colors) +
+  theme(legend.title = element_blank(),
+        legend.position = c(0.12, 0.9))
+  
+
+otu_alphadiv %>%
+  filter(measure == "Richness" & fraction == "Particle") %>%
+  group_by(lakesite) %>%
+  summarize(mean(mean), sd(mean))
+
+
+plot_station_invsimps <-
+  ggplot(filter(otu_alphadiv, measure == "Inverse_Simpson" & fraction == "Particle"), 
+              aes(x = lakesite, y = mean, fill = lakesite)) + 
+  geom_jitter(size = 3, shape = 21) + 
+  ggtitle("Particle Fraction Only") + 
+  ylab("Inverse Simpson") + 
+  geom_boxplot(outlier.shape = NA, color = "black", alpha = 0.5) + 
+  scale_fill_manual(values = lakesite_colors) +
+  theme(legend.title = element_blank(),
+        legend.position = "none")
+
+
+otu_alphadiv %>%
+  filter(measure == "Inverse_Simpson" & fraction == "Particle") %>%
+  group_by(lakesite) %>%
+  summarize(mean(mean))
+
+
+plot_grid(plot_station_rich, plot_station_invsimps, 
           labels = c("A", "B"), ncol = 2, nrow = 1, align = "h")
 ```
 
