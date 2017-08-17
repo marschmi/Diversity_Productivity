@@ -77,18 +77,154 @@ surface_PAFL_otu_pruned_rm2 <- prune_taxa(taxa_sums(surface_PAFL_otu_pruned_raw)
 surface_PAFL_otu_pruned_rm2
 
 # Remove tree for computational efficiency 
-surface_PAFL_otu_pruned_notree_rm2 <- phyloseq(tax_table(surface_PAFL_otu_pruned_rm2), otu_table(surface_PAFL_otu_pruned_rm2), sample_data(surface_PAFL_otu_pruned_rm2))
+surface_PAFL_otu_pruned_notree_rm2 <- phyloseq(tax_table(surface_PAFL_otu_pruned_rm2), otu_table(surface_PAFL_otu_pruned_rm2), sample_data(surface_PAFL_otu_pruned_rm2)) 
 
 
 # Gather the metadata in a dataframe to play with 
 metadata <- data.frame(sample_data(surface_PAFL_otu_pruned_notree_rm2)) %>%
       mutate(fraction = factor(fraction, levels = c("WholePart","WholeFree")),
          lakesite = factor(lakesite,  levels = c("MOT", "MDP", "MBR", "MIN")),
-         fraction = fct_recode(fraction, Particle = "WholePart", Free = "WholeFree"))
+         fraction = fct_recode(fraction, Particle = "WholePart", Free = "WholeFree"),
+         lakesite = fct_recode(lakesite, Outlet = "MOT", Deep = "MDP", Bear = "MBR", River = "MIN"))
+row.names(metadata) <- metadata$norep_filter_name
+
+# Replace the sample data 
+sample_data(surface_PAFL_otu_pruned_notree_rm2) <- metadata
 ```
 
 
-```{r pcoa}
+
+```{r cellabund-vs-fraction, eval = TRUE, fig.width = 6, fig.height = 3.5, include = TRUE}
+
+ggplot(dplyr::filter(metadata, year == "2015" & fraction %in% c("Free", "Particle") &
+                       norep_filter_name != "MOTEJ515"), 
+       aes(x = lakesite, y = log10(as.numeric(fraction_bac_abund)), fill = fraction)) + 
+  geom_bar(stat = "identity", color = "black",  position=position_dodge()) + 
+  facet_grid(. ~ season) + 
+  scale_y_continuous(expand = c(0,0)) +
+  scale_fill_manual(values = fraction_colors) + 
+  guides(fill=guide_legend(nrow=1,byrow=TRUE)) +
+  xlab("Lake Station") +  ylab("Log10(Bacterial Cells/mL)") +
+  theme(axis.text.x = element_text(angle = 30, vjust = 1, hjust = 1),
+        legend.position = c(0.85, 0.9), legend.title = element_blank(),
+        plot.margin	= unit(c(0.25, 0.25, 0.25, 0.5), "cm")) #top, right, bottom, and left margins)
+```
+
+```{r prod-vs-fraction, eval = TRUE, fig.width = 6, fig.height = 5, include = TRUE}
+prod1 <- ggplot(dplyr::filter(metadata, year == "2015" & fraction %in% c("Free", "Particle")), 
+       aes(x = lakesite, y = frac_bacprod, fill = fraction)) + 
+  geom_bar(stat = "identity", color = "black",  position=position_dodge()) + 
+  geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod), 
+                position = position_dodge(width = 0.75), width = 0.25) +
+  facet_grid(. ~ season) + 
+  scale_y_continuous(expand = c(0,0), limits = c(0, 80), 
+                     breaks = seq(from = 0, to = 80, by = 15)) +
+  scale_fill_manual(values = fraction_colors) + 
+  guides(fill=guide_legend(nrow=1,byrow=TRUE)) +
+  xlab("Lake Station") + ylab("Community Production\n(ug C/L/Hr)") + 
+  theme(axis.text.x = element_blank(), #element_text(angle = 30, vjust = 1, hjust = 1),
+        axis.title.x = element_blank(),
+        legend.position = c(0.85, 0.9), legend.title = element_blank(),
+        plot.margin	= unit(c(0.25, 0.25, 0.25, 0.25), "cm")) #top, right, bottom, and left margins)
+
+
+prod2 <- ggplot(dplyr::filter(metadata, year == "2015" & fraction %in% c("Free", "Particle")), 
+       aes(x = lakesite, y = fracprod_per_cell_noinf, fill = fraction)) + 
+  geom_bar(stat = "identity", color = "black",  position=position_dodge()) + 
+  facet_grid(. ~ season) +
+  scale_y_continuous(expand = c(0,0)) +
+  scale_fill_manual(values = fraction_colors) + 
+  guides(fill=guide_legend(nrow=1,byrow=TRUE)) +
+  xlab("Lake Station") + ylab("Cellular Production \n(ug C/cell/Hr)") + 
+  theme(axis.text.x = element_text(angle = 30, vjust = 1, hjust = 1),
+        legend.position = c(0.85, 0.9), legend.title = element_blank(),
+        plot.margin	= unit(c(0.25, 0.25, 0.25, 0.5), "cm")) #top, right, bottom, and left margins)
+
+
+########## LONG FORMAT OF TOTAL PRODUCTIVITY
+ggplot(dplyr::filter(metadata, year == "2015" & fraction == "Free"), 
+       aes(x = lakesite, y = tot_bacprod)) + 
+  geom_bar(stat = "identity", color = "black", fill = "grey", position=position_dodge()) + 
+  geom_errorbar(aes(ymin = tot_bacprod - SD_tot_bacprod, ymax = tot_bacprod + SD_tot_bacprod),width = 0.25) +
+  facet_grid(season ~., scales = "free") + 
+  scale_y_continuous(expand = c(0,0), limits = c(0, 80), 
+                     breaks = seq(from = 0, to = 80, by = 15)) +
+  scale_fill_manual(values = fraction_colors) + 
+  guides(fill=guide_legend(nrow=1,byrow=TRUE)) +
+  xlab("Lake Station") + ylab("Community Production\n(ug C/L/Hr)") + 
+  theme(legend.position = c(0.85, 0.9), legend.title = element_blank(),
+        plot.margin	= unit(c(0.25, 0.25, 0.25, 0.25), "cm")) #top, right, bottom, and left margins)
+
+
+########## LONG FORMAT OF COMMUNITY PRODUCTIVITY
+ggplot(dplyr::filter(metadata, year == "2015" & fraction %in% c("Free", "Particle")), 
+       aes(x = lakesite, y = frac_bacprod, fill = fraction)) + 
+  geom_bar(stat = "identity", color = "black",  position=position_dodge()) + 
+  geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod), 
+                position = position_dodge(width = 0.75), width = 0.25) +
+  facet_grid(season ~., scales = "free") + 
+  scale_y_continuous(expand = c(0,0), limits = c(0, 80), 
+                     breaks = seq(from = 0, to = 80, by = 15)) +
+  scale_fill_manual(values = fraction_colors) + 
+  guides(fill=guide_legend(nrow=1,byrow=TRUE)) +
+  xlab("Lake Station") + ylab("Community Production\n(ug C/L/Hr)") + 
+  theme(axis.text.x = element_blank(), #element_text(angle = 30, vjust = 1, hjust = 1),
+        axis.title.x = element_blank(),
+        legend.position = c(0.85, 0.9), legend.title = element_blank(),
+        plot.margin	= unit(c(0.25, 0.25, 0.25, 0.25), "cm")) #top, right, bottom, and left margins)
+
+
+########## LONG FORMAT OF CELLULAR PRODUCTIVITY
+ggplot(dplyr::filter(metadata, year == "2015" & fraction %in% c("Free", "Particle")), 
+       aes(x = lakesite, y = fracprod_per_cell_noinf, fill = fraction)) + 
+  geom_bar(stat = "identity", color = "black",  position=position_dodge()) + 
+  facet_grid(season ~ ., scales = "free") +
+  scale_y_continuous(expand = c(0,0)) +
+  scale_fill_manual(values = fraction_colors) + 
+  guides(fill=guide_legend(nrow=1,byrow=TRUE)) +
+  xlab("Lake Station") + ylab("Cellular Production \n(ug C/cell/Hr)") + 
+  theme(axis.text.x = element_text(angle = 30, vjust = 1, hjust = 1),
+        legend.position = c(0.85, 0.9), legend.title = element_blank(),
+        plot.margin	= unit(c(0.25, 0.25, 0.25, 0.5), "cm")) #top, right, bottom, and left margins)
+
+
+plot_grid(prod1, prod2, labels = c("A", "B"),
+          rel_heights = c(1, 1.3),
+          nrow = 2, ncol = 1,
+          align = "v")
+
+
+### BY STATION 
+prod_by_station <- ggplot(dplyr::filter(metadata, year == "2015" & fraction %in% c("Free")), 
+       aes(x = lakesite, y = tot_bacprod)) + 
+  geom_boxplot(fill = "grey") + geom_point(size = 3.5, position = position_jitter()) +
+  scale_y_continuous(expand = c(0,0), limits = c(0,100)) +
+  scale_fill_manual(values = fraction_colors) + 
+  guides(fill=guide_legend(nrow=1,byrow=TRUE)) +
+  xlab("Lake Station") + ylab("Total Production (ug C/cell/Hr)") + 
+  theme(axis.text.x = element_text(angle = 30, vjust = 1, hjust = 1),
+        legend.position = c(0.85, 0.9), legend.title = element_blank(),
+        plot.margin	= unit(c(0.25, 0.25, 0.25, 0.5), "cm")) #top, right, bottom, and left margins)
+
+prod_by_season <- ggplot(dplyr::filter(metadata, year == "2015" & fraction %in% c("Free")), 
+       aes(x = season, y = tot_bacprod)) + 
+  geom_boxplot(fill = "grey") + geom_point(size = 3.5, position = position_jitter()) +
+  scale_y_continuous(expand = c(0,0), limits = c(0,100)) +
+  scale_fill_manual(values = fraction_colors) + 
+  guides(fill=guide_legend(nrow=1,byrow=TRUE)) +
+  xlab("Season") + 
+  theme(axis.text.x = element_text(angle = 30, vjust = 1, hjust = 1),
+        axis.title.y = element_blank(),
+        legend.position = c(0.85, 0.9), legend.title = element_blank(),
+        plot.margin	= unit(c(0.25, 0.25, 0.25, 0.5), "cm")) #top, right, bottom, and left margins)
+
+plot_grid(prod_by_station, prod_by_season, labels = c("A", "B"),
+          rel_widths = c(1, 0.75),
+          nrow = 1, ncol = 2,
+          align = "h")
+```
+
+```{r pcoa, fig.width=8, fig.height=4, dependson = "load-data"}
 
 scaled_surface_PAFLA_pruned_rm2 <- scale_reads(surface_PAFL_otu_pruned_notree_rm2)
 
@@ -111,7 +247,7 @@ p1 <- plot_ordination(
   scale_colour_manual(values = fraction_colors) +
   scale_fill_manual(values = fraction_colors) +
   scale_shape_manual(values = c(21, 22, 23, 24)) +
-  theme(legend.position = "bottom")
+  theme(legend.position = "none")
 
 
 # Calculate the BRAY-CURTIS distance
@@ -131,10 +267,20 @@ p2 <- plot_ordination(
   scale_colour_manual(values = fraction_colors) +
   scale_fill_manual(values = fraction_colors) +
   scale_shape_manual(values = c(21, 22, 23, 24)) +
-  theme(legend.position = "bottom")
+  theme(legend.position = "right", legend.title = element_blank())
 
-plot_grid(p1, p2, labels = c("A", "B"), align = "h", ncol = 2)
+plot_grid(p1, p2, labels = c("A", "B"), align = "h", ncol = 2,
+          rel_widths = c(0.8, 1.2))
 
+
+# Calculate bray curtis distance matrix
+musk_bray <- phyloseq::distance(scaled_surface_PAFLA_pruned_rm2, method = "bray")
+
+# make a data frame from the sample_data
+sampledf <- data.frame(sample_data(scaled_surface_PAFLA_pruned_rm2))
+
+# Adonis test
+adonis(musk_bray ~ fraction + season , data = sampledf)
 
 ```
 
@@ -154,16 +300,17 @@ dat1 <- data.frame(a = c(1.15,1.15,1.85,1.85), b = c(6.45,6.5,6.5,6.45)) # Whole
 
 poster_a <- ggplot(filter(metadata, norep_filter_name != "MOTEJ515"), 
        aes(y = log10(as.numeric(fraction_bac_abund)), x = fraction)) +
-  #scale_color_manual(values = fraction_colors) + 
-  scale_fill_manual(values = fraction_colors) +
-  geom_jitter(size = 3, shape = 21, aes(fill = fraction), width = 0.2) + 
+  geom_jitter(size = 3, aes(fill = fraction, shape = season), width = 0.2) + 
   geom_boxplot(alpha = 0.5, outlier.shape = NA, aes( fill = fraction)) +
-  ylab("Log10(Bacterial Cells/mL)") +
+  ylab("Log10(Bacterial Counts) \n (cells/mL)") +
+  scale_fill_manual(values = fraction_colors) +
+  scale_shape_manual(values = season_shapes) +
   ##### Particle vs free cell abundances 
   geom_path(data = dat1, aes(x = a, y = b), linetype = 1, color = "gray40") +
   annotate("text", x=1.5, y=6.5, fontface = "bold",  size = 3.5, color = "gray40",
            label= paste("***\np =", round(frac_abund_wilcox$p.value, digits = 6))) +
-  theme(legend.position = "none",
+  theme(legend.position = "bottom",
+        legend.title = element_blank(),
         axis.title.x = element_blank())
 
 
@@ -181,11 +328,11 @@ dat2 <- data.frame(a = c(1.15,1.15,1.85,1.85), b = c(67,68,68,67)) # WholePart v
 
 
 poster_b <- ggplot(metadata, aes(y = frac_bacprod, x = fraction)) + 
-  #scale_color_manual(values = fraction_colors) + 
-  scale_fill_manual(values = fraction_colors) +
-  geom_jitter(size = 3, shape = 21, aes(fill = fraction), width = 0.2) + 
-  geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(fill = fraction)) +
-  ylab("Heterotrophic Production (μgC/L/hr)") +
+  geom_jitter(size = 3, aes(fill = fraction, shape = season), width = 0.2) + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA, aes( fill = fraction)) +
+  scale_fill_manual(values = fraction_colors, guide = FALSE) +
+  scale_shape_manual(values = season_shapes) +
+  ylab("Community Production \n (μgC/L/hr)") +
   ##### Particle vs free bulk production  
   geom_path(data = dat2, aes(x = a, y = b), linetype = 1, color = "gray40") +
   annotate("text", x=1.5, y=68, fontface = "bold",  size = 3.5, color = "gray40",
@@ -210,12 +357,12 @@ dat3 <- data.frame(a = c(1.15,1.15,1.85,1.85), b = c(-5.05,-5,-5,-5.05)) # Whole
 
 poster_c <- ggplot(filter(metadata, norep_filter_name != "MOTEJ515"), 
        aes(y = log10(fracprod_per_cell), x = fraction)) +
-  #scale_color_manual(values = fraction_colors) + 
-  scale_fill_manual(values = fraction_colors) +
-  geom_jitter(size = 3, shape = 21, aes(fill = fraction), width = 0.2) + 
-  geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(fill = fraction)) +
+  geom_jitter(size = 3, aes(fill = fraction, shape = season), width = 0.2) + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA, aes( fill = fraction)) +
+  scale_fill_manual(values = fraction_colors, guide = FALSE) +
+  scale_shape_manual(values = season_shapes) +
   ylim(c(-8.5, -5)) + 
-  ylab("log10(production/cell) (μgC/cell/hr)") +
+  ylab("Log10(Cellular Production) \n(μgC/cell/hr)") +
   ##### Particle vs free per-cell production 
   geom_path(data = dat3, aes(x = a, y = b), linetype = 1, color = "gray40") +
   annotate("text", x=1.5, y=-5, fontface = "bold",  size = 3.5, color = "gray40",
@@ -223,9 +370,20 @@ poster_c <- ggplot(filter(metadata, norep_filter_name != "MOTEJ515"),
   theme(legend.position = "none",
         axis.title.x = element_blank())
 
-plot_grid(poster_a, poster_b, poster_c,
+
+
+######## FIGURE 1
+# legend
+legend <- get_legend(poster_a)
+
+row1_plots <- plot_grid(poster_a + theme(legend.position = "none"), poster_b, poster_c,
           labels = c("A", "B", "C"),
-          ncol = 3)
+          ncol = 3, nrow = 1)
+
+#fig_1 <- 
+  plot_grid(row1_plots, legend,
+                   ncol = 1, nrow = 2, 
+                   rel_heights = c(1, 0.05))
 ```
 
 
@@ -255,25 +413,41 @@ free_work_df <- work_df %>%
 byfrac_df <- part_work_df %>%
   left_join(free_work_df, by = "norep_water_name")
 
+byfrac_df$season <- substr(byfrac_df$norep_water_name, 5,5) # 7th letter = month sampled
+byfrac_df$season <- as.character(byfrac_df$season)
+byfrac_df$season <- ifelse(byfrac_df$season == "5", "Spring", 
+                             ifelse(byfrac_df$season == "7", "Summer", 
+                                    ifelse(byfrac_df$season == "9", "Fall",
+                                           "NA")))
+byfrac_df$season <- factor(byfrac_df$season, levels = c("Spring", "Summer", "Fall"))
+
 summary(lm(log10(part_bacabund) ~ log10(free_bacabund), data = filter(byfrac_df, norep_water_name != "MOTE515")))
 
 plot1 <- ggplot(filter(byfrac_df, norep_water_name != "MOTE515"), 
        aes(x = log10(free_bacabund), y = log10(part_bacabund))) +
   xlab("Free") +  ylab("Particle") + 
-  ggtitle("Log10(cells/mL)") +
-  geom_point(size = 3, shape = 21, fill = "grey") 
+  ggtitle("Log10(Bacterial Counts) \n (cells/mL)") +
+  geom_point(size = 3, fill = "grey", aes(shape = season), width = 0.2) + 
+  scale_shape_manual(values = season_shapes) +
+  theme(legend.position = "bottom",
+        legend.title = element_blank())
+
+
+
 
 
 lm_prod_corr <- lm(part_prod ~ free_prod, data = byfrac_df)
 
 plot2 <- ggplot(byfrac_df, aes(x = free_prod, y = part_prod)) +
   xlab("Free") +  ylab("Particle") + 
-  ggtitle("Heterotrophic Production \n(μgC/L/hr)") +
-  geom_point(size = 3, shape = 21, fill = "grey") +
+  ggtitle("Community Production \n(μgC/L/hr)") +
+  geom_point(size = 3, fill = "grey", aes(shape = season), width = 0.2) + 
+  scale_shape_manual(values = season_shapes) +
   geom_smooth(method = "lm", color = "black")  + 
   annotate("text", x =20, y= 30, color = "black", fontface = "bold", size = 4,
        label = paste("R2 =", round(summary(lm_prod_corr)$adj.r.squared, digits = 3), "\n", 
-                     "p =", round(unname(summary(lm_prod_corr)$coefficients[,4][2]), digits = 3))) 
+                     "p =", round(unname(summary(lm_prod_corr)$coefficients[,4][2]), digits = 3))) +
+  theme(legend.position = "none")
 
 
 lm_percell_corr <- lm(log10(part_percell_prod) ~ log10(free_percell_prod), data = byfrac_df)
@@ -281,17 +455,26 @@ lm_percell_corr <- lm(log10(part_percell_prod) ~ log10(free_percell_prod), data 
 plot3 <- ggplot(byfrac_df,
        aes(x = log10(free_percell_prod), y = log10(part_percell_prod))) +  
   xlab("Free") +  ylab("Particle") + 
-  ggtitle("log10(production/cell) \n (μgC/cell/hr)") +
-  geom_point(size = 3, shape = 21, fill = "grey") +
+  ggtitle("Log10(Cellular Production) \n (μgC/cell/hr)") +
+  geom_point(size = 3, fill = "grey", aes(shape = season), width = 0.2) + 
+  scale_shape_manual(values = season_shapes) +
   geom_smooth(method = "lm", color = "black") + 
   annotate("text", y = -5.8, x=-7.9, color = "black", fontface = "bold", size = 4,
        label = paste("R2 =", round(summary(lm_percell_corr)$adj.r.squared, digits = 3), "\n", 
-                     "p =", round(unname(summary(lm_percell_corr)$coefficients[,4][2]), digits = 3))) 
+                     "p =", round(unname(summary(lm_percell_corr)$coefficients[,4][2]), digits = 3))) +
+  theme(legend.position = "none")
 
-plot_grid(plot1, plot2, plot3, 
+legend_s1 <- get_legend(plot1)
+
+top_row_S1 <- plot_grid(plot1 +theme(legend.position = "none"), plot2, plot3, 
           nrow = 1, ncol = 3, 
           labels = c("A", "B", "C"), 
           align = "h")
+
+
+plot_grid(top_row_S1, legend_s1,
+          rel_heights = c(1, 0.05),
+          nrow = 2, ncol = 1)
 ```
 
 
@@ -311,11 +494,9 @@ otu_alphadiv <- calc_mean_alphadiv(physeq = surface_PAFL_otu_pruned_notree_rm2,
                            richness_df = alpha_calc$Richness, 
                            evenness_df = alpha_calc$Inverse_Simpson, 
                            shannon_df = alpha_calc$Shannon) %>%
-    mutate(fraction = factor(fraction, levels = c("WholePart","WholeFree")),
-         lakesite = factor(lakesite,  levels = c("MOT", "MDP", "MBR", "MIN")),
-         measure = factor(measure, levels = c("Richness",  "Shannon_Entropy", "Inverse_Simpson", "Simpsons_Evenness")),
-         fraction = fct_recode(fraction, Particle = "WholePart", Free = "WholeFree"),
-         lakesite = fct_recode(lakesite, Outlet = "MOT", Deep = "MDP", Bear = "MBR", River = "MIN"))
+  mutate(fraction = factor(fraction, levels = c("Particle","Free")),
+         lakesite = factor(lakesite,  levels = c("Outlet", "Deep", "Bear", "River")),
+         measure = factor(measure, levels = c("Richness",  "Shannon_Entropy", "Inverse_Simpson", "Simpsons_Evenness"))) 
 ```
 
 
@@ -1399,6 +1580,51 @@ otu_alphadiv %>%
 
 plot_grid(plot_station_rich, plot_station_invsimps, 
           labels = c("A", "B"), ncol = 2, nrow = 1, align = "h")
+
+
+
+####  FREE LIVING
+plot_station_rich_FL <- 
+  ggplot(filter(otu_alphadiv, measure == "Richness" & fraction == "Free"), 
+              aes(x = lakesite, y = mean, fill = lakesite)) + 
+  geom_jitter(size = 3, shape = 21) + 
+  ylab("Observed Richness") + 
+  ggtitle("Free-Living Fraction Only") +  
+  geom_boxplot(outlier.shape = NA, color = "black", alpha = 0.5) + 
+  scale_fill_manual(values = lakesite_colors) +
+  theme(legend.title = element_blank(),
+        legend.position = c(0.12, 0.9))
+  
+
+otu_alphadiv %>%
+  filter(measure == "Richness" & fraction == "Free") %>%
+  group_by(lakesite) %>%
+  summarize(mean(mean), sd(mean))
+
+
+plot_station_invsimps_FL <-
+  ggplot(filter(otu_alphadiv, measure == "Inverse_Simpson" & fraction == "Free"), 
+              aes(x = lakesite, y = mean, fill = lakesite)) + 
+  geom_jitter(size = 3, shape = 21) + 
+  ggtitle("Free-Living Fraction Only") + 
+  ylab("Inverse Simpson") + 
+  geom_boxplot(outlier.shape = NA, color = "black", alpha = 0.5) + 
+  scale_fill_manual(values = lakesite_colors) +
+  theme(legend.title = element_blank(),
+        legend.position = "none")
+
+
+otu_alphadiv %>%
+  filter(measure == "Inverse_Simpson" & fraction == "Free") %>%
+  group_by(lakesite) %>%
+  summarize(mean(mean))
+
+
+plot_grid(plot_station_rich_FL, plot_station_invsimps_FL, 
+          labels = c("A", "B"), ncol = 2, nrow = 1, align = "h")
+
+
+
 ```
 
 

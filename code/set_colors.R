@@ -63,11 +63,27 @@ lakesite_colors <- c(
   MOT = "#00ADA7",
     Outlet = "#00ADA7")
 
+lakesite_shapes <- c(
+  MIN = 24,
+    River = 24,
+  MBR = 23,
+    Bear = 23,
+  MDP = 22,
+    Deep = 22,
+  MOT = 21,
+    Outlet = 21)
+
 # Set global colors for the season
 season_colors <- c(
   Spring = "#675B78",
   Summer = "#AC6C82",
   Fall = "#EB7B88")
+
+season_shapes <- c(
+  Spring = 25,
+  Summer = 23,
+  Fall = 21)
+
 
 # Set global colors for the year
 year_colors <- c(
