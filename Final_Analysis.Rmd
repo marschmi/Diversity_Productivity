@@ -285,6 +285,36 @@ adonis(musk_bray ~ fraction + season , data = sampledf)
 ```
 
 
+```{r euclidian-pcoa}
+
+# Subset the environmental data only
+environmental_data <- metadata %>%
+  dplyr::select(Sample_depth_m:DO_percent, -BGA_cellspermL, -SRP_ugperLfraction, norep_filter_name) %>%
+  dplyr::filter(fraction == "Free") %>%
+  dplyr::select(-fraction) %>%
+  tibble::column_to_rownames(var = "norep_filter_name") %>%
+  as.matrix()
+
+pairs(environmental_data)
+
+# Scale the data so their variances are the same!
+scaled_enviro <- scale(environmental_data)
+
+# Sanity Checks: check that we get mean of 0 and sd of 1
+apply(scaled_enviro, 2, mean)
+apply(scaled_enviro, 2, sd)
+
+# Run a principal component analysis via the vegan package
+pca_environ <- rda(scaled_enviro) # 
+plot(pca_environ)
+
+biplot(pca_environ)
+
+summary(pca_environ)
+```
+
+
+
 ## Figure 1
 ```{r boxplot-cellcount-prod, eval = TRUE, fig.width = 10, fig.height = 4, warning = FALSE, dependson="load-data"}
 ######################################################### Fraction ABUNDANCe 
