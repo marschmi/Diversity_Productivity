@@ -93,7 +93,7 @@ sample_data(surface_PAFL_otu_pruned_notree_rm2) <- metadata
 ```
 
 
-
+# Production over Station and Season
 ```{r cellabund-vs-fraction, eval = TRUE, fig.width = 6, fig.height = 3.5, include = TRUE}
 
 ggplot(dplyr::filter(metadata, year == "2015" & fraction %in% c("Free", "Particle") &
@@ -106,7 +106,7 @@ ggplot(dplyr::filter(metadata, year == "2015" & fraction %in% c("Free", "Particl
   guides(fill=guide_legend(nrow=1,byrow=TRUE)) +
   xlab("Lake Station") +  ylab("Log10(Bacterial Cells/mL)") +
   theme(axis.text.x = element_text(angle = 30, vjust = 1, hjust = 1),
-        legend.position = c(0.85, 0.9), legend.title = element_blank(),
+        legend.position = "bottom", legend.title = element_blank(),
         plot.margin	= unit(c(0.25, 0.25, 0.25, 0.5), "cm")) #top, right, bottom, and left margins)
 ```
 
@@ -157,7 +157,8 @@ ggplot(dplyr::filter(metadata, year == "2015" & fraction == "Free"),
 
 
 ########## LONG FORMAT OF COMMUNITY PRODUCTIVITY
-ggplot(dplyr::filter(metadata, year == "2015" & fraction %in% c("Free", "Particle")), 
+community_prod_plot_long <- 
+  ggplot(dplyr::filter(metadata, year == "2015" & fraction %in% c("Free", "Particle")), 
        aes(x = lakesite, y = frac_bacprod, fill = fraction)) + 
   geom_bar(stat = "identity", color = "black",  position=position_dodge()) + 
   geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod), 
@@ -168,24 +169,28 @@ ggplot(dplyr::filter(metadata, year == "2015" & fraction %in% c("Free", "Particl
   scale_fill_manual(values = fraction_colors) + 
   guides(fill=guide_legend(nrow=1,byrow=TRUE)) +
   xlab("Lake Station") + ylab("Community Production\n(ug C/L/Hr)") + 
-  theme(axis.text.x = element_blank(), #element_text(angle = 30, vjust = 1, hjust = 1),
-        axis.title.x = element_blank(),
-        legend.position = c(0.85, 0.9), legend.title = element_blank(),
+  theme(legend.position = "bottom", legend.title = element_blank(),
         plot.margin	= unit(c(0.25, 0.25, 0.25, 0.25), "cm")) #top, right, bottom, and left margins)
 
 
 ########## LONG FORMAT OF CELLULAR PRODUCTIVITY
-ggplot(dplyr::filter(metadata, year == "2015" & fraction %in% c("Free", "Particle")), 
+percapita_prod_plot_long <- 
+  ggplot(dplyr::filter(metadata, year == "2015" & fraction %in% c("Free", "Particle")), 
        aes(x = lakesite, y = fracprod_per_cell_noinf, fill = fraction)) + 
   geom_bar(stat = "identity", color = "black",  position=position_dodge()) + 
-  facet_grid(season ~ ., scales = "free") +
+  facet_grid(season ~ ., scales = "free_x") +
   scale_y_continuous(expand = c(0,0)) +
   scale_fill_manual(values = fraction_colors) + 
   guides(fill=guide_legend(nrow=1,byrow=TRUE)) +
   xlab("Lake Station") + ylab("Cellular Production \n(ug C/cell/Hr)") + 
   theme(axis.text.x = element_text(angle = 30, vjust = 1, hjust = 1),
-        legend.position = c(0.85, 0.9), legend.title = element_blank(),
+        legend.position = "bottom", legend.title = element_blank(),
         plot.margin	= unit(c(0.25, 0.25, 0.25, 0.5), "cm")) #top, right, bottom, and left margins)
+
+plot_grid(community_prod_plot_long, percapita_prod_plot_long, 
+          labels = c("A", "B"),
+          nrow = 1, ncol = 2,
+          align = "v")
 
 
 plot_grid(prod1, prod2, labels = c("A", "B"),
@@ -285,18 +290,24 @@ adonis(musk_bray ~ fraction + season , data = sampledf)
 ```
 
 
-```{r euclidian-pcoa}
+# Environmental Variables Pairs
+```{r environmental-pairwise, fig.height=20, fig.width=20}
 
 # Subset the environmental data only
 environmental_data <- metadata %>%
-  dplyr::select(Sample_depth_m:DO_percent, -BGA_cellspermL, -SRP_ugperLfraction, norep_filter_name) %>%
+  dplyr::select(Temp_C:DO_percent, -BGA_cellspermL, -SRP_ugperL, fraction, norep_filter_name) %>%
   dplyr::filter(fraction == "Free") %>%
   dplyr::select(-fraction) %>%
   tibble::column_to_rownames(var = "norep_filter_name") %>%
   as.matrix()
 
 pairs(environmental_data)
+```
 
+
+# Euclidian PCA with Environmental Variables
+
+```{r euclidian-pcoa-varexplained, fig.height=4, fig.width=5, dependson = "environmental-pairwise"}
 # Scale the data so their variances are the same!
 scaled_enviro <- scale(environmental_data)
 
@@ -306,11 +317,172 @@ apply(scaled_enviro, 2, sd)
 
 # Run a principal component analysis via the vegan package
 pca_environ <- rda(scaled_enviro) # 
-plot(pca_environ)
 
-biplot(pca_environ)
+par(mar = c(5,5,2,5))
+plot(summary(pca_environ)$cont$importance[2,]*100, 
+     xlab = "PCA Axis", 
+     ylab = "Variation Explained Per Axis",
+     ylim = c(0, 105),
+     col = "cornflowerblue",
+     cex =2,
+     pch = 16)
+par(new = T)
+plot(summary(pca_environ)$cont$importance[3,]*100,
+       cex = 2,
+       pch = 17,
+       ylim = c(0, 105),
+       col = "firebrick3",
+       axes=F, 
+       xlab=NA, 
+       ylab=NA)
+axis(side = 4)
+mtext(side = 4, line = 3, "Total Accumulated Variation")
+legend("right",
+       legend=c("Per Axis", "Total"),
+       pch=c(16, 17), col=c("cornflowerblue", "firebrick3"))
+```
 
-summary(pca_environ)
+
+# Linear Models with Environmental Variables
+```{r environ-lm, fig.height=3.5, fig.height=8, dependson = "euclidian-pcoa-varexplained"}
+pca_scores_df <- summary(pca_environ)$sites %>%
+  as.data.frame() %>%
+  tibble::rownames_to_column(var = "norep_filter_name") %>%
+  mutate(norep_water_name = paste(substr(norep_filter_name, 1, 4), substr(norep_filter_name, 6, 8), sep = "")) %>%
+  dplyr::select(-norep_filter_name)
+
+metadata_pca <- metadata %>%
+  mutate(norep_water_name = paste(substr(norep_filter_name, 1, 4), substr(norep_filter_name, 6, 8), sep = "")) %>%
+  left_join(pca_scores_df, by = "norep_water_name")
+
+
+
+#####  SINGLE REGRESSION with PC1
+## Free living
+comm_lm_PC1_free <- summary(lm(frac_bacprod ~ PC1, 
+           data = filter(metadata_pca, fraction == "Free")))
+## Particle-associated
+comm_lm_PC1_part <- summary(lm(frac_bacprod ~ PC1, 
+           data = filter(metadata_pca, fraction == "Particle")))
+## PER CAPITA: Free living
+percap_lm_PC1_free <- summary(lm(log10(fracprod_per_cell_noinf) ~ PC1, 
+           data = filter(metadata_pca, fraction == "Free")))
+## PER CAPITA: Particle-associated
+percap_lm_PC1_part <- summary(lm(log10(fracprod_per_cell_noinf) ~ PC1, 
+           data = filter(metadata_pca, fraction == "Particle")))
+
+# Put the results all together 
+pca_lm_row1 <- c("Free", "Per-Liter","PC1",
+          round(comm_lm_PC1_free$adj.r.squared, digits = 3),
+          round(comm_lm_PC1_free$coefficients[2,4], digits = 3))
+pca_lm_row2 <- c("Particle", "Per-Liter","PC1",
+          round(comm_lm_PC1_part$adj.r.squared, digits = 3),
+          round(comm_lm_PC1_part$coefficients[2,4], digits = 3))
+pca_lm_row3 <- c("Free", "Per-Capita","PC1",
+          round(percap_lm_PC1_free$adj.r.squared, digits = 3),
+          round(percap_lm_PC1_free$coefficients[2,4], digits = 3))
+pca_lm_row4 <- c("Particle", "Per-Capita", "PC1",
+          round(percap_lm_PC1_part$adj.r.squared, digits = 3),
+          round(percap_lm_PC1_part$coefficients[2,4], digits = 3))
+
+pca_lm_results_df <- 
+  rbind(pca_lm_row1, pca_lm_row2, pca_lm_row3, pca_lm_row4)
+
+colnames(pca_lm_results_df) <- c("fraction", "Predictor","Prod_measure", "Adjusted_R2", "p-value")
+
+row.names(pca_lm_results_df) = NULL
+
+pander(pca_lm_results_df,
+               caption = "Single Linear regression statistics for PC1.")
+
+
+#####  SINGLE REGRESSION with PC2
+## Free living
+comm_lm_PC2_free <- summary(lm(frac_bacprod ~ PC2, 
+           data = filter(metadata_pca, fraction == "Free")))
+## Particle-associated
+comm_lm_PC2_part <- summary(lm(frac_bacprod ~ PC2, 
+           data = filter(metadata_pca, fraction == "Particle")))
+## PER CAPITA: Free living
+percap_lm_PC2_free <- summary(lm(log10(fracprod_per_cell_noinf) ~ PC2, 
+           data = filter(metadata_pca, fraction == "Free")))
+## PER CAPITA: Particle-associated
+percap_lm_PC2_part <- summary(lm(log10(fracprod_per_cell_noinf) ~ PC2, 
+           data = filter(metadata_pca, fraction == "Particle")))
+
+# Put the results all together 
+pca_lm2_row1 <- c("Free", "Per-Liter","PC2",
+          round(comm_lm_PC2_free$adj.r.squared, digits = 3),
+          round(comm_lm_PC2_free$coefficients[2,4], digits = 3))
+pca_lm2_row2 <- c("Particle", "Per-Liter","PC2",
+          round(comm_lm_PC2_part$adj.r.squared, digits = 3),
+          round(comm_lm_PC2_part$coefficients[2,4], digits = 3))
+pca_lm2_row3 <- c("Free", "Per-Capita","PC2",
+          round(percap_lm_PC2_free$adj.r.squared, digits = 3),
+          round(percap_lm_PC2_free$coefficients[2,4], digits = 3))
+pca_lm2_row4 <- c("Particle", "Per-Capita", "PC2",
+          round(percap_lm_PC2_part$adj.r.squared, digits = 3),
+          round(percap_lm_PC2_part$coefficients[2,4], digits = 3))
+
+pca_lm2_results_df <- 
+  rbind(pca_lm2_row1, pca_lm2_row2, pca_lm2_row3, pca_lm2_row4)
+
+colnames(pca_lm2_results_df) <- c("fraction", "Predictor","Prod_measure", "Adjusted_R2", "p-value")
+
+row.names(pca_lm2_results_df) = NULL
+
+pander(pca_lm2_results_df,
+               caption = "Single Linear regression statistics for PC2.")
+
+
+
+
+#####  MULTIPLE REGRESSION 
+## Free living
+summary(lm(frac_bacprod ~ PC1 + PC2, 
+           data = filter(metadata_pca, fraction == "Free")))
+## Particle-associated
+summary(lm(frac_bacprod ~ PC1 + PC2, 
+           data = filter(metadata_pca, fraction == "Particle")))
+## PER CAPITA: Free living
+summary(lm(log10(fracprod_per_cell_noinf) ~ PC1 + PC2, 
+           data = filter(metadata_pca, fraction == "Free")))
+## PER CAPITA: Particle-associated
+summary(lm(log10(fracprod_per_cell_noinf) ~ PC1 + PC2, 
+           data = filter(metadata_pca, fraction == "Particle")))
+
+PC1_lm_plot <- 
+  ggplot(metadata_pca, aes(x = PC1, y = log10(fracprod_per_cell_noinf), 
+                         color = fraction,  fill = fraction)) +
+  geom_point() + ylab("log10(cellular production)") + 
+  scale_color_manual(values = fraction_colors) + 
+  scale_fill_manual(values = fraction_colors) + 
+  geom_smooth(method = "lm") +
+  theme(legend.title = element_blank(), legend.position = "bottom")
+
+
+PC2_lm_plot <- 
+  ggplot(metadata_pca, aes(x = PC2, y = log10(fracprod_per_cell_noinf), 
+                         color = fraction,  fill = fraction)) +
+  geom_point() + ylab("log10(cellular production)") + 
+  scale_color_manual(values = fraction_colors) + 
+  scale_fill_manual(values = fraction_colors) + 
+  geom_smooth(method = "lm") +
+  theme(legend.title = element_blank(), legend.position = "bottom")  
+
+plot_grid(PC2_lm_plot, PC2_lm_plot, 
+          labels = c("A", "B"),
+          nrow = 1, ncol = 2)
+
+
+```
+
+
+```{r euclidian-pcoa, fig.height=6, fig.width=6, dependson = c("environmental-pairwise", "euclidian-pcoa-varexplained")}
+par(oma(0.1, 0.1, 0.1, 0.1))
+biplot(pca_environ,
+     xlab = paste("PC1", paste(round(summary(pca_environ)$cont$importance[2,1]*100, digits = 2), "%", sep = ""), sep = ": "),
+     ylab = paste("PC2", paste(round(summary(pca_environ)$cont$importance[2,2]*100, digits = 2), "%", sep = ""), sep = ": "))
 ```
 
 
@@ -509,7 +681,7 @@ plot_grid(top_row_S1, legend_s1,
 
 
 # Calculate Community Diversity 
-```{r calc-div}
+```{r calc-div, dependson="environ-lm"}
 # Set the seed for reproducibility
 set.seed(777)
 
@@ -526,7 +698,11 @@ otu_alphadiv <- calc_mean_alphadiv(physeq = surface_PAFL_otu_pruned_notree_rm2,
                            shannon_df = alpha_calc$Shannon) %>%
   mutate(fraction = factor(fraction, levels = c("Particle","Free")),
          lakesite = factor(lakesite,  levels = c("Outlet", "Deep", "Bear", "River")),
-         measure = factor(measure, levels = c("Richness",  "Shannon_Entropy", "Inverse_Simpson", "Simpsons_Evenness"))) 
+         measure = factor(measure, levels = c("Richness",  "Shannon_Entropy", "Inverse_Simpson", "Simpsons_Evenness")),
+         norep_water_name = paste(substr(norep_filter_name, 1, 4), substr(norep_filter_name, 6, 8), sep = ""))
+
+otu_alphadiv <- otu_alphadiv %>%
+  left_join(pca_scores_df, by = "norep_water_name")
 ```
 
 
@@ -558,23 +734,95 @@ cor(filter(otu_alphadiv, measure == "Simpsons_Evenness" & fraction == "Particle"
 ggplot(otu_alphadiv, aes(y = mean, x = fraction)) +
   ylab("Mean Diversity Value") +
   facet_wrap(~measure, scale = "free_y", ncol = 4) +
-  geom_jitter(size = 3, shape = 21, aes(fill = fraction), color = "black") +
   geom_boxplot(alpha = 0.5, outlier.shape = NA, color = "black", aes(fill = fraction)) +
+  geom_jitter(size = 3, aes(fill = fraction, shape = season), color = "black") +
   scale_fill_manual(values = fraction_colors) + 
+  scale_shape_manual(values = season_shapes) + 
   scale_color_manual(values = fraction_colors) + 
   theme(legend.position = "none", axis.title.x = element_blank()) 
 ```
 
 
 ## Linear Regression Statistics 
-```{r div-prod-lm-models, dependson= "calc-div"}
+```{r subset-div-data, dependson= "calc-div"}
 #################################### Subset Dataframes 
 richness <- filter(otu_alphadiv, measure == "Richness")
 shannon <- filter(otu_alphadiv, measure == "Shannon_Entropy")
 invsimps <- filter(otu_alphadiv, measure == "Inverse_Simpson")
 simpseven <- filter(otu_alphadiv, measure == "Simpsons_Evenness")
+```
+
+# Ridge & Lasso Regressions
+```{r lasso-ridge, dependson = c("subset-div-data", "calc-div"), fig.width=8, fig.height=4}
+
+####################### EDIT THIS ENTIRE SECTION AUGUST 21st, 2017 NOON
+
+PA_wide_all_divs <- dplyr::filter(wide_all_divs, fraction == "WholePart") %>%
+  dplyr::select(-fraction) %>%
+  tibble::column_to_rownames(var = "norep_filter_name")
+
+PA_wide_all_divs_noprod <- PA_wide_all_divs %>%
+  dplyr::select(Inverse_Simpson, Richness, Shannon_Entropy, Unweighted_MPD, Weighted_MPD, frac_bacprod)
+
+library(glmnet)
 
 
+set.seed(777)
+
+# Set model parameters
+x = model.matrix(frac_bacprod ~ ., PA_wide_all_divs_noprod)[,-1]
+y = PA_wide_all_divs$frac_bacprod
+grid = 10^seq(10,-2,length = 100)
+
+# Pull out test and training sets for cross validation
+train <- sample(1:nrow(x), nrow(x)/2)
+test <- -train
+y_test <- y[test]
+
+
+# Run RIDGE regression with alpha = 0
+ridge_divs_train <- glmnet(x[train,], y[train], alpha = 0, lambda = grid, thresh = 1e-12,standardize = TRUE)
+par(mfrow = c(1,2))
+plot(ridge_divs_train)
+
+# Cross validation
+cv_ridge_divs <- cv.glmnet(x[train,], y[train], alpha = 0)
+plot(cv_ridge_divs)
+best_ridge_lambda <- cv_ridge_divs$lambda.min
+ridge_divs_pred <- predict(ridge_divs_train, s = best_ridge_lambda, newx = x[test,])
+mean((ridge_divs_pred - y_test)^2) # Test MSE
+
+
+# Run lasso regression with alpha = 1
+lasso_divs_train <- glmnet(x[train,], y[train], alpha = 1, lambda = grid, standardize = TRUE)
+par(mfrow = c(1,2))
+plot(lasso_divs_train)
+
+# Cross validation
+cv_lasso_divs <- cv.glmnet(x[train,], y[train], alpha = 1)
+plot(cv_lasso_divs)
+best_lasso_lambda <- cv_lasso_divs$lambda.min
+lasso_divs_pred <- predict(lasso_divs_train, s = best_lasso_lambda, newx = x[test,])
+mean((lasso_divs_pred - y_test)^2)
+
+
+## Run lasso on the entire dataset 
+lasso_divs <- glmnet(x, y, alpha = 1, lambda = grid, standardize = TRUE)
+par(mfrow = c(1,1))
+plot(lasso_divs)
+legend("bottomright")
+
+# What are the lasso coefficients?
+predict(lasso_divs, type = "coefficients", s = best_lasso_lambda)
+```
+
+The test MSE for ridge regression is `r mean((ridge_divs_pred - y_test)^2)` while the test MSE for lasso is `r mean((lasso_divs_pred - y_test)^2)`.  Therefore, it's best if we use lasso!
+
+Additionally, the lasso model uses Inverse Simpson as the **best and only** predictor of production!
+
+
+# Linear Regressions with Fraction Diversity
+```{r div-prod-lm-models}
 #################################### Bulk Measure Production #################################### 
 ################### Richness ################### 
 summary(lm(frac_bacprod ~ mean, data = richness))  # All samples together
@@ -788,7 +1036,7 @@ colnames(r2_table) <- c("Diversity_Metric", "Production_Measure","Adjusted_R2","
 row.names(r2_table) = NULL
 
 pander(r2_table,
-               caption = "Supplemental Table 1: \n R2 estimates for heterotrophic production vs particle-associated diversity linear regressions.")
+               caption = "Supplemental Table 2: \n R2 estimates for heterotrophic production vs particle-associated diversity linear regressions.")
 ```
 
 
