@@ -60,6 +60,7 @@ library(sandwich)   # for vcovHC function in post-hoc test
 library(MASS)       # For studres in plot_residuals function
 library(caret)      # For cross validation
 library(pander)     # For pretty tables 
+library(glmnet)     # For lasso and ridge regressions 
 source("code/Muskegon_functions.R")
 source("code/set_colors.R") 
 ```
@@ -752,73 +753,6 @@ invsimps <- filter(otu_alphadiv, measure == "Inverse_Simpson")
 simpseven <- filter(otu_alphadiv, measure == "Simpsons_Evenness")
 ```
 
-# Ridge & Lasso Regressions
-```{r lasso-ridge, dependson = c("subset-div-data", "calc-div"), fig.width=8, fig.height=4}
-
-####################### EDIT THIS ENTIRE SECTION AUGUST 21st, 2017 NOON
-
-PA_wide_all_divs <- dplyr::filter(wide_all_divs, fraction == "WholePart") %>%
-  dplyr::select(-fraction) %>%
-  tibble::column_to_rownames(var = "norep_filter_name")
-
-PA_wide_all_divs_noprod <- PA_wide_all_divs %>%
-  dplyr::select(Inverse_Simpson, Richness, Shannon_Entropy, Unweighted_MPD, Weighted_MPD, frac_bacprod)
-
-library(glmnet)
-
-
-set.seed(777)
-
-# Set model parameters
-x = model.matrix(frac_bacprod ~ ., PA_wide_all_divs_noprod)[,-1]
-y = PA_wide_all_divs$frac_bacprod
-grid = 10^seq(10,-2,length = 100)
-
-# Pull out test and training sets for cross validation
-train <- sample(1:nrow(x), nrow(x)/2)
-test <- -train
-y_test <- y[test]
-
-
-# Run RIDGE regression with alpha = 0
-ridge_divs_train <- glmnet(x[train,], y[train], alpha = 0, lambda = grid, thresh = 1e-12,standardize = TRUE)
-par(mfrow = c(1,2))
-plot(ridge_divs_train)
-
-# Cross validation
-cv_ridge_divs <- cv.glmnet(x[train,], y[train], alpha = 0)
-plot(cv_ridge_divs)
-best_ridge_lambda <- cv_ridge_divs$lambda.min
-ridge_divs_pred <- predict(ridge_divs_train, s = best_ridge_lambda, newx = x[test,])
-mean((ridge_divs_pred - y_test)^2) # Test MSE
-
-
-# Run lasso regression with alpha = 1
-lasso_divs_train <- glmnet(x[train,], y[train], alpha = 1, lambda = grid, standardize = TRUE)
-par(mfrow = c(1,2))
-plot(lasso_divs_train)
-
-# Cross validation
-cv_lasso_divs <- cv.glmnet(x[train,], y[train], alpha = 1)
-plot(cv_lasso_divs)
-best_lasso_lambda <- cv_lasso_divs$lambda.min
-lasso_divs_pred <- predict(lasso_divs_train, s = best_lasso_lambda, newx = x[test,])
-mean((lasso_divs_pred - y_test)^2)
-
-
-## Run lasso on the entire dataset 
-lasso_divs <- glmnet(x, y, alpha = 1, lambda = grid, standardize = TRUE)
-par(mfrow = c(1,1))
-plot(lasso_divs)
-legend("bottomright")
-
-# What are the lasso coefficients?
-predict(lasso_divs, type = "coefficients", s = best_lasso_lambda)
-```
-
-The test MSE for ridge regression is `r mean((ridge_divs_pred - y_test)^2)` while the test MSE for lasso is `r mean((lasso_divs_pred - y_test)^2)`.  Therefore, it's best if we use lasso!
-
-Additionally, the lasso model uses Inverse Simpson as the **best and only** predictor of production!
 
 
 # Linear Regressions with Fraction Diversity
@@ -1535,6 +1469,204 @@ weighted_df <- WEIGHTED_sesMPD_indepswap_RAREFIED_rm2 %>%
   left_join(invsimps_df, by = "norep_filter_name") %>%
   mutate(lakesite = factor(lakesite, levels = c("MOT", "MDP","MBR", "MIN")),
          lakesite = fct_recode(lakesite, Outlet = "MOT", Deep = "MDP", Bear = "MBR", River = "MIN"))
+```
+
+
+
+# Prepare the data for Ridge & Lasso Regressions
+```{r prepare-data}
+unweight_vals <- unweighted_df %>%
+  dplyr::select(mpd.obs.z, norep_filter_name) %>%
+  rename(unweighted_div = mpd.obs.z)
+  
+weighted_vals <- weighted_df %>%
+  dplyr::select(mpd.obs.z, norep_filter_name) %>%
+  rename(weighted_div = mpd.obs.z)
+
+
+wide_all_divs <- otu_alphadiv %>%
+  dplyr::select(norep_filter_name ,mean, measure) %>%
+  spread(measure, mean)
+
+lasso_data_df <- metadata_pca %>%
+  left_join(wide_all_divs, by = "norep_filter_name") %>%
+  left_join(unweight_vals, by = "norep_filter_name") %>%
+  left_join(weighted_vals, by = "norep_filter_name") %>%
+  dplyr::select(-c(project, year, Date, limnion, norep_water_name, dnaconcrep1, 
+                   SD_perc_attached_bacprod, SE_total_bac_abund, SE_perc_attached_abund, SE_attached_bac))
+
+lasso_data_df_particle <- lasso_data_df %>%
+  filter(fraction == "Particle" ) %>%
+  dplyr::select(-fraction)
+
+lasso_data_df_particle_noprod <- lasso_data_df_particle %>%
+  dplyr::select(-c(fracprod_per_cell, fracprod_per_cell_noinf, 
+                   tot_bacprod, SD_tot_bacprod,SD_frac_bacprod, 
+                   lakesite, season, norep_filter_name, station, BGA_cellspermL, Turb_NTU)) 
+  
+  # Must be numerical to go into the model 
+lasso_data_df_particle_noprod <- apply(lasso_data_df_particle_noprod, 2, as.numeric) %>%
+  as.data.frame()
+
+percell_lasso_data_df_particle_noprod <- lasso_data_df_particle %>%
+  dplyr::select(-c(fracprod_per_cell, frac_bacprod,
+                   tot_bacprod, SD_tot_bacprod,SD_frac_bacprod, 
+                   lakesite, season, norep_filter_name, station, BGA_cellspermL, Turb_NTU)) %>%
+  dplyr::filter(Temp_C != 14.28) # Remove the missing row of data :( )
+```
+
+
+# Multiple Regression
+```{r}
+
+summary(lm(frac_bacprod ~ Inverse_Simpson, data = lasso_data_df_particle)) 
+
+summary(lm(frac_bacprod ~ PC2, data = lasso_data_df_particle)) 
+
+summary(lm(log10(fracprod_per_cell_noinf) ~ Inverse_Simpson, data = lasso_data_df_particle)) 
+
+summary(lm(log10(fracprod_per_cell_noinf) ~ PC2, data = lasso_data_df_particle)) 
+
+summary(lm(log10(fracprod_per_cell_noinf) ~ Inverse_Simpson + PC2, data = lasso_data_df_particle)) 
+
+
+```
+
+
+# Perform Ridge and Lasso regression
+## Bulk Community Production
+```{r bulk-lasso-ridge, dependson = c("calc-div"), fig.width=8, fig.height=4}
+set.seed(777)
+
+# Set model parameters for community level data
+## NOTE: there cannot be any data with NA
+x = model.matrix(frac_bacprod ~ ., lasso_data_df_particle_noprod)[,-1]
+y = lasso_data_df_particle_noprod$frac_bacprod
+grid = 10^seq(10,-2,length = 100)
+
+# Pull out test and training sets for cross validation
+# We will use half the set to train the model and the 2nd half of the dataset to test the model 
+train <- sample(1:nrow(x), nrow(x)/2)
+test <- -train
+y_test <- y[test]
+
+################ RIDGE
+# Run RIDGE regression with alpha = 0
+ridge_divs_train <- glmnet(x[train,], y[train], alpha = 0, lambda = grid, thresh = 1e-12, standardize = TRUE)
+par(mfrow = c(1,2)) 
+plot(ridge_divs_train)
+legend("top")
+
+# Cross validation
+cv_ridge_divs <- cv.glmnet(x[train,], y[train], alpha = 0)
+plot(cv_ridge_divs)
+best_ridge_lambda <- cv_ridge_divs$lambda.min
+ridge_divs_pred <- predict(ridge_divs_train, s = best_ridge_lambda, newx = x[test,])
+mean((ridge_divs_pred - y_test)^2) # Test MSE
+
+
+## Run ridge on the entire dataset 
+ridge_divs <- glmnet(x, y, alpha = 0, lambda = grid, standardize = TRUE)
+par(mfrow = c(1,1))
+plot(ridge_divs)
+legend("top")
+
+
+################ LASSO
+# Run lasso regression with alpha = 1
+lasso_divs_train <- glmnet(x[train,], y[train], alpha = 1, lambda = grid, standardize = TRUE)
+par(mfrow = c(1,2))
+plot(lasso_divs_train)
+
+# Cross validation
+cv_lasso_divs <- cv.glmnet(x[train,], y[train], alpha = 1)
+plot(cv_lasso_divs)
+best_lasso_lambda <- cv_lasso_divs$lambda.min
+lasso_divs_pred <- predict(lasso_divs_train, s = best_lasso_lambda, newx = x[test,])
+mean((lasso_divs_pred - y_test)^2)
+
+
+## Run lasso on the entire dataset 
+lasso_divs <- glmnet(x, y, alpha = 1, lambda = grid, standardize = TRUE)
+par(mfrow = c(1,1))
+plot(lasso_divs)
+legend("top")
+
+# What are the lasso coefficients?
+predict(lasso_divs, type = "coefficients", s = best_lasso_lambda)
+# What about for ridge regression?
+predict(ridge_divs_pred, type = "coefficients", s = best_ridge_lambda)
+```
+
+The test MSE for ridge regression is `r mean((ridge_divs_pred - y_test)^2)` while the test MSE for lasso is `r mean((lasso_divs_pred - y_test)^2)`.  
+
+Additionally, the lasso model uses Inverse Simpson as the **best and only** predictor of production!
+
+
+## Per capita Production 
+```{r percapita-lasso-ridge, dependson = c("calc-div", "prepare-data"), fig.width=8, fig.height=4}
+percell_lasso_data_df_ALL <- lasso_data_df %>%
+  dplyr::select(-c(fracprod_per_cell, frac_bacprod,
+                   tot_bacprod, SD_tot_bacprod,SD_frac_bacprod, 
+                   lakesite, season, norep_filter_name, station, BGA_cellspermL, Turb_NTU)) %>%
+  dplyr::filter(!is.na(fracprod_per_cell_noinf)) %>%
+  mutate(log10_percell = log10(fracprod_per_cell_noinf)) %>%
+  dplyr::select(-c(fracprod_per_cell_noinf))
+
+set.seed(777)
+
+# Set model parameters for community level data
+## NOTE: there cannot be any data with NA
+x = model.matrix(log10_percell ~ ., percell_lasso_data_df_ALL)[,-1]
+y = percell_lasso_data_df_ALL$log10_percell
+grid = 10^seq(10,-2,length = 100)
+
+# Pull out test and training sets for cross validation
+# We will use half the set to train the model and the 2nd half of the dataset to test the model 
+train <- sample(1:nrow(x), nrow(x)/2)
+test <- -train
+y_test <- y[test]
+
+################ RIDGE
+# Run RIDGE regression with alpha = 0
+ridge_divs_train <- glmnet(x[train,], y[train], alpha = 0, lambda = grid, thresh = 1e-12, standardize = TRUE)
+par(mfrow = c(1,2)) 
+plot(ridge_divs_train)
+
+# Cross validation
+cv_ridge_divs <- cv.glmnet(x[train,], y[train], alpha = 0)
+plot(cv_ridge_divs)
+best_ridge_lambda <- cv_ridge_divs$lambda.min
+ridge_divs_pred <- predict(ridge_divs_train, s = best_ridge_lambda, newx = x[test,])
+mean((ridge_divs_pred - y_test)^2) # Test MSE
+
+
+## Run ridge on the entire dataset 
+ridge_divs <- glmnet(x, y, alpha = 0, lambda = grid, standardize = TRUE)
+par(mfrow = c(1,1))
+plot(ridge_divs)
+
+################ LASSO
+# Run lasso regression with alpha = 1
+lasso_divs_train <- glmnet(x[train,], y[train], alpha = 1, lambda = grid, standardize = TRUE)
+par(mfrow = c(1,2))
+plot(lasso_divs_train)
+
+# Cross validation
+cv_lasso_divs <- cv.glmnet(x[train,], y[train], alpha = 1)
+plot(cv_lasso_divs)
+best_lasso_lambda <- cv_lasso_divs$lambda.min
+lasso_divs_pred <- predict(lasso_divs_train, s = best_lasso_lambda, newx = x[test,])
+mean((lasso_divs_pred - y_test)^2)
+
+
+## Run lasso on the entire dataset 
+lasso_divs <- glmnet(x, y, alpha = 1, lambda = grid, standardize = TRUE)
+par(mfrow = c(1,1))
+plot(lasso_divs)
+
+# What are the lasso coefficients?
+predict(lasso_divs, type = "coefficients", s = best_lasso_lambda)
 ```
 
 
