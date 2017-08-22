@@ -247,12 +247,12 @@ p1 <- plot_ordination(
   physeq = scaled_surface_PAFLA_pruned_rm2,
   ordination = soren_whole_dist,
   color = "fraction",
-  shape = "lakesite",
+  shape = "season",
   title = "Sørensen") +
   geom_point(size=5, alpha = 0.7, aes(fill =fraction,  color = fraction)) +
   scale_colour_manual(values = fraction_colors) +
   scale_fill_manual(values = fraction_colors) +
-  scale_shape_manual(values = c(21, 22, 23, 24)) +
+  scale_shape_manual(values = season_shapes) +
   theme(legend.position = "none")
 
 
@@ -267,12 +267,12 @@ p2 <- plot_ordination(
   physeq = scaled_surface_PAFLA_pruned_rm2,
   ordination = bray_whole_dist ,
   color = "fraction",
-  shape = "lakesite",
+  shape = "season",
   title = "Bray-Curtis") +
   geom_point(size=5, alpha = 0.7, aes(fill =fraction,  color = fraction)) +
   scale_colour_manual(values = fraction_colors) +
   scale_fill_manual(values = fraction_colors) +
-  scale_shape_manual(values = c(21, 22, 23, 24)) +
+  scale_shape_manual(values = season_shapes) +
   theme(legend.position = "right", legend.title = element_blank())
 
 plot_grid(p1, p2, labels = c("A", "B"), align = "h", ncol = 2,
@@ -740,7 +740,8 @@ ggplot(otu_alphadiv, aes(y = mean, x = fraction)) +
   scale_fill_manual(values = fraction_colors) + 
   scale_shape_manual(values = season_shapes) + 
   scale_color_manual(values = fraction_colors) + 
-  theme(legend.position = "none", axis.title.x = element_blank()) 
+  theme(legend.position = "bottom", axis.title.x = element_blank(), 
+        legend.title = element_blank()) 
 ```
 
 
@@ -991,10 +992,11 @@ rich_nums <- data.frame(a = c(1.15,1.15,1.85,1.85), b = c(920, 930, 930, 920)) #
 rich_distribution_plot <- 
   ggplot(richness, aes(y = mean, x = fraction)) +
   scale_fill_manual(values = fraction_colors) +
-  geom_jitter(size = 3, shape = 21, aes(fill = fraction), width = 0.2) + 
   geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(fill = fraction)) +
+  geom_jitter(size = 3, aes(fill = fraction, shape = season), width = 0.2) + 
   scale_y_continuous(limits = c(150,950), breaks = seq(from = 0, to =925, by = 150)) + 
   xlab("Observed Richness") + xlab("Fraction") + 
+  scale_shape_manual(values = season_shapes) +
   geom_path(data = rich_nums, aes(x = a, y = b), linetype = 1, color = "#424645") +
   annotate("text", x=1.5, y=790, fontface = "bold",  size = 4, color = "#424645",
            label= paste("***\np =", round(rich_fraction_wilcox$p.value, digits = 5))) +
@@ -1008,9 +1010,10 @@ prod_vs_rich_plot <-
   ggplot(richness, aes(x=mean, y=frac_bacprod)) + 
   geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd, color = fraction), alpha = 0.7) + # X-axis errorbars
   geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod, color = fraction)) +  # Y-axis errorbars
-  geom_point(size = 3.5, shape = 21, color = "black", aes(fill = fraction)) +
+  geom_point(size = 3.5, color = "black", aes(fill = fraction, shape = season)) +
   scale_color_manual(values = fraction_colors) +
   scale_fill_manual(values = fraction_colors) +
+  scale_shape_manual(values = season_shapes) +
   ylab("Heterotrophic Production \n (μgC/L/hr)") + 
   xlab("Observed Richness") +
   geom_smooth(data=filter(richness, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
@@ -1025,9 +1028,10 @@ prod_vs_rich_plot <-
 percell_prod_vs_rich_plot <- 
   ggplot(richness, aes(x=mean, y=log10(fracprod_per_cell_noinf))) + 
   geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd, color = fraction), alpha = 0.7) + # X-axis errorbars
-  geom_point(size = 3.5, shape = 21, color = "black", aes(fill = fraction)) +
+  geom_point(size = 3.5,  color = "black", aes(fill = fraction, shape = season)) +
   scale_color_manual(values = fraction_colors) +
   scale_fill_manual(values = fraction_colors) +
+  scale_shape_manual(values = season_shapes) +
   ylab("log10(production/cell)\n (μgC/cell/hr)") +
   xlab("Observed Richness") +
   geom_smooth(data=filter(richness, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
@@ -1041,11 +1045,6 @@ percell_prod_vs_rich_plot <-
         legend.text = element_text(size = 14))
 
 
-# All 3 richness plots together 
-rich_plots <- plot_grid(rich_distribution_plot, prod_vs_rich_plot, percell_prod_vs_rich_plot,
-          labels = c("A", "C", "E"), ncol = 1, nrow = 3,
-          rel_heights = c(0.5, 0.8, 1.1),
-          align = "v")
 
 
 ######################################################### INVERSE SIMPSON
@@ -1062,8 +1061,9 @@ invsimps_nums <- data.frame(a = c(1.15,1.15,1.85,1.85), b = c(83,85,85,83)) # Wh
 invsimps_distribution_plot <- 
   ggplot(invsimps, aes(y = mean, x = fraction)) +
   scale_fill_manual(values = fraction_colors) +
-  geom_jitter(size = 3, shape = 21, aes(fill = fraction), width = 0.2) + 
+  scale_shape_manual(values = season_shapes) +
   geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(fill = fraction)) +
+  geom_jitter(size = 3,  aes(fill = fraction, shape = season), width = 0.2) + 
   scale_y_continuous(limits = c(0,85), breaks = seq(from = 0, to = 85, by = 20)) + 
   ylab("Inverse Simpson") + xlab("Fraction") + 
   geom_path(data = invsimps_nums, aes(x = a, y = b), linetype = 1, color = "#424645") +
@@ -1079,9 +1079,10 @@ prod_vs_invsimps_plot <-
   ggplot(invsimps, aes(x=mean, y=frac_bacprod)) + 
   geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd, color = fraction), alpha = 0.7) + # X-axis errorbars
   geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod, color = fraction)) +  # Y-axis errorbars
-  geom_point(size = 3.5, shape = 21, color = "black", aes(fill = fraction)) +
+  geom_point(size = 3.5, color = "black", aes(fill = fraction, shape = season)) +
   scale_color_manual(values = fraction_colors) +
   scale_fill_manual(values = fraction_colors) +
+  scale_shape_manual(values = season_shapes) +
   ylab("Heterotrophic Production \n (μgC/L/hr)") + 
   xlab("Inverse Simpson") +
   geom_smooth(data=filter(invsimps, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
@@ -1097,9 +1098,10 @@ prod_vs_invsimps_plot <-
 percell_prod_vs_invsimps_plot <- 
   ggplot(invsimps, aes(x=mean, y=log10(fracprod_per_cell_noinf))) + 
   geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd, color = fraction), alpha = 0.7) + # X-axis errorbars
-  geom_point(size = 3.5, shape = 21, color = "black", aes(fill = fraction)) +
+  geom_point(size = 3.5, color = "black", aes(fill = fraction, shape = season)) +
   scale_color_manual(values = fraction_colors) +
   scale_fill_manual(values = fraction_colors) +
+  scale_shape_manual(values = season_shapes) +
   ylab("log10(production/cell)\n (μgC/cell/hr)") +
   xlab("Inverse Simpson") +
   geom_smooth(data=filter(invsimps, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
@@ -1124,18 +1126,33 @@ invsimps_plots <- plot_grid(invsimps_distribution_plot, prod_vs_invsimps_plot, p
 ## Plot Figure 2 
 ```{r fig2-noyaxis, fig.width = 8, fig.height = 8, dependson = "fig2-panels"}
 
-invsimps_plots_noyaxis <- 
-  plot_grid(invsimps_distribution_plot + theme(axis.title.y = element_blank(), axis.text.y = element_blank()), 
-            prod_vs_invsimps_plot + theme(axis.title.y = element_blank()), 
-            percell_prod_vs_invsimps_plot + theme(axis.title.y = element_blank()), 
-          labels = c("B", "D", "F"), ncol = 1, nrow = 3,
-          rel_heights = c(0.5, 0.8, 1.1),
+# All 3 richness plots together 
+rich_plots <- plot_grid(rich_distribution_plot, prod_vs_rich_plot, 
+                        percell_prod_vs_rich_plot + theme(legend.position = "none"),
+          labels = c("A", "C", "E"), ncol = 1, nrow = 3,
+          rel_heights = c(0.5, 1, 1),
           align = "v")
 
 
-plot_grid(rich_plots, invsimps_plots_noyaxis,
+invsimps_plots_noyaxis <- 
+  plot_grid(invsimps_distribution_plot + theme(axis.title.y = element_blank(), axis.text.y = element_blank()), 
+            prod_vs_invsimps_plot + theme(axis.title.y = element_blank()), 
+            percell_prod_vs_invsimps_plot + theme(axis.title.y = element_blank(), legend.position = "none"), 
+          labels = c("B", "D", "F"), ncol = 1, nrow = 3,
+          rel_heights = c(0.5, 1, 1),
+          align = "v")
+
+
+figure2_row1 <- plot_grid(rich_plots, invsimps_plots_noyaxis,
           ncol = 2, nrow = 1, rel_widths = c(1, 0.825),
           align = "h")
+
+
+######## FIGURE 2
+plot_grid(figure2_row1, legend,
+                   ncol = 1, nrow = 2, 
+                   rel_heights = c(1, 0.05))
+
 ```
 
 
@@ -1332,7 +1349,8 @@ ggplot(filter(otu_alphadiv, measure == "Simpsons_Evenness"),
 plot_all_rich_percell <- 
   ggplot(richness, aes(x=mean, y=log10(fracprod_per_cell_noinf))) + 
   geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd), color = "grey", alpha = 0.7) + # X-axis errorbars
-  geom_point(size = 3.5, shape = 21, color = "black", fill =  "grey") +
+  geom_point(size = 3.5, aes(shape = season), color = "black", fill =  "grey") +
+  scale_shape_manual(values = season_shapes) + 
   ylab("log10(production/cell)\n (μgC/cell/hr)") + xlab("Observed Richness") +
   geom_smooth(method='lm', color = "#424645", fill = "#424645") + 
   scale_x_continuous(limits = c(150,950), breaks = seq(from = 0, to =925, by = 150)) + 
@@ -1346,7 +1364,8 @@ plot_all_rich_percell <-
 plot_all_shannon_percell <- 
   ggplot(shannon, aes(x=mean, y=log10(fracprod_per_cell_noinf))) + 
   geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd), color = "grey", alpha = 0.7) + # X-axis errorbars
-  geom_point(size = 3.5, shape = 21, color = "black", fill =  "grey") +
+  geom_point(size = 3.5, aes(shape = season), color = "black", fill =  "grey") +
+  scale_shape_manual(values = season_shapes) + 
   ylab("log10(production/cell)\n (μgC/cell/hr)") + xlab("Shannon Entropy") +
   geom_smooth(method='lm', color = "#424645", fill = "#424645") + 
   scale_x_continuous(limits = c(3.5,6), breaks = seq(from = 3, to =6, by = 0.5)) + 
@@ -1361,7 +1380,8 @@ plot_all_shannon_percell <-
 plot_all_invsimps_percell <- 
   ggplot(invsimps, aes(x=mean, y=log10(fracprod_per_cell_noinf))) + 
   geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd), color = "grey", alpha = 0.7) + # X-axis errorbars
-  geom_point(size = 3.5, shape = 21, color = "black", fill =  "grey") +
+  geom_point(size = 3.5, aes(shape = season), color = "black", fill =  "grey") +
+  scale_shape_manual(values = season_shapes) + 
   ylab("log10(production/cell)\n (μgC/cell/hr)") + xlab("Inverse Simpson") +
   geom_smooth(method='lm', color = "#424645", fill = "#424645") + 
   scale_x_continuous(limits = c(0,85), breaks = seq(from = 0, to = 85, by = 20)) + 
@@ -1376,8 +1396,9 @@ plot_all_invsimps_percell <-
 plot_all_simpseven_percell <- 
   ggplot(simpseven, aes(x=mean, y=log10(fracprod_per_cell_noinf))) + 
   geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd), color = "grey", alpha = 0.7) + # X-axis errorbars
-  geom_point(size = 3.5, shape = 21, color = "black", fill =  "grey") +
-  ylab("log10(production/cell)\n (μgC/cell/hr)") + xlab("Inverse Simpson") +
+  geom_point(size = 3.5, aes(shape = season), color = "black", fill =  "grey") +
+  scale_shape_manual(values = season_shapes) + 
+  ylab("log10(production/cell)\n (μgC/cell/hr)") + xlab("Simpson's Evenness") +
   geom_smooth(method='lm', color = "#424645", fill = "#424645") + 
   scale_x_continuous(limits = c(0,0.15), breaks = seq(from = 0, to = 0.15, by = 0.03)) + 
   scale_y_continuous(limits = c(-8.5, -5.4), breaks = seq(from = -9, to = -5, by = 1)) + 
@@ -1388,14 +1409,22 @@ plot_all_simpseven_percell <-
         legend.text = element_text(size = 14))
 
 
-plot_grid(plot_all_rich_percell, 
-          plot_all_shannon_percell + theme(axis.title.y = element_blank()), 
-          plot_all_invsimps_percell + theme(axis.title.y = element_blank()), 
-          plot_all_simpseven_percell + theme(axis.title.y = element_blank()),
+figs3_row1 <- plot_grid(plot_all_rich_percell + theme(legend.position = "none"), 
+          plot_all_shannon_percell + theme(axis.title.y = element_blank(), legend.position = "none"), 
+          plot_all_invsimps_percell + theme(axis.title.y = element_blank(), legend.position = "none"), 
+          plot_all_simpseven_percell + theme(axis.title.y = element_blank(), legend.position = "none"),
           align = "h", labels = c("A", "B", "C", "D"),
           rel_widths = c(1.05, 0.9, 0.9, 0.9),
           nrow = 1, ncol = 4)
 
+######## FIGURE S3
+# legend
+legend_grey <- get_legend(plot_all_rich_percell)
+
+
+plot_grid(figs3_row1, legend_grey,
+                   ncol = 1, nrow = 2, 
+                   rel_heights = c(1, 0.05))
 ```
 
 
@@ -1495,6 +1524,8 @@ lasso_data_df <- metadata_pca %>%
   dplyr::select(-c(project, year, Date, limnion, norep_water_name, dnaconcrep1, 
                    SD_perc_attached_bacprod, SE_total_bac_abund, SE_perc_attached_abund, SE_attached_bac))
 
+
+### PARTICLE DATA 
 lasso_data_df_particle <- lasso_data_df %>%
   filter(fraction == "Particle" ) %>%
   dplyr::select(-fraction)
@@ -1502,46 +1533,63 @@ lasso_data_df_particle <- lasso_data_df %>%
 lasso_data_df_particle_noprod <- lasso_data_df_particle %>%
   dplyr::select(-c(fracprod_per_cell, fracprod_per_cell_noinf, 
                    tot_bacprod, SD_tot_bacprod,SD_frac_bacprod, 
-                   lakesite, season, norep_filter_name, station, BGA_cellspermL, Turb_NTU)) 
+                   norep_filter_name, BGA_cellspermL, Turb_NTU,
+                   lakesite, season, station)) 
   
-  # Must be numerical to go into the model 
-lasso_data_df_particle_noprod <- apply(lasso_data_df_particle_noprod, 2, as.numeric) %>%
-  as.data.frame()
-
 percell_lasso_data_df_particle_noprod <- lasso_data_df_particle %>%
   dplyr::select(-c(fracprod_per_cell, frac_bacprod,
                    tot_bacprod, SD_tot_bacprod,SD_frac_bacprod, 
+                   lakesite, season, norep_filter_name, station, BGA_cellspermL, Turb_NTU)) %>%
+  dplyr::filter(Temp_C != 14.28) # Remove the missing row of data :( )
+
+
+## ALL DATA 
+all_dat_lasso_comm <- lasso_data_df %>%
+    dplyr::select(-c(fracprod_per_cell, fracprod_per_cell_noinf, 
+                   tot_bacprod, SD_tot_bacprod,SD_frac_bacprod, 
+                   norep_filter_name, BGA_cellspermL, Turb_NTU,
+                   lakesite, season, station, fraction)) 
+  
+
+all_dat_lasso_percapita <- lasso_data_df  %>%
+  dplyr::select(-c(fracprod_per_cell, frac_bacprod,
+                   tot_bacprod, SD_tot_bacprod,SD_frac_bacprod, fraction,
                    lakesite, season, norep_filter_name, station, BGA_cellspermL, Turb_NTU)) %>%
   dplyr::filter(Temp_C != 14.28) # Remove the missing row of data :( )
 ```
 
 
 # Multiple Regression
-```{r}
-
+```{r multiple-regression}
+## Community Bulk Production: No correlation with PC2
 summary(lm(frac_bacprod ~ Inverse_Simpson, data = lasso_data_df_particle)) 
 
 summary(lm(frac_bacprod ~ PC2, data = lasso_data_df_particle)) 
 
+## Per Capita Production --> Correlations for both Simpson and PC2
 summary(lm(log10(fracprod_per_cell_noinf) ~ Inverse_Simpson, data = lasso_data_df_particle)) 
 
 summary(lm(log10(fracprod_per_cell_noinf) ~ PC2, data = lasso_data_df_particle)) 
 
 summary(lm(log10(fracprod_per_cell_noinf) ~ Inverse_Simpson + PC2, data = lasso_data_df_particle)) 
-
-
+summary(lm(log10(fracprod_per_cell_noinf) ~ unweighted_div, data = lasso_data_df_particle)) 
 ```
 
 
 # Perform Ridge and Lasso regression
-## Bulk Community Production
-```{r bulk-lasso-ridge, dependson = c("calc-div"), fig.width=8, fig.height=4}
+## Bulk Community Production: PARTICLE 
+```{r part-bulk-lasso-ridge, dependson = c("calc-div"), fig.width=8, fig.height=4}
 set.seed(777)
+
+scaled_comm_data <- lasso_data_df_particle_noprod %>%
+  scale() %>%
+  as.data.frame()
+
 
 # Set model parameters for community level data
 ## NOTE: there cannot be any data with NA
-x = model.matrix(frac_bacprod ~ ., lasso_data_df_particle_noprod)[,-1]
-y = lasso_data_df_particle_noprod$frac_bacprod
+x = model.matrix(frac_bacprod ~ ., scaled_comm_data)[,-1]
+y = scaled_comm_data$frac_bacprod
 grid = 10^seq(10,-2,length = 100)
 
 # Pull out test and training sets for cross validation
@@ -1555,7 +1603,6 @@ y_test <- y[test]
 ridge_divs_train <- glmnet(x[train,], y[train], alpha = 0, lambda = grid, thresh = 1e-12, standardize = TRUE)
 par(mfrow = c(1,2)) 
 plot(ridge_divs_train)
-legend("top")
 
 # Cross validation
 cv_ridge_divs <- cv.glmnet(x[train,], y[train], alpha = 0)
@@ -1569,7 +1616,6 @@ mean((ridge_divs_pred - y_test)^2) # Test MSE
 ridge_divs <- glmnet(x, y, alpha = 0, lambda = grid, standardize = TRUE)
 par(mfrow = c(1,1))
 plot(ridge_divs)
-legend("top")
 
 
 ################ LASSO
@@ -1590,12 +1636,13 @@ mean((lasso_divs_pred - y_test)^2)
 lasso_divs <- glmnet(x, y, alpha = 1, lambda = grid, standardize = TRUE)
 par(mfrow = c(1,1))
 plot(lasso_divs)
-legend("top")
+
+plot(lasso_divs, xvar = "lambda", label = TRUE)
+plot(lasso_divs, xvar = "dev", label = TRUE)
+
 
 # What are the lasso coefficients?
 predict(lasso_divs, type = "coefficients", s = best_lasso_lambda)
-# What about for ridge regression?
-predict(ridge_divs_pred, type = "coefficients", s = best_ridge_lambda)
 ```
 
 The test MSE for ridge regression is `r mean((ridge_divs_pred - y_test)^2)` while the test MSE for lasso is `r mean((lasso_divs_pred - y_test)^2)`.  
@@ -1603,22 +1650,93 @@ The test MSE for ridge regression is `r mean((ridge_divs_pred - y_test)^2)` whil
 Additionally, the lasso model uses Inverse Simpson as the **best and only** predictor of production!
 
 
-## Per capita Production 
+
+
+## Per capita Production: PARTICLE
 ```{r percapita-lasso-ridge, dependson = c("calc-div", "prepare-data"), fig.width=8, fig.height=4}
-percell_lasso_data_df_ALL <- lasso_data_df %>%
-  dplyr::select(-c(fracprod_per_cell, frac_bacprod,
-                   tot_bacprod, SD_tot_bacprod,SD_frac_bacprod, 
-                   lakesite, season, norep_filter_name, station, BGA_cellspermL, Turb_NTU)) %>%
+scaled_percapita_data <- percell_lasso_data_df_particle_noprod %>%
   dplyr::filter(!is.na(fracprod_per_cell_noinf)) %>%
   mutate(log10_percell = log10(fracprod_per_cell_noinf)) %>%
-  dplyr::select(-c(fracprod_per_cell_noinf))
+  dplyr::select(-c(fracprod_per_cell_noinf)) %>%
+  scale() %>%
+  as.data.frame()
 
 set.seed(777)
 
 # Set model parameters for community level data
 ## NOTE: there cannot be any data with NA
-x = model.matrix(log10_percell ~ ., percell_lasso_data_df_ALL)[,-1]
-y = percell_lasso_data_df_ALL$log10_percell
+x = model.matrix(log10_percell ~ ., scaled_percapita_data)[,-1]
+y = scaled_percapita_data$log10_percell
+grid = 10^seq(10,-2,length = 100)
+
+# Pull out test and training sets for cross validation
+# We will use half the set to train the model and the 2nd half of the dataset to test the model 
+train <- sample(1:nrow(x), nrow(x)/2)
+test <- -train
+y_test <- y[test]
+
+################ RIDGE
+# Run RIDGE regression with alpha = 0
+ridge_divs_train <- glmnet(x[train,], y[train], alpha = 0, lambda = grid, thresh = 1e-12, standardize = FALSE)
+par(mfrow = c(1,2)) 
+plot(ridge_divs_train)
+
+# Cross validation
+cv_ridge_divs <- cv.glmnet(x[train,], y[train], alpha = 0)
+plot(cv_ridge_divs)
+best_ridge_lambda <- cv_ridge_divs$lambda.min
+ridge_divs_pred <- predict(ridge_divs_train, s = best_ridge_lambda, newx = x[test,])
+mean((ridge_divs_pred - y_test)^2) # Test MSE
+
+
+## Run ridge on the entire dataset 
+ridge_divs <- glmnet(x, y, alpha = 0, lambda = grid, standardize = FALSE)
+par(mfrow = c(1,1))
+plot(ridge_divs)
+
+################ LASSO
+# Run lasso regression with alpha = 1
+lasso_divs_train <- glmnet(x[train,], y[train], alpha = 1, lambda = grid, standardize = FALSE)
+par(mfrow = c(1,2))
+plot(lasso_divs_train)
+
+# Cross validation
+cv_lasso_divs <- cv.glmnet(x[train,], y[train], alpha = 1)
+plot(cv_lasso_divs)
+best_lasso_lambda <- cv_lasso_divs$lambda.min
+lasso_divs_pred <- predict(lasso_divs_train, s = best_lasso_lambda, newx = x[test,])
+mean((lasso_divs_pred - y_test)^2)
+
+
+## Run lasso on the entire dataset 
+lasso_divs <- glmnet(x, y, alpha = 1, lambda = grid, standardize = FALSE)
+par(mfrow = c(1,1))
+plot(lasso_divs)
+
+plot(lasso_divs, xvar = "lambda", label = TRUE)
+plot(lasso_divs, xvar = "dev", label = TRUE)
+
+# What are the lasso coefficients?
+predict(lasso_divs, type = "coefficients", s = best_lasso_lambda)
+```
+
+
+## Per-capita Production:  ALL SAMPLES 
+```{r all-percapita-lasso-ridge, dependson = c("calc-div"), fig.width=8, fig.height=4}
+set.seed(777)
+
+scaled_percapita_ALL <- all_dat_lasso_percapita %>%
+  dplyr::filter(!is.na(fracprod_per_cell_noinf)) %>%
+  mutate(log10_percell = log10(fracprod_per_cell_noinf)) %>%
+  dplyr::select(-c(fracprod_per_cell_noinf)) %>%
+  scale() %>%
+  as.data.frame()
+
+
+# Set model parameters for community level data
+## NOTE: there cannot be any data with NA
+x = model.matrix(log10_percell ~ ., scaled_percapita_ALL)[,-1]
+y = scaled_percapita_ALL$log10_percell
 grid = 10^seq(10,-2,length = 100)
 
 # Pull out test and training sets for cross validation
@@ -1646,6 +1764,7 @@ ridge_divs <- glmnet(x, y, alpha = 0, lambda = grid, standardize = TRUE)
 par(mfrow = c(1,1))
 plot(ridge_divs)
 
+
 ################ LASSO
 # Run lasso regression with alpha = 1
 lasso_divs_train <- glmnet(x[train,], y[train], alpha = 1, lambda = grid, standardize = TRUE)
@@ -1665,9 +1784,15 @@ lasso_divs <- glmnet(x, y, alpha = 1, lambda = grid, standardize = TRUE)
 par(mfrow = c(1,1))
 plot(lasso_divs)
 
+plot(lasso_divs, xvar = "lambda", label = TRUE)
+plot(lasso_divs, xvar = "dev", label = TRUE)
+
+
 # What are the lasso coefficients?
 predict(lasso_divs, type = "coefficients", s = best_lasso_lambda)
 ```
+
+
 
 
 ## Figure 3: Unweighted ses.mpd
@@ -1688,8 +1813,9 @@ unweight_distribution_plot <-
   ggplot(unweighted_df, aes(y = mpd.obs.z, x = fraction)) +
   #scale_color_manual(values = fraction_colors) + 
   scale_fill_manual(values = fraction_colors) +
-  geom_jitter(size = 3, shape = 21, aes(fill = fraction), width = 0.2) + 
   geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(fill = fraction)) +
+  geom_jitter(size = 3, aes(fill = fraction, shape = season), width = 0.2) + 
+  scale_shape_manual(values = season_shapes) + 
   scale_y_continuous(limits = c(-1.5,1.75), breaks = seq(from = -1.5, to = 1.5, by = 0.5)) + 
   ylab("Standardized Effect Size \n Unweighted Mean Pairwise Dist") +
   xlab("Fraction") + 
@@ -1713,7 +1839,8 @@ unweight_rich_vs_mpd_plot <-
   ggplot(unweighted_df, aes(y = mean, x = mpd.obs.z)) +
   geom_errorbar(aes(ymin = mean - sd, ymax = mean + sd, color = fraction), alpha = 0.7) + # X-axis errorbars
   geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) +
-  geom_point(size = 3, shape = 21, aes(fill = fraction)) + ylab("Observed  Richness") +
+  geom_point(size = 3, aes(fill = fraction, shape = season)) + ylab("Observed  Richness") +
+  scale_shape_manual(values = season_shapes) + 
   xlab("Standardized Effect Size \n Unweighted Mean Pairwise Dist") +
   scale_fill_manual(values = fraction_colors) +
   geom_smooth(method = "lm", color = "#424645", fill = "#424645", alpha = 0.3) + 
@@ -1735,7 +1862,8 @@ unweight_prod_vs_mpd_plot <-
   ggplot(unweighted_df, aes(y = frac_bacprod, x = mpd.obs.z, fill = fraction)) +
   geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod, color = fraction), alpha = 0.7) + # X-axis errorbars
   geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) +
-  geom_point(size = 3, shape = 21) + 
+  geom_point(size = 3, aes(shape = season)) +
+  scale_shape_manual(values = season_shapes) + 
   ylab("Heterotrophic Production \n (μgC/L/hr)") +
   xlab("Standardized Effect Size \n Unweighted Mean Pairwise Dist") +
   scale_fill_manual(values = fraction_colors) +
@@ -1756,10 +1884,11 @@ unweight_percell_vs_mpd_plot <-
   ggplot(unweighted_df, 
        aes(y = log10(fracprod_per_cell_noinf), x = mpd.obs.z)) +
   geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) +
-  geom_point(size = 3, shape = 21, aes(fill = fraction)) + 
+  geom_point(size = 3,  aes(fill = fraction, shape = season)) + 
   ylab("log10(Production/cell)\n (μgC/cell/hr)") +
   xlab("Standardized Effect Size \n Unweighted Mean Pairwise Dist") +
   scale_fill_manual(values = fraction_colors) +
+  scale_shape_manual(values = season_shapes) + 
   geom_smooth(method = "lm", color="#424645", fill = "#424645", alpha = 0.3) +
   #stat_smooth(method="lm", se=TRUE, formula= y ~ poly(x, 2, raw=TRUE), color="#424645", fill = "#424645", alpha = 0.3) +
   scale_y_continuous(limits = c(-8.5,-5), breaks = c(-8, -7, -6)) + 
@@ -1771,10 +1900,19 @@ unweight_percell_vs_mpd_plot <-
         legend.text = element_text(size = 14))
 
 
-plot_grid(unweight_distribution_plot, unweight_rich_vs_mpd_plot, unweight_prod_vs_mpd_plot, unweight_percell_vs_mpd_plot, 
+
+
+
+######## FIGURE 3
+figure3_row1 <- plot_grid(unweight_distribution_plot, unweight_rich_vs_mpd_plot, unweight_prod_vs_mpd_plot, 
+          unweight_percell_vs_mpd_plot + theme(legend.position = "none"), 
           labels = c("A", "B", "C", "D"), ncol = 1, nrow = 4,
-          rel_heights = c(0.5, 0.8, 0.8, 1.2),
+          rel_heights = c(0.5, 1, 1, 1),
           align = "v")
+
+plot_grid(figure3_row1, legend,
+                   ncol = 1, nrow = 2, 
+                   rel_heights = c(1, 0.05))
 ```
 
 
@@ -1797,8 +1935,9 @@ weight_distribution_plot <-
   ggplot(weighted_df, aes(y = mpd.obs.z, x = fraction)) +
   #scale_color_manual(values = fraction_colors) + 
   scale_fill_manual(values = fraction_colors) +
-  geom_jitter(size = 3, shape = 21, aes(fill = fraction), width = 0.2) + 
   geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(fill = fraction)) +
+  geom_jitter(size = 3.5, aes(fill = fraction, shape = season), width = 0.2) + 
+  scale_shape_manual(values = season_shapes) + 
   scale_y_continuous(limits = c(-1.5,1.75), breaks = seq(from = -1.5, to = 1.5, by = 0.5)) + 
   ylab("Standardized Effect Size \n Unweighted Mean Pairwise Dist") +
   xlab("Fraction") + 
@@ -1821,7 +1960,8 @@ weight_invsimps_vs_mpd_plot <-
   ggplot(weighted_df, aes(y = mean, x = mpd.obs.z, fill = fraction)) +
   geom_errorbar(aes(ymin = mean - sd, ymax = mean + sd, color = fraction), alpha = 0.7) + # X-axis errorbars
   geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) +
-  geom_point(size = 3, shape = 21) + ylab("Inverse Simpson") +
+  geom_point(size = 3.5, aes(shape = season)) + ylab("Inverse Simpson") +
+  scale_shape_manual(values = season_shapes) + 
   #xlab("Standardized Effect Size \n Weighted Mean Pairwise Dist") +
   scale_fill_manual(values = fraction_colors) +
   scale_x_continuous(limits = c(-1.5,1.75), breaks = seq(from = -1.5, to = 1.5, by = 0.5)) + 
@@ -1841,7 +1981,8 @@ weight_prod_vs_mpd_plot <-
   ggplot(weighted_df, aes(y = frac_bacprod, x = mpd.obs.z, fill = fraction)) +
   geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod, color = fraction), alpha = 0.7) + # X-axis errorbars
   geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) +
-  geom_point(size = 3, shape = 21) + 
+  geom_point(size = 3.5, aes(shape = season)) + 
+  scale_shape_manual(values = season_shapes) + 
   ylab("Heterotrophic Production \n (μgC/L/hr)") +
   xlab("Standardized Effect Size \n Weighted Mean Pairwise Dist") +
   scale_fill_manual(values = fraction_colors) +
@@ -2166,3 +2307,24 @@ ggplot(df_2, aes(y = ntaxa, x = mpd.obs.z, fill = fraction)) +
 ```
 
 
+
+## Plot: Temp vs Production
+```{r temp-vs-prod, dependson = "prepare-data"}
+ggplot(lasso_data_df, aes(x = Temp_C, y = frac_bacprod, color = fraction)) +
+  geom_point(size = 3.5, aes(shape = season, fill = fraction), color = "black", guide = FALSE) + 
+  xlab("Water Temperature (C)") + ylab("Bulk Community Production (ug C/L/Hr)") +
+  scale_fill_manual(values = fraction_colors, guide = 'none') +
+  scale_color_manual(values = fraction_colors) + 
+  scale_shape_manual(values = season_shapes) + 
+  geom_smooth(method = "lm", fill = NA, lty = 2, aes(color = fraction)) +
+  theme(legend.position = c(0.5, 0.95), legend.direction = "horizontal",
+        legend.title = element_blank())
+
+
+free_data_df <- dplyr::filter(lasso_data_df, fraction == "Free")
+
+summary(lm(frac_bacprod ~ Temp_C, data = free_data_df))
+
+particle_data_df <- dplyr::filter(lasso_data_df, fraction == "Particle")
+summary(lm(frac_bacprod ~ Temp_C, data = particle_data_df))
+```
