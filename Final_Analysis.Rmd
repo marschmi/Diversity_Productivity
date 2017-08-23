@@ -31,7 +31,7 @@ knitr::opts_chunk$set(eval = TRUE,
                       echo = TRUE, 
                       cache = TRUE,
                       include = TRUE,
-                      warning = TRUE,
+                      warning = FALSE,
                       collapse = FALSE,
                       message = FALSE,
                       engine = "R", # Chunks will always have R code, unless noted
@@ -62,7 +62,7 @@ library(caret)      # For cross validation
 library(pander)     # For pretty tables 
 library(glmnet)     # For lasso and ridge regressions 
 source("code/Muskegon_functions.R")
-source("code/set_colors.R") 
+source("code/set_colors.R")  
 ```
 
 
@@ -515,10 +515,27 @@ biplot(pca_environ,
      ylab = paste("PC2", paste(round(summary(pca_environ)$cont$importance[2,2]*100, digits = 2), "%", sep = ""), sep = ": "))
 ```
 
+```{r}
+ggplot(filter(metadata, norep_filter_name != "MOTEJ515"), 
+       aes(y = log10(as.numeric(fraction_bac_abund)), x = fraction)) +
+  geom_jitter(size = 3, aes(fill = fraction, shape = season), width = 0.2) + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA, aes( fill = fraction)) +
+  ylab("Log10(Bacterial Counts) \n (cells/mL)") +
+  scale_fill_manual(values = fraction_colors) +
+  scale_shape_manual(values = season_shapes) +
+  ##### Particle vs free cell abundances 
+  geom_path(data = dat1, aes(x = a, y = b), linetype = 1, color = "gray40") +
+  annotate("text", x=1.5, y=6.5, fontface = "bold",  size = 3.5, color = "gray40",
+           label= paste("***\np =", round(frac_abund_wilcox$p.value, digits = 6))) +
+  theme(legend.position = "bottom",
+        legend.title = element_blank(),
+        axis.title.x = element_blank())
 
+
+```
 
 ## Figure 1
-```{r boxplot-cellcount-prod, eval = TRUE, fig.width = 10, fig.height = 4, warning = FALSE, dependson="load-data"}
+```{r boxplot-cellcount-prod, eval = TRUE, fig.width = 8.5, fig.height = 3.5, warning = FALSE, dependson="load-data"}
 ######################################################### Fraction ABUNDANCe 
 frac_abund_wilcox <- wilcox.test(log10(as.numeric(fraction_bac_abund)) ~ fraction, data = metadata)
 frac_abund_wilcox
@@ -556,7 +573,7 @@ metadata %>%
   summarize(mean(frac_bacprod))
 
 # Make a data frame to draw significance line in boxplot (visually calculated)
-dat2 <- data.frame(a = c(1.15,1.15,1.85,1.85), b = c(67,68,68,67)) # WholePart vs WholeFree
+dat2 <- data.frame(a = c(1.15,1.15,1.85,1.85), b = c(71,72,72,71)) # WholePart vs WholeFree
 
 
 poster_b <- ggplot(metadata, aes(y = frac_bacprod, x = fraction)) + 
@@ -564,10 +581,11 @@ poster_b <- ggplot(metadata, aes(y = frac_bacprod, x = fraction)) +
   geom_boxplot(alpha = 0.5, outlier.shape = NA, aes( fill = fraction)) +
   scale_fill_manual(values = fraction_colors, guide = FALSE) +
   scale_shape_manual(values = season_shapes) +
+  scale_y_continuous(limits = c(0, 73)) +
   ylab("Community Production \n (μgC/L/hr)") +
   ##### Particle vs free bulk production  
   geom_path(data = dat2, aes(x = a, y = b), linetype = 1, color = "gray40") +
-  annotate("text", x=1.5, y=68, fontface = "bold",  size = 3.5, color = "gray40",
+  annotate("text", x=1.5, y=72, fontface = "bold",  size = 3.5, color = "gray40",
            label= paste("**\np =", round(totprod_wilcox$p.value, digits = 3))) +
   theme(legend.position = "none",
         axis.title.x = element_blank())
@@ -1008,14 +1026,14 @@ rich_nums <- data.frame(a = c(1.15,1.15,1.85,1.85), b = c(920, 930, 930, 920)) #
 rich_distribution_plot <- 
   ggplot(richness, aes(y = mean, x = fraction)) +
   scale_fill_manual(values = fraction_colors) +
-  geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(fill = fraction)) +
   geom_jitter(size = 3, aes(fill = fraction, shape = season), width = 0.2) + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(fill = fraction)) +
   scale_y_continuous(limits = c(150,950), breaks = seq(from = 0, to =925, by = 150)) + 
   xlab("Observed Richness") + xlab("Fraction") + 
   scale_shape_manual(values = season_shapes) +
   geom_path(data = rich_nums, aes(x = a, y = b), linetype = 1, color = "#424645") +
   annotate("text", x=1.5, y=790, fontface = "bold",  size = 4, color = "#424645",
-           label= paste("***\np =", round(rich_fraction_wilcox$p.value, digits = 5))) +
+           label= paste("p =", round(rich_fraction_wilcox$p.value, digits = 5))) +
   theme(legend.position = "none",# axis.title.y = element_blank(),
         axis.title.x = element_blank(), axis.text.x = element_blank()) +
   coord_flip()
@@ -1078,8 +1096,8 @@ invsimps_distribution_plot <-
   ggplot(invsimps, aes(y = mean, x = fraction)) +
   scale_fill_manual(values = fraction_colors) +
   scale_shape_manual(values = season_shapes) +
-  geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(fill = fraction)) +
   geom_jitter(size = 3,  aes(fill = fraction, shape = season), width = 0.2) + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(fill = fraction)) +
   scale_y_continuous(limits = c(0,85), breaks = seq(from = 0, to = 85, by = 20)) + 
   ylab("Inverse Simpson") + xlab("Fraction") + 
   geom_path(data = invsimps_nums, aes(x = a, y = b), linetype = 1, color = "#424645") +
@@ -1165,7 +1183,7 @@ figure2_row1 <- plot_grid(rich_plots, invsimps_plots_noyaxis,
 
 
 ######## FIGURE 2
-plot_grid(figure2_row1, legend,
+plot_grid(figure2_row1, season_legend,
                    ncol = 1, nrow = 2, 
                    rel_heights = c(1, 0.05))
 
@@ -1189,15 +1207,16 @@ shannon_nums <- data.frame(a = c(1.15,1.15,1.85,1.85), b = c(5.8, 5.9, 5.9, 5.8)
 shannon_distribution_plot <- 
   ggplot(shannon, aes(y = mean, x = fraction)) +
   scale_fill_manual(values = fraction_colors) +
-  geom_jitter(size = 3, shape = 21, aes(fill = fraction), width = 0.2) + 
+  geom_jitter(size = 3, aes(shape = season, fill = fraction), width = 0.2) + 
   geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(fill = fraction)) +
   scale_y_continuous(limits = c(3.5,6), breaks = seq(from = 3, to =6, by = 0.5)) + 
   xlab("Shannon Entropy") +
   xlab("Fraction") + 
+  scale_shape_manual(values = season_shapes) +
     # Add line and pval
   geom_path(data = shannon_nums, aes(x = a, y = b), linetype = 1, color = "#424645") +
   annotate("text", x=1.5, y=5.6, fontface = "bold",  size = 4, color = "#424645",
-           label= paste("***\np =", round(shannon_fraction_wilcox$p.value, digits = 3))) +
+           label= paste("*p =", round(shannon_fraction_wilcox$p.value, digits = 3))) +
   theme(legend.position = "none",# axis.title.y = element_blank(),
         axis.title.x = element_blank(), axis.text.x = element_blank()) +
   coord_flip()
@@ -1208,8 +1227,9 @@ prod_vs_shannon_plot <-
   ggplot(shannon, aes(x=mean, y=frac_bacprod)) + 
   geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd, color = fraction), alpha = 0.7) + # X-axis errorbars
   geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod, color = fraction)) +  # Y-axis errorbars
-  geom_point(size = 3.5, shape = 21, color = "black", aes(fill = fraction)) +
+  geom_point(size = 3.5, color = "black", aes(fill = fraction, shape = season)) +
   scale_color_manual(values = fraction_colors) +
+  scale_shape_manual(values = season_shapes) +
   scale_fill_manual(values = fraction_colors) +
   ylab("Heterotrophic Production \n (μgC/L/hr)") + 
   scale_x_continuous(limits = c(3.5,6), breaks = seq(from = 3, to =6, by = 0.5)) + 
@@ -1225,9 +1245,10 @@ prod_vs_shannon_plot <-
 percell_prod_vs_shannon_plot <- 
   ggplot(shannon, aes(x=mean, y=log10(fracprod_per_cell_noinf))) + 
   geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd, color = fraction), alpha = 0.7) + # X-axis errorbars
-  geom_point(size = 3.5, shape = 21, color = "black", aes(fill = fraction)) +
+  geom_point(size = 3.5, color = "black", aes(fill = fraction, shape = season)) +
   scale_color_manual(values = fraction_colors) +
   scale_fill_manual(values = fraction_colors) +
+  scale_shape_manual(values = season_shapes) +
   ylab("log10(production/cell)\n (μgC/cell/hr)") +
   xlab("Shannon Entropy") +
   geom_smooth(data=filter(shannon, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
@@ -1237,8 +1258,7 @@ percell_prod_vs_shannon_plot <-
            label = paste("R2 =", round(summary(lm_percell_prod_vs_shannon_PA)$adj.r.squared, digits = 2), "\n", 
                          "p =", round(unname(summary(lm_percell_prod_vs_shannon_PA)$coefficients[,4][2]), digits = 3))) + 
   #annotate("text", x = 250, y=55, color = "skyblue", fontface = "bold", label = paste("Free = NS")) +
-  theme(legend.title = element_blank(), legend.position ="bottom", 
-        legend.text = element_text(size = 14))
+  theme(legend.title = element_blank(), legend.position = "none")
 
 
 
@@ -1262,10 +1282,11 @@ simpseven_nums <- data.frame(a = c(1.15,1.15,1.85,1.85), b = c(0.14, 0.15, 0.15,
 simpseven_distribution_plot <- 
   ggplot(simpseven, aes(y = mean, x = fraction)) +
   scale_fill_manual(values = fraction_colors) +
-  geom_jitter(size = 3, shape = 21, aes(fill = fraction), width = 0.2) + 
+  geom_jitter(size = 3, aes(fill = fraction, shape = season), width = 0.2) + 
   geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(fill = fraction)) +
   scale_y_continuous(limits = c(0,0.15), breaks = seq(from = 0, to = 0.15, by = 0.03)) + 
   ylab("Simpson's Evenness") +
+  scale_shape_manual(values = season_shapes) +
   xlab("Fraction") + 
   geom_path(data = simpseven_nums, aes(x = a, y = b), linetype = 1, color = "#424645") +
   annotate("text", x=1.5, y=0.14, fontface = "bold",  size = 4, color = "#424645", label= "NS") +
@@ -1281,8 +1302,9 @@ prod_vs_simpseven_plot <-
   ggplot(simpseven, aes(x=mean, y=frac_bacprod)) + 
   geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd, color = fraction), alpha = 0.7) + # X-axis errorbars
   geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod, color = fraction)) +  # Y-axis errorbars
-  geom_point(size = 3.5, shape = 21, color = "black", aes(fill = fraction)) +
+  geom_point(size = 3.5, color = "black", aes(fill = fraction, shape = season)) +
   scale_color_manual(values = fraction_colors) +
+  scale_shape_manual(values = season_shapes) +
   scale_fill_manual(values = fraction_colors) +
   ylab("Heterotrophic Production \n (μgC/L/hr)") + 
   ylab("Simpson's Evenness") +
@@ -1300,8 +1322,9 @@ prod_vs_simpseven_plot <-
 percell_prod_vs_simpseven_plot <- 
   ggplot(simpseven, aes(x=mean, y=log10(fracprod_per_cell_noinf))) + 
   geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd, color = fraction), alpha = 0.7) + # X-axis errorbars
-  geom_point(size = 3.5, shape = 21, color = "black", aes(fill = fraction)) +
+  geom_point(size = 3.5, color = "black", aes(fill = fraction, shape = season)) +
   scale_color_manual(values = fraction_colors) +
+  scale_shape_manual(values = season_shapes) +
   scale_fill_manual(values = fraction_colors) +
   ylab("log10(production/cell)\n (μgC/cell/hr)") +
   xlab("Simpson's Evenness") +
@@ -1310,8 +1333,7 @@ percell_prod_vs_simpseven_plot <-
   annotate("text", x = 0.14, y=-6.3, color = "#FF6600", fontface = "bold",size = 4,
            label = paste("R2 =", round(summary(lm_percell_prod_vs_simpseven_PA)$adj.r.squared, digits = 2), "\n", 
                          "p =", round(unname(summary(lm_percell_prod_vs_simpseven_PA)$coefficients[,4][2]), digits = 4))) +
-  theme(legend.title = element_blank(), legend.position ="bottom", 
-        legend.text = element_text(size = 14))
+  theme(legend.title = element_blank(), legend.position ="none")
 
 
 
@@ -1320,6 +1342,20 @@ simpseven_plots <- plot_grid(simpseven_distribution_plot, prod_vs_simpseven_plot
           rel_heights = c(0.5, 0.8, 1.1),
           align = "v")
 ```
+
+```{r r2-plotting, fig.width=4, fig.height=4}
+R2_val <- grobTree(textGrob(bquote(Adj~R^2 == .(paste(round(summary(lm_prod_vs_shannon_PA)$adj.r.squared, digits = 2)))), 
+                            x=0.5,  y=0.5, gp=gpar(col="#FF6600", size=12, fontface="bold")))
+
+R2 <- grobTree(textGrob(bquote(Adj~R^2~ . (paste("=", round(summary(lm_prod_vs_shannon_PA)$adj.r.squared, digits = 2)))),
+                        #paste("p =", round(unname(summary(lm_prod_vs_shannon_PA)$coefficients[,4][2]), digits = 3)), 
+                            x=0.5,  y=0.75, gp=gpar(col="#FF6600", size=12, fontface="bold")))
+
+
+prod_vs_shannon_plot + 
+  xlab("Shannon Entropy") + annotation_custom(R2)
+```
+
 
 ## Plot Figure S2
 ```{r figS2-noyaxis, fig.width = 8, fig.height = 8, dependson = c("figS2-panels", "calc-div")}
@@ -1333,9 +1369,13 @@ simpseven_plots_noyaxis <-
           align = "v")
 
 
-plot_grid(shannon_plots, simpseven_plots_noyaxis,
+figS2_row1 <- plot_grid(shannon_plots, simpseven_plots_noyaxis,
           ncol = 2, nrow = 1, rel_widths = c(1, 0.825),
           align = "h")
+
+plot_grid(figS2_row1, season_legend,
+          ncol = 1, nrow = 2, rel_heights = c(1, 0.05))
+
 ```
 
 ```{r simps-vs-prod, fig.width=4, fig.height=4, dependson= "calc-div"}
@@ -1595,12 +1635,16 @@ summary(lm(log10(fracprod_per_cell_noinf) ~ unweighted_div, data = lasso_data_df
 # Perform Ridge and Lasso regression
 ## Bulk Community Production: PARTICLE 
 ```{r part-bulk-lasso-ridge, dependson = c("calc-div"), fig.width=8, fig.height=4}
+# Set the seed for reproducibility of the grid values 
 set.seed(777)
 
-scaled_comm_data <- lasso_data_df_particle_noprod %>%
-  scale() %>%
-  as.data.frame()
 
+################ PREPARE DATA ################ 
+# Subset data needed and scale all o
+scaled_comm_data <- 
+  lasso_data_df_particle_noprod %>%    # Use data only for the particle samples  
+  scale() %>%                          # Scale all of the variables to have mean =0 and sd = 1
+  as.data.frame()                      # Make it a dataframe so that model.matrix function works (does not take a matrix)
 
 # Set model parameters for community level data
 ## NOTE: there cannot be any data with NA
@@ -1608,13 +1652,14 @@ x = model.matrix(frac_bacprod ~ ., scaled_comm_data)[,-1]
 y = scaled_comm_data$frac_bacprod
 grid = 10^seq(10,-2,length = 100)
 
+################ PREPARE TRAINING & TESTING DATA FOR CROSS VALIDATION ################ 
 # Pull out test and training sets for cross validation
 # We will use half the set to train the model and the 2nd half of the dataset to test the model 
 train <- sample(1:nrow(x), nrow(x)/2)
 test <- -train
 y_test <- y[test]
 
-################ RIDGE
+################ RIDGE ################ 
 # Run RIDGE regression with alpha = 0
 ridge_divs_train <- glmnet(x[train,], y[train], alpha = 0, lambda = grid, thresh = 1e-12, standardize = TRUE)
 par(mfrow = c(1,2)) 
@@ -1634,7 +1679,7 @@ par(mfrow = c(1,1))
 plot(ridge_divs)
 
 
-################ LASSO
+################ LASSO ################ 
 # Run lasso regression with alpha = 1
 lasso_divs_train <- glmnet(x[train,], y[train], alpha = 1, lambda = grid, standardize = TRUE)
 par(mfrow = c(1,2))
@@ -1648,7 +1693,7 @@ lasso_divs_pred <- predict(lasso_divs_train, s = best_lasso_lambda, newx = x[tes
 mean((lasso_divs_pred - y_test)^2)
 
 
-## Run lasso on the entire dataset 
+## Run lasso on the entire dataset with the best lambda value 
 lasso_divs <- glmnet(x, y, alpha = 1, lambda = grid, standardize = TRUE)
 par(mfrow = c(1,1))
 plot(lasso_divs)
@@ -1657,7 +1702,7 @@ plot(lasso_divs, xvar = "lambda", label = TRUE)
 plot(lasso_divs, xvar = "dev", label = TRUE)
 
 
-# What are the lasso coefficients?
+# What are the lasso coefficients? (Anything with a . is not selected by the model)
 predict(lasso_divs, type = "coefficients", s = best_lasso_lambda)
 ```
 
@@ -1829,8 +1874,8 @@ unweight_distribution_plot <-
   ggplot(unweighted_df, aes(y = mpd.obs.z, x = fraction)) +
   #scale_color_manual(values = fraction_colors) + 
   scale_fill_manual(values = fraction_colors) +
-  geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(fill = fraction)) +
   geom_jitter(size = 3, aes(fill = fraction, shape = season), width = 0.2) + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(fill = fraction)) +
   scale_shape_manual(values = season_shapes) + 
   scale_y_continuous(limits = c(-1.5,1.75), breaks = seq(from = -1.5, to = 1.5, by = 0.5)) + 
   ylab("Standardized Effect Size \n Unweighted Mean Pairwise Dist") +
@@ -1839,7 +1884,7 @@ unweight_distribution_plot <-
   ##### Particle vs free per-cell production 
   geom_path(data = dat4, aes(x = a, y = b), linetype = 1, color = "#424645") +
   annotate("text", x=1.5, y=1.35, fontface = "bold",  size = 4, color = "#424645",
-           label= paste("***\np =", round(unweighted_fraction_wilcox$p.value, digits = 2))) +
+           label= paste("p =", round(unweighted_fraction_wilcox$p.value, digits = 2))) +
   theme(legend.position = "none",# axis.title.y = element_blank(),
         axis.title.x = element_blank(), axis.text.x = element_blank()) +
   coord_flip()
@@ -1902,7 +1947,7 @@ unweight_percell_vs_mpd_plot <-
   geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) +
   geom_point(size = 3,  aes(fill = fraction, shape = season)) + 
   ylab("log10(Production/cell)\n (μgC/cell/hr)") +
-  xlab("Standardized Effect Size \n Unweighted Mean Pairwise Dist") +
+  xlab("Unweighted Phylogenetic Diversity") +
   scale_fill_manual(values = fraction_colors) +
   scale_shape_manual(values = season_shapes) + 
   geom_smooth(method = "lm", color="#424645", fill = "#424645", alpha = 0.3) +
@@ -1923,10 +1968,10 @@ unweight_percell_vs_mpd_plot <-
 figure3_row1 <- plot_grid(unweight_distribution_plot, unweight_rich_vs_mpd_plot, unweight_prod_vs_mpd_plot, 
           unweight_percell_vs_mpd_plot + theme(legend.position = "none"), 
           labels = c("A", "B", "C", "D"), ncol = 1, nrow = 4,
-          rel_heights = c(0.5, 1, 1, 1),
+          rel_heights = c(0.5, 1, 1, 1.2),
           align = "v")
 
-plot_grid(figure3_row1, legend,
+plot_grid(figure3_row1, season_legend,
                    ncol = 1, nrow = 2, 
                    rel_heights = c(1, 0.05))
 ```
@@ -1951,8 +1996,8 @@ weight_distribution_plot <-
   ggplot(weighted_df, aes(y = mpd.obs.z, x = fraction)) +
   #scale_color_manual(values = fraction_colors) + 
   scale_fill_manual(values = fraction_colors) +
-  geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(fill = fraction)) +
   geom_jitter(size = 3.5, aes(fill = fraction, shape = season), width = 0.2) + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(fill = fraction)) +
   scale_shape_manual(values = season_shapes) + 
   scale_y_continuous(limits = c(-1.5,1.75), breaks = seq(from = -1.5, to = 1.5, by = 0.5)) + 
   ylab("Standardized Effect Size \n Unweighted Mean Pairwise Dist") +
@@ -2017,24 +2062,30 @@ weight_percell_vs_mpd_plot <-
   ggplot(weighted_df, 
        aes(y = log10(fracprod_per_cell_noinf), x = mpd.obs.z, fill = fraction)) +
   geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) +
-  geom_point(size = 3, shape = 21) + 
+  geom_point(size = 3.5, aes(shape = season)) + 
+  scale_shape_manual(values = season_shapes) + 
   ylab("log10(Production/cell)\n (μgC/cell/hr)") +
-  xlab("Standardized Effect Size \n Weighted Mean Pairwise Dist") +
+  xlab("Weighted Phylogenetic Diversity") +
   scale_fill_manual(values = fraction_colors) +
   geom_smooth(method = "lm", data = filter(weighted_df, fraction == "Free"), color = "skyblue", fill = "skyblue", alpha = 0.3) +
   scale_x_continuous(limits = c(-1.5,1.75), breaks = seq(from = -1.5, to = 1.5, by = 0.5)) + 
     scale_y_continuous(limits = c(-8.5,-5), breaks = c(-8, -7, -6)) + 
-  annotate("text", x = 0.3, y=-7.9, color = "skyblue", fontface = "bold",
+  annotate("text", x = 0.65, y=-7.9, color = "skyblue", fontface = "bold",
      label = paste("R2 =", round(summary(lm_percell_free_mpd)$adj.r.squared, digits = 3), "\n", 
                    "p =", round(unname(summary(lm_percell_free_mpd)$coefficients[,4][2]), digits = 3))) +
-  theme(legend.title = element_blank(), legend.position ="bottom", 
+  theme(legend.title = element_blank(), legend.position ="none", 
         legend.text = element_text(size = 14))
 
 
-plot_grid(weight_distribution_plot, weight_invsimps_vs_mpd_plot, weight_prod_vs_mpd_plot, weight_percell_vs_mpd_plot, 
+row1_weighted_PD_plot <- plot_grid(weight_distribution_plot, weight_invsimps_vs_mpd_plot, weight_prod_vs_mpd_plot, weight_percell_vs_mpd_plot, 
           labels = c("A", "B", "C", "D"), ncol = 1, nrow = 4,
           rel_heights = c(0.5, 0.8, 0.8, 1.2),
           align = "v")
+
+plot_grid(row1_weighted_PD_plot, season_legend,
+          ncol = 1, nrow = 2,
+          rel_heights = c(1, 0.05))
+
 ```
 
 
@@ -2072,8 +2123,8 @@ ggplot(unweight_cellnums, aes(y = log10(fraction_bac_abund), x = mpd.obs.z)) +
 
 ```
 
-## Figure S7
-```{r plot-station-diversity, fig.width = 9, fig.height = 5, dependson = c("calc-div", "calc-sesmpd")}
+
+```{r plot-station-diversity, fig.width = 9, fig.height = 5, dependson = c("calc-div", "calc-sesmpd"), eval = FALSE}
 # Test by station
 part_unweighted_df <- filter(unweighted_df, fraction == "Particle")  
 kruskal.test(mpd.obs.z ~ lakesite, data = filter(unweighted_df, fraction == "Particle"))
@@ -2196,7 +2247,7 @@ plot_grid(plot_station_rich_FL, plot_station_invsimps_FL,
 
 
 # Figure SX: Compare Diversity Estimates
-```{r plot-div, fig.width = 14, fig.height = 3.75, dependson= c("calc-div", "prepare-data")}
+```{r plot-div, fig.width = 14, fig.height = 7, dependson= c("calc-div", "prepare-data")}
 
 long_div_df <- lasso_data_df %>%
   dplyr::select(norep_filter_name, lakesite:season, Richness:Weighted_PD) %>%
@@ -2205,8 +2256,8 @@ long_div_df <- lasso_data_df %>%
                             c("Richness", "Shannon_Entropy", "Inverse_Simpson", "Simpsons_Evenness", "Unweighted_PD", "Weighted_PD")))
 
 
-divs_PAFLA_plot <- ggplot(long_div_df, aes(y = mean, x = lakesite, shape = lakesite)) +
-  ylab("Mean Diversity Value") +
+divs_PAFLA_plot_lakesite <- ggplot(long_div_df, aes(y = mean, x = lakesite, shape = lakesite)) +
+  ylab("Mean Diversity Value\n By Lake Station") +
   facet_wrap(~measure, scale = "free_y", ncol = 6) +
     geom_point(size = 3, aes(fill = fraction), color = "black", position = position_jitterdodge()) +
   geom_boxplot(alpha = 0.5, outlier.shape = NA, color = "black", aes(fill = fraction)) +
@@ -2216,9 +2267,28 @@ divs_PAFLA_plot <- ggplot(long_div_df, aes(y = mean, x = lakesite, shape = lakes
   theme(legend.position = "none", axis.title.x = element_blank(), 
         axis.text.x = element_text(angle = 30, vjust = 1, hjust = 1)) 
 
-plot_grid(divs_PAFLA_plot, lakesite_legend,
-          nrow = 2, ncol = 1, 
+plot_A <- plot_grid(divs_PAFLA_plot_lakesite, lakesite_legend,
+          nrow = 2, ncol = 1,  labels = c("A",""),
           rel_heights = c(1, 0.05))
+
+
+divs_PAFLA_plot_season <- ggplot(long_div_df, aes(y = mean, x = season, shape = season)) +
+  ylab("Mean Diversity Value \n By Season") +
+  facet_wrap(~measure, scale = "free_y", ncol = 6) +
+   geom_point(size = 3, aes(fill = fraction), color = "black", position = position_jitterdodge()) +
+  geom_boxplot(alpha = 0.5, outlier.shape = NA, color = "black", aes(fill = fraction)) +
+  scale_fill_manual(values = fraction_colors) + 
+  scale_shape_manual(values = season_shapes) + 
+  scale_color_manual(values = fraction_colors) + 
+  theme(legend.position = "none", axis.title.x = element_blank(), 
+        axis.text.x = element_text(angle = 30, vjust = 1, hjust = 1)) 
+
+plot_B <- plot_grid(divs_PAFLA_plot_season, season_legend,
+          nrow = 2, ncol = 1, labels = c("B",""),
+          rel_heights = c(1, 0.05))
+
+plot_grid(plot_A, plot_B,
+          nrow = 2, ncol = 1)
 
 ```
 
@@ -2287,7 +2357,7 @@ plot_grid(divs_PAFLA_plot, lakesite_legend,
 
   
 ## Plot Figure S5: Randomized Richness  
-```{r, randomized-sesmpd, fig.width = 4, fig.height = 4, dependson = c("randomize-richness", "calc-div")}  
+```{r, randomized-sesmpd, fig.width = 4.25, fig.height = 4, dependson = c("randomize-richness", "calc-div")}  
 # Read in the tree
 randomized_tree <- read.tree(file = "data/PhyloTree/randomized/newick_tree_randomized_rmN.tre")
   
@@ -2341,13 +2411,18 @@ summary(lm(ntaxa ~ mpd.obs.z, data = filter(df_2, fraction == "Particle")))
 summary(lm(ntaxa ~ mpd.obs.z, data = filter(df_2, fraction == "Free")))
 
 
-ggplot(df_2, aes(y = ntaxa, x = mpd.obs.z, fill = fraction)) +
+randomized_rich_plot <- ggplot(df_2, aes(y = ntaxa, x = mpd.obs.z, fill = fraction)) +
   geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) +
-  geom_point(size = 3, shape = 21) + ylab("Randomized Richness") +
-  xlab("Standardized Effect Size \n Unweighted Mean Pairwise Dist") +
+  geom_point(size = 3.5, aes(shape = season)) + ylab("Randomized Richness") +
+  xlab("Unweighted Phylogenetic Diversity") +
   scale_fill_manual(values = fraction_colors) +
+  scale_shape_manual(values = season_shapes) + 
   scale_x_continuous(limits = c(-1,1)) + 
-  theme(legend.title = element_blank(), legend.position = c(0.15, 0.9))
+  theme(legend.title = element_blank(), legend.position = "none")
+
+
+plot_grid(randomized_rich_plot, season_legend,
+          rel_heights = c(1, 0.05), nrow = 2, ncol = 1)
 ```
 
 
