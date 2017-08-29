@@ -66,6 +66,18 @@ source("code/set_colors.R")
 ```
 
 
+# Map of Muskegon Lake
+
+```{r musk-map}
+library(ggmap)
+
+mussk <- get_map(c(-86.35, 43.21, -86.235, 43.265),  #left/bottom/right/top
+                 zoom = 13, maptype = "satellite", source= "google")
+ggmap(mussk) + xlab("Longitude") + ylab("Latitude") +
+  theme(axis.text = element_text(size = 10, color = "black"),
+        axis.title = element_text(size = 12, color = "black", face = "bold"))
+```
+
 # Load data
 ```{r load-data, eval = TRUE}
 # Loads a phyloseq object named otu_merged_musk_pruned)
@@ -1048,7 +1060,7 @@ prod_vs_rich_plot <-
   scale_color_manual(values = fraction_colors) +
   scale_fill_manual(values = fraction_colors) +
   scale_shape_manual(values = season_shapes) +
-  ylab("Heterotrophic Production \n (μgC/L/hr)") + 
+  ylab("\n Heterotrophic Production \n (μgC/L/hr)") + 
   xlab("Observed Richness") +
   geom_smooth(data=filter(richness, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
   scale_x_continuous(limits = c(150,950), breaks = seq(from = 0, to =925, by = 150)) + 
@@ -1066,7 +1078,7 @@ percell_prod_vs_rich_plot <-
   scale_color_manual(values = fraction_colors) +
   scale_fill_manual(values = fraction_colors) +
   scale_shape_manual(values = season_shapes) +
-  ylab("log10(production/cell)\n (μgC/cell/hr)") +
+  ylab("\n log10(production/cell)\n (μgC/cell/hr)") +
   xlab("Observed Richness") +
   geom_smooth(data=filter(richness, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
   scale_x_continuous(limits = c(150,950), breaks = seq(from = 0, to =925, by = 150)) + 
@@ -1158,13 +1170,12 @@ invsimps_plots <- plot_grid(invsimps_distribution_plot, prod_vs_invsimps_plot, p
 
 
 ## Plot Figure 2 
-```{r fig2-noyaxis, fig.width = 8, fig.height = 8, dependson = "fig2-panels"}
-
+```{r fig2-noyaxis, fig.width = 7, fig.height = 7, dependson = "fig2-panels"}
 # All 3 richness plots together 
 rich_plots <- plot_grid(rich_distribution_plot, prod_vs_rich_plot, 
                         percell_prod_vs_rich_plot + theme(legend.position = "none"),
           labels = c("A", "C", "E"), ncol = 1, nrow = 3,
-          rel_heights = c(0.5, 1, 1),
+          rel_heights = c(0.5, 0.8, 1),
           align = "v")
 
 
@@ -1173,12 +1184,12 @@ invsimps_plots_noyaxis <-
             prod_vs_invsimps_plot + theme(axis.title.y = element_blank()), 
             percell_prod_vs_invsimps_plot + theme(axis.title.y = element_blank(), legend.position = "none"), 
           labels = c("B", "D", "F"), ncol = 1, nrow = 3,
-          rel_heights = c(0.5, 1, 1),
+          rel_heights = c(0.5, 0.8, 1),
           align = "v")
 
 
 figure2_row1 <- plot_grid(rich_plots, invsimps_plots_noyaxis,
-          ncol = 2, nrow = 1, rel_widths = c(1, 0.825),
+          ncol = 2, nrow = 1, rel_widths = c(1, 0.75),
           align = "h")
 
 
@@ -1359,7 +1370,6 @@ prod_vs_shannon_plot +
 
 ## Plot Figure S2
 ```{r figS2-noyaxis, fig.width = 8, fig.height = 8, dependson = c("figS2-panels", "calc-div")}
-
 simpseven_plots_noyaxis <- 
   plot_grid(simpseven_distribution_plot + theme(axis.title.y = element_blank(), axis.text.y = element_blank()), 
             prod_vs_simpseven_plot + theme(axis.title.y = element_blank()), 
