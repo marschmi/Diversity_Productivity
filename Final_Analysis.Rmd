@@ -137,7 +137,7 @@ prod1 <- ggplot(dplyr::filter(metadata, year == "2015" & fraction %in% c("Free",
   xlab("Lake Station") + ylab("Community Production\n(ug C/L/Hr)") + 
   theme(axis.text.x = element_blank(), #element_text(angle = 30, vjust = 1, hjust = 1),
         axis.title.x = element_blank(),
-        legend.position = c(0.85, 0.9), legend.title = element_blank(),
+        legend.position = c(0.65, 0.9), legend.title = element_blank(),
         plot.margin	= unit(c(0.25, 0.25, 0.25, 0.25), "cm")) #top, right, bottom, and left margins)
 
 
@@ -148,9 +148,9 @@ prod2 <- ggplot(dplyr::filter(metadata, year == "2015" & fraction %in% c("Free",
   scale_y_continuous(expand = c(0,0)) +
   scale_fill_manual(values = fraction_colors) + 
   guides(fill=guide_legend(nrow=1,byrow=TRUE)) +
-  xlab("Lake Station") + ylab("Cellular Production \n(ug C/cell/Hr)") + 
+  xlab("Lake Station") + ylab("Per-Capita Production \n(ug C/cell/Hr)") + 
   theme(axis.text.x = element_text(angle = 30, vjust = 1, hjust = 1),
-        legend.position = c(0.85, 0.9), legend.title = element_blank(),
+        legend.position = c(0.65, 0.9), legend.title = element_blank(),
         plot.margin	= unit(c(0.25, 0.25, 0.25, 0.5), "cm")) #top, right, bottom, and left margins)
 
 
@@ -195,7 +195,7 @@ percapita_prod_plot_long <-
   scale_y_continuous(expand = c(0,0)) +
   scale_fill_manual(values = fraction_colors) + 
   guides(fill=guide_legend(nrow=1,byrow=TRUE)) +
-  xlab("Lake Station") + ylab("Cellular Production \n(ug C/cell/Hr)") + 
+  xlab("Lake Station") + ylab("Per-Capita Production \n(ug C/cell/Hr)") + 
   theme(axis.text.x = element_text(angle = 30, vjust = 1, hjust = 1),
         legend.position = "bottom", legend.title = element_blank(),
         plot.margin	= unit(c(0.25, 0.25, 0.25, 0.5), "cm")) #top, right, bottom, and left margins)
@@ -477,6 +477,165 @@ pander(pca_lm2_results_df,
                caption = "Single Linear regression statistics for PC2.")
 
 
+#####  SINGLE REGRESSION with PC3
+## Free living
+comm_lm_PC3_free <- summary(lm(frac_bacprod ~ PC3, 
+           data = filter(metadata_pca, fraction == "Free")))
+## Particle-associated
+comm_lm_PC3_part <- summary(lm(frac_bacprod ~ PC3, 
+           data = filter(metadata_pca, fraction == "Particle")))
+## PER CAPITA: Free living
+percap_lm_PC3_free <- summary(lm(log10(fracprod_per_cell_noinf) ~ PC3, 
+           data = filter(metadata_pca, fraction == "Free")))
+## PER CAPITA: Particle-associated
+percap_lm_PC3_part <- summary(lm(log10(fracprod_per_cell_noinf) ~ PC3, 
+           data = filter(metadata_pca, fraction == "Particle")))
+
+# Put the results all together 
+pca_lm_row1_PC3 <- c("Free", "Per-Liter","PC3",
+          round(comm_lm_PC3_free$adj.r.squared, digits = 3),
+          round(comm_lm_PC3_free$coefficients[2,4], digits = 3))
+pca_lm_row2_PC3 <- c("Particle", "Per-Liter","PC3",
+          round(comm_lm_PC3_part$adj.r.squared, digits = 3),
+          round(comm_lm_PC3_part$coefficients[2,4], digits = 3))
+pca_lm_row3_PC3 <- c("Free", "Per-Capita","PC3",
+          round(percap_lm_PC3_free$adj.r.squared, digits = 3),
+          round(percap_lm_PC3_free$coefficients[2,4], digits = 3))
+pca_lm_row4_PC3 <- c("Particle", "Per-Capita", "PC3",
+          round(percap_lm_PC3_part$adj.r.squared, digits = 3),
+          round(percap_lm_PC3_part$coefficients[2,4], digits = 3))
+
+pca_lm_results_df_PC3 <- 
+  rbind(pca_lm_row1_PC3, pca_lm_row2_PC3, pca_lm_row3_PC3, pca_lm_row4_PC3)
+
+colnames(pca_lm_results_df_PC3) <- c("fraction", "Predictor","Prod_measure", "Adjusted_R2", "p-value")
+
+row.names(pca_lm_results_df_PC3) = NULL
+
+pander(pca_lm_results_df_PC3,
+               caption = "Single Linear regression statistics for PC3.")
+
+
+
+#####  SINGLE REGRESSION with PC4
+## Free living
+comm_lm_PC4_free <- summary(lm(frac_bacprod ~ PC4, 
+           data = filter(metadata_pca, fraction == "Free")))
+## Particle-associated
+comm_lm_PC4_part <- summary(lm(frac_bacprod ~ PC4, 
+           data = filter(metadata_pca, fraction == "Particle")))
+## PER CAPITA: Free living
+percap_lm_PC4_free <- summary(lm(log10(fracprod_per_cell_noinf) ~ PC4, 
+           data = filter(metadata_pca, fraction == "Free")))
+## PER CAPITA: Particle-associated
+percap_lm_PC4_part <- summary(lm(log10(fracprod_per_cell_noinf) ~ PC4, 
+           data = filter(metadata_pca, fraction == "Particle")))
+
+# Put the results all together 
+pca_lm_row1_PC4 <- c("Free", "Per-Liter","PC4",
+          round(comm_lm_PC4_free$adj.r.squared, digits = 3),
+          round(comm_lm_PC4_free$coefficients[2,4], digits = 3))
+pca_lm_row2_PC4 <- c("Particle", "Per-Liter","PC4",
+          round(comm_lm_PC4_part$adj.r.squared, digits = 3),
+          round(comm_lm_PC4_part$coefficients[2,4], digits = 3))
+pca_lm_row3_PC4 <- c("Free", "Per-Capita","PC4",
+          round(percap_lm_PC4_free$adj.r.squared, digits = 3),
+          round(percap_lm_PC4_free$coefficients[2,4], digits = 3))
+pca_lm_row4_PC4 <- c("Particle", "Per-Capita", "PC4",
+          round(percap_lm_PC4_part$adj.r.squared, digits = 3),
+          round(percap_lm_PC4_part$coefficients[2,4], digits = 3))
+
+pca_lm_results_df_PC4 <- 
+  rbind(pca_lm_row1_PC4, pca_lm_row2_PC4, pca_lm_row3_PC4, pca_lm_row4_PC4)
+
+colnames(pca_lm_results_df_PC4) <- c("fraction", "Predictor","Prod_measure", "Adjusted_R2", "p-value")
+
+row.names(pca_lm_results_df_PC4) = NULL
+
+pander(pca_lm_results_df_PC4,
+               caption = "Single Linear regression statistics for PC4.")
+
+
+#####  SINGLE REGRESSION with PC5
+## Free living
+comm_lm_PC5_free <- summary(lm(frac_bacprod ~ PC5, 
+           data = filter(metadata_pca, fraction == "Free")))
+## Particle-associated
+comm_lm_PC5_part <- summary(lm(frac_bacprod ~ PC5, 
+           data = filter(metadata_pca, fraction == "Particle")))
+## PER CAPITA: Free living
+percap_lm_PC5_free <- summary(lm(log10(fracprod_per_cell_noinf) ~ PC5, 
+           data = filter(metadata_pca, fraction == "Free")))
+## PER CAPITA: Particle-associated
+percap_lm_PC5_part <- summary(lm(log10(fracprod_per_cell_noinf) ~ PC5, 
+           data = filter(metadata_pca, fraction == "Particle")))
+
+# Put the results all together 
+pca_lm_row1_PC5 <- c("Free", "Per-Liter","PC5",
+          round(comm_lm_PC5_free$adj.r.squared, digits = 3),
+          round(comm_lm_PC5_free$coefficients[2,4], digits = 3))
+pca_lm_row2_PC5 <- c("Particle", "Per-Liter","PC5",
+          round(comm_lm_PC5_part$adj.r.squared, digits = 3),
+          round(comm_lm_PC5_part$coefficients[2,4], digits = 3))
+pca_lm_row3_PC5 <- c("Free", "Per-Capita","PC5",
+          round(percap_lm_PC5_free$adj.r.squared, digits = 3),
+          round(percap_lm_PC5_free$coefficients[2,4], digits = 3))
+pca_lm_row4_PC5 <- c("Particle", "Per-Capita", "PC5",
+          round(percap_lm_PC5_part$adj.r.squared, digits = 3),
+          round(percap_lm_PC5_part$coefficients[2,4], digits = 3))
+
+pca_lm_results_df_PC5 <- 
+  rbind(pca_lm_row1_PC5, pca_lm_row2_PC5, pca_lm_row3_PC5, pca_lm_row4_PC5)
+
+colnames(pca_lm_results_df_PC5) <- c("fraction", "Predictor","Prod_measure", "Adjusted_R2", "p-value")
+
+row.names(pca_lm_results_df_PC5) = NULL
+
+pander(pca_lm_results_df_PC5,
+               caption = "Single Linear regression statistics for PC5.")
+
+
+
+#####  SINGLE REGRESSION with PC6
+## Free living
+comm_lm_PC6_free <- summary(lm(frac_bacprod ~ PC6, 
+           data = filter(metadata_pca, fraction == "Free")))
+## Particle-associated
+comm_lm_PC6_part <- summary(lm(frac_bacprod ~ PC6, 
+           data = filter(metadata_pca, fraction == "Particle")))
+## PER CAPITA: Free living
+percap_lm_PC6_free <- summary(lm(log10(fracprod_per_cell_noinf) ~ PC6, 
+           data = filter(metadata_pca, fraction == "Free")))
+## PER CAPITA: Particle-associated
+percap_lm_PC6_part <- summary(lm(log10(fracprod_per_cell_noinf) ~ PC6, 
+           data = filter(metadata_pca, fraction == "Particle")))
+
+# Put the results all together 
+pca_lm_row1_PC6 <- c("Free", "Per-Liter","PC6",
+          round(comm_lm_PC6_free$adj.r.squared, digits = 3),
+          round(comm_lm_PC6_free$coefficients[2,4], digits = 3))
+pca_lm_row2_PC6 <- c("Particle", "Per-Liter","PC6",
+          round(comm_lm_PC6_part$adj.r.squared, digits = 3),
+          round(comm_lm_PC6_part$coefficients[2,4], digits = 3))
+pca_lm_row3_PC6 <- c("Free", "Per-Capita","PC6",
+          round(percap_lm_PC6_free$adj.r.squared, digits = 3),
+          round(percap_lm_PC6_free$coefficients[2,4], digits = 3))
+pca_lm_row4_PC6 <- c("Particle", "Per-Capita", "PC6",
+          round(percap_lm_PC6_part$adj.r.squared, digits = 3),
+          round(percap_lm_PC6_part$coefficients[2,4], digits = 3))
+
+pca_lm_results_df_PC6 <- 
+  rbind(pca_lm_row1_PC6, pca_lm_row2_PC6, pca_lm_row3_PC6, pca_lm_row4_PC6)
+
+colnames(pca_lm_results_df_PC6) <- c("fraction", "Predictor","Prod_measure", "Adjusted_R2", "p-value")
+
+row.names(pca_lm_results_df_PC6) = NULL
+
+pander(pca_lm_results_df_PC6,
+               caption = "Single Linear regression statistics for PC6.")
+
+
+
 
 
 #####  MULTIPLE REGRESSION 
@@ -624,7 +783,7 @@ poster_c <- ggplot(filter(metadata, norep_filter_name != "MOTEJ515"),
   scale_fill_manual(values = fraction_colors, guide = FALSE) +
   scale_shape_manual(values = season_shapes) +
   ylim(c(-8.5, -5)) + 
-  ylab("Log10(Cellular Production) \n(μgC/cell/hr)") +
+  ylab("Log10(Per-Capita Production) \n(μgC/cell/hr)") +
   ##### Particle vs free per-cell production 
   geom_path(data = dat3, aes(x = a, y = b), linetype = 1, color = "gray40") +
   annotate("text", x=1.5, y=-5, fontface = "bold",  size = 3.5, color = "gray40",
@@ -1060,7 +1219,7 @@ prod_vs_rich_plot <-
   scale_color_manual(values = fraction_colors) +
   scale_fill_manual(values = fraction_colors) +
   scale_shape_manual(values = season_shapes) +
-  ylab("\n Heterotrophic Production \n (μgC/L/hr)") + 
+  ylab("\n Community Production \n (μgC/L/hr)") + 
   xlab("Observed Richness") +
   geom_smooth(data=filter(richness, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
   scale_x_continuous(limits = c(150,950), breaks = seq(from = 0, to =925, by = 150)) + 
@@ -1078,7 +1237,7 @@ percell_prod_vs_rich_plot <-
   scale_color_manual(values = fraction_colors) +
   scale_fill_manual(values = fraction_colors) +
   scale_shape_manual(values = season_shapes) +
-  ylab("\n log10(production/cell)\n (μgC/cell/hr)") +
+  ylab("\n log10(Per-Capita Production)\n (μgC/cell/hr)") +
   xlab("Observed Richness") +
   geom_smooth(data=filter(richness, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
   scale_x_continuous(limits = c(150,950), breaks = seq(from = 0, to =925, by = 150)) + 
@@ -1867,7 +2026,7 @@ predict(lasso_divs, type = "coefficients", s = best_lasso_lambda)
 
 
 ## Figure 3: Unweighted ses.mpd
-```{r plot-unweighted-sesmpd, fig.width = 4.5, fig.height = 9.5, dependson = c("calc-div", "calc-sesmpd")}
+```{r plot-unweighted-sesmpd, fig.width = 4.6, fig.height = 9.5, dependson = c("calc-div", "calc-sesmpd")}
 ######################################################### SES MPD DISTRIBUTION: UNWEIGHTED  
 unweighted_fraction_wilcox <- wilcox.test(mpd.obs.z ~ fraction, data = unweighted_df)
 unweighted_fraction_wilcox
@@ -1910,7 +2069,7 @@ unweight_rich_vs_mpd_plot <-
   ggplot(unweighted_df, aes(y = mean, x = mpd.obs.z)) +
   geom_errorbar(aes(ymin = mean - sd, ymax = mean + sd, color = fraction), alpha = 0.7) + # X-axis errorbars
   geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) +
-  geom_point(size = 3, aes(fill = fraction, shape = season)) + ylab("Observed  Richness") +
+  geom_point(size = 3, aes(fill = fraction, shape = season)) + ylab("\n Observed  Richness") +
   scale_shape_manual(values = season_shapes) + 
   xlab("Standardized Effect Size \n Unweighted Mean Pairwise Dist") +
   scale_fill_manual(values = fraction_colors) +
@@ -1935,7 +2094,7 @@ unweight_prod_vs_mpd_plot <-
   geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) +
   geom_point(size = 3, aes(shape = season)) +
   scale_shape_manual(values = season_shapes) + 
-  ylab("Heterotrophic Production \n (μgC/L/hr)") +
+  ylab("\n Community Production \n (μgC/L/hr)") +
   xlab("Standardized Effect Size \n Unweighted Mean Pairwise Dist") +
   scale_fill_manual(values = fraction_colors) +
   scale_x_continuous(limits = c(-1.5,1.75), breaks = seq(from = -1.5, to = 1.5, by = 0.5)) + 
@@ -1956,7 +2115,7 @@ unweight_percell_vs_mpd_plot <-
        aes(y = log10(fracprod_per_cell_noinf), x = mpd.obs.z)) +
   geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) +
   geom_point(size = 3,  aes(fill = fraction, shape = season)) + 
-  ylab("log10(Production/cell)\n (μgC/cell/hr)") +
+  ylab("\n log10(Per-Capita Production)\n (μgC/cell/hr)") +
   xlab("Unweighted Phylogenetic Diversity") +
   scale_fill_manual(values = fraction_colors) +
   scale_shape_manual(values = season_shapes) + 
