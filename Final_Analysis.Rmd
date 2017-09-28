@@ -337,10 +337,23 @@ adonis(musk_bray ~ fraction + season , data = sampledf)
 
 # Subset the environmental data only
 environmental_data <- metadata %>%
-  dplyr::select(Temp_C:DO_percent, -BGA_cellspermL, -SRP_ugperL, fraction, norep_filter_name) %>%
+  dplyr::select(Temp_C:DO_percent, -BGA_cellspermL, -SRP_ugperL, fraction, norep_filter_name, -DO_percent) %>%
   dplyr::filter(fraction == "Free") %>%
   dplyr::select(-fraction) %>%
   tibble::column_to_rownames(var = "norep_filter_name") %>%
+  dplyr::rename(Temp = Temp_C, 
+         SpCond = SpCond_uSpercm,
+         TDS = TDS_mgperL,
+         ORP = ORP_mV,
+         Chla = Chl_Lab_ugperL,
+         Cl = Cl_mgperL,
+         SO4 = SO4_mgperL,
+         NO3 = NO3_mgperL,
+         NH3 = NH3_mgperL,
+         TKN = TKN_mgperL,
+         TP = TP_ugperL,
+         Alk = Alk_mgperL,
+         DO = DO_mgperL) %>%
   as.matrix()
 
 pairs(environmental_data)
@@ -677,6 +690,22 @@ plot_grid(PC2_lm_plot, PC2_lm_plot,
 
 
 ```
+
+```{r table-with-PC-results}
+
+all_pca_lm_results <- dplyr::bind_rows(
+  data.frame(pca_lm_results_df), 
+  data.frame(pca_lm2_results_df), 
+  data.frame(pca_lm_results_df_PC3),
+  data.frame(pca_lm_results_df_PC4), 
+  data.frame(pca_lm_results_df_PC5), 
+  data.frame(pca_lm_results_df_PC6))
+
+
+dplyr::filter(all_pca_lm_results, p.value < 0.05)
+
+```
+
 
 
 ```{r euclidian-pcoa, fig.height=6, fig.width=6, dependson = c("environmental-pairwise", "euclidian-pcoa-varexplained")}
@@ -2615,4 +2644,33 @@ summary(lm(frac_bacprod ~ Temp_C, data = free_data_df))
 
 particle_data_df <- dplyr::filter(lasso_data_df, fraction == "Particle")
 summary(lm(frac_bacprod ~ Temp_C, data = particle_data_df))
+```
+
+
+# Figure S1: Faiths PD
+```{r faiths-pd, fig.width = 4.25, fig.height = 4}
+surface_PAFL_otu_pruned_RAREFIED_rm2
+
+## Calculate Faith's PD and species richness for sample 
+faiths_pd_RAREFIED <- pd(comm_RAREFIED_rm2, phy_RAREFIED_rm2, include.root = FALSE)
+faiths_pd_RAREFIED$norep_filter_name <- row.names(faiths_pd_RAREFIED)
+
+
+# Join Faith's PD with the rest of the metadata 
+meta_data_PD <- left_join(faiths_pd_RAREFIED, lasso_data_df, by = "norep_filter_name")
+
+
+### Is there a correlation between species richness and faith's PD?
+lm_PD_vs_SR <- lm(PD ~ SR, data = meta_data_PD)
+ggplot(meta_data_PD, aes(y = PD, x = SR)) + 
+  geom_point(size = 3) + 
+  ylab("Faith's PD") + 
+  xlab("Species Richness") +
+  geom_smooth(method = "lm") +
+    annotate("text", x = 600, y=35, color = "black", fontface = "bold",
+           label = paste("R2 =", round(summary(lm_PD_vs_SR)$adj.r.squared, digits = 3), "\n", 
+                         "p =", round(unname(summary(lm_PD_vs_SR)$coefficients[,4][2]), digits = 20))) 
+
+summary(lm_PD_vs_SR)
+
 ```
