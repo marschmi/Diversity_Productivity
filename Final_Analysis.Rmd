@@ -447,8 +447,8 @@ colnames(pca_lm_results_df) <- c("fraction", "Predictor","Prod_measure", "Adjust
 
 row.names(pca_lm_results_df) = NULL
 
-pander(pca_lm_results_df,
-               caption = "Single Linear regression statistics for PC1.")
+#pander(pca_lm_results_df,
+#               caption = "Single Linear regression statistics for PC1.")
 
 
 #####  SINGLE REGRESSION with PC2
@@ -486,8 +486,8 @@ colnames(pca_lm2_results_df) <- c("fraction", "Predictor","Prod_measure", "Adjus
 
 row.names(pca_lm2_results_df) = NULL
 
-pander(pca_lm2_results_df,
-               caption = "Single Linear regression statistics for PC2.")
+#pander(pca_lm2_results_df,
+#               caption = "Single Linear regression statistics for PC2.")
 
 
 #####  SINGLE REGRESSION with PC3
@@ -525,8 +525,8 @@ colnames(pca_lm_results_df_PC3) <- c("fraction", "Predictor","Prod_measure", "Ad
 
 row.names(pca_lm_results_df_PC3) = NULL
 
-pander(pca_lm_results_df_PC3,
-               caption = "Single Linear regression statistics for PC3.")
+#pander(pca_lm_results_df_PC3,
+#               caption = "Single Linear regression statistics for PC3.")
 
 
 
@@ -565,8 +565,8 @@ colnames(pca_lm_results_df_PC4) <- c("fraction", "Predictor","Prod_measure", "Ad
 
 row.names(pca_lm_results_df_PC4) = NULL
 
-pander(pca_lm_results_df_PC4,
-               caption = "Single Linear regression statistics for PC4.")
+#pander(pca_lm_results_df_PC4,
+#               caption = "Single Linear regression statistics for PC4.")
 
 
 #####  SINGLE REGRESSION with PC5
@@ -604,8 +604,8 @@ colnames(pca_lm_results_df_PC5) <- c("fraction", "Predictor","Prod_measure", "Ad
 
 row.names(pca_lm_results_df_PC5) = NULL
 
-pander(pca_lm_results_df_PC5,
-               caption = "Single Linear regression statistics for PC5.")
+#pander(pca_lm_results_df_PC5,
+#               caption = "Single Linear regression statistics for PC5.")
 
 
 
@@ -644,8 +644,8 @@ colnames(pca_lm_results_df_PC6) <- c("fraction", "Predictor","Prod_measure", "Ad
 
 row.names(pca_lm_results_df_PC6) = NULL
 
-pander(pca_lm_results_df_PC6,
-               caption = "Single Linear regression statistics for PC6.")
+#pander(pca_lm_results_df_PC6,
+#               caption = "Single Linear regression statistics for PC6.")
 
 
 
@@ -691,6 +691,10 @@ plot_grid(PC2_lm_plot, PC2_lm_plot,
 
 ```
 
+## Filtered PCA Linear Model Results
+
+Below represents the significant LM results from the individual PCA axes: 
+
 ```{r table-with-PC-results}
 
 all_pca_lm_results <- dplyr::bind_rows(
@@ -702,8 +706,11 @@ all_pca_lm_results <- dplyr::bind_rows(
   data.frame(pca_lm_results_df_PC6))
 
 
-dplyr::filter(all_pca_lm_results, p.value < 0.05)
+pander(all_pca_lm_results,
+       caption = "All individual LM results from PCA axes.")
 
+pander(dplyr::filter(all_pca_lm_results, p.value < 0.05),
+       caption = "Significant individual LM results from the individual PCA axes.")
 ```
 
 
