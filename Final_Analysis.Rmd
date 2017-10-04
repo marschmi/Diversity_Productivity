@@ -134,7 +134,7 @@ prod1 <- ggplot(dplyr::filter(metadata, year == "2015" & fraction %in% c("Free",
                      breaks = seq(from = 0, to = 80, by = 15)) +
   scale_fill_manual(values = fraction_colors) + 
   guides(fill=guide_legend(nrow=1,byrow=TRUE)) +
-  xlab("Lake Station") + ylab("Community Production\n(ug C/L/Hr)") + 
+  xlab("Lake Station") + ylab("Community Production\n(ug C/L/day)") + 
   theme(axis.text.x = element_blank(), #element_text(angle = 30, vjust = 1, hjust = 1),
         axis.title.x = element_blank(),
         legend.position = c(0.65, 0.9), legend.title = element_blank(),
@@ -148,7 +148,7 @@ prod2 <- ggplot(dplyr::filter(metadata, year == "2015" & fraction %in% c("Free",
   scale_y_continuous(expand = c(0,0)) +
   scale_fill_manual(values = fraction_colors) + 
   guides(fill=guide_legend(nrow=1,byrow=TRUE)) +
-  xlab("Lake Station") + ylab("Per-Capita Production \n(ug C/cell/Hr)") + 
+  xlab("Lake Station") + ylab("Per-Capita Production \n(ug C/cell/day)") + 
   theme(axis.text.x = element_text(angle = 30, vjust = 1, hjust = 1),
         legend.position = c(0.65, 0.9), legend.title = element_blank(),
         plot.margin	= unit(c(0.25, 0.25, 0.25, 0.5), "cm")) #top, right, bottom, and left margins)
@@ -164,7 +164,7 @@ ggplot(dplyr::filter(metadata, year == "2015" & fraction == "Free"),
                      breaks = seq(from = 0, to = 80, by = 15)) +
   scale_fill_manual(values = fraction_colors) + 
   guides(fill=guide_legend(nrow=1,byrow=TRUE)) +
-  xlab("Lake Station") + ylab("Community Production\n(ug C/L/Hr)") + 
+  xlab("Lake Station") + ylab("Community Production\n(ug C/L/day)") + 
   theme(legend.position = c(0.85, 0.9), legend.title = element_blank(),
         plot.margin	= unit(c(0.25, 0.25, 0.25, 0.25), "cm")) #top, right, bottom, and left margins)
 
@@ -181,7 +181,7 @@ community_prod_plot_long <-
                      breaks = seq(from = 0, to = 80, by = 15)) +
   scale_fill_manual(values = fraction_colors) + 
   guides(fill=guide_legend(nrow=1,byrow=TRUE)) +
-  xlab("Lake Station") + ylab("Community Production\n(ug C/L/Hr)") + 
+  xlab("Lake Station") + ylab("Community Production\n(ug C/L/day)") + 
   theme(legend.position = "bottom", legend.title = element_blank(),
         plot.margin	= unit(c(0.25, 0.25, 0.25, 0.25), "cm")) #top, right, bottom, and left margins)
 
@@ -195,7 +195,7 @@ percapita_prod_plot_long <-
   scale_y_continuous(expand = c(0,0)) +
   scale_fill_manual(values = fraction_colors) + 
   guides(fill=guide_legend(nrow=1,byrow=TRUE)) +
-  xlab("Lake Station") + ylab("Per-Capita Production \n(ug C/cell/Hr)") + 
+  xlab("Lake Station") + ylab("Per-Capita Production \n(ug C/cell/day)") + 
   theme(axis.text.x = element_text(angle = 30, vjust = 1, hjust = 1),
         legend.position = "bottom", legend.title = element_blank(),
         plot.margin	= unit(c(0.25, 0.25, 0.25, 0.5), "cm")) #top, right, bottom, and left margins)
@@ -219,7 +219,7 @@ prod_by_station <- ggplot(dplyr::filter(metadata, year == "2015" & fraction %in%
   scale_y_continuous(expand = c(0,0), limits = c(0,100)) +
   scale_fill_manual(values = fraction_colors) + 
   guides(fill=guide_legend(nrow=1,byrow=TRUE)) +
-  xlab("Lake Station") + ylab("Total Production (ug C/cell/Hr)") + 
+  xlab("Lake Station") + ylab("Total Production (ug C/cell/day)") + 
   theme(axis.text.x = element_text(angle = 30, vjust = 1, hjust = 1),
         legend.position = c(0.85, 0.9), legend.title = element_blank(),
         plot.margin	= unit(c(0.25, 0.25, 0.25, 0.5), "cm")) #top, right, bottom, and left margins)
@@ -709,8 +709,18 @@ all_pca_lm_results <- dplyr::bind_rows(
 pander(all_pca_lm_results,
        caption = "All individual LM results from PCA axes.")
 
-pander(dplyr::filter(all_pca_lm_results, p.value < 0.05),
-       caption = "Significant individual LM results from the individual PCA axes.")
+pander(dplyr::filter(all_pca_lm_results, p.value < 0.06),
+       caption = "Individual Linear Model results from the individual PCA axes with a p-value less than 0.06.")
+```
+
+
+```{r multiple-regression-PCs}
+# Multiple regression with community-wide production
+summary(lm(frac_bacprod ~ PC1 + PC2, data = filter(metadata_pca, fraction == "Particle")))
+
+# Multiple regression with per-capita production
+summary(lm(log10(fracprod_per_cell_noinf) ~ PC1 + PC2, data = filter(metadata_pca, fraction == "Free")))
+
 ```
 
 
@@ -789,7 +799,7 @@ poster_b <- ggplot(metadata, aes(y = frac_bacprod, x = fraction)) +
   scale_fill_manual(values = fraction_colors, guide = FALSE) +
   scale_shape_manual(values = season_shapes) +
   scale_y_continuous(limits = c(0, 73)) +
-  ylab("Community Production \n (μgC/L/hr)") +
+  ylab("Community Production \n (μgC/L/day)") +
   ##### Particle vs free bulk production  
   geom_path(data = dat2, aes(x = a, y = b), linetype = 1, color = "gray40") +
   annotate("text", x=1.5, y=72, fontface = "bold",  size = 3.5, color = "gray40",
@@ -819,7 +829,7 @@ poster_c <- ggplot(filter(metadata, norep_filter_name != "MOTEJ515"),
   scale_fill_manual(values = fraction_colors, guide = FALSE) +
   scale_shape_manual(values = season_shapes) +
   ylim(c(-8.5, -5)) + 
-  ylab("Log10(Per-Capita Production) \n(μgC/cell/hr)") +
+  ylab("Log10(Per-Capita Production) \n(μgC/cell/day)") +
   ##### Particle vs free per-cell production 
   geom_path(data = dat3, aes(x = a, y = b), linetype = 1, color = "gray40") +
   annotate("text", x=1.5, y=-5, fontface = "bold",  size = 3.5, color = "gray40",
@@ -897,7 +907,7 @@ lm_prod_corr <- lm(part_prod ~ free_prod, data = byfrac_df)
 
 plot2 <- ggplot(byfrac_df, aes(x = free_prod, y = part_prod)) +
   xlab("Free") +  ylab("Particle") + 
-  ggtitle("Community Production \n(μgC/L/hr)") +
+  ggtitle("Community Production \n(μgC/L/day)") +
   geom_point(size = 3, fill = "grey", aes(shape = season), width = 0.2) + 
   scale_shape_manual(values = season_shapes) +
   geom_smooth(method = "lm", color = "black")  + 
@@ -912,7 +922,7 @@ lm_percell_corr <- lm(log10(part_percell_prod) ~ log10(free_percell_prod), data 
 plot3 <- ggplot(byfrac_df,
        aes(x = log10(free_percell_prod), y = log10(part_percell_prod))) +  
   xlab("Free") +  ylab("Particle") + 
-  ggtitle("Log10(Cellular Production) \n (μgC/cell/hr)") +
+  ggtitle("Log10(Cellular Production) \n (μgC/cell/day)") +
   geom_point(size = 3, fill = "grey", aes(shape = season), width = 0.2) + 
   scale_shape_manual(values = season_shapes) +
   geom_smooth(method = "lm", color = "black") + 
@@ -1255,7 +1265,7 @@ prod_vs_rich_plot <-
   scale_color_manual(values = fraction_colors) +
   scale_fill_manual(values = fraction_colors) +
   scale_shape_manual(values = season_shapes) +
-  ylab("\n Community Production \n (μgC/L/hr)") + 
+  ylab("\n Community Production \n (μgC/L/day)") + 
   xlab("Observed Richness") +
   geom_smooth(data=filter(richness, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
   scale_x_continuous(limits = c(150,950), breaks = seq(from = 0, to =925, by = 150)) + 
@@ -1273,7 +1283,7 @@ percell_prod_vs_rich_plot <-
   scale_color_manual(values = fraction_colors) +
   scale_fill_manual(values = fraction_colors) +
   scale_shape_manual(values = season_shapes) +
-  ylab("\n log10(Per-Capita Production)\n (μgC/cell/hr)") +
+  ylab("\n log10(Per-Capita Production)\n (μgC/cell/day)") +
   xlab("Observed Richness") +
   geom_smooth(data=filter(richness, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
   scale_x_continuous(limits = c(150,950), breaks = seq(from = 0, to =925, by = 150)) + 
@@ -1324,7 +1334,7 @@ prod_vs_invsimps_plot <-
   scale_color_manual(values = fraction_colors) +
   scale_fill_manual(values = fraction_colors) +
   scale_shape_manual(values = season_shapes) +
-  ylab("Heterotrophic Production \n (μgC/L/hr)") + 
+  ylab("Heterotrophic Production \n (μgC/L/day)") + 
   xlab("Inverse Simpson") +
   geom_smooth(data=filter(invsimps, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
   scale_x_continuous(limits = c(0,85), breaks = seq(from = 0, to = 85, by = 20)) + 
@@ -1343,7 +1353,7 @@ percell_prod_vs_invsimps_plot <-
   scale_color_manual(values = fraction_colors) +
   scale_fill_manual(values = fraction_colors) +
   scale_shape_manual(values = season_shapes) +
-  ylab("log10(production/cell)\n (μgC/cell/hr)") +
+  ylab("log10(production/cell)\n (μgC/cell/day)") +
   xlab("Inverse Simpson") +
   geom_smooth(data=filter(invsimps, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
   scale_x_continuous(limits = c(0,85), breaks = seq(from = 0, to = 85, by = 20)) + 
@@ -1437,7 +1447,7 @@ prod_vs_shannon_plot <-
   scale_color_manual(values = fraction_colors) +
   scale_shape_manual(values = season_shapes) +
   scale_fill_manual(values = fraction_colors) +
-  ylab("Heterotrophic Production \n (μgC/L/hr)") + 
+  ylab("Heterotrophic Production \n (μgC/L/day)") + 
   scale_x_continuous(limits = c(3.5,6), breaks = seq(from = 3, to =6, by = 0.5)) + 
   xlab("Shannon Entropy") +
   geom_smooth(data=filter(shannon, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
@@ -1455,7 +1465,7 @@ percell_prod_vs_shannon_plot <-
   scale_color_manual(values = fraction_colors) +
   scale_fill_manual(values = fraction_colors) +
   scale_shape_manual(values = season_shapes) +
-  ylab("log10(production/cell)\n (μgC/cell/hr)") +
+  ylab("log10(production/cell)\n (μgC/cell/day)") +
   xlab("Shannon Entropy") +
   geom_smooth(data=filter(shannon, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
   scale_x_continuous(limits = c(3.5,6), breaks = seq(from = 3, to =6, by = 0.5)) + 
@@ -1512,7 +1522,7 @@ prod_vs_simpseven_plot <-
   scale_color_manual(values = fraction_colors) +
   scale_shape_manual(values = season_shapes) +
   scale_fill_manual(values = fraction_colors) +
-  ylab("Heterotrophic Production \n (μgC/L/hr)") + 
+  ylab("Heterotrophic Production \n (μgC/L/day)") + 
   ylab("Simpson's Evenness") +
   geom_smooth(data=filter(simpseven, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
   scale_x_continuous(limits = c(0,0.15), breaks = seq(from = 0, to = 0.15, by = 0.03)) + 
@@ -1532,7 +1542,7 @@ percell_prod_vs_simpseven_plot <-
   scale_color_manual(values = fraction_colors) +
   scale_shape_manual(values = season_shapes) +
   scale_fill_manual(values = fraction_colors) +
-  ylab("log10(production/cell)\n (μgC/cell/hr)") +
+  ylab("log10(production/cell)\n (μgC/cell/day)") +
   xlab("Simpson's Evenness") +
   geom_smooth(data=filter(simpseven, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
   scale_x_continuous(limits = c(0,0.15), breaks = seq(from = 0, to = 0.15, by = 0.03)) + 
@@ -1591,7 +1601,7 @@ ggplot(filter(otu_alphadiv, measure == "Simpsons_Evenness"),
        aes(x = mean, y = frac_bacprod)) + 
   geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd, color = fraction), alpha = 0.7) + # X-axis errorbars
   geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod, color = fraction)) +  # Y-axis errorbars
-  ylab("Heterotrophic Production \n(ug C/L/hr)") +
+  ylab("Heterotrophic Production \n(ug C/L/day)") +
   xlab("Simpson's Evenness") + 
   geom_point(size = 3, shape = 21, aes(fill = fraction)) + 
   geom_smooth(method = "lm", color = "#424645", fill = "#424645", alpha = 0.3) +
@@ -1612,7 +1622,7 @@ plot_all_rich_percell <-
   geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd), color = "grey", alpha = 0.7) + # X-axis errorbars
   geom_point(size = 3.5, aes(shape = season), color = "black", fill =  "grey") +
   scale_shape_manual(values = season_shapes) + 
-  ylab("log10(production/cell)\n (μgC/cell/hr)") + xlab("Observed Richness") +
+  ylab("log10(production/cell)\n (μgC/cell/day)") + xlab("Observed Richness") +
   geom_smooth(method='lm', color = "#424645", fill = "#424645") + 
   scale_x_continuous(limits = c(150,950), breaks = seq(from = 0, to =925, by = 150)) + 
   scale_y_continuous(limits = c(-8.5, -5.4), breaks = seq(from = -9, to = -5, by = 1)) + 
@@ -1627,7 +1637,7 @@ plot_all_shannon_percell <-
   geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd), color = "grey", alpha = 0.7) + # X-axis errorbars
   geom_point(size = 3.5, aes(shape = season), color = "black", fill =  "grey") +
   scale_shape_manual(values = season_shapes) + 
-  ylab("log10(production/cell)\n (μgC/cell/hr)") + xlab("Shannon Entropy") +
+  ylab("log10(production/cell)\n (μgC/cell/day)") + xlab("Shannon Entropy") +
   geom_smooth(method='lm', color = "#424645", fill = "#424645") + 
   scale_x_continuous(limits = c(3.5,6), breaks = seq(from = 3, to =6, by = 0.5)) + 
   scale_y_continuous(limits = c(-8.5, -5.4), breaks = seq(from = -9, to = -5, by = 1)) + 
@@ -1643,7 +1653,7 @@ plot_all_invsimps_percell <-
   geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd), color = "grey", alpha = 0.7) + # X-axis errorbars
   geom_point(size = 3.5, aes(shape = season), color = "black", fill =  "grey") +
   scale_shape_manual(values = season_shapes) + 
-  ylab("log10(production/cell)\n (μgC/cell/hr)") + xlab("Inverse Simpson") +
+  ylab("log10(production/cell)\n (μgC/cell/day)") + xlab("Inverse Simpson") +
   geom_smooth(method='lm', color = "#424645", fill = "#424645") + 
   scale_x_continuous(limits = c(0,85), breaks = seq(from = 0, to = 85, by = 20)) + 
   scale_y_continuous(limits = c(-8.5, -5.4), breaks = seq(from = -9, to = -5, by = 1)) + 
@@ -1659,7 +1669,7 @@ plot_all_simpseven_percell <-
   geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd), color = "grey", alpha = 0.7) + # X-axis errorbars
   geom_point(size = 3.5, aes(shape = season), color = "black", fill =  "grey") +
   scale_shape_manual(values = season_shapes) + 
-  ylab("log10(production/cell)\n (μgC/cell/hr)") + xlab("Simpson's Evenness") +
+  ylab("log10(production/cell)\n (μgC/cell/day)") + xlab("Simpson's Evenness") +
   geom_smooth(method='lm', color = "#424645", fill = "#424645") + 
   scale_x_continuous(limits = c(0,0.15), breaks = seq(from = 0, to = 0.15, by = 0.03)) + 
   scale_y_continuous(limits = c(-8.5, -5.4), breaks = seq(from = -9, to = -5, by = 1)) + 
@@ -1987,6 +1997,59 @@ predict(lasso_divs, type = "coefficients", s = best_lasso_lambda)
 ```
 
 
+## Community-wide Production:  ALL SAMPLES 
+```{r ALL-bulk-lasso-ridge, dependson = c("calc-div"), fig.width=8, fig.height=4}
+# Set the seed for reproducibility of the grid values 
+set.seed(777)
+
+################ PREPARE DATA ################ 
+# Subset data needed and scale all o
+scaled_comm_data_ALL <- 
+  all_dat_lasso_percapita %>%    # Use data only for the particle samples  
+  scale() %>%                          # Scale all of the variables to have mean =0 and sd = 1
+  as.data.frame()                      # Make it a dataframe so that model.matrix function works (does not take a matrix)
+
+# Set model parameters for community level data
+## NOTE: there cannot be any data with NA
+x = model.matrix(frac_bacprod ~ ., scaled_comm_data_ALL)[,-1]
+y = scaled_comm_data$frac_bacprod
+grid = 10^seq(10,-2,length = 100)
+
+################ PREPARE TRAINING & TESTING DATA FOR CROSS VALIDATION ################ 
+# Pull out test and training sets for cross validation
+# We will use half the set to train the model and the 2nd half of the dataset to test the model 
+train <- sample(1:nrow(x), nrow(x)/2)
+test <- -train
+y_test <- y[test]
+
+
+################ LASSO ################ 
+# Run lasso regression with alpha = 1
+lasso_divs_train <- glmnet(x[train,], y[train], alpha = 1, lambda = grid, standardize = TRUE)
+par(mfrow = c(1,2))
+plot(lasso_divs_train)
+
+# Cross validation
+cv_lasso_divs <- cv.glmnet(x[train,], y[train], alpha = 1)
+plot(cv_lasso_divs)
+best_lasso_lambda <- cv_lasso_divs$lambda.min
+lasso_divs_pred <- predict(lasso_divs_train, s = best_lasso_lambda, newx = x[test,])
+mean((lasso_divs_pred - y_test)^2)
+
+
+## Run lasso on the entire dataset with the best lambda value 
+lasso_divs <- glmnet(x, y, alpha = 1, lambda = grid, standardize = TRUE)
+par(mfrow = c(1,1))
+plot(lasso_divs)
+
+plot(lasso_divs, xvar = "lambda", label = TRUE)
+plot(lasso_divs, xvar = "dev", label = TRUE)
+
+
+# What are the lasso coefficients? (Anything with a . is not selected by the model)
+predict(lasso_divs, type = "coefficients", s = best_lasso_lambda)
+```
+
 ## Per-capita Production:  ALL SAMPLES 
 ```{r all-percapita-lasso-ridge, dependson = c("calc-div"), fig.width=8, fig.height=4}
 set.seed(777)
@@ -2130,7 +2193,7 @@ unweight_prod_vs_mpd_plot <-
   geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) +
   geom_point(size = 3, aes(shape = season)) +
   scale_shape_manual(values = season_shapes) + 
-  ylab("\n Community Production \n (μgC/L/hr)") +
+  ylab("\n Community Production \n (μgC/L/day)") +
   xlab("Standardized Effect Size \n Unweighted Mean Pairwise Dist") +
   scale_fill_manual(values = fraction_colors) +
   scale_x_continuous(limits = c(-1.5,1.75), breaks = seq(from = -1.5, to = 1.5, by = 0.5)) + 
@@ -2151,7 +2214,7 @@ unweight_percell_vs_mpd_plot <-
        aes(y = log10(fracprod_per_cell_noinf), x = mpd.obs.z)) +
   geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) +
   geom_point(size = 3,  aes(fill = fraction, shape = season)) + 
-  ylab("\n log10(Per-Capita Production)\n (μgC/cell/hr)") +
+  ylab("\n log10(Per-Capita Production)\n (μgC/cell/day)") +
   xlab("Unweighted Phylogenetic Diversity") +
   scale_fill_manual(values = fraction_colors) +
   scale_shape_manual(values = season_shapes) + 
@@ -2249,7 +2312,7 @@ weight_prod_vs_mpd_plot <-
   geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) +
   geom_point(size = 3.5, aes(shape = season)) + 
   scale_shape_manual(values = season_shapes) + 
-  ylab("Heterotrophic Production \n (μgC/L/hr)") +
+  ylab("Heterotrophic Production \n (μgC/L/day)") +
   xlab("Standardized Effect Size \n Weighted Mean Pairwise Dist") +
   scale_fill_manual(values = fraction_colors) +
   scale_x_continuous(limits = c(-1.5,1.75), breaks = seq(from = -1.5, to = 1.5, by = 0.5)) + 
@@ -2269,7 +2332,7 @@ weight_percell_vs_mpd_plot <-
   geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) +
   geom_point(size = 3.5, aes(shape = season)) + 
   scale_shape_manual(values = season_shapes) + 
-  ylab("log10(Production/cell)\n (μgC/cell/hr)") +
+  ylab("log10(Production/cell)\n (μgC/cell/day)") +
   xlab("Weighted Phylogenetic Diversity") +
   scale_fill_manual(values = fraction_colors) +
   geom_smooth(method = "lm", data = filter(weighted_df, fraction == "Free"), color = "skyblue", fill = "skyblue", alpha = 0.3) +
@@ -2636,7 +2699,7 @@ plot_grid(randomized_rich_plot, season_legend,
 ```{r temp-vs-prod, dependson = "prepare-data"}
 ggplot(lasso_data_df, aes(x = Temp_C, y = frac_bacprod, color = fraction)) +
   geom_point(size = 3.5, aes(shape = season, fill = fraction), color = "black", guide = FALSE) + 
-  xlab("Water Temperature (C)") + ylab("Bulk Community Production (ug C/L/Hr)") +
+  xlab("Water Temperature (C)") + ylab("Bulk Community Production (ug C/L/day)") +
   scale_fill_manual(values = fraction_colors, guide = 'none') +
   scale_color_manual(values = fraction_colors) + 
   scale_shape_manual(values = season_shapes) + 
