@@ -2057,7 +2057,7 @@ set.seed(777)
 scaled_percapita_ALL <- all_dat_lasso_percapita %>%
   dplyr::filter(!is.na(fracprod_per_cell_noinf)) %>%
   mutate(log10_percell = log10(fracprod_per_cell_noinf)) %>%
-  dplyr::select(-c(fracprod_per_cell_noinf)) %>%
+  dplyr::select(-c(fracprod_per_cell_noinf, perc_attached_abund, fraction_bac_abund, attached_bac)) %>%
   scale() %>%
   as.data.frame()
 
