@@ -71,11 +71,24 @@ source("code/set_colors.R")
 ```{r musk-map}
 library(ggmap)
 
-mussk <- get_map(c(-86.35, 43.21, -86.235, 43.265),  #left/bottom/right/top
-                 zoom = 13, maptype = "satellite", source= "google")
-ggmap(mussk) + xlab("Longitude") + ylab("Latitude") +
+lakesite_coordinates <- read.csv("data/metadata/ML_GPS_Coordinates.csv") %>%
+  dplyr::select(lakesite, Latitude, Longitude) %>%
+  dplyr::rename(Lat = Latitude,
+                Long = Longitude)
+
+#geocode("Muskegon Lake")
+
+map <- get_map(c(-86.35, 43.21, -86.235, 43.265),  #left/bottom/right/top
+                 zoom = 13, maptype = "toner-background")
+ggmap(map) + xlab("Longitude") + ylab("Latitude") +
   theme(axis.text = element_text(size = 10, color = "black"),
-        axis.title = element_text(size = 12, color = "black", face = "bold"))
+        axis.title = element_text(size = 12, color = "black", face = "bold")) +
+    geom_point(data = lakesite_coordinates, 
+               aes(x=Long, y=Lat), color="red", size=4) +
+    geom_text(data = lakesite_coordinates,
+              aes(x=Long, y=Lat, label=lakesite), col="white", cex=4, vjust = 0.5,hjust = -0.25) 
+
+
 ```
 
 # Load data
@@ -718,6 +731,16 @@ pander(dplyr::filter(all_pca_lm_results, p.value < 0.06),
 # Multiple regression with community-wide production
 summary(lm(frac_bacprod ~ PC1 + PC2, data = filter(metadata_pca, fraction == "Particle")))
 
+summary(lm(Temp_C ~ PC2, data = filter(metadata_pca, fraction == "Particle")))
+
+ggplot(metadata_pca, aes(PC2, Temp_C)) + 
+  geom_point() +
+  geom_smooth(method = "lm")
+
+ggplot(metadata_pca, aes(PC2, pH)) + 
+  geom_point() +
+  geom_smooth(method = "lm")
+
 # Multiple regression with per-capita production
 summary(lm(log10(fracprod_per_cell_noinf) ~ PC1 + PC2, data = filter(metadata_pca, fraction == "Free")))
 
@@ -750,6 +773,33 @@ ggplot(filter(metadata, norep_filter_name != "MOTEJ515"),
 
 
 ```
+
+
+# Environmental Params: as they are
+
+```{r basic-env-regressions}
+metadata_pca_particle <- metadata_pca %>%
+  filter(fraction == "Particle")
+
+# Temperature
+summary(lm(frac_bacprod ~ Temp_C, data = metadata_pca_particle))
+summary(lm(log10(fracprod_per_cell_noinf) ~ Temp_C, data = metadata_pca_particle))
+
+summary(lm(log10(fracprod_per_cell_noinf) ~ Temp_C, data = metadata_pca_particle))
+
+# pH
+summary(lm(frac_bacprod ~ pH, data = metadata_pca_particle))
+summary(lm(log10(fracprod_per_cell_noinf) ~ pH, data = metadata_pca_particle))
+
+
+# SO4_mgperL
+summary(lm(frac_bacprod ~ SO4_mgperL, data = metadata_pca_particle))
+summary(lm(log10(fracprod_per_cell_noinf) ~ SO4_mgperL, data = metadata_pca_particle))
+
+
+```
+
+
 
 ## Figure 1
 ```{r boxplot-cellcount-prod, eval = TRUE, fig.width = 8.5, fig.height = 3.5, warning = FALSE, dependson="load-data"}
@@ -848,7 +898,7 @@ row1_plots <- plot_grid(poster_a + theme(legend.position = "none"), poster_b, po
           ncol = 3, nrow = 1)
 
 #fig_1 <- 
-  plot_grid(row1_plots, legend,
+  plot_grid(row1_plots, get_legend(poster_a),
                    ncol = 1, nrow = 2, 
                    rel_heights = c(1, 0.05))
 ```
