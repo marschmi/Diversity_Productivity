@@ -1396,21 +1396,29 @@ prod_vs_invsimps_plot <-
 
 
 # Inverse Simpson vs per-cell production Plot 
+
+  
+lb1 <- paste("atop(R^2 ==", round(summary(lm_percell_prod_vs_invsimps_PA)$adj.r.squared, digits = 2), ",",
+             "p ==", round(unname(summary(lm_percell_prod_vs_invsimps_PA)$coefficients[,4][2]), digits = 4), ")")
+
 percell_prod_vs_invsimps_plot <- 
-  ggplot(invsimps, aes(x=mean, y=log10(fracprod_per_cell_noinf))) + 
+  ggplot(invsimps, aes(x=mean, y=log10(fracprod_per_cell_noinf), fill = fraction, color = fraction)) + 
   geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd, color = fraction), alpha = 0.7) + # X-axis errorbars
-  geom_point(size = 3.5, color = "black", aes(fill = fraction, shape = season)) +
-  scale_color_manual(values = fraction_colors) +
-  scale_fill_manual(values = fraction_colors) +
+  geom_point(size = 3.5, color = "black", aes(shape = season)) +
+  scale_color_manual(values = fraction_colors, guide = TRUE) +
+  scale_fill_manual(values = fraction_colors, guide = FALSE) +
   scale_shape_manual(values = season_shapes) +
   ylab("log10(production/cell)\n (μgC/cell/day)") +
   xlab("Inverse Simpson") +
   geom_smooth(data=filter(invsimps, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
   scale_x_continuous(limits = c(0,85), breaks = seq(from = 0, to = 85, by = 20)) + 
   #scale_y_continuous(limits = c(-8e-7,5e-6), breaks = seq(from = 0, to = 6e-7, by = 3e-7)) + 
-  annotate("text", x = 70, y=-7.5, color = "#FF6600", fontface = "bold",size = 4,
-           label = paste("R2 =", round(summary(lm_percell_prod_vs_invsimps_PA)$adj.r.squared, digits = 2), "\n", 
-                         "p =", round(unname(summary(lm_percell_prod_vs_invsimps_PA)$coefficients[,4][2]), digits = 4))) +
+  annotate("text", x=70, y=-7.5, label=lb1, parse = TRUE, color = "#FF6600", fontface = "bold",size = 4) +
+  #annotate("text", x = 70, y = -7.75, label = lb2, parse = FALSE, color = "#FF6600", fontface = "bold",size = 4) + 
+  #annotate("text", x = 70, y=-7.5, color = "#FF6600", fontface = "bold",size = 4,
+  #         label = paste("R2 =", round(summary(lm_percell_prod_vs_invsimps_PA)$adj.r.squared, digits = 2), "\n", 
+  #                       "p =", round(unname(summary(lm_percell_prod_vs_invsimps_PA)$coefficients[,4][2]), digits = 4))) +
+  guides(color = guide_legend(override.aes = list(shape = 15))) +
   theme(legend.title = element_blank(), legend.position ="bottom", 
         legend.text = element_text(size = 14))
 
