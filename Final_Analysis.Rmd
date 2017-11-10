@@ -355,7 +355,7 @@ environmental_data <- metadata %>%
   dplyr::select(-fraction) %>%
   tibble::column_to_rownames(var = "norep_filter_name") %>%
   dplyr::rename(Temp = Temp_C, 
-         SpCond = SpCond_uSpercm,
+         SPC = SpCond_uSpercm,
          TDS = TDS_mgperL,
          ORP = ORP_mV,
          Chla = Chl_Lab_ugperL,
@@ -952,43 +952,58 @@ plot1 <- ggplot(filter(byfrac_df, norep_water_name != "MOTE515"),
 
 
 
-
+################ Community-Wide production correlation between particle and free
+## 1. Run the linear regression 
 lm_prod_corr <- lm(part_prod ~ free_prod, data = byfrac_df)
 
+# 2. Extract the R2 and p-value from the linear model: 
+lm_lab_perliter_PAvsFL <- paste("atop(R^2 ==", round(summary(lm_prod_corr)$adj.r.squared, digits = 3), ",",
+            "p ==", round(unname(summary(lm_prod_corr)$coefficients[,4][2]), digits = 3), ")")
+
+## 3. Plot Community production correlation between particle and free
 plot2 <- ggplot(byfrac_df, aes(x = free_prod, y = part_prod)) +
   xlab("Free") +  ylab("Particle") + 
   ggtitle("Community Production \n(μgC/L/day)") +
   geom_point(size = 3, fill = "grey", aes(shape = season), width = 0.2) + 
   scale_shape_manual(values = season_shapes) +
   geom_smooth(method = "lm", color = "black")  + 
-  annotate("text", x =20, y= 30, color = "black", fontface = "bold", size = 4,
-       label = paste("R2 =", round(summary(lm_prod_corr)$adj.r.squared, digits = 3), "\n", 
-                     "p =", round(unname(summary(lm_prod_corr)$coefficients[,4][2]), digits = 3))) +
+  # Add the R2 and p-value to the plot 
+  annotate("text", x=20, y=30, label=lm_lab_perliter_PAvsFL, parse = TRUE, color = "black", size = 4) +
   theme(legend.position = "none")
 
 
+################ Per-Capita production correlation between particle and free
+## 1. Run the linear regression 
 lm_percell_corr <- lm(log10(part_percell_prod) ~ log10(free_percell_prod), data = byfrac_df)
 
+# 2. Extract the R2 and p-value from the linear model: 
+lm_lab_percell_PAvsFL <- paste("atop(R^2 ==", round(summary(lm_percell_corr)$adj.r.squared, digits = 3), ",",
+            "p ==", round(unname(summary(lm_percell_corr)$coefficients[,4][2]), digits = 3), ")")
+
+## 3. Plot Per-Capita production correlation between particle and free
 plot3 <- ggplot(byfrac_df,
        aes(x = log10(free_percell_prod), y = log10(part_percell_prod))) +  
   xlab("Free") +  ylab("Particle") + 
-  ggtitle("Log10(Cellular Production) \n (μgC/cell/day)") +
+  ggtitle("log10(Per-Capita Production)\n (μgC/cell/day)") +
   geom_point(size = 3, fill = "grey", aes(shape = season), width = 0.2) + 
   scale_shape_manual(values = season_shapes) +
   geom_smooth(method = "lm", color = "black") + 
-  annotate("text", y = -5.8, x=-7.9, color = "black", fontface = "bold", size = 4,
-       label = paste("R2 =", round(summary(lm_percell_corr)$adj.r.squared, digits = 3), "\n", 
-                     "p =", round(unname(summary(lm_percell_corr)$coefficients[,4][2]), digits = 3))) +
+  # Add the R2 and p-value to the plot 
+  annotate("text", y = -5.8, x=-7.9, label=lm_lab_percell_PAvsFL, parse = TRUE, color = "black", size = 4) +
   theme(legend.position = "none")
 
+
+# Make the final multi-paneled Plot
+# Extract the legend
 legend_s1 <- get_legend(plot1)
 
+# Make the 3 plots
 top_row_S1 <- plot_grid(plot1 +theme(legend.position = "none"), plot2, plot3, 
           nrow = 1, ncol = 3, 
           labels = c("A", "B", "C"), 
           align = "h")
 
-
+# Put the legend and 3 plots together
 plot_grid(top_row_S1, legend_s1,
           rel_heights = c(1, 0.05),
           nrow = 2, ncol = 1)
@@ -1279,7 +1294,7 @@ pander(r2_table,
 
 ## Prepare Figure 2
 ```{r fig2-panels, fig.height=8, fig.width=4.5, dependson= "calc-div"}
-######################################################### OBSERVED RICHNESS 
+######################################################### OBSERVED RICHNESS ######################################################### 
 rich_fraction_wilcox <- wilcox.test(mean ~ fraction, data = richness)
 rich_fraction_wilcox
 
@@ -1299,14 +1314,19 @@ rich_distribution_plot <-
   xlab("Observed Richness") + xlab("Fraction") + 
   scale_shape_manual(values = season_shapes) +
   geom_path(data = rich_nums, aes(x = a, y = b), linetype = 1, color = "#424645") +
-  annotate("text", x=1.5, y=790, fontface = "bold",  size = 4, color = "#424645",
+  annotate("text", x=1.5, y=790, size = 4, color = "#424645",
            label= paste("p =", round(rich_fraction_wilcox$p.value, digits = 5))) +
   theme(legend.position = "none",# axis.title.y = element_blank(),
         axis.title.x = element_blank(), axis.text.x = element_blank()) +
   coord_flip()
 
 
-# Richness vs Per-Liter Heterotrophic Production Plot 
+################ Richness vs Community-wide (Per-Liter) Production 
+## 1. Extract the R2 and p-value from the linear model: 
+lm_lab_perliter_rich_PA <- paste("atop(R^2 ==", round(summary(lm_prod_vs_rich_PA)$adj.r.squared, digits = 2), ",",
+             "p ==", round(unname(summary(lm_prod_vs_rich_PA)$coefficients[,4][2]), digits = 3), ")")
+
+## 2. Plot Richness vs Community-wide (Per-Liter) Production 
 prod_vs_rich_plot <-  
   ggplot(richness, aes(x=mean, y=frac_bacprod)) + 
   geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd, color = fraction), alpha = 0.7) + # X-axis errorbars
@@ -1319,13 +1339,17 @@ prod_vs_rich_plot <-
   xlab("Observed Richness") +
   geom_smooth(data=filter(richness, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
   scale_x_continuous(limits = c(150,950), breaks = seq(from = 0, to =925, by = 150)) + 
-  annotate("text", x = 790, y=45, color = "#FF6600", fontface = "bold", size = 4,
-           label = paste("R2 =", round(summary(lm_prod_vs_rich_PA)$adj.r.squared, digits = 2), "\n", 
-                         "p =", round(unname(summary(lm_prod_vs_rich_PA)$coefficients[,4][2]), digits = 3))) +
+   # Add the R2 and p-value to the plot 
+  annotate("text", x=790, y=45, label=lm_lab_perliter_rich_PA, parse = TRUE, color = "#FF6600", size = 4) +
   theme(legend.position = "none", axis.title.x = element_blank(), axis.text.x = element_blank()) 
 
 
-# Richness vs Per-cell herterotrophic production Plot 
+################ Richness vs Per Capita (Per-Cell) Production 
+## 1. Extract the R2 and p-value from the linear model: 
+lm_lab_percell_rich_PA <- paste("atop(R^2 ==", round(summary(lm_percell_prod_vs_rich_PA)$adj.r.squared, digits = 2), ",",
+             "p ==", round(unname(summary(lm_percell_prod_vs_rich_PA)$coefficients[,4][2]), digits = 3), ")")
+
+## 2. Plot Richness vs Per Capita (Per-Cell) Production 
 percell_prod_vs_rich_plot <- 
   ggplot(richness, aes(x=mean, y=log10(fracprod_per_cell_noinf))) + 
   geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd, color = fraction), alpha = 0.7) + # X-axis errorbars
@@ -1338,17 +1362,15 @@ percell_prod_vs_rich_plot <-
   geom_smooth(data=filter(richness, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
   scale_x_continuous(limits = c(150,950), breaks = seq(from = 0, to =925, by = 150)) + 
   #scale_y_continuous(limits = c(-8e-7,5e-6), breaks = seq(from = 0, to = 6e-7, by = 3e-7)) + 
-  annotate("text", x = 790, y=-7.5, color = "#FF6600", fontface = "bold", size = 4,
-           label = paste("R2 =", round(summary(lm_percell_prod_vs_rich_PA)$adj.r.squared, digits = 2), "\n", 
-                         "p =", round(unname(summary(lm_percell_prod_vs_rich_PA)$coefficients[,4][2]), digits = 3))) + 
-  #annotate("text", x = 250, y=55, color = "skyblue", fontface = "bold", label = paste("Free = NS")) +
+  # Add the R2 and p-value to the plot 
+  annotate("text", x=790, y=-7.5, label=lm_lab_percell_rich_PA, parse = TRUE, color = "#FF6600", size = 4) +
   theme(legend.title = element_blank(), legend.position ="bottom", 
         legend.text = element_text(size = 14))
 
 
 
 
-######################################################### INVERSE SIMPSON
+######################################################### INVERSE SIMPSON ######################################################### 
 invsimps_fraction_wilcox <- wilcox.test(mean ~ fraction, data = invsimps)
 invsimps_fraction_wilcox
 
@@ -1368,14 +1390,18 @@ invsimps_distribution_plot <-
   scale_y_continuous(limits = c(0,85), breaks = seq(from = 0, to = 85, by = 20)) + 
   ylab("Inverse Simpson") + xlab("Fraction") + 
   geom_path(data = invsimps_nums, aes(x = a, y = b), linetype = 1, color = "#424645") +
-  annotate("text", x=1.5, y=80, fontface = "bold",  size = 4, color = "#424645", label= "NS") +
+  annotate("text", x=1.5, y=80, size = 4, color = "#424645", label= "NS") +
   theme(legend.position = "none", #axis.title.y = element_blank(),
         axis.title.x = element_blank(), axis.text.x = element_blank()) +
   coord_flip()
 
 
-# INVERSE SIMPSON 
-# Plot Inverse Simpson vs Per-Liter Heterotrophic Production  
+################ Inverse Simpson vs Community-wide (Per-Liter) Production 
+## 1. Extract the R2 and p-value from the linear model: 
+lm_lab_perliter_invsimps_PA <- paste("atop(R^2 ==", round(summary(lm_prod_vs_invsimps_PA)$adj.r.squared, digits = 2), ",",
+             "p ==", round(unname(summary(lm_prod_vs_invsimps_PA)$coefficients[,4][2]), digits = 4), ")")
+
+## 2. Plot Inverse Simpson vs Community-wide (Per-Liter) Production 
 prod_vs_invsimps_plot <-  
   ggplot(invsimps, aes(x=mean, y=frac_bacprod)) + 
   geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd, color = fraction), alpha = 0.7) + # X-axis errorbars
@@ -1384,23 +1410,22 @@ prod_vs_invsimps_plot <-
   scale_color_manual(values = fraction_colors) +
   scale_fill_manual(values = fraction_colors) +
   scale_shape_manual(values = season_shapes) +
-  ylab("Heterotrophic Production \n (μgC/L/day)") + 
+  ylab("Community Production \n (μgC/L/day)") + 
   xlab("Inverse Simpson") +
   geom_smooth(data=filter(invsimps, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
   scale_x_continuous(limits = c(0,85), breaks = seq(from = 0, to = 85, by = 20)) + 
-  annotate("text", x = 70, y=45, color = "#FF6600", fontface = "bold",size = 4,
-           label = paste("R2 =", round(summary(lm_prod_vs_invsimps_PA)$adj.r.squared, digits = 2), "\n", 
-                         "p =", round(unname(summary(lm_prod_vs_invsimps_PA)$coefficients[,4][2]), digits = 4))) +
+  # Add the R2 and p-value to the plot 
+  annotate("text", x=70, y=45, label=lm_lab_perliter_invsimps_PA, parse = TRUE, color = "#FF6600", size = 4) +
   theme(legend.position = "none", axis.title.x = element_blank(), axis.text.x = element_blank()) 
 
 
 
-# Inverse Simpson vs per-cell production Plot 
-
-  
-lb1 <- paste("atop(R^2 ==", round(summary(lm_percell_prod_vs_invsimps_PA)$adj.r.squared, digits = 2), ",",
+################ Inverse Simpson vs Per Capitra (Per-Cell) Production 
+## 1. Extract the R2 and p-value from the linear model: 
+lm_lab_percell_invsimps_PA <- paste("atop(R^2 ==", round(summary(lm_percell_prod_vs_invsimps_PA)$adj.r.squared, digits = 2), ",",
              "p ==", round(unname(summary(lm_percell_prod_vs_invsimps_PA)$coefficients[,4][2]), digits = 4), ")")
 
+## 2. Plot Inverse Simpson vs Per Capitra (Per-Cell) Production 
 percell_prod_vs_invsimps_plot <- 
   ggplot(invsimps, aes(x=mean, y=log10(fracprod_per_cell_noinf), fill = fraction, color = fraction)) + 
   geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd, color = fraction), alpha = 0.7) + # X-axis errorbars
@@ -1413,11 +1438,8 @@ percell_prod_vs_invsimps_plot <-
   geom_smooth(data=filter(invsimps, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
   scale_x_continuous(limits = c(0,85), breaks = seq(from = 0, to = 85, by = 20)) + 
   #scale_y_continuous(limits = c(-8e-7,5e-6), breaks = seq(from = 0, to = 6e-7, by = 3e-7)) + 
-  annotate("text", x=70, y=-7.5, label=lb1, parse = TRUE, color = "#FF6600", fontface = "bold",size = 4) +
-  #annotate("text", x = 70, y = -7.75, label = lb2, parse = FALSE, color = "#FF6600", fontface = "bold",size = 4) + 
-  #annotate("text", x = 70, y=-7.5, color = "#FF6600", fontface = "bold",size = 4,
-  #         label = paste("R2 =", round(summary(lm_percell_prod_vs_invsimps_PA)$adj.r.squared, digits = 2), "\n", 
-  #                       "p =", round(unname(summary(lm_percell_prod_vs_invsimps_PA)$coefficients[,4][2]), digits = 4))) +
+  # Add the R2 and p-value to the plot 
+  annotate("text", x=70, y=-7.5, label=lm_lab_percell_invsimps_PA, parse = TRUE, color = "#FF6600", size = 4) +
   guides(color = guide_legend(override.aes = list(shape = 15))) +
   theme(legend.title = element_blank(), legend.position ="bottom", 
         legend.text = element_text(size = 14))
@@ -1450,7 +1472,7 @@ invsimps_plots_noyaxis <-
           rel_heights = c(0.5, 0.8, 1),
           align = "v")
 
-
+# Extract distribution plots of richness and inverse simpson
 figure2_row1 <- plot_grid(rich_plots, invsimps_plots_noyaxis,
           ncol = 2, nrow = 1, rel_widths = c(1, 0.75),
           align = "h")
@@ -1460,14 +1482,13 @@ figure2_row1 <- plot_grid(rich_plots, invsimps_plots_noyaxis,
 plot_grid(figure2_row1, season_legend,
                    ncol = 1, nrow = 2, 
                    rel_heights = c(1, 0.05))
-
 ```
 
 
 
 ## Prepare Figure S2
 ```{r figS2-panels, fig.height=8, fig.width=4.5}
-######################################################### SHANNON_ENTROPY
+######################################################### SHANNON ENTROPY ######################################################### 
 shannon_fraction_wilcox <- wilcox.test(mean ~ fraction, data = shannon)
 shannon_fraction_wilcox
 
@@ -1489,14 +1510,19 @@ shannon_distribution_plot <-
   scale_shape_manual(values = season_shapes) +
     # Add line and pval
   geom_path(data = shannon_nums, aes(x = a, y = b), linetype = 1, color = "#424645") +
-  annotate("text", x=1.5, y=5.6, fontface = "bold",  size = 4, color = "#424645",
-           label= paste("*p =", round(shannon_fraction_wilcox$p.value, digits = 3))) +
+  annotate("text", x=1.5, y=5.4, size = 4, color = "#424645",
+           label= paste("p =", round(shannon_fraction_wilcox$p.value, digits = 3))) +
   theme(legend.position = "none",# axis.title.y = element_blank(),
         axis.title.x = element_blank(), axis.text.x = element_blank()) +
   coord_flip()
 
 
-# Shannon vs Per-Liter Heterotrophic Production Plot 
+################ Shannon vs Community-wide (Per-Liter) Production 
+## 1. Extract the R2 and p-value from the linear model: 
+lm_lab_perliter_shannon_PA <- paste("atop(R^2 ==", round(summary(lm_prod_vs_shannon_PA)$adj.r.squared, digits = 2), ",",
+             "p ==", round(unname(summary(lm_prod_vs_shannon_PA)$coefficients[,4][2]), digits = 3), ")")
+
+## 2. Plot Shannon vs Community-wide (Per-Liter) Production 
 prod_vs_shannon_plot <-  
   ggplot(shannon, aes(x=mean, y=frac_bacprod)) + 
   geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd, color = fraction), alpha = 0.7) + # X-axis errorbars
@@ -1505,17 +1531,21 @@ prod_vs_shannon_plot <-
   scale_color_manual(values = fraction_colors) +
   scale_shape_manual(values = season_shapes) +
   scale_fill_manual(values = fraction_colors) +
-  ylab("Heterotrophic Production \n (μgC/L/day)") + 
+  ylab("\n Community Production \n (μgC/L/day)") + 
   scale_x_continuous(limits = c(3.5,6), breaks = seq(from = 3, to =6, by = 0.5)) + 
   xlab("Shannon Entropy") +
   geom_smooth(data=filter(shannon, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
-  annotate("text", x = 5.25, y=45, color = "#FF6600", fontface = "bold", size = 4,
-           label = paste("R2 =", round(summary(lm_prod_vs_shannon_PA)$adj.r.squared, digits = 2), "\n", 
-                         "p =", round(unname(summary(lm_prod_vs_shannon_PA)$coefficients[,4][2]), digits = 3))) +
+  # Add the R2 and p-value to the plot 
+  annotate("text", x=5.25, y=45, label=lm_lab_perliter_shannon_PA, parse = TRUE, color = "#FF6600", size = 4) +
   theme(legend.position = "none", axis.title.x = element_blank(), axis.text.x = element_blank()) 
 
 
-# Richness vs Per-cell herterotrophic production Plot 
+################ Shannon vs Per Capitra (Per-Cell) Production 
+## 1. Extract the R2 and p-value from the linear model: 
+lm_lab_percell_shannon_PA <- paste("atop(R^2 ==", round(summary(lm_percell_prod_vs_shannon_PA)$adj.r.squared, digits = 2), ",",
+             "p ==", round(unname(summary(lm_percell_prod_vs_shannon_PA)$coefficients[,4][2]), digits = 3), ")")
+
+## 2. Plot Shannon vs Per Capitra (Per-Cell) Production 
 percell_prod_vs_shannon_plot <- 
   ggplot(shannon, aes(x=mean, y=log10(fracprod_per_cell_noinf))) + 
   geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd, color = fraction), alpha = 0.7) + # X-axis errorbars
@@ -1523,26 +1553,24 @@ percell_prod_vs_shannon_plot <-
   scale_color_manual(values = fraction_colors) +
   scale_fill_manual(values = fraction_colors) +
   scale_shape_manual(values = season_shapes) +
-  ylab("log10(production/cell)\n (μgC/cell/day)") +
+  ylab("\n log10(Per-Capita Production)\n (μgC/cell/day)") +
   xlab("Shannon Entropy") +
   geom_smooth(data=filter(shannon, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
   scale_x_continuous(limits = c(3.5,6), breaks = seq(from = 3, to =6, by = 0.5)) + 
   #scale_y_continuous(limits = c(-8e-7,5e-6), breaks = seq(from = 0, to = 6e-7, by = 3e-7)) + 
-  annotate("text", x = 5.25, y=-7.5, color = "#FF6600", fontface = "bold", size = 4,
-           label = paste("R2 =", round(summary(lm_percell_prod_vs_shannon_PA)$adj.r.squared, digits = 2), "\n", 
-                         "p =", round(unname(summary(lm_percell_prod_vs_shannon_PA)$coefficients[,4][2]), digits = 3))) + 
-  #annotate("text", x = 250, y=55, color = "skyblue", fontface = "bold", label = paste("Free = NS")) +
+  # Add the R2 and p-value to the plot 
+  annotate("text", x=5.25, y=-7.5, label=lm_lab_percell_shannon_PA, parse = TRUE, color = "#FF6600", size = 4) +
   theme(legend.title = element_blank(), legend.position = "none")
 
 
 
 shannon_plots <- plot_grid(shannon_distribution_plot, prod_vs_shannon_plot, percell_prod_vs_shannon_plot,
           labels = c("A", "C", "E"), ncol = 1, nrow = 3,
-          rel_heights = c(0.5, 0.8, 1.1),
+          rel_heights = c(0.5, 0.85, 1.1),
           align = "v")
 
 
-######################################################### INVERSE SIMPSON
+######################################################### SIMPSON'S EVENNESS ######################################################### 
 simpseven_fraction_wilcox <- wilcox.test(mean ~ fraction, data = simpseven)
 simpseven_fraction_wilcox
 
@@ -1563,15 +1591,20 @@ simpseven_distribution_plot <-
   scale_shape_manual(values = season_shapes) +
   xlab("Fraction") + 
   geom_path(data = simpseven_nums, aes(x = a, y = b), linetype = 1, color = "#424645") +
-  annotate("text", x=1.5, y=0.14, fontface = "bold",  size = 4, color = "#424645", label= "NS") +
+  annotate("text", x=1.5, y=0.14, size = 4, color = "#424645", label= "NS") +
   theme(legend.position = "none",
         axis.title.x = element_blank(), axis.text.x = element_blank()) +
   coord_flip()
 
 
 
-# SIMPSONS EVENNESS
-# Plot Inverse Simpson vs Per-Liter Heterotrophic Production  
+
+################ Simpson's Evenness vs Community-wide (Per-Liter) Production 
+## 1. Extract the R2 and p-value from the linear model: 
+lm_lab_perliter_simpseven_PA <- paste("atop(R^2 ==", round(summary(lm_prod_vs_simpseven_PA)$adj.r.squared, digits = 2), ",",
+             "p ==", round(unname(summary(lm_prod_vs_simpseven_PA)$coefficients[,4][2]), digits = 3), ")")
+
+## 2. Plot Simpson's Evenness vs Community-wide (Per-Liter) Production 
 prod_vs_simpseven_plot <-  
   ggplot(simpseven, aes(x=mean, y=frac_bacprod)) + 
   geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd, color = fraction), alpha = 0.7) + # X-axis errorbars
@@ -1580,19 +1613,22 @@ prod_vs_simpseven_plot <-
   scale_color_manual(values = fraction_colors) +
   scale_shape_manual(values = season_shapes) +
   scale_fill_manual(values = fraction_colors) +
-  ylab("Heterotrophic Production \n (μgC/L/day)") + 
+  ylab("\n Community Production \n (μgC/L/day)") + 
   ylab("Simpson's Evenness") +
   geom_smooth(data=filter(simpseven, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
   scale_x_continuous(limits = c(0,0.15), breaks = seq(from = 0, to = 0.15, by = 0.03)) + 
-  annotate("text", x = 0.14, y=15, color = "#FF6600", fontface = "bold",size = 4,
-           label = paste("R2 =", round(summary(lm_prod_vs_simpseven_PA)$adj.r.squared, digits = 2), "\n", 
-                         "p =", round(unname(summary(lm_prod_vs_simpseven_PA)$coefficients[,4][2]), digits = 3))) +
+  # Add the R2 and p-value to the plot 
+  annotate("text", x=0.14, y=15, label=lm_lab_perliter_simpseven_PA, parse = TRUE, color = "#FF6600", size = 4) +
   theme(legend.position = "none", axis.title.x = element_blank(), axis.text.x = element_blank()) 
 
 
 
+################ Simpson's Evenness vs Per Capitra (Per-Cell) Production 
+## 1. Extract the R2 and p-value from the linear model: 
+lm_lab_percell_simpseven_PA <- paste("atop(R^2 ==", round(summary(lm_percell_prod_vs_simpseven_PA)$adj.r.squared, digits = 2), ",",
+             "p ==", round(unname(summary(lm_percell_prod_vs_simpseven_PA)$coefficients[,4][2]), digits = 3), ")")
 
-# Plot 
+## 2. Plot Simpson's Evenness vs Per Capitra (Per-Cell) Production 
 percell_prod_vs_simpseven_plot <- 
   ggplot(simpseven, aes(x=mean, y=log10(fracprod_per_cell_noinf))) + 
   geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd, color = fraction), alpha = 0.7) + # X-axis errorbars
@@ -1600,35 +1636,21 @@ percell_prod_vs_simpseven_plot <-
   scale_color_manual(values = fraction_colors) +
   scale_shape_manual(values = season_shapes) +
   scale_fill_manual(values = fraction_colors) +
-  ylab("log10(production/cell)\n (μgC/cell/day)") +
+  ylab("\n log10(Per-Capita Production)\n (μgC/cell/day)") +
   xlab("Simpson's Evenness") +
   geom_smooth(data=filter(simpseven, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
   scale_x_continuous(limits = c(0,0.15), breaks = seq(from = 0, to = 0.15, by = 0.03)) + 
-  annotate("text", x = 0.14, y=-6.3, color = "#FF6600", fontface = "bold",size = 4,
-           label = paste("R2 =", round(summary(lm_percell_prod_vs_simpseven_PA)$adj.r.squared, digits = 2), "\n", 
-                         "p =", round(unname(summary(lm_percell_prod_vs_simpseven_PA)$coefficients[,4][2]), digits = 4))) +
+  # Add the R2 and p-value to the plot 
+  annotate("text", x=0.14, y=-6.3, label=lm_lab_percell_simpseven_PA, parse = TRUE, color = "#FF6600", size = 4) +
   theme(legend.title = element_blank(), legend.position ="none")
-
 
 
 simpseven_plots <- plot_grid(simpseven_distribution_plot, prod_vs_simpseven_plot, percell_prod_vs_simpseven_plot,
           labels = c("B", "D", "F"), ncol = 1, nrow = 3,
-          rel_heights = c(0.5, 0.8, 1.1),
+          rel_heights = c(0.5, 0.85, 1.1),
           align = "v")
 ```
 
-```{r r2-plotting, fig.width=4, fig.height=4}
-R2_val <- grobTree(textGrob(bquote(Adj~R^2 == .(paste(round(summary(lm_prod_vs_shannon_PA)$adj.r.squared, digits = 2)))), 
-                            x=0.5,  y=0.5, gp=gpar(col="#FF6600", size=12, fontface="bold")))
-
-R2 <- grobTree(textGrob(bquote(Adj~R^2~ . (paste("=", round(summary(lm_prod_vs_shannon_PA)$adj.r.squared, digits = 2)))),
-                        #paste("p =", round(unname(summary(lm_prod_vs_shannon_PA)$coefficients[,4][2]), digits = 3)), 
-                            x=0.5,  y=0.75, gp=gpar(col="#FF6600", size=12, fontface="bold")))
-
-
-prod_vs_shannon_plot + 
-  xlab("Shannon Entropy") + annotation_custom(R2)
-```
 
 
 ## Plot Figure S2
@@ -1641,14 +1663,12 @@ simpseven_plots_noyaxis <-
           rel_heights = c(0.5, 0.8, 1.1),
           align = "v")
 
-
 figS2_row1 <- plot_grid(shannon_plots, simpseven_plots_noyaxis,
-          ncol = 2, nrow = 1, rel_widths = c(1, 0.825),
+          ncol = 2, nrow = 1, rel_widths = c(1, 0.75),
           align = "h")
 
 plot_grid(figS2_row1, season_legend,
           ncol = 1, nrow = 2, rel_heights = c(1, 0.05))
-
 ```
 
 ```{r simps-vs-prod, fig.width=4, fig.height=4, dependson= "calc-div"}
