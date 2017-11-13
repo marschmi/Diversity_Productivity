@@ -1695,29 +1695,35 @@ ggplot(filter(otu_alphadiv, measure == "Simpsons_Evenness"),
 
 ## Prepare Figure S7
 ```{r figS3, fig.width=12, fig.height=3.5, dependson= "calc-div"}
-################ Figure S7: Per-cell Heterotrophic Production vs All Observed Richness
+################ Figure S7A: Per-cell Heterotrophic Production vs All Observed Richness
 ## 1. Extract the R2 and p-value from the linear model: 
 lm_lab_overall_rich_vs_percell <- 
   paste("atop(R^2 ==", round(summary(lm(log10(fracprod_per_cell_noinf) ~ mean, data = richness))$adj.r.squared, digits = 2), ",",
   "p ==", round(unname(summary(lm(log10(fracprod_per_cell_noinf) ~ mean, data = richness))$coefficients[,4][2]), digits = 6), ")")
 
-## 2.  Figure S7: Per-cell Heterotrophic Production vs All Observed Richness
+## 2.  Figure S7A: Per-cell Heterotrophic Production vs All Observed Richness
 plot_all_rich_percell <- 
   ggplot(richness, aes(x=mean, y=log10(fracprod_per_cell_noinf))) + 
   geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd), color = "grey", alpha = 0.7) + # X-axis errorbars
   geom_point(size = 3.5, aes(shape = season), color = "black", fill =  "grey") +
   scale_shape_manual(values = season_shapes) + 
-  ylab("log10(production/cell)\n (μgC/cell/day)") + xlab("Observed Richness") +
+  ylab("\n log10(Per-Capita Production)\n (μgC/cell/day)") + xlab("Observed Richness") +
   geom_smooth(method='lm', color = "#424645", fill = "#424645") + 
   scale_x_continuous(limits = c(150,950), breaks = seq(from = 0, to =925, by = 150)) + 
   scale_y_continuous(limits = c(-8.5, -5.4), breaks = seq(from = -9, to = -5, by = 1)) + 
   # Add the R2 and p-value to the plot 
-  annotate("text", x=790, y=-8, label=lm_lab_perliter_invsimps_PA, parse = TRUE, color = "#424645", size = 4) +
+  annotate("text", x=790, y=-8, label=lm_lab_overall_rich_vs_percell, parse = TRUE, color = "#424645", size = 4) +
   theme(legend.title = element_blank(), legend.position ="bottom", 
         legend.text = element_text(size = 14))
 
 
-################# CORRECT ME HERE MARIAN 
+################ Figure S7B: Per-cell Heterotrophic Production vs All shannon
+## 1. Extract the R2 and p-value from the linear model: 
+lm_lab_overall_shannon_vs_percell <- 
+  paste("atop(R^2 ==", round(summary(lm(log10(fracprod_per_cell_noinf) ~ mean, data = shannon))$adj.r.squared, digits = 2), ",",
+  "p ==", round(unname(summary(lm(log10(fracprod_per_cell_noinf) ~ mean, data = shannon))$coefficients[,4][2]), digits = 5), ")")
+
+## 2.  Figure S7B: Per-cell Heterotrophic Production vs All Shannon
 plot_all_shannon_percell <- 
   ggplot(shannon, aes(x=mean, y=log10(fracprod_per_cell_noinf))) + 
   geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd), color = "grey", alpha = 0.7) + # X-axis errorbars
@@ -1727,13 +1733,18 @@ plot_all_shannon_percell <-
   geom_smooth(method='lm', color = "#424645", fill = "#424645") + 
   scale_x_continuous(limits = c(3.5,6), breaks = seq(from = 3, to =6, by = 0.5)) + 
   scale_y_continuous(limits = c(-8.5, -5.4), breaks = seq(from = -9, to = -5, by = 1)) + 
-  annotate("text", x = 5.25, y=-8, color = "#424645", fontface = "bold", size = 4,
-           label = paste("R2 =", round(summary(lm(log10(fracprod_per_cell_noinf) ~ mean, data = shannon))$adj.r.squared, digits = 2), "\n", 
-                         "p =", round(unname(summary(lm(log10(fracprod_per_cell_noinf) ~ mean, data = shannon))$coefficients[,4][2]), digits = 5))) + 
+  # Add the R2 and p-value to the plot 
+  annotate("text", x=5.25, y=-8, label=lm_lab_overall_shannon_vs_percell, parse = TRUE, color = "#424645", size = 4) +
   theme(legend.title = element_blank(), legend.position ="bottom", 
         legend.text = element_text(size = 14))
 
+################ Figure S7C: Per-cell Heterotrophic Production vs All Inverse Simpson
+## 1. Extract the R2 and p-value from the linear model: 
+lm_lab_overall_invsimps_vs_percell <- 
+  paste("atop(R^2 ==", round(summary(lm(log10(fracprod_per_cell_noinf) ~ mean, data = invsimps))$adj.r.squared, digits = 2), ",",
+  "p ==", round(unname(summary(lm(log10(fracprod_per_cell_noinf) ~ mean, data = invsimps))$coefficients[,4][2]), digits = 5), ")")
 
+## 2.  Figure S7C: Per-cell Heterotrophic Production vs All Inverse Simpson
 plot_all_invsimps_percell <- 
   ggplot(invsimps, aes(x=mean, y=log10(fracprod_per_cell_noinf))) + 
   geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd), color = "grey", alpha = 0.7) + # X-axis errorbars
@@ -1743,13 +1754,18 @@ plot_all_invsimps_percell <-
   geom_smooth(method='lm', color = "#424645", fill = "#424645") + 
   scale_x_continuous(limits = c(0,85), breaks = seq(from = 0, to = 85, by = 20)) + 
   scale_y_continuous(limits = c(-8.5, -5.4), breaks = seq(from = -9, to = -5, by = 1)) + 
-  annotate("text", x = 70, y=-8, color = "#424645", fontface = "bold", size = 4,
-           label = paste("R2 =", round(summary(lm(log10(fracprod_per_cell_noinf) ~ mean, data = invsimps))$adj.r.squared, digits = 2), "\n", 
-                         "p =", round(unname(summary(lm(log10(fracprod_per_cell_noinf) ~ mean, data = invsimps))$coefficients[,4][2]), digits = 5))) + 
+  # Add the R2 and p-value to the plot 
+  annotate("text", x=70, y=-8, label=lm_lab_overall_invsimps_vs_percell, parse = TRUE, color = "#424645", size = 4) +
   theme(legend.title = element_blank(), legend.position ="bottom", 
         legend.text = element_text(size = 14))
 
+################ Figure S7D: Per-cell Heterotrophic Production vs All Simpson's Evenness
+## 1. Extract the R2 and p-value from the linear model: 
+lm_lab_overall_simpseven_vs_percell <- 
+  paste("atop(R^2 ==", round(summary(lm(log10(fracprod_per_cell_noinf) ~ mean, data = simpseven))$adj.r.squared, digits = 2), ",",
+  "p ==", round(unname(summary(lm(log10(fracprod_per_cell_noinf) ~ mean, data = simpseven))$coefficients[,4][2]), digits = 2), ")")
 
+## 2.  Figure S7D: Per-cell Heterotrophic Production vs All Inverse Simpson
 plot_all_simpseven_percell <- 
   ggplot(simpseven, aes(x=mean, y=log10(fracprod_per_cell_noinf))) + 
   geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd), color = "grey", alpha = 0.7) + # X-axis errorbars
@@ -1759,9 +1775,8 @@ plot_all_simpseven_percell <-
   geom_smooth(method='lm', color = "#424645", fill = "#424645") + 
   scale_x_continuous(limits = c(0,0.15), breaks = seq(from = 0, to = 0.15, by = 0.03)) + 
   scale_y_continuous(limits = c(-8.5, -5.4), breaks = seq(from = -9, to = -5, by = 1)) + 
-  annotate("text", x = 0.12, y=-8, color = "#424645", fontface = "bold", size = 4,
-           label = paste("R2 =", round(summary(lm(log10(fracprod_per_cell_noinf) ~ mean, data = simpseven))$adj.r.squared, digits = 2), "\n", 
-                         "p =", round(unname(summary(lm(log10(fracprod_per_cell_noinf) ~ mean, data = simpseven))$coefficients[,4][2]), digits = 2))) + 
+  # Add the R2 and p-value to the plot 
+  annotate("text", x=0.12, y=-8, label=lm_lab_overall_simpseven_vs_percell, parse = TRUE, color = "#424645", size = 4) +
   theme(legend.title = element_blank(), legend.position ="bottom", 
         legend.text = element_text(size = 14))
 
