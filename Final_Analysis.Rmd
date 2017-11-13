@@ -812,7 +812,7 @@ metadata %>%
   summarize(mean(as.numeric(fraction_bac_abund)))
 
 # Make a data frame to draw significance line in boxplot (visually calculated)
-dat1 <- data.frame(a = c(1.15,1.15,1.85,1.85), b = c(6.45,6.5,6.5,6.45)) # WholePart vs WholeFree
+dat1 <- data.frame(a = c(1.1,1.1,1.9,1.9), b = c(6.45,6.5,6.5,6.45)) # WholePart vs WholeFree
 
 poster_a <- ggplot(filter(metadata, norep_filter_name != "MOTEJ515"), 
        aes(y = log10(as.numeric(fraction_bac_abund)), x = fraction)) +
@@ -823,7 +823,7 @@ poster_a <- ggplot(filter(metadata, norep_filter_name != "MOTEJ515"),
   scale_shape_manual(values = season_shapes) +
   ##### Particle vs free cell abundances 
   geom_path(data = dat1, aes(x = a, y = b), linetype = 1, color = "gray40") +
-  annotate("text", x=1.5, y=6.5, fontface = "bold",  size = 3.5, color = "gray40",
+  annotate("text", x=1.5, y=6.5, size = 4, color = "gray40",
            label= paste("***\np =", round(frac_abund_wilcox$p.value, digits = 6))) +
   theme(legend.position = "bottom",
         legend.title = element_blank(),
@@ -840,7 +840,7 @@ metadata %>%
   summarize(mean(frac_bacprod))
 
 # Make a data frame to draw significance line in boxplot (visually calculated)
-dat2 <- data.frame(a = c(1.15,1.15,1.85,1.85), b = c(71,72,72,71)) # WholePart vs WholeFree
+dat2 <- data.frame(a = c(1.1,1.1,1.9,1.9), b = c(71,72,72,71)) # WholePart vs WholeFree
 
 
 poster_b <- ggplot(metadata, aes(y = frac_bacprod, x = fraction)) + 
@@ -852,7 +852,7 @@ poster_b <- ggplot(metadata, aes(y = frac_bacprod, x = fraction)) +
   ylab("Community Production \n (μgC/L/day)") +
   ##### Particle vs free bulk production  
   geom_path(data = dat2, aes(x = a, y = b), linetype = 1, color = "gray40") +
-  annotate("text", x=1.5, y=72, fontface = "bold",  size = 3.5, color = "gray40",
+  annotate("text", x=1.5, y=72, size = 4, color = "gray40",
            label= paste("**\np =", round(totprod_wilcox$p.value, digits = 3))) +
   theme(legend.position = "none",
         axis.title.x = element_blank())
@@ -869,7 +869,7 @@ filter(metadata, norep_filter_name != "MOTEJ515") %>%
 
 
 # Make a data frame to draw significance line in boxplot (visually calculated)
-dat3 <- data.frame(a = c(1.15,1.15,1.85,1.85), b = c(-5.05,-5,-5,-5.05)) # WholePart vs WholeFree
+dat3 <- data.frame(a = c(1.1,1.1,1.9,1.9), b = c(-5.05,-5,-5,-5.05)) # WholePart vs WholeFree
 
 
 poster_c <- ggplot(filter(metadata, norep_filter_name != "MOTEJ515"), 
@@ -882,7 +882,7 @@ poster_c <- ggplot(filter(metadata, norep_filter_name != "MOTEJ515"),
   ylab("Log10(Per-Capita Production) \n(μgC/cell/day)") +
   ##### Particle vs free per-cell production 
   geom_path(data = dat3, aes(x = a, y = b), linetype = 1, color = "gray40") +
-  annotate("text", x=1.5, y=-5, fontface = "bold",  size = 3.5, color = "gray40",
+  annotate("text", x=1.5, y=-5,  size = 4, color = "gray40",
            label= paste("***\np =", round(percellprod_wilcox$p.value, digits = 5))) +
   theme(legend.position = "none",
         axis.title.x = element_blank())
@@ -1693,8 +1693,15 @@ ggplot(filter(otu_alphadiv, measure == "Simpsons_Evenness"),
 
 
 
-## Prepare Figure S3
+## Prepare Figure S7
 ```{r figS3, fig.width=12, fig.height=3.5, dependson= "calc-div"}
+################ Figure S7: Per-cell Heterotrophic Production vs All Observed Richness
+## 1. Extract the R2 and p-value from the linear model: 
+lm_lab_overall_rich_vs_percell <- 
+  paste("atop(R^2 ==", round(summary(lm(log10(fracprod_per_cell_noinf) ~ mean, data = richness))$adj.r.squared, digits = 2), ",",
+  "p ==", round(unname(summary(lm(log10(fracprod_per_cell_noinf) ~ mean, data = richness))$coefficients[,4][2]), digits = 6), ")")
+
+## 2.  Figure S7: Per-cell Heterotrophic Production vs All Observed Richness
 plot_all_rich_percell <- 
   ggplot(richness, aes(x=mean, y=log10(fracprod_per_cell_noinf))) + 
   geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd), color = "grey", alpha = 0.7) + # X-axis errorbars
@@ -1704,12 +1711,13 @@ plot_all_rich_percell <-
   geom_smooth(method='lm', color = "#424645", fill = "#424645") + 
   scale_x_continuous(limits = c(150,950), breaks = seq(from = 0, to =925, by = 150)) + 
   scale_y_continuous(limits = c(-8.5, -5.4), breaks = seq(from = -9, to = -5, by = 1)) + 
-  annotate("text", x = 790, y=-8, color = "#424645", fontface = "bold", size = 4,
-           label = paste("R2 =", round(summary(lm(log10(fracprod_per_cell_noinf) ~ mean, data = richness))$adj.r.squared, digits = 2), "\n", 
-                         "p =", round(unname(summary(lm(log10(fracprod_per_cell_noinf) ~ mean, data = richness))$coefficients[,4][2]), digits = 6))) + 
+  # Add the R2 and p-value to the plot 
+  annotate("text", x=790, y=-8, label=lm_lab_perliter_invsimps_PA, parse = TRUE, color = "#424645", size = 4) +
   theme(legend.title = element_blank(), legend.position ="bottom", 
         legend.text = element_text(size = 14))
 
+
+################# CORRECT ME HERE MARIAN 
 plot_all_shannon_percell <- 
   ggplot(shannon, aes(x=mean, y=log10(fracprod_per_cell_noinf))) + 
   geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd), color = "grey", alpha = 0.7) + # X-axis errorbars
@@ -2205,20 +2213,26 @@ predict(lasso_divs, type = "coefficients", s = best_lasso_lambda)
 ## Figure 3: Unweighted ses.mpd
 ```{r plot-unweighted-sesmpd, fig.width = 4.6, fig.height = 9.5, dependson = c("calc-div", "calc-sesmpd")}
 ######################################################### SES MPD DISTRIBUTION: UNWEIGHTED  
+
+
+
+################ Figure 3A: Distribution of Particle and Free Unweighted Mean Pairwise distance
+## 1. Is there a difference between particle and free Unweighted Mean Pairwise distance?
 unweighted_fraction_wilcox <- wilcox.test(mpd.obs.z ~ fraction, data = unweighted_df)
 unweighted_fraction_wilcox
 
+# 2. What are the means of particle and free unweighted PD?
 unweighted_df %>%
   group_by(fraction) %>%
   summarize(mean(mpd.obs.z))
 
+
+## 3. Plot Unweighted Phylogenetic Diversity vs Richness  
 # Make a data frame to draw significance line in boxplot (visually calculated)
 dat4 <- data.frame(a = c(1.15,1.15,1.85,1.85), b = c(1.6,1.7,1.7,1.6)) # WholePart vs WholeFree
 
-
 unweight_distribution_plot <- 
   ggplot(unweighted_df, aes(y = mpd.obs.z, x = fraction)) +
-  #scale_color_manual(values = fraction_colors) + 
   scale_fill_manual(values = fraction_colors) +
   geom_jitter(size = 3, aes(fill = fraction, shape = season), width = 0.2) + 
   geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(fill = fraction)) +
@@ -2229,19 +2243,27 @@ unweight_distribution_plot <-
   geom_hline(yintercept = 0, linetype = "dashed", size = 1.5) +
   ##### Particle vs free per-cell production 
   geom_path(data = dat4, aes(x = a, y = b), linetype = 1, color = "#424645") +
-  annotate("text", x=1.5, y=1.35, fontface = "bold",  size = 4, color = "#424645",
+  annotate("text", x=1.5, y=1.35, size = 4, color = "#424645",
            label= paste("p =", round(unweighted_fraction_wilcox$p.value, digits = 2))) +
   theme(legend.position = "none",# axis.title.y = element_blank(),
         axis.title.x = element_blank(), axis.text.x = element_blank()) +
   coord_flip()
 
-# Is there a relationship between richness and Unweighted Mean Pairwise distance?
-summary(lm(mean ~ mpd.obs.z, data = unweighted_df))
 
-summary(lm(mean ~ mpd.obs.z, data = filter(unweighted_df, fraction == "Particle")))
-summary(lm(mean ~ mpd.obs.z, data = filter(unweighted_df, fraction == "Free")))
+################ Figure 3B: Unweighted Phylogenetic Diversity vs Richness  
+## 1. Is there a relationship between richness and Unweighted Mean Pairwise distance?
+lm_richness_vs_unweight <- lm(mean ~ mpd.obs.z, data = unweighted_df)
 
+  # Linear model results for particle-associated only 
+  summary(lm(mean ~ mpd.obs.z, data = filter(unweighted_df, fraction == "Particle")))
+  # Linear model results for free-living only 
+  summary(lm(mean ~ mpd.obs.z, data = filter(unweighted_df, fraction == "Free")))
 
+## 2. Extract the R2 and p-value from the linear model: 
+lm_lab_richness_vs_unweight<- paste("atop(R^2 ==", round(summary(lm_richness_vs_unweight)$adj.r.squared, digits = 2), ",",
+             "p ==", round(unname(summary(lm_richness_vs_unweight)$coefficients[,4][2]), digits = 3), ")")
+
+## 3. Plot Unweighted Phylogenetic Diversity vs Richness  
 unweight_rich_vs_mpd_plot <- 
   ggplot(unweighted_df, aes(y = mean, x = mpd.obs.z)) +
   geom_errorbar(aes(ymin = mean - sd, ymax = mean + sd, color = fraction), alpha = 0.7) + # X-axis errorbars
@@ -2252,18 +2274,20 @@ unweight_rich_vs_mpd_plot <-
   scale_fill_manual(values = fraction_colors) +
   geom_smooth(method = "lm", color = "#424645", fill = "#424645", alpha = 0.3) + 
   scale_x_continuous(limits = c(-1.5,1.75), breaks = seq(from = -1.5, to = 1.5, by = 0.5)) + 
-  annotate("text", x = 0.75, y=750, color = "#424645", fontface = "bold",
-           label = paste("R2 =", round(summary(lm(mean ~ mpd.obs.z, data = unweighted_df))$adj.r.squared, digits = 2), "\n", 
-                         "p =", round(unname(summary(lm(mean ~ mpd.obs.z, data = unweighted_df))$coefficients[,4][2]), digits = 3))) +
+  # Add the R2 and p-value to the plot 
+  annotate("text", x=0.75, y=750, label=lm_lab_richness_vs_unweight, parse = TRUE, color = "#424645", size = 4) +
   theme(legend.title = element_blank(), legend.position = "none", 
         axis.text.x = element_blank(), axis.title.x = element_blank())
 
 
+################ Figure 3C: Unweighted Mean Pairwise distance vs Community-Wide Production
 # Is there a relationship between Production and Unweighted Mean Pairwise distance?
-#summary(lm(frac_bacprod ~ mpd.obs.z, data = unweighted_df)) # NS 
+summary(lm(frac_bacprod ~ mpd.obs.z, data = unweighted_df)) # NS 
 
-summary(lm(frac_bacprod ~ mpd.obs.z, data = filter(unweighted_df, fraction == "Particle")))
-summary(lm(frac_bacprod ~ mpd.obs.z, data = filter(unweighted_df, fraction == "Free")))
+  # Linear model results for particle-associated only 
+  summary(lm(frac_bacprod ~ mpd.obs.z, data = filter(unweighted_df, fraction == "Particle")))
+  # Linear model results for free-living only 
+  summary(lm(frac_bacprod ~ mpd.obs.z, data = filter(unweighted_df, fraction == "Free")))
 
 unweight_prod_vs_mpd_plot <- 
   ggplot(unweighted_df, aes(y = frac_bacprod, x = mpd.obs.z, fill = fraction)) +
@@ -2279,14 +2303,21 @@ unweight_prod_vs_mpd_plot <-
         axis.text.x = element_blank(), axis.title.x = element_blank())
 
 
-# Is there a relationship between PER-CELL PRODUCTION and Unweighted Mean Pairwise distance?
+
+################ Figure 3D: Unweighted Phylogenetic Diversity vs Per Capitra (Per-Cell) Production 
+## 1. Run the linear model: Is there a relationship between PER-CELL PRODUCTION and Unweighted Mean Pairwise distance?
 unweight_vs_percell <- lm(log10(fracprod_per_cell_noinf) ~ mpd.obs.z, data = unweighted_df)
-summary(unweight_vs_percell)
 
-summary(lm(log10(fracprod_per_cell_noinf) ~ mpd.obs.z, data = filter(unweighted_df, fraction == "Particle")))
-summary(lm(log10(fracprod_per_cell_noinf) ~ mpd.obs.z, data = filter(unweighted_df, fraction == "Free")))
+  # Linear model results for particle-associated only 
+  summary(lm(log10(fracprod_per_cell_noinf) ~ mpd.obs.z, data = filter(unweighted_df, fraction == "Particle")))
+  # Linear model results for free-living only 
+  summary(lm(log10(fracprod_per_cell_noinf) ~ mpd.obs.z, data = filter(unweighted_df, fraction == "Free")))
 
+## 2. Extract the R2 and p-value from the linear model: 
+lm_lab_percell_unweightPD <- paste("atop(R^2 ==", round(summary(unweight_vs_percell)$adj.r.squared, digits = 2), ",",
+             "p ==", round(unname(summary(unweight_vs_percell)$coefficients[,4][2]), digits = 4), ")")
 
+## 3. Plot Unweighted Phylogenetic Diversity vs Per Capitra (Per-Cell) Production 
 unweight_percell_vs_mpd_plot <- 
   ggplot(unweighted_df, 
        aes(y = log10(fracprod_per_cell_noinf), x = mpd.obs.z)) +
@@ -2297,12 +2328,10 @@ unweight_percell_vs_mpd_plot <-
   scale_fill_manual(values = fraction_colors) +
   scale_shape_manual(values = season_shapes) + 
   geom_smooth(method = "lm", color="#424645", fill = "#424645", alpha = 0.3) +
-  #stat_smooth(method="lm", se=TRUE, formula= y ~ poly(x, 2, raw=TRUE), color="#424645", fill = "#424645", alpha = 0.3) +
   scale_y_continuous(limits = c(-8.5,-5), breaks = c(-8, -7, -6)) + 
   scale_x_continuous(limits = c(-1.5,1.75), breaks = seq(from = -1.5, to = 1.5, by = 0.5)) + 
-  annotate("text", x = 0.75, y=-6, color = "#424645", fontface = "bold",
-         label = paste("R2 =", round(summary(unweight_vs_percell)$adj.r.squared, digits = 2), "\n", 
-                       "p =", round(unname(summary(unweight_vs_percell)$coefficients[,4][2]), digits = 4))) +
+  # Add the R2 and p-value to the plot 
+  annotate("text", x=0.75, y=-6, label=lm_lab_percell_unweightPD, parse = TRUE, color = "#424645", size = 4) +
   theme(legend.title = element_blank(), legend.position ="bottom", 
         legend.text = element_text(size = 14))
 
@@ -2807,18 +2836,21 @@ faiths_pd_RAREFIED$norep_filter_name <- row.names(faiths_pd_RAREFIED)
 # Join Faith's PD with the rest of the metadata 
 meta_data_PD <- left_join(faiths_pd_RAREFIED, lasso_data_df, by = "norep_filter_name")
 
-
-### Is there a correlation between species richness and faith's PD?
+################ Figure S1: species richness and faith's PD
+## 1. Run the linear model: Is there a correlation between species richness and faith's PD?
 lm_PD_vs_SR <- lm(PD ~ SR, data = meta_data_PD)
+summary(lm_PD_vs_SR)
+
+## 2. Extract the R2 and p-value from the linear model: 
+lm_lab_PD_vs_SR<- paste("atop(R^2 ==", round(summary(lm_PD_vs_SR)$adj.r.squared, digits = 3), ",",
+             "p ==", round(unname(summary(lm_PD_vs_SR)$coefficients[,4][2]), digits = 20), ")")
+
+## 3. Plot Figure S1: species richness and faith's PD
 ggplot(meta_data_PD, aes(y = PD, x = SR)) + 
   geom_point(size = 3) + 
   ylab("Faith's PD") + 
   xlab("Species Richness") +
-  geom_smooth(method = "lm") +
-    annotate("text", x = 600, y=35, color = "black", fontface = "bold",
-           label = paste("R2 =", round(summary(lm_PD_vs_SR)$adj.r.squared, digits = 3), "\n", 
-                         "p =", round(unname(summary(lm_PD_vs_SR)$coefficients[,4][2]), digits = 20))) 
-
-summary(lm_PD_vs_SR)
-
+  geom_smooth(method = "lm", color = "black") +
+  # Add the R2 and p-value to the plot 
+  annotate("text", x=600, y=35, label=lm_lab_PD_vs_SR, parse = TRUE, color = "black", size = 4) 
 ```
