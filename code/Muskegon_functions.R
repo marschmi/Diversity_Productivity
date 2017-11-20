@@ -653,16 +653,16 @@ lm_fraction_output <- function(dataframe) {
     round(summary(lm_300_part)$adj.r.squared, digits = 2))
   
   part_lm_pval <- c(
-    round(unname(summary(lm_01_part)$coefficients[,4][2]), digits = 3),
-    round(unname(summary(lm_05_part)$coefficients[,4][2]), digits = 3),
-    round(unname(summary(lm_10_part)$coefficients[,4][2]), digits = 3),
-    round(unname(summary(lm_20_part)$coefficients[,4][2]), digits = 3),
-    round(unname(summary(lm_30_part)$coefficients[,4][2]), digits = 3),
-    round(unname(summary(lm_60_part)$coefficients[,4][2]), digits = 3),
-    round(unname(summary(lm_90_part)$coefficients[,4][2]), digits = 3),
-    round(unname(summary(lm_150_part)$coefficients[,4][2]), digits = 3),
-    round(unname(summary(lm_225_part)$coefficients[,4][2]), digits = 3),
-    round(unname(summary(lm_300_part)$coefficients[,4][2]), digits = 3))
+    round(unname(summary(lm_01_part)$coefficients[,4][2]), digits = 4),
+    round(unname(summary(lm_05_part)$coefficients[,4][2]), digits = 4),
+    round(unname(summary(lm_10_part)$coefficients[,4][2]), digits = 4),
+    round(unname(summary(lm_20_part)$coefficients[,4][2]), digits = 4),
+    round(unname(summary(lm_30_part)$coefficients[,4][2]), digits = 4),
+    round(unname(summary(lm_60_part)$coefficients[,4][2]), digits = 4),
+    round(unname(summary(lm_90_part)$coefficients[,4][2]), digits = 4),
+    round(unname(summary(lm_150_part)$coefficients[,4][2]), digits = 4),
+    round(unname(summary(lm_225_part)$coefficients[,4][2]), digits = 4),
+    round(unname(summary(lm_300_part)$coefficients[,4][2]), digits = 4))
   
   part_lm_df <- data.frame(removed_factors, part_lm_adj_r2, part_lm_pval) %>%
     rename(Removed = removed_factors, Adj_R2 = part_lm_adj_r2, pval = part_lm_pval) %>%
@@ -692,16 +692,16 @@ lm_fraction_output <- function(dataframe) {
     round(summary(lm_300_free)$adj.r.squared, digits = 2))
   
   free_lm_pval <- c(
-    round(unname(summary(lm_01_free)$coefficients[,4][2]), digits = 3),
-    round(unname(summary(lm_05_free)$coefficients[,4][2]), digits = 3),
-    round(unname(summary(lm_10_free)$coefficients[,4][2]), digits = 3),
-    round(unname(summary(lm_20_free)$coefficients[,4][2]), digits = 3),
-    round(unname(summary(lm_30_free)$coefficients[,4][2]), digits = 3),
-    round(unname(summary(lm_60_free)$coefficients[,4][2]), digits = 3),
-    round(unname(summary(lm_90_free)$coefficients[,4][2]), digits = 3),
-    round(unname(summary(lm_150_free)$coefficients[,4][2]), digits = 3),
-    round(unname(summary(lm_225_free)$coefficients[,4][2]), digits = 3),
-    round(unname(summary(lm_300_free)$coefficients[,4][2]), digits = 3))
+    round(unname(summary(lm_01_free)$coefficients[,4][2]), digits = 4),
+    round(unname(summary(lm_05_free)$coefficients[,4][2]), digits = 4),
+    round(unname(summary(lm_10_free)$coefficients[,4][2]), digits = 4),
+    round(unname(summary(lm_20_free)$coefficients[,4][2]), digits = 4),
+    round(unname(summary(lm_30_free)$coefficients[,4][2]), digits = 4),
+    round(unname(summary(lm_60_free)$coefficients[,4][2]), digits = 4),
+    round(unname(summary(lm_90_free)$coefficients[,4][2]), digits = 4),
+    round(unname(summary(lm_150_free)$coefficients[,4][2]), digits = 4),
+    round(unname(summary(lm_225_free)$coefficients[,4][2]), digits = 4),
+    round(unname(summary(lm_300_free)$coefficients[,4][2]), digits = 4))
   
   free_lm_df <- data.frame(removed_factors, free_lm_adj_r2, free_lm_pval) %>%
     rename(Removed = removed_factors, Adj_R2 = free_lm_adj_r2, pval = free_lm_pval) %>%
