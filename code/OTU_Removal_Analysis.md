@@ -21,6 +21,7 @@ library(phyloseq)
 library(tidyr)
 library(dplyr)
 library(cowplot)
+library(forcats)
 library(picante) # Will also include ape and vegan 
 library(car) # For residual analysis
 library(sandwich) # for vcovHC function in post-hoc test
@@ -155,6 +156,19 @@ notree_musk_surface_pruned_rm10
 ## otu_table()   OTU Table:         [ 1059 taxa and 24 samples ]
 ## sample_data() Sample Data:       [ 24 samples by 13 sample variables ]
 ## tax_table()   Taxonomy Table:    [ 1059 taxa by 8 taxonomic ranks ]
+```
+
+```r
+# If taxa with 20 counts are removed 
+notree_musk_surface_pruned_rm20 <- prune_taxa(taxa_sums(notree_musk_surface_pruned) > 20, notree_musk_surface_pruned) 
+notree_musk_surface_pruned_rm20
+```
+
+```
+## phyloseq-class experiment-level object
+## otu_table()   OTU Table:         [ 694 taxa and 24 samples ]
+## sample_data() Sample Data:       [ 24 samples by 13 sample variables ]
+## tax_table()   Taxonomy Table:    [ 694 taxa by 8 taxonomic ranks ]
 ```
 
 ```r
@@ -300,6 +314,29 @@ otu_alphadiv_rm10 <- calc_mean_alphadiv(physeq = notree_musk_surface_pruned_rm10
          measure = factor(measure, levels = c("Richness", "Simpsons_Evenness", "Shannon_Entropy", "Inverse_Simpson")),
          Removed = "10-tons") 
 
+
+################## Remove 20-tons 
+alpha_rm20 <- calc_alpha_diversity(physeq = notree_musk_surface_pruned_rm20)
+min(sample_sums(notree_musk_surface_pruned_rm20)) - 1
+```
+
+```
+## [1] 6067
+```
+
+```r
+otu_alphadiv_rm20 <- calc_mean_alphadiv(physeq = notree_musk_surface_pruned_rm20,
+                           richness_df = alpha_rm20$Richness, 
+                           evenness_df = alpha_rm20$Inverse_Simpson, 
+                           shannon_df = alpha_rm20$Shannon) %>%
+    mutate(fraction = factor(fraction, levels = c("WholePart", "Particle", "WholeFree", "Free")),
+         lakesite = factor(lakesite,  levels = c("MOT", "MDP", "MBR", "MIN")),
+         measure = factor(measure, levels = c("Richness", "Simpsons_Evenness", "Shannon_Entropy", "Inverse_Simpson")),
+         Removed = "20-tons")  
+
+
+
+
 ################## Remove 30-tons 
 alpha_rm30 <- calc_alpha_diversity(physeq = notree_musk_surface_pruned_rm30)
 min(sample_sums(notree_musk_surface_pruned_rm30)) - 1
@@ -421,28 +458,32 @@ otu_alphadiv_rm300 <- calc_mean_alphadiv(physeq = notree_musk_surface_pruned_rm3
 ```
 
 
+# Minimum Sequences Plot
+
 ```r
 min_seqs <- c(min(sample_sums(notree_musk_surface_pruned_rm1)) - 1, min(sample_sums(notree_musk_surface_pruned_rm5)) - 1, 
-  min(sample_sums(notree_musk_surface_pruned_rm10)) - 1, min(sample_sums(notree_musk_surface_pruned_rm30)) - 1,
+  min(sample_sums(notree_musk_surface_pruned_rm10)) - 1, min(sample_sums(notree_musk_surface_pruned_rm20)) - 1,
+  min(sample_sums(notree_musk_surface_pruned_rm30)) - 1,
   min(sample_sums(notree_musk_surface_pruned_rm60)) - 1, min(sample_sums(notree_musk_surface_pruned_rm90)) - 1,
   min(sample_sums(notree_musk_surface_pruned_rm150)) - 1, min(sample_sums(notree_musk_surface_pruned_rm225)) - 1,
   min(sample_sums(notree_musk_surface_pruned_rm300)) - 1)
 
 
 num_otus <- c(ncol(otu_table(notree_musk_surface_pruned_rm1)), ncol(otu_table(notree_musk_surface_pruned_rm5)), ncol(otu_table(notree_musk_surface_pruned_rm10)), 
+              ncol(otu_table(notree_musk_surface_pruned_rm20)),
               ncol(otu_table(notree_musk_surface_pruned_rm30)), ncol(otu_table(notree_musk_surface_pruned_rm60)), ncol(otu_table(notree_musk_surface_pruned_rm90)),
               ncol(otu_table(notree_musk_surface_pruned_rm150)), ncol(otu_table(notree_musk_surface_pruned_rm225)), ncol(otu_table(notree_musk_surface_pruned_rm300)))
 
-Removed <- c("1-tons","5-tons", "10-tons", "30-tons", "60-tons", "90-tons", "150-tons", "225-tons","300-tons")
+Removed <- c("1-tons","5-tons", "10-tons", "20-tons", "30-tons", "60-tons", "90-tons", "150-tons", "225-tons","300-tons")
 
 
 statz <- data.frame(cbind(as.numeric(min_seqs), as.numeric(num_otus), Removed)) %>%
-         mutate(Removed = factor(Removed, levels = c("1-tons","5-tons", "10-tons", "30-tons", "60-tons", 
+         mutate(Removed = factor(Removed, levels = c("1-tons","5-tons", "10-tons", "20-tons", "30-tons", "60-tons", 
                                               "90-tons", "150-tons", "225-tons","300-tons"))) %>%
   mutate(num_otus = as.numeric(num_otus))
 
 p1 <- ggplot(statz, aes(x = Removed, y = min_seqs, fill = Removed)) +
-  geom_bar(stat = "identity") + ylab("Minimum Number of Sequences") +
+  geom_bar(stat = "identity") + ylab("Minimum # of Sequences") +
   scale_y_continuous(expand = c(0,0), limits = c(0, 8000)) +
   scale_color_manual(values = tons_colors) +
   scale_fill_manual(values = tons_colors) +
@@ -455,7 +496,7 @@ p2 <-ggplot(statz, aes(x = Removed, y = num_otus, fill = Removed)) +
   scale_color_manual(values = tons_colors) +
   scale_fill_manual(values = tons_colors) +
   theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
-        legend.position = c(0.9, 0.8), legend.title = element_blank())
+        legend.position = c(0.8, 0.65), legend.title = element_blank())
 
 plot_grid(p1, p2, align = "v", labels = c("A", "B"), nrow = 2, ncol =1)
 ```
@@ -471,11 +512,12 @@ plot_grid(p1, p2, align = "v", labels = c("A", "B"), nrow = 2, ncol =1)
 
 ```r
 # Combine all div metrics 
-all_divs <- bind_rows(otu_alphadiv_rm1, otu_alphadiv_rm5, otu_alphadiv_rm10, otu_alphadiv_rm30, 
+all_divs <- bind_rows(otu_alphadiv_rm1, otu_alphadiv_rm5, otu_alphadiv_rm10, otu_alphadiv_rm20, otu_alphadiv_rm30, 
                       otu_alphadiv_rm60, otu_alphadiv_rm90, otu_alphadiv_rm150, 
                       otu_alphadiv_rm225, otu_alphadiv_rm300) %>%
-  dplyr::filter(fraction %in% c("WholePart", "WholeFree") & year == "2015") %>%
-  mutate(Removed = factor(Removed, levels = c("1-tons","5-tons", "10-tons", "30-tons", "60-tons", 
+  dplyr::filter(fraction %in% c("WholePart", "WholeFree") & year == "2015") %>% 
+  mutate(fraction = fct_recode(fraction, "Particle" = "WholePart", "Free" = "WholeFree")) %>%
+  mutate(Removed = factor(Removed, levels = c("1-tons","5-tons", "10-tons", "20-tons", "30-tons", "60-tons", 
                                               "90-tons", "150-tons", "225-tons","300-tons")))
 ```
 
@@ -529,10 +571,10 @@ summary(lm(frac_bacprod ~ mean + fraction, data = dplyr::filter(all_divs, measur
 ## -20.797  -6.772  -0.585   6.031  33.411 
 ## 
 ## Coefficients:
-##                    Estimate Std. Error t value Pr(>|t|)   
-## (Intercept)       -13.35169   10.71466  -1.246   0.2264   
-## mean                0.03843    0.01663   2.311   0.0311 * 
-## fractionWholeFree  23.18701    6.44851   3.596   0.0017 **
+##               Estimate Std. Error t value Pr(>|t|)   
+## (Intercept)  -13.35169   10.71466  -1.246   0.2264   
+## mean           0.03843    0.01663   2.311   0.0311 * 
+## fractionFree  23.18701    6.44851   3.596   0.0017 **
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
@@ -542,80 +584,39 @@ summary(lm(frac_bacprod ~ mean + fraction, data = dplyr::filter(all_divs, measur
 ```
 
 ```r
-summary(lm(frac_bacprod ~ mean/Removed, data = dplyr::filter(all_divs, measure == "Richness" & fraction == "WholePart")))
+# Are the linear models for different OTU removals significant? 
+summary(lm(frac_bacprod ~ mean/Removed, data = dplyr::filter(all_divs, measure == "Richness" & fraction == "Particle")))
 ```
 
 ```
 ## 
 ## Call:
 ## lm(formula = frac_bacprod ~ mean/Removed, data = dplyr::filter(all_divs, 
-##     measure == "Richness" & fraction == "WholePart"))
+##     measure == "Richness" & fraction == "Particle"))
 ## 
 ## Residuals:
-##    Min     1Q Median     3Q    Max 
-## -9.928 -5.493 -1.521  3.624 22.370 
+##     Min      1Q  Median      3Q     Max 
+## -10.089  -5.440  -1.310   3.722  22.488 
 ## 
 ## Coefficients:
 ##                        Estimate Std. Error t value Pr(>|t|)    
-## (Intercept)          -10.286510   5.124149  -2.007 0.047454 *  
-## mean                   0.033280   0.008436   3.945 0.000150 ***
-## mean:Removed5-tons     0.009687   0.006221   1.557 0.122657    
-## mean:Removed10-tons    0.016918   0.007742   2.185 0.031268 *  
-## mean:Removed30-tons    0.036689   0.012813   2.863 0.005127 ** 
-## mean:Removed60-tons    0.052790   0.017170   3.075 0.002732 ** 
-## mean:Removed90-tons    0.067999   0.021474   3.167 0.002057 ** 
-## mean:Removed150-tons   0.092711   0.028425   3.262 0.001525 ** 
-## mean:Removed225-tons   0.126222   0.037525   3.364 0.001098 ** 
-## mean:Removed300-tons   0.150614   0.044357   3.395 0.000991 ***
+## (Intercept)          -11.820593   4.947751  -2.389 0.018608 *  
+## mean                   0.035581   0.008183   4.348  3.1e-05 ***
+## mean:Removed5-tons     0.010441   0.006144   1.699 0.092104 .  
+## mean:Removed10-tons    0.018249   0.007613   2.397 0.018231 *  
+## mean:Removed20-tons    0.029796   0.010190   2.924 0.004202 ** 
+## mean:Removed30-tons    0.039610   0.012515   3.165 0.002011 ** 
+## mean:Removed60-tons    0.056972   0.016733   3.405 0.000928 ***
+## mean:Removed90-tons    0.073401   0.020903   3.511 0.000649 ***
+## mean:Removed150-tons   0.100057   0.027640   3.620 0.000448 ***
+## mean:Removed225-tons   0.136096   0.036460   3.733 0.000303 ***
+## mean:Removed300-tons   0.162378   0.043085   3.769 0.000267 ***
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
-## Residual standard error: 7.652 on 98 degrees of freedom
-## Multiple R-squared:  0.1469,	Adjusted R-squared:  0.06859 
-## F-statistic: 1.875 on 9 and 98 DF,  p-value: 0.06447
-```
-
-```r
-# Are the slopes of Removed different from each other?
-summary(lm(frac_bacprod ~ mean*Removed, data = dplyr::filter(all_divs, measure == "Richness" & fraction == "WholePart")))
-```
-
-```
-## 
-## Call:
-## lm(formula = frac_bacprod ~ mean * Removed, data = dplyr::filter(all_divs, 
-##     measure == "Richness" & fraction == "WholePart"))
-## 
-## Residuals:
-##      Min       1Q   Median       3Q      Max 
-## -12.7683  -4.2203  -0.9146   3.5894  20.3023 
-## 
-## Coefficients:
-##                       Estimate Std. Error t value Pr(>|t|)   
-## (Intercept)           -9.61507    7.03808  -1.366  0.17530   
-## mean                   0.03227    0.01107   2.916  0.00448 **
-## Removed5-tons         -8.36171   12.16940  -0.687  0.49378   
-## Removed10-tons       -16.40576   14.92731  -1.099  0.27468   
-## Removed30-tons       -27.68454   27.15250  -1.020  0.31065   
-## Removed60-tons        -9.09932   33.71779  -0.270  0.78788   
-## Removed90-tons        38.97631   34.72069   1.123  0.26461   
-## Removed150-tons       69.89030   33.46261   2.089  0.03957 * 
-## Removed225-tons       65.49632   38.04611   1.721  0.08860 . 
-## Removed300-tons       86.75844   40.58064   2.138  0.03523 * 
-## mean:Removed5-tons     0.02601    0.02307   1.128  0.26247   
-## mean:Removed10-tons    0.05519    0.03347   1.649  0.10264   
-## mean:Removed30-tons    0.12965    0.09025   1.437  0.15428   
-## mean:Removed60-tons    0.08942    0.14010   0.638  0.52494   
-## mean:Removed90-tons   -0.13008    0.17141  -0.759  0.44992   
-## mean:Removed150-tons  -0.35003    0.20646  -1.695  0.09346 . 
-## mean:Removed225-tons  -0.39790    0.29742  -1.338  0.18431   
-## mean:Removed300-tons  -0.65000    0.36712  -1.771  0.08002 . 
-## ---
-## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-## 
-## Residual standard error: 7.32 on 90 degrees of freedom
-## Multiple R-squared:  0.2831,	Adjusted R-squared:  0.1477 
-## F-statistic: 2.091 on 17 and 90 DF,  p-value: 0.01365
+## Residual standard error: 7.591 on 109 degrees of freedom
+## Multiple R-squared:  0.1597,	Adjusted R-squared:  0.08265 
+## F-statistic: 2.072 on 10 and 109 DF,  p-value: 0.03274
 ```
 
 
@@ -627,28 +628,30 @@ lm_fraction_output(dataframe = dplyr::filter(all_divs,  measure == "Richness"))
 
 ```
 ## $free
-##    Removed Adj_R2  pval  fraction
-## 1   1-tons   0.05 0.241 WholeFree
-## 2   5-tons  -0.08 0.666 WholeFree
-## 3  10-tons  -0.10 0.952 WholeFree
-## 4  30-tons  -0.08 0.702 WholeFree
-## 5  60-tons  -0.05 0.504 WholeFree
-## 6  90-tons   0.04 0.263 WholeFree
-## 7 150-tons   0.08 0.191 WholeFree
-## 8 225-tons   0.05 0.234 WholeFree
-## 9 300-tons   0.06 0.223 WholeFree
+##     Removed Adj_R2  pval fraction
+## 1    1-tons   0.05 0.241     Free
+## 2    5-tons  -0.08 0.666     Free
+## 3   10-tons  -0.10 0.952     Free
+## 4   20-tons  -0.09 0.779     Free
+## 5   30-tons  -0.08 0.702     Free
+## 6   60-tons  -0.05 0.504     Free
+## 7   90-tons   0.04 0.263     Free
+## 8  150-tons   0.08 0.191     Free
+## 9  225-tons   0.05 0.234     Free
+## 10 300-tons   0.06 0.223     Free
 ## 
 ## $part
-##    Removed Adj_R2  pval  fraction
-## 1   1-tons   0.57 0.003 WholePart
-## 2   5-tons   0.55 0.003 WholePart
-## 3  10-tons   0.50 0.006 WholePart
-## 4  30-tons   0.16 0.111 WholePart
-## 5  60-tons  -0.04 0.466 WholePart
-## 6  90-tons  -0.07 0.635 WholePart
-## 7 150-tons   0.09 0.182 WholePart
-## 8 225-tons   0.02 0.296 WholePart
-## 9 300-tons   0.12 0.141 WholePart
+##     Removed Adj_R2  pval fraction
+## 1    1-tons   0.57 0.003 Particle
+## 2    5-tons   0.55 0.003 Particle
+## 3   10-tons   0.50 0.006 Particle
+## 4   20-tons   0.35 0.025 Particle
+## 5   30-tons   0.16 0.111 Particle
+## 6   60-tons  -0.04 0.466 Particle
+## 7   90-tons  -0.07 0.635 Particle
+## 8  150-tons   0.09 0.182 Particle
+## 9  225-tons   0.02 0.296 Particle
+## 10 300-tons   0.12 0.141 Particle
 ```
 
 ```r
@@ -660,7 +663,7 @@ ggplot(dplyr::filter(all_divs, measure == "Richness"),
   xlab("Richness") +
   ylab("Bacterial Production by Fraction") +
   geom_smooth(method = "lm", data = filter(all_divs, 
-                                           measure == "Richness" & fraction == "WholePart" & Removed %in% sig_rich_lms)) + 
+                                           measure == "Richness" & fraction == "Particle" & Removed %in% sig_rich_lms)) + 
   scale_color_manual(values = tons_colors) +
   scale_fill_manual(values = tons_colors) +  
   facet_grid(fraction~Removed, scales = "free") +
@@ -720,10 +723,10 @@ summary(lm(frac_bacprod ~ mean + fraction, data = dplyr::filter(all_divs, measur
 ## -22.152  -5.408  -1.649   4.042  36.152 
 ## 
 ## Coefficients:
-##                   Estimate Std. Error t value Pr(>|t|)   
-## (Intercept)        -40.068     27.334  -1.466  0.15749   
-## mean                10.912      5.906   1.848  0.07878 . 
-## fractionWholeFree   20.301      6.280   3.232  0.00399 **
+##              Estimate Std. Error t value Pr(>|t|)   
+## (Intercept)   -40.068     27.334  -1.466  0.15749   
+## mean           10.912      5.906   1.848  0.07878 . 
+## fractionFree   20.301      6.280   3.232  0.00399 **
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
@@ -733,80 +736,39 @@ summary(lm(frac_bacprod ~ mean + fraction, data = dplyr::filter(all_divs, measur
 ```
 
 ```r
-summary(lm(frac_bacprod ~ mean/Removed, data = dplyr::filter(all_divs, measure == "Shannon_Entropy" & fraction == "WholePart")))
+# Are the linear models for different OTU removals significant? 
+summary(lm(frac_bacprod ~ mean/Removed, data = dplyr::filter(all_divs, measure == "Shannon_Entropy" & fraction == "Particle")))
 ```
 
 ```
 ## 
 ## Call:
 ## lm(formula = frac_bacprod ~ mean/Removed, data = dplyr::filter(all_divs, 
-##     measure == "Shannon_Entropy" & fraction == "WholePart"))
+##     measure == "Shannon_Entropy" & fraction == "Particle"))
 ## 
 ## Residuals:
-##     Min      1Q  Median      3Q     Max 
-## -10.869  -2.977  -0.974   1.779  13.872 
+##      Min       1Q   Median       3Q      Max 
+## -10.8903  -2.9868  -0.9647   1.8390  13.8331 
 ## 
 ## Coefficients:
 ##                      Estimate Std. Error t value Pr(>|t|)    
-## (Intercept)          -52.8965     6.0044  -8.810 4.62e-14 ***
-## mean                  13.6646     1.3384  10.210  < 2e-16 ***
-## mean:Removed5-tons     0.4437     0.5120   0.867 0.388311    
-## mean:Removed10-tons    0.7346     0.5206   1.411 0.161433    
-## mean:Removed30-tons    1.4101     0.5462   2.582 0.011318 *  
-## mean:Removed60-tons    1.8617     0.5671   3.283 0.001425 ** 
-## mean:Removed90-tons    2.2584     0.5878   3.842 0.000217 ***
-## mean:Removed150-tons   2.8748     0.6233   4.612 1.21e-05 ***
-## mean:Removed225-tons   3.5678     0.6669   5.350 5.77e-07 ***
-## mean:Removed300-tons   4.0108     0.6972   5.753 1.00e-07 ***
+## (Intercept)          -53.2811     5.6778  -9.384 1.09e-15 ***
+## mean                  13.7473     1.2703  10.822  < 2e-16 ***
+## mean:Removed5-tons     0.4465     0.5092   0.877 0.382500    
+## mean:Removed10-tons    0.7392     0.5175   1.429 0.155997    
+## mean:Removed20-tons    1.1273     0.5305   2.125 0.035839 *  
+## mean:Removed30-tons    1.4189     0.5417   2.619 0.010065 *  
+## mean:Removed60-tons    1.8733     0.5614   3.337 0.001159 ** 
+## mean:Removed90-tons    2.2725     0.5808   3.913 0.000159 ***
+## mean:Removed150-tons   2.8927     0.6141   4.711 7.32e-06 ***
+## mean:Removed225-tons   3.5898     0.6549   5.482 2.75e-07 ***
+## mean:Removed300-tons   4.0355     0.6833   5.906 4.04e-08 ***
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
-## Residual standard error: 5.68 on 98 degrees of freedom
-## Multiple R-squared:   0.53,	Adjusted R-squared:  0.4869 
-## F-statistic: 12.28 on 9 and 98 DF,  p-value: 8.15e-13
-```
-
-```r
-# Are the slopes of Removed different from each other?
-summary(lm(frac_bacprod ~ mean*Removed, data = dplyr::filter(all_divs, measure == "Shannon_Entropy" & fraction == "WholePart")))
-```
-
-```
-## 
-## Call:
-## lm(formula = frac_bacprod ~ mean * Removed, data = dplyr::filter(all_divs, 
-##     measure == "Shannon_Entropy" & fraction == "WholePart"))
-## 
-## Residuals:
-##     Min      1Q  Median      3Q     Max 
-## -11.039  -2.590  -1.495   2.027  13.228 
-## 
-## Coefficients:
-##                      Estimate Std. Error t value Pr(>|t|)    
-## (Intercept)           -38.634     13.894  -2.781 0.006606 ** 
-## mean                   10.599      3.008   3.523 0.000672 ***
-## Removed5-tons          -6.146     20.897  -0.294 0.769335    
-## Removed10-tons        -11.074     21.938  -0.505 0.614943    
-## Removed30-tons        -21.134     24.202  -0.873 0.384849    
-## Removed60-tons        -25.396     25.210  -1.007 0.316463    
-## Removed90-tons        -28.758     26.264  -1.095 0.276457    
-## Removed150-tons       -28.546     26.759  -1.067 0.288922    
-## Removed225-tons       -19.226     24.830  -0.774 0.440766    
-## Removed300-tons       -17.370     24.774  -0.701 0.485018    
-## mean:Removed5-tons      1.706      4.606   0.370 0.712021    
-## mean:Removed10-tons     3.076      4.903   0.627 0.531996    
-## mean:Removed30-tons     6.110      5.607   1.090 0.278734    
-## mean:Removed60-tons     7.656      5.985   1.279 0.204080    
-## mean:Removed90-tons     8.970      6.377   1.407 0.162975    
-## mean:Removed150-tons    9.674      6.706   1.442 0.152657    
-## mean:Removed225-tons    7.984      6.374   1.253 0.213625    
-## mean:Removed300-tons    7.944      6.486   1.225 0.223880    
-## ---
-## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-## 
-## Residual standard error: 5.841 on 90 degrees of freedom
-## Multiple R-squared:  0.5435,	Adjusted R-squared:  0.4573 
-## F-statistic: 6.303 on 17 and 90 DF,  p-value: 1.967e-09
+## Residual standard error: 5.65 on 109 degrees of freedom
+## Multiple R-squared:  0.5344,	Adjusted R-squared:  0.4917 
+## F-statistic: 12.51 on 10 and 109 DF,  p-value: 3.071e-14
 ```
 
 
@@ -818,28 +780,30 @@ lm_fraction_output(dataframe = dplyr::filter(all_divs,  measure == "Shannon_Entr
 
 ```
 ## $free
-##    Removed Adj_R2  pval  fraction
-## 1   1-tons  -0.05 0.503 WholeFree
-## 2   5-tons  -0.09 0.745 WholeFree
-## 3  10-tons  -0.10 0.844 WholeFree
-## 4  30-tons  -0.10 0.953 WholeFree
-## 5  60-tons  -0.10 0.987 WholeFree
-## 6  90-tons  -0.10 0.927 WholeFree
-## 7 150-tons  -0.10 0.950 WholeFree
-## 8 225-tons  -0.09 0.832 WholeFree
-## 9 300-tons  -0.09 0.771 WholeFree
+##     Removed Adj_R2  pval fraction
+## 1    1-tons  -0.05 0.503     Free
+## 2    5-tons  -0.09 0.745     Free
+## 3   10-tons  -0.10 0.844     Free
+## 4   20-tons  -0.10 0.900     Free
+## 5   30-tons  -0.10 0.953     Free
+## 6   60-tons  -0.10 0.987     Free
+## 7   90-tons  -0.10 0.927     Free
+## 8  150-tons  -0.10 0.950     Free
+## 9  225-tons  -0.09 0.832     Free
+## 10 300-tons  -0.09 0.771     Free
 ## 
 ## $part
-##    Removed Adj_R2  pval  fraction
-## 1   1-tons   0.52 0.005 WholePart
-## 2   5-tons   0.52 0.005 WholePart
-## 3  10-tons   0.53 0.005 WholePart
-## 4  30-tons   0.53 0.005 WholePart
-## 5  60-tons   0.53 0.005 WholePart
-## 6  90-tons   0.51 0.006 WholePart
-## 7 150-tons   0.47 0.008 WholePart
-## 8 225-tons   0.45 0.010 WholePart
-## 9 300-tons   0.42 0.013 WholePart
+##     Removed Adj_R2  pval fraction
+## 1    1-tons   0.52 0.005 Particle
+## 2    5-tons   0.52 0.005 Particle
+## 3   10-tons   0.53 0.005 Particle
+## 4   20-tons   0.53 0.004 Particle
+## 5   30-tons   0.53 0.005 Particle
+## 6   60-tons   0.53 0.005 Particle
+## 7   90-tons   0.51 0.006 Particle
+## 8  150-tons   0.47 0.008 Particle
+## 9  225-tons   0.45 0.010 Particle
+## 10 300-tons   0.42 0.013 Particle
 ```
 
 ```r
@@ -848,7 +812,7 @@ ggplot(dplyr::filter(all_divs, measure == "Shannon_Entropy"),
   geom_point(size = 3) + 
   xlab("Shannon_Entropy") +
   ylab("Bacterial Production by Fraction") +
-  geom_smooth(method = "lm", data = filter(all_divs, measure == "Shannon_Entropy" & fraction == "WholePart" )) + 
+  geom_smooth(method = "lm", data = filter(all_divs, measure == "Shannon_Entropy" & fraction == "Particle" )) + 
   scale_color_manual(values = tons_colors) +
   scale_fill_manual(values = tons_colors) +  
   facet_grid(fraction~Removed, scales = "free") +
@@ -908,10 +872,10 @@ summary(lm(frac_bacprod ~ mean + fraction, data = dplyr::filter(all_divs, measur
 ## -20.233  -6.159  -0.140   2.733  37.288 
 ## 
 ## Coefficients:
-##                   Estimate Std. Error t value Pr(>|t|)   
-## (Intercept)        -1.2879     6.4374  -0.200  0.84335   
-## mean                0.3068     0.1443   2.127  0.04545 * 
-## fractionWholeFree  17.8422     5.4821   3.255  0.00379 **
+##              Estimate Std. Error t value Pr(>|t|)   
+## (Intercept)   -1.2879     6.4374  -0.200  0.84335   
+## mean           0.3068     0.1443   2.127  0.04545 * 
+## fractionFree  17.8422     5.4821   3.255  0.00379 **
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
@@ -921,80 +885,39 @@ summary(lm(frac_bacprod ~ mean + fraction, data = dplyr::filter(all_divs, measur
 ```
 
 ```r
-summary(lm(frac_bacprod ~ mean/Removed, data = dplyr::filter(all_divs, measure == "Inverse_Simpson" & fraction == "WholePart")))
+# Are the linear models for different OTU removals significant? 
+summary(lm(frac_bacprod ~ mean/Removed, data = dplyr::filter(all_divs, measure == "Inverse_Simpson" & fraction == "Particle")))
 ```
 
 ```
 ## 
 ## Call:
 ## lm(formula = frac_bacprod ~ mean/Removed, data = dplyr::filter(all_divs, 
-##     measure == "Inverse_Simpson" & fraction == "WholePart"))
+##     measure == "Inverse_Simpson" & fraction == "Particle"))
 ## 
 ## Residuals:
 ##      Min       1Q   Median       3Q      Max 
-## -10.3694  -2.0780  -0.7986   1.4728   9.7613 
+## -10.3703  -2.0544  -0.7842   1.4876   9.7477 
 ## 
 ## Coefficients:
 ##                      Estimate Std. Error t value Pr(>|t|)    
-## (Intercept)          -2.03446    0.96421  -2.110 0.037408 *  
-## mean                  0.31228    0.03624   8.618 1.20e-13 ***
-## mean:Removed5-tons    0.03872    0.04697   0.824 0.411761    
-## mean:Removed10-tons   0.06390    0.04898   1.304 0.195140    
-## mean:Removed30-tons   0.11820    0.05378   2.198 0.030323 *  
-## mean:Removed60-tons   0.15147    0.05701   2.657 0.009211 ** 
-## mean:Removed90-tons   0.18186    0.06018   3.022 0.003206 ** 
-## mean:Removed150-tons  0.22972    0.06528   3.519 0.000658 ***
-## mean:Removed225-tons  0.27327    0.07001   3.903 0.000174 ***
-## mean:Removed300-tons  0.30889    0.07410   4.169 6.62e-05 ***
+## (Intercept)          -2.05965    0.90498  -2.276 0.024806 *  
+## mean                  0.31276    0.03543   8.826 2.01e-14 ***
+## mean:Removed5-tons    0.03879    0.04654   0.833 0.406450    
+## mean:Removed10-tons   0.06401    0.04853   1.319 0.189876    
+## mean:Removed20-tons   0.09628    0.05124   1.879 0.062921 .  
+## mean:Removed30-tons   0.11841    0.05323   2.224 0.028180 *  
+## mean:Removed60-tons   0.15175    0.05640   2.691 0.008254 ** 
+## mean:Removed90-tons   0.18220    0.05950   3.062 0.002768 ** 
+## mean:Removed150-tons  0.23015    0.06448   3.569 0.000534 ***
+## mean:Removed225-tons  0.27377    0.06911   3.961 0.000133 ***
+## mean:Removed300-tons  0.30947    0.07310   4.233 4.82e-05 ***
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
-## Residual standard error: 4.748 on 98 degrees of freedom
-## Multiple R-squared:  0.6716,	Adjusted R-squared:  0.6415 
-## F-statistic: 22.27 on 9 and 98 DF,  p-value: < 2.2e-16
-```
-
-```r
-# Are the slopes of Removed different from each other?
-summary(lm(frac_bacprod ~ mean*Removed, data = dplyr::filter(all_divs, measure == "Inverse_Simpson" & fraction == "WholePart")))
-```
-
-```
-## 
-## Call:
-## lm(formula = frac_bacprod ~ mean * Removed, data = dplyr::filter(all_divs, 
-##     measure == "Inverse_Simpson" & fraction == "WholePart"))
-## 
-## Residuals:
-##      Min       1Q   Median       3Q      Max 
-## -10.3907  -2.1335  -0.5506   1.7252   9.4510 
-## 
-## Coefficients:
-##                      Estimate Std. Error t value Pr(>|t|)    
-## (Intercept)          -0.22434    2.58861  -0.087   0.9311    
-## mean                  0.27781    0.05901   4.708 9.02e-06 ***
-## Removed5-tons        -0.87070    3.76140  -0.231   0.8175    
-## Removed10-tons       -1.44156    3.83739  -0.376   0.7081    
-## Removed30-tons       -2.35080    3.97971  -0.591   0.5562    
-## Removed60-tons       -2.62043    4.04640  -0.648   0.5189    
-## Removed90-tons       -2.79312    4.11453  -0.679   0.4990    
-## Removed150-tons      -2.83775    4.17493  -0.680   0.4984    
-## Removed225-tons      -2.38590    4.15132  -0.575   0.5669    
-## Removed300-tons      -2.38496    4.19628  -0.568   0.5712    
-## mean:Removed5-tons    0.05273    0.09128   0.578   0.5649    
-## mean:Removed10-tons   0.08966    0.09736   0.921   0.3596    
-## mean:Removed30-tons   0.16763    0.11166   1.501   0.1368    
-## mean:Removed60-tons   0.21038    0.12084   1.741   0.0851 .  
-## mean:Removed90-tons   0.24831    0.13027   1.906   0.0598 .  
-## mean:Removed150-tons  0.30128    0.14388   2.094   0.0391 *  
-## mean:Removed225-tons  0.33024    0.15296   2.159   0.0335 *  
-## mean:Removed300-tons  0.36740    0.16401   2.240   0.0275 *  
-## ---
-## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-## 
-## Residual standard error: 4.928 on 90 degrees of freedom
-## Multiple R-squared:  0.6752,	Adjusted R-squared:  0.6138 
-## F-statistic:    11 on 17 and 90 DF,  p-value: 2.107e-15
+## Residual standard error: 4.705 on 109 degrees of freedom
+## Multiple R-squared:  0.6772,	Adjusted R-squared:  0.6475 
+## F-statistic: 22.86 on 10 and 109 DF,  p-value: < 2.2e-16
 ```
 
 
@@ -1005,28 +928,30 @@ lm_fraction_output(dataframe = dplyr::filter(all_divs,  measure == "Inverse_Simp
 
 ```
 ## $free
-##    Removed Adj_R2  pval  fraction
-## 1   1-tons  -0.02 0.392 WholeFree
-## 2   5-tons  -0.04 0.457 WholeFree
-## 3  10-tons  -0.04 0.481 WholeFree
-## 4  30-tons  -0.05 0.499 WholeFree
-## 5  60-tons  -0.05 0.501 WholeFree
-## 6  90-tons  -0.05 0.514 WholeFree
-## 7 150-tons  -0.05 0.501 WholeFree
-## 8 225-tons  -0.03 0.418 WholeFree
-## 9 300-tons  -0.02 0.388 WholeFree
+##     Removed Adj_R2  pval fraction
+## 1    1-tons  -0.02 0.392     Free
+## 2    5-tons  -0.04 0.457     Free
+## 3   10-tons  -0.04 0.481     Free
+## 4   20-tons  -0.04 0.484     Free
+## 5   30-tons  -0.05 0.499     Free
+## 6   60-tons  -0.05 0.501     Free
+## 7   90-tons  -0.05 0.514     Free
+## 8  150-tons  -0.05 0.501     Free
+## 9  225-tons  -0.03 0.418     Free
+## 10 300-tons  -0.02 0.388     Free
 ## 
 ## $part
-##    Removed Adj_R2  pval  fraction
-## 1   1-tons   0.69 0.000 WholePart
-## 2   5-tons   0.70 0.000 WholePart
-## 3  10-tons   0.70 0.000 WholePart
-## 4  30-tons   0.69 0.001 WholePart
-## 5  60-tons   0.67 0.001 WholePart
-## 6  90-tons   0.63 0.001 WholePart
-## 7 150-tons   0.60 0.002 WholePart
-## 8 225-tons   0.56 0.003 WholePart
-## 9 300-tons   0.54 0.004 WholePart
+##     Removed Adj_R2  pval fraction
+## 1    1-tons   0.69 0.000 Particle
+## 2    5-tons   0.70 0.000 Particle
+## 3   10-tons   0.70 0.000 Particle
+## 4   20-tons   0.70 0.000 Particle
+## 5   30-tons   0.69 0.001 Particle
+## 6   60-tons   0.67 0.001 Particle
+## 7   90-tons   0.63 0.001 Particle
+## 8  150-tons   0.60 0.002 Particle
+## 9  225-tons   0.56 0.003 Particle
+## 10 300-tons   0.54 0.004 Particle
 ```
 
 ```r
@@ -1035,7 +960,7 @@ ggplot(dplyr::filter(all_divs, measure == "Inverse_Simpson"),
   geom_point(size = 3) + 
   xlab("Inverse_Simpson") +
   ylab("Bacterial Production by Fraction") +
-  geom_smooth(method = "lm", data = filter(all_divs, measure == "Inverse_Simpson" & fraction == "WholePart" )) + 
+  geom_smooth(method = "lm", data = filter(all_divs, measure == "Inverse_Simpson" & fraction == "Particle" )) + 
   scale_color_manual(values = tons_colors) +
   scale_fill_manual(values = tons_colors) +  
   facet_grid(fraction~Removed, scales = "free") +
@@ -1095,10 +1020,10 @@ summary(lm(frac_bacprod ~ mean + fraction, data = dplyr::filter(all_divs, measur
 ## -19.541  -7.275  -1.774   0.993  40.759 
 ## 
 ## Coefficients:
-##                   Estimate Std. Error t value Pr(>|t|)  
-## (Intercept)         -0.263      8.889  -0.030   0.9767  
-## mean               184.151    143.925   1.279   0.2147  
-## fractionWholeFree   12.045      5.742   2.098   0.0482 *
+##              Estimate Std. Error t value Pr(>|t|)  
+## (Intercept)    -0.263      8.889  -0.030   0.9767  
+## mean          184.151    143.925   1.279   0.2147  
+## fractionFree   12.045      5.742   2.098   0.0482 *
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
@@ -1108,80 +1033,39 @@ summary(lm(frac_bacprod ~ mean + fraction, data = dplyr::filter(all_divs, measur
 ```
 
 ```r
-summary(lm(frac_bacprod ~ mean/Removed, data = dplyr::filter(all_divs, measure == "Simpsons_Evenness" & fraction == "WholePart")))
+# Are the linear models for different OTU removals significant? 
+summary(lm(frac_bacprod ~ mean/Removed, data = dplyr::filter(all_divs, measure == "Simpsons_Evenness" & fraction == "Particle")))
 ```
 
 ```
 ## 
 ## Call:
 ## lm(formula = frac_bacprod ~ mean/Removed, data = dplyr::filter(all_divs, 
-##     measure == "Simpsons_Evenness" & fraction == "WholePart"))
+##     measure == "Simpsons_Evenness" & fraction == "Particle"))
 ## 
 ## Residuals:
 ##      Min       1Q   Median       3Q      Max 
-## -11.0505  -2.5797  -0.7464   1.9396  13.1164 
+## -11.0520  -2.5509  -0.7527   1.9354  13.1082 
 ## 
 ## Coefficients:
 ##                      Estimate Std. Error t value Pr(>|t|)    
-## (Intercept)            -2.856      1.154  -2.476 0.015020 *  
-## mean                  233.840     30.756   7.603 1.76e-11 ***
-## mean:Removed5-tons    -35.054     32.836  -1.068 0.288350    
-## mean:Removed10-tons   -56.983     31.573  -1.805 0.074180 .  
-## mean:Removed30-tons   -98.211     29.871  -3.288 0.001402 ** 
-## mean:Removed60-tons  -118.576     29.378  -4.036 0.000108 ***
-## mean:Removed90-tons  -132.604     29.170  -4.546 1.56e-05 ***
-## mean:Removed150-tons -146.394     29.063  -5.037 2.16e-06 ***
-## mean:Removed225-tons -157.873     29.044  -5.436 4.00e-07 ***
-## mean:Removed300-tons -164.232     29.062  -5.651 1.57e-07 ***
+## (Intercept)            -2.879      1.090  -2.642  0.00947 ** 
+## mean                  234.204     30.116   7.777 4.49e-12 ***
+## mean:Removed5-tons    -35.115     32.700  -1.074  0.28526    
+## mean:Removed10-tons   -57.081     31.419  -1.817  0.07200 .  
+## mean:Removed20-tons   -82.839     30.217  -2.741  0.00715 ** 
+## mean:Removed30-tons   -98.376     29.649  -3.318  0.00123 ** 
+## mean:Removed60-tons  -118.771     29.112  -4.080 8.61e-05 ***
+## mean:Removed90-tons  -132.820     28.867  -4.601 1.14e-05 ***
+## mean:Removed150-tons -146.630     28.722  -5.105 1.41e-06 ***
+## mean:Removed225-tons -158.125     28.669  -5.515 2.36e-07 ***
+## mean:Removed300-tons -164.493     28.669  -5.738 8.72e-08 ***
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
-## Residual standard error: 5.186 on 98 degrees of freedom
-## Multiple R-squared:  0.6082,	Adjusted R-squared:  0.5722 
-## F-statistic:  16.9 on 9 and 98 DF,  p-value: < 2.2e-16
-```
-
-```r
-# Are the slopes of Removed different from each other?
-summary(lm(frac_bacprod ~ mean*Removed, data = dplyr::filter(all_divs, measure == "Simpsons_Evenness" & fraction == "WholePart")))
-```
-
-```
-## 
-## Call:
-## lm(formula = frac_bacprod ~ mean * Removed, data = dplyr::filter(all_divs, 
-##     measure == "Simpsons_Evenness" & fraction == "WholePart"))
-## 
-## Residuals:
-##      Min       1Q   Median       3Q      Max 
-## -11.0044  -2.1792  -0.6513   1.8458  12.7042 
-## 
-## Coefficients:
-##                       Estimate Std. Error t value Pr(>|t|)    
-## (Intercept)            -4.0388     4.1759  -0.967 0.336048    
-## mean                  252.1779    69.7898   3.613 0.000497 ***
-## Removed5-tons           0.1749     5.7318   0.031 0.975725    
-## Removed10-tons          0.4974     5.6325   0.088 0.929827    
-## Removed30-tons          0.9554     5.4741   0.175 0.861836    
-## Removed60-tons          1.2497     5.4425   0.230 0.818910    
-## Removed90-tons          1.5366     5.4093   0.284 0.777010    
-## Removed150-tons         1.7644     5.3936   0.327 0.744335    
-## Removed225-tons         1.8233     5.4107   0.337 0.736919    
-## Removed300-tons         1.9021     5.4256   0.351 0.726727    
-## mean:Removed5-tons    -40.3843    88.9879  -0.454 0.651052    
-## mean:Removed10-tons   -67.5423    84.1917  -0.802 0.424525    
-## mean:Removed30-tons  -114.6162    77.4198  -1.480 0.142245    
-## mean:Removed60-tons  -137.3961    75.2410  -1.826 0.071154 .  
-## mean:Removed90-tons  -153.1747    73.9150  -2.072 0.041097 *  
-## mean:Removed150-tons -167.9025    72.8577  -2.305 0.023494 *  
-## mean:Removed225-tons -179.2587    72.1670  -2.484 0.014845 *  
-## mean:Removed300-tons -185.7204    71.8293  -2.586 0.011328 *  
-## ---
-## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-## 
-## Residual standard error: 5.403 on 90 degrees of freedom
-## Multiple R-squared:  0.6095,	Adjusted R-squared:  0.5357 
-## F-statistic: 8.263 on 17 and 90 DF,  p-value: 3.986e-12
+## Residual standard error: 5.167 on 109 degrees of freedom
+## Multiple R-squared:  0.6107,	Adjusted R-squared:  0.575 
+## F-statistic:  17.1 on 10 and 109 DF,  p-value: < 2.2e-16
 ```
 
 
@@ -1192,28 +1076,30 @@ lm_fraction_output(dataframe = dplyr::filter(all_divs,  measure == "Simpsons_Eve
 
 ```
 ## $free
-##    Removed Adj_R2  pval  fraction
-## 1   1-tons  -0.10 0.912 WholeFree
-## 2   5-tons  -0.05 0.520 WholeFree
-## 3  10-tons  -0.02 0.393 WholeFree
-## 4  30-tons   0.03 0.278 WholeFree
-## 5  60-tons   0.05 0.233 WholeFree
-## 6  90-tons   0.08 0.186 WholeFree
-## 7 150-tons   0.08 0.192 WholeFree
-## 8 225-tons   0.08 0.196 WholeFree
-## 9 300-tons   0.07 0.200 WholeFree
+##     Removed Adj_R2  pval fraction
+## 1    1-tons  -0.10 0.912     Free
+## 2    5-tons  -0.05 0.520     Free
+## 3   10-tons  -0.02 0.393     Free
+## 4   20-tons   0.02 0.298     Free
+## 5   30-tons   0.03 0.278     Free
+## 6   60-tons   0.05 0.233     Free
+## 7   90-tons   0.08 0.186     Free
+## 8  150-tons   0.08 0.192     Free
+## 9  225-tons   0.08 0.196     Free
+## 10 300-tons   0.07 0.200     Free
 ## 
 ## $part
-##    Removed Adj_R2  pval  fraction
-## 1   1-tons   0.46 0.009 WholePart
-## 2   5-tons   0.53 0.004 WholePart
-## 3  10-tons   0.56 0.003 WholePart
-## 4  30-tons   0.62 0.001 WholePart
-## 5  60-tons   0.62 0.002 WholePart
-## 6  90-tons   0.61 0.002 WholePart
-## 7 150-tons   0.60 0.002 WholePart
-## 8 225-tons   0.58 0.003 WholePart
-## 9 300-tons   0.56 0.003 WholePart
+##     Removed Adj_R2  pval fraction
+## 1    1-tons   0.46 0.009 Particle
+## 2    5-tons   0.53 0.004 Particle
+## 3   10-tons   0.56 0.003 Particle
+## 4   20-tons   0.60 0.002 Particle
+## 5   30-tons   0.62 0.001 Particle
+## 6   60-tons   0.62 0.002 Particle
+## 7   90-tons   0.61 0.002 Particle
+## 8  150-tons   0.60 0.002 Particle
+## 9  225-tons   0.58 0.003 Particle
+## 10 300-tons   0.56 0.003 Particle
 ```
 
 ```r
@@ -1222,7 +1108,7 @@ ggplot(dplyr::filter(all_divs, measure == "Simpsons_Evenness"),
   geom_point(size = 3) + 
   xlab("Simpsons_Evenness") +
   ylab("Bacterial Production by Fraction") +
-  geom_smooth(method = "lm", data = filter(all_divs, measure == "Simpsons_Evenness" & fraction == "WholePart" )) + 
+  geom_smooth(method = "lm", data = filter(all_divs, measure == "Simpsons_Evenness" & fraction == "Particle" )) + 
   scale_color_manual(values = tons_colors) +
   scale_fill_manual(values = tons_colors) +  
   facet_grid(fraction~Removed, scales = "free") +
@@ -1231,193 +1117,3 @@ ggplot(dplyr::filter(all_divs, measure == "Simpsons_Evenness"),
 ```
 
 <img src="OTU_Removal_Analysis_Figs/simps-evenness-plots-1.png" style="display: block; margin: auto;" />
-
-
-
-
-
-
-
-
-
-
-
-## Subset Diversity Data 
-
-```r
-######################################################### RICHNESS
-# Subset only richness data 
-ML_rm1_rich_stats <- filter(otu_alphadiv, measure == "Richness" & 
-                              fraction %in% c("WholePart", "WholeFree") & year == "2015")
-
-######################################################### SHANNON ENTROPY
-# Subset only Shannon_Entropy data 
-ML_otu_shannon_stats <- filter(otu_alphadiv, measure == "Shannon_Entropy" & 
-                                 fraction %in% c("WholePart", "WholeFree") & year == "2015")
-
-######################################################### INVERSE SIMPSON
-# Subset only Inverse_Simpson data 
-ML_otu_invsimps_stats <- filter(otu_alphadiv, measure == "Inverse_Simpson" & 
-                                  fraction %in% c("WholePart", "WholeFree") & year == "2015")
-
-######################################################### SIMPSON'S EVENNESS
-# Subset only Simpsons_Evenness data 
-ML_otu_simpseven_stats <- filter(otu_alphadiv, measure == "Simpsons_Evenness" & 
-                                   fraction %in% c("WholePart", "WholeFree") & year == "2015")
-```
-
-
-
-# Diversity vs Fraction Production 
-
-```r
-######################################################### RICHNESS
-# Free-Living Richness vs fractional production 
-freeprod_ML_otu_rich <- lm(frac_bacprod ~ mean, data = filter(ML_otu_rich_stats, fraction == "WholeFree"))
-summary(freeprod_ML_otu_rich) 
-
-# Particle-Associated Richness vs fractional production 
-partprod_MLotu_rich <- lm(frac_bacprod ~ mean, data = filter(ML_otu_rich_stats, fraction == "WholePart"))
-summary(partprod_MLotu_rich) 
-
-# Both fractions together
-summary(lm(frac_bacprod ~ mean, data = ML_otu_rich_stats))
- 
-# Plot 
-ggplot(ML_otu_rich_stats, aes(x=mean, y=frac_bacprod, color = fraction)) + 
-  geom_point(size = 3.5) + 
-  geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd), alpha = 0.7) + # X-axis errorbars
-  # Y-axis errorbars
-  geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod),  alpha = 0.5) + 
-  scale_color_manual(values = c("firebrick3","cornflowerblue"), 
-                     limits = c("WholePart", "WholeFree"),
-                     breaks=c("WholePart", "WholeFree"),
-                     labels=c("Particle", "Free")) + 
-  ylab("Heterotrophic Production (μgC/L/hr)") + xlab("Observed Richness") +
-  geom_smooth(data=subset(ML_otu_rich_stats, fraction == "WholePart"), method='lm') + 
-  #scale_x_continuous(limits = c(180, 810), breaks = c(200, 400, 600, 800)) + 
-  theme(legend.position=c(0.15,0.9),        
-        legend.title=element_blank()) 
-  #annotate("text", x = 250, y=55, color = "cornflowerblue", fontface = "bold",
-  #         label = paste("R2 =", round(summary(freeprod_ML_otu_rich)$adj.r.squared, digits = 2), "\n", 
-  #                       "p =", round(unname(summary(freeprod_ML_otu_rich)$coefficients[,4][2]), digits = 2))) + 
-  #annotate("text", x = 650, y=3, color = "firebrick3", fontface = "bold",
-  #         label = paste("R2 =", round(summary(partprod_MLotu_rich)$adj.r.squared, digits = 2), "\n", 
-  #                       "p =", round(unname(summary(partprod_MLotu_rich)$coefficients[,4][2]), digits = 4)));
-
-
-######################################################### SHANNON ENTROPY
-# Free-Living Shannon vs fractional production 
-freeprod_ML_otu_shannon <- lm(frac_bacprod ~ mean, data = filter(ML_otu_shannon_stats, fraction == "WholeFree"))
-summary(freeprod_ML_otu_shannon)
-
-# Particle-Associated Shannon vs fractional production 
-partprod_MLotu_shannon <- lm(frac_bacprod ~ mean, data = filter(ML_otu_shannon_stats, fraction == "WholePart"))
-summary(partprod_MLotu_shannon)
-
-# Both fractions together
-summary(lm(frac_bacprod ~ mean, data = ML_otu_shannon_stats))
-
-# Plot 
-otu_shannon_vegan <- ggplot(ML_otu_shannon_stats, aes(x=mean, y=frac_bacprod, color = fraction)) + 
-  geom_point(size = 3.5) + 
-  geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd), alpha = 0.7) + # X-axis errorbars
-  # Y-axis errorbars
-  geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod),  alpha = 0.5) + 
-  scale_color_manual(values = c("firebrick3","cornflowerblue"), 
-                     limits = c("WholePart", "WholeFree"),
-                     breaks=c("WholeFree", "WholePart"),
-                     labels=c("Free-Living", "Particle-Associated")) + 
-  ylab("Secondary Production (μgC/L/hr)") + xlab("Shannon Entropy") +
-  scale_x_continuous(limits = c(3.4, 5.85), breaks = c(3.5, 4, 4.5, 5, 5.5)) + 
-  geom_smooth(data=subset(ML_otu_shannon_stats, fraction == "WholePart"), method='lm') + 
-  theme(legend.position=c(0.15,0.9),        
-        legend.title=element_blank()) +
-  annotate("text", x = 3.75, y=55, color = "cornflowerblue", fontface = "bold",
-           label = paste("R2 =", round(summary(freeprod_ML_otu_shannon)$adj.r.squared, digits = 2), "\n", 
-                         "p =", round(unname(summary(freeprod_ML_otu_shannon)$coefficients[,4][2]), digits = 2))) + 
-  annotate("text", x = 5.35, y=3, color = "firebrick3", fontface = "bold",
-           label = paste("R2 =", round(summary(partprod_MLotu_shannon)$adj.r.squared, digits = 2), "\n", 
-                         "p =", round(unname(summary(partprod_MLotu_shannon)$coefficients[,4][2]), digits = 4))); 
-
-
-######################################################### INVERSE SIMPSON
-# Free-Living Inverse Simpson vs fractional production 
-freeprod_ML_otu_invsimps <- lm(frac_bacprod ~ mean, data = filter(ML_otu_invsimps_stats, fraction == "WholeFree"))
-summary(freeprod_ML_otu_invsimps)
-
-# Particle-Associated Inverse Simpson vs fractional production 
-partprod_MLotu_invsimps <- lm(frac_bacprod ~ mean, data = filter(ML_otu_invsimps_stats, fraction == "WholePart"))
-summary(partprod_MLotu_invsimps)
-
-# Both fractions together
-summary(lm(frac_bacprod ~ mean, data = ML_otu_invsimps_stats))
-
-# Plot Simpson's Evenness
-otu_invsimps_vegan <- ggplot(ML_otu_invsimps_stats, aes(x=mean, y=frac_bacprod, color = fraction)) + 
-  geom_point(size = 3.5) +  
-  geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd), alpha = 0.7) + # X-axis errorbars
-  # Y-axis errorbars
-  geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod),  alpha = 0.5) + 
-  scale_color_manual(values = c("firebrick3","cornflowerblue"), 
-                     limits = c("WholePart", "WholeFree"),
-                     breaks=c("WholeFree", "WholePart"),
-                     labels=c("Free-Living", "Particle-Associated")) + 
-  scale_x_continuous(limits = c(0,95), breaks = c(0, 20, 40, 60, 80), expand = c(0,0)) + 
-  ylab("Secondary Production (μgC/L/hr)") + xlab("Inverse Simpson") +
-  geom_smooth(data=subset(ML_otu_invsimps_stats, fraction == "WholePart"), method='lm') + 
-  theme(legend.position=c(0.85,0.9),        
-        legend.title=element_blank()) +
-  annotate("text", x = 15, y=55, color = "cornflowerblue", fontface = "bold",
-           label = paste("R2 =", round(summary(freeprod_ML_otu_invsimps)$adj.r.squared, digits = 2), "\n", 
-                         "p =", round(unname(summary(freeprod_ML_otu_invsimps)$coefficients[,4][2]), digits = 2))) + 
-  annotate("text", x = 63, y=3, color = "firebrick3", fontface = "bold",
-           label = paste("R2 =", round(summary(partprod_MLotu_invsimps)$adj.r.squared, digits = 2), "\n", 
-                         "p =", round(unname(summary(partprod_MLotu_invsimps)$coefficients[,4][2]), digits = 4))); 
-
-
-
-######################################################### SIMPSON'S EVENNESS
-# Free-Living Simpson's Evenness vs fractional production 
-freeprod_ML_otu_simpseven <- lm(frac_bacprod ~ mean, data = filter(ML_otu_simpseven_stats, fraction == "WholeFree"))
-summary(freeprod_ML_otu_simpseven)
-
-# Particle-Associated Simpson's Evenness vs fractional production 
-partprod_MLotu_simpseven <- lm(frac_bacprod ~ mean, data = filter(ML_otu_simpseven_stats, fraction == "WholePart"))
-summary(partprod_MLotu_simpseven)
-
-# Both fractions together
-summary(lm(frac_bacprod ~ mean, data = ML_otu_simpseven_stats))
-
-# Plot 
-otu_simpseven_vegan <- ggplot(ML_otu_simpseven_stats, aes(x=mean, y=frac_bacprod, color = fraction)) + 
-  geom_point(size = 3.5) +  
-  geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd), alpha = 0.7) + # X-axis errorbars
-  # Y-axis errorbars
-  geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod),  alpha = 0.5) + 
-  scale_color_manual(values = c("firebrick3","cornflowerblue"), 
-                     limits = c("WholePart", "WholeFree"),
-                     breaks=c("WholeFree", "WholePart"),
-                     labels=c("Free-Living", "Particle-Associated")) + 
-  scale_x_continuous(limits = c(0.03,0.151), breaks = c(0.05, 0.1, 0.15))  +
-  ylab("Secondary Production (μgC/L/hr)") + xlab("Simpson's Evenness") +
-  geom_smooth(data=subset(ML_otu_simpseven_stats, fraction == "WholePart"), method='lm') + 
-  theme(legend.position=c(0.15,0.9),        
-        legend.title=element_blank()) +
-  annotate("text", x = 0.05, y=55, color = "cornflowerblue", fontface = "bold",
-           label = paste("R2 =", round(summary(freeprod_ML_otu_simpseven)$adj.r.squared, digits = 2), "\n", 
-                         "p =", round(unname(summary(freeprod_ML_otu_simpseven)$coefficients[,4][2]), digits = 2))) + 
-  annotate("text", x = 0.125, y=3, color = "firebrick3", fontface = "bold",
-           label = paste("R2 =", round(summary(partprod_MLotu_simpseven)$adj.r.squared, digits = 2), "\n", 
-                         "p =", round(unname(summary(partprod_MLotu_simpseven)$coefficients[,4][2]), digits = 4))); 
-
-otu_vegan <- plot_grid(otu_rich_vegan, otu_simpseven_vegan, otu_shannon_vegan, otu_invsimps_vegan,
-                       labels = c("A", "B", "C", "D"), 
-                       align = "h", nrow = 2, ncol = 2)
-otu_vegan
-```
-
-
-
-
-

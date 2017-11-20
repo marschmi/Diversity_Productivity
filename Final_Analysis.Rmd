@@ -814,7 +814,8 @@ metadata %>%
 # Make a data frame to draw significance line in boxplot (visually calculated)
 dat1 <- data.frame(a = c(1.1,1.1,1.9,1.9), b = c(6.45,6.5,6.5,6.45)) # WholePart vs WholeFree
 
-poster_a <- ggplot(filter(metadata, norep_filter_name != "MOTEJ515"), 
+poster_a <- 
+  ggplot(filter(metadata, norep_filter_name != "MOTEJ515"), 
        aes(y = log10(as.numeric(fraction_bac_abund)), x = fraction)) +
   geom_jitter(size = 3, aes(fill = fraction, shape = season), width = 0.2) + 
   geom_boxplot(alpha = 0.5, outlier.shape = NA, aes( fill = fraction)) +
@@ -823,8 +824,9 @@ poster_a <- ggplot(filter(metadata, norep_filter_name != "MOTEJ515"),
   scale_shape_manual(values = season_shapes) +
   ##### Particle vs free cell abundances 
   geom_path(data = dat1, aes(x = a, y = b), linetype = 1, color = "gray40") +
-  annotate("text", x=1.5, y=6.5, size = 4, color = "gray40",
-           label= paste("***\np =", round(frac_abund_wilcox$p.value, digits = 6))) +
+  annotate("text", x=1.5, y=6.55, size = 8, color = "gray40", label= paste("***")) +
+  annotate("text", x=1.5, y=6.4, size = 3.5, color = "gray40",
+           label= paste("p =", round(frac_abund_wilcox$p.value, digits = 6))) +
   theme(legend.position = "bottom",
         legend.title = element_blank(),
         axis.title.x = element_blank())
@@ -848,15 +850,15 @@ poster_b <- ggplot(metadata, aes(y = frac_bacprod, x = fraction)) +
   geom_boxplot(alpha = 0.5, outlier.shape = NA, aes( fill = fraction)) +
   scale_fill_manual(values = fraction_colors, guide = FALSE) +
   scale_shape_manual(values = season_shapes) +
-  scale_y_continuous(limits = c(0, 73)) +
+  scale_y_continuous(limits = c(0, 78), expand = c(0,0), breaks = seq(0, 75, by = 15)) +
   ylab("Community Production \n (μgC/L/day)") +
   ##### Particle vs free bulk production  
   geom_path(data = dat2, aes(x = a, y = b), linetype = 1, color = "gray40") +
-  annotate("text", x=1.5, y=72, size = 4, color = "gray40",
-           label= paste("**\np =", round(totprod_wilcox$p.value, digits = 3))) +
+  annotate("text", x=1.5, y=73, size = 8, color = "gray40", label= paste("*")) +
+  annotate("text", x=1.5, y=69, size = 3.5, color = "gray40",
+           label= paste("p =", round(totprod_wilcox$p.value, digits = 3))) +
   theme(legend.position = "none",
         axis.title.x = element_blank())
-
 
 
 ######################################################### TOTAL PRODUCTION 
@@ -878,15 +880,15 @@ poster_c <- ggplot(filter(metadata, norep_filter_name != "MOTEJ515"),
   geom_boxplot(alpha = 0.5, outlier.shape = NA, aes( fill = fraction)) +
   scale_fill_manual(values = fraction_colors, guide = FALSE) +
   scale_shape_manual(values = season_shapes) +
-  ylim(c(-8.5, -5)) + 
+  ylim(c(-8.5, -4.9)) + 
   ylab("Log10(Per-Capita Production) \n(μgC/cell/day)") +
   ##### Particle vs free per-cell production 
   geom_path(data = dat3, aes(x = a, y = b), linetype = 1, color = "gray40") +
-  annotate("text", x=1.5, y=-5,  size = 4, color = "gray40",
-           label= paste("***\np =", round(percellprod_wilcox$p.value, digits = 5))) +
+  annotate("text", x=1.5, y=-4.95, size = 8, color = "gray40", label= paste("***")) +
+  annotate("text", x=1.5, y=-5.15,  size = 3.5, color = "gray40",
+           label= paste("p =", round(percellprod_wilcox$p.value, digits = 5))) +
   theme(legend.position = "none",
         axis.title.x = element_blank())
-
 
 
 ######## FIGURE 1
@@ -1310,16 +1312,17 @@ rich_distribution_plot <-
   scale_fill_manual(values = fraction_colors) +
   geom_jitter(size = 3, aes(fill = fraction, shape = season), width = 0.2) + 
   geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(fill = fraction)) +
-  scale_y_continuous(limits = c(150,950), breaks = seq(from = 0, to =925, by = 150)) + 
+  scale_y_continuous(limits = c(150,980), breaks = seq(from = 0, to =925, by = 150)) + 
   xlab("Observed Richness") + xlab("Fraction") + 
   scale_shape_manual(values = season_shapes) +
   geom_path(data = rich_nums, aes(x = a, y = b), linetype = 1, color = "#424645") +
+  annotate("text", x=1.5, y=980, size = 8, color = "#424645", label= paste("***"), angle = 90) +
   annotate("text", x=1.5, y=790, size = 4, color = "#424645",
            label= paste("p =", round(rich_fraction_wilcox$p.value, digits = 5))) +
   theme(legend.position = "none",# axis.title.y = element_blank(),
         axis.title.x = element_blank(), axis.text.x = element_blank()) +
   coord_flip()
-
+rich_distribution_plot
 
 ################ Richness vs Community-wide (Per-Liter) Production 
 ## 1. Extract the R2 and p-value from the linear model: 
@@ -1338,7 +1341,7 @@ prod_vs_rich_plot <-
   ylab("\n Community Production \n (μgC/L/day)") + 
   xlab("Observed Richness") +
   geom_smooth(data=filter(richness, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
-  scale_x_continuous(limits = c(150,950), breaks = seq(from = 0, to =925, by = 150)) + 
+  scale_x_continuous(limits = c(150,980), breaks = seq(from = 0, to =925, by = 150)) + 
    # Add the R2 and p-value to the plot 
   annotate("text", x=790, y=45, label=lm_lab_perliter_rich_PA, parse = TRUE, color = "#FF6600", size = 4) +
   theme(legend.position = "none", axis.title.x = element_blank(), axis.text.x = element_blank()) 
@@ -1360,7 +1363,7 @@ percell_prod_vs_rich_plot <-
   ylab("\n log10(Per-Capita Production)\n (μgC/cell/day)") +
   xlab("Observed Richness") +
   geom_smooth(data=filter(richness, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
-  scale_x_continuous(limits = c(150,950), breaks = seq(from = 0, to =925, by = 150)) + 
+  scale_x_continuous(limits = c(150,980), breaks = seq(from = 0, to =925, by = 150)) + 
   #scale_y_continuous(limits = c(-8e-7,5e-6), breaks = seq(from = 0, to = 6e-7, by = 3e-7)) + 
   # Add the R2 and p-value to the plot 
   annotate("text", x=790, y=-7.5, label=lm_lab_percell_rich_PA, parse = TRUE, color = "#FF6600", size = 4) +
@@ -1504,18 +1507,18 @@ shannon_distribution_plot <-
   scale_fill_manual(values = fraction_colors) +
   geom_jitter(size = 3, aes(shape = season, fill = fraction), width = 0.2) + 
   geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(fill = fraction)) +
-  scale_y_continuous(limits = c(3.5,6), breaks = seq(from = 3, to =6, by = 0.5)) + 
+  scale_y_continuous(limits = c(3.5,6.1), breaks = seq(from = 3, to =6, by = 0.5)) + 
   xlab("Shannon Entropy") +
   xlab("Fraction") + 
   scale_shape_manual(values = season_shapes) +
     # Add line and pval
   geom_path(data = shannon_nums, aes(x = a, y = b), linetype = 1, color = "#424645") +
-  annotate("text", x=1.5, y=5.4, size = 4, color = "#424645",
+  annotate("text", x=1.5, y=6.1, size = 8, color = "#424645", label= paste("**"), angle = 90) +
+  annotate("text", x=1.5, y=5.5, size = 4, color = "#424645",
            label= paste("p =", round(shannon_fraction_wilcox$p.value, digits = 3))) +
   theme(legend.position = "none",# axis.title.y = element_blank(),
         axis.title.x = element_blank(), axis.text.x = element_blank()) +
   coord_flip()
-
 
 ################ Shannon vs Community-wide (Per-Liter) Production 
 ## 1. Extract the R2 and p-value from the linear model: 
@@ -1532,7 +1535,7 @@ prod_vs_shannon_plot <-
   scale_shape_manual(values = season_shapes) +
   scale_fill_manual(values = fraction_colors) +
   ylab("\n Community Production \n (μgC/L/day)") + 
-  scale_x_continuous(limits = c(3.5,6), breaks = seq(from = 3, to =6, by = 0.5)) + 
+  scale_x_continuous(limits = c(3.5,6.1), breaks = seq(from = 3, to =6, by = 0.5)) + 
   xlab("Shannon Entropy") +
   geom_smooth(data=filter(shannon, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
   # Add the R2 and p-value to the plot 
@@ -1556,7 +1559,7 @@ percell_prod_vs_shannon_plot <-
   ylab("\n log10(Per-Capita Production)\n (μgC/cell/day)") +
   xlab("Shannon Entropy") +
   geom_smooth(data=filter(shannon, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
-  scale_x_continuous(limits = c(3.5,6), breaks = seq(from = 3, to =6, by = 0.5)) + 
+  scale_x_continuous(limits = c(3.5,6.1), breaks = seq(from = 3, to =6, by = 0.5)) + 
   #scale_y_continuous(limits = c(-8e-7,5e-6), breaks = seq(from = 0, to = 6e-7, by = 3e-7)) + 
   # Add the R2 and p-value to the plot 
   annotate("text", x=5.25, y=-7.5, label=lm_lab_percell_shannon_PA, parse = TRUE, color = "#FF6600", size = 4) +

@@ -13,6 +13,8 @@ output:
       collapsed: no
       smooth_scroll: yes
       toc_depth: 3
+editor_options: 
+  chunk_output_type: console
 ---
 <style>
 pre code, pre, code {
@@ -51,6 +53,7 @@ library(phyloseq)
 library(tidyr)
 library(dplyr)
 library(cowplot)
+library(forcats)
 library(picante) # Will also include ape and vegan 
 library(car) # For residual analysis
 library(sandwich) # for vcovHC function in post-hoc test
@@ -113,6 +116,10 @@ notree_musk_surface_pruned_rm5
 # If taxa with 10 counts are removed 
 notree_musk_surface_pruned_rm10 <- prune_taxa(taxa_sums(notree_musk_surface_pruned) > 10, notree_musk_surface_pruned) 
 notree_musk_surface_pruned_rm10
+
+# If taxa with 20 counts are removed 
+notree_musk_surface_pruned_rm20 <- prune_taxa(taxa_sums(notree_musk_surface_pruned) > 20, notree_musk_surface_pruned) 
+notree_musk_surface_pruned_rm20
 
 # If taxa with 30 counts are removed 
 notree_musk_surface_pruned_rm30 <- prune_taxa(taxa_sums(notree_musk_surface_pruned) > 30, notree_musk_surface_pruned) 
@@ -184,6 +191,23 @@ otu_alphadiv_rm10 <- calc_mean_alphadiv(physeq = notree_musk_surface_pruned_rm10
          lakesite = factor(lakesite,  levels = c("MOT", "MDP", "MBR", "MIN")),
          measure = factor(measure, levels = c("Richness", "Simpsons_Evenness", "Shannon_Entropy", "Inverse_Simpson")),
          Removed = "10-tons") 
+
+
+################## Remove 20-tons 
+alpha_rm20 <- calc_alpha_diversity(physeq = notree_musk_surface_pruned_rm20)
+min(sample_sums(notree_musk_surface_pruned_rm20)) - 1
+
+otu_alphadiv_rm20 <- calc_mean_alphadiv(physeq = notree_musk_surface_pruned_rm20,
+                           richness_df = alpha_rm20$Richness, 
+                           evenness_df = alpha_rm20$Inverse_Simpson, 
+                           shannon_df = alpha_rm20$Shannon) %>%
+    mutate(fraction = factor(fraction, levels = c("WholePart", "Particle", "WholeFree", "Free")),
+         lakesite = factor(lakesite,  levels = c("MOT", "MDP", "MBR", "MIN")),
+         measure = factor(measure, levels = c("Richness", "Simpsons_Evenness", "Shannon_Entropy", "Inverse_Simpson")),
+         Removed = "20-tons")  
+
+
+
 
 ################## Remove 30-tons 
 alpha_rm30 <- calc_alpha_diversity(physeq = notree_musk_surface_pruned_rm30)
@@ -269,28 +293,32 @@ otu_alphadiv_rm300 <- calc_mean_alphadiv(physeq = notree_musk_surface_pruned_rm3
          Removed = "300-tons")  
 ```
 
+
+# Minimum Sequences Plot
 ```{r min-seqs-plots}
 min_seqs <- c(min(sample_sums(notree_musk_surface_pruned_rm1)) - 1, min(sample_sums(notree_musk_surface_pruned_rm5)) - 1, 
-  min(sample_sums(notree_musk_surface_pruned_rm10)) - 1, min(sample_sums(notree_musk_surface_pruned_rm30)) - 1,
+  min(sample_sums(notree_musk_surface_pruned_rm10)) - 1, min(sample_sums(notree_musk_surface_pruned_rm20)) - 1,
+  min(sample_sums(notree_musk_surface_pruned_rm30)) - 1,
   min(sample_sums(notree_musk_surface_pruned_rm60)) - 1, min(sample_sums(notree_musk_surface_pruned_rm90)) - 1,
   min(sample_sums(notree_musk_surface_pruned_rm150)) - 1, min(sample_sums(notree_musk_surface_pruned_rm225)) - 1,
   min(sample_sums(notree_musk_surface_pruned_rm300)) - 1)
 
 
 num_otus <- c(ncol(otu_table(notree_musk_surface_pruned_rm1)), ncol(otu_table(notree_musk_surface_pruned_rm5)), ncol(otu_table(notree_musk_surface_pruned_rm10)), 
+              ncol(otu_table(notree_musk_surface_pruned_rm20)),
               ncol(otu_table(notree_musk_surface_pruned_rm30)), ncol(otu_table(notree_musk_surface_pruned_rm60)), ncol(otu_table(notree_musk_surface_pruned_rm90)),
               ncol(otu_table(notree_musk_surface_pruned_rm150)), ncol(otu_table(notree_musk_surface_pruned_rm225)), ncol(otu_table(notree_musk_surface_pruned_rm300)))
 
-Removed <- c("1-tons","5-tons", "10-tons", "30-tons", "60-tons", "90-tons", "150-tons", "225-tons","300-tons")
+Removed <- c("1-tons","5-tons", "10-tons", "20-tons", "30-tons", "60-tons", "90-tons", "150-tons", "225-tons","300-tons")
 
 
 statz <- data.frame(cbind(as.numeric(min_seqs), as.numeric(num_otus), Removed)) %>%
-         mutate(Removed = factor(Removed, levels = c("1-tons","5-tons", "10-tons", "30-tons", "60-tons", 
+         mutate(Removed = factor(Removed, levels = c("1-tons","5-tons", "10-tons", "20-tons", "30-tons", "60-tons", 
                                               "90-tons", "150-tons", "225-tons","300-tons"))) %>%
   mutate(num_otus = as.numeric(num_otus))
 
 p1 <- ggplot(statz, aes(x = Removed, y = min_seqs, fill = Removed)) +
-  geom_bar(stat = "identity") + ylab("Minimum Number of Sequences") +
+  geom_bar(stat = "identity") + ylab("Minimum # of Sequences") +
   scale_y_continuous(expand = c(0,0), limits = c(0, 8000)) +
   scale_color_manual(values = tons_colors) +
   scale_fill_manual(values = tons_colors) +
@@ -303,7 +331,7 @@ p2 <-ggplot(statz, aes(x = Removed, y = num_otus, fill = Removed)) +
   scale_color_manual(values = tons_colors) +
   scale_fill_manual(values = tons_colors) +
   theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
-        legend.position = c(0.9, 0.8), legend.title = element_blank())
+        legend.position = c(0.8, 0.65), legend.title = element_blank())
 
 plot_grid(p1, p2, align = "v", labels = c("A", "B"), nrow = 2, ncol =1)
 ```
@@ -314,19 +342,20 @@ plot_grid(p1, p2, align = "v", labels = c("A", "B"), nrow = 2, ncol =1)
 
 
 # Combine all data 
-```{r }
+```{r all_divs}
 # Combine all div metrics 
-all_divs <- bind_rows(otu_alphadiv_rm1, otu_alphadiv_rm5, otu_alphadiv_rm10, otu_alphadiv_rm30, 
+all_divs <- bind_rows(otu_alphadiv_rm1, otu_alphadiv_rm5, otu_alphadiv_rm10, otu_alphadiv_rm20, otu_alphadiv_rm30, 
                       otu_alphadiv_rm60, otu_alphadiv_rm90, otu_alphadiv_rm150, 
                       otu_alphadiv_rm225, otu_alphadiv_rm300) %>%
-  dplyr::filter(fraction %in% c("WholePart", "WholeFree") & year == "2015") %>%
-  mutate(Removed = factor(Removed, levels = c("1-tons","5-tons", "10-tons", "30-tons", "60-tons", 
+  dplyr::filter(fraction %in% c("WholePart", "WholeFree") & year == "2015") %>% 
+  mutate(fraction = fct_recode(fraction, "Particle" = "WholePart", "Free" = "WholeFree")) %>%
+  mutate(Removed = factor(Removed, levels = c("1-tons","5-tons", "10-tons", "20-tons", "30-tons", "60-tons", 
                                               "90-tons", "150-tons", "225-tons","300-tons")))
 ```
 
 
 # Richness 
-```{r rich-plots1, fig.width=7, fig.height=4}
+```{r rich-plots1, fig.width=9, fig.height=4, dependson="all_divs"}
 ### PLOT
 ggplot(dplyr::filter(all_divs, measure == "Richness"), 
        aes(y = mean, x = Removed, color = Removed, fill = Removed)) +
@@ -355,16 +384,12 @@ summary(lm(frac_bacprod ~ mean + fraction, data = dplyr::filter(all_divs, measur
                                                        Removed == "1-tons")))
 
 
-
-summary(lm(frac_bacprod ~ mean/Removed, data = dplyr::filter(all_divs, measure == "Richness" & fraction == "WholePart")))
-
-
-# Are the slopes of Removed different from each other?
-summary(lm(frac_bacprod ~ mean*Removed, data = dplyr::filter(all_divs, measure == "Richness" & fraction == "WholePart")))
+# Are the linear models for different OTU removals significant? 
+summary(lm(frac_bacprod ~ mean/Removed, data = dplyr::filter(all_divs, measure == "Richness" & fraction == "Particle")))
 ```
 
 
-```{r richness-plots, fig.width=8, fig.height=5}
+```{r richness-plots, fig.width=10, fig.height=5, dependson="all_divs"}
 # Linear Model output
 lm_fraction_output(dataframe = dplyr::filter(all_divs,  measure == "Richness"))
 
@@ -376,7 +401,7 @@ ggplot(dplyr::filter(all_divs, measure == "Richness"),
   xlab("Richness") +
   ylab("Bacterial Production by Fraction") +
   geom_smooth(method = "lm", data = filter(all_divs, 
-                                           measure == "Richness" & fraction == "WholePart" & Removed %in% sig_rich_lms)) + 
+                                           measure == "Richness" & fraction == "Particle" & Removed %in% sig_rich_lms)) + 
   scale_color_manual(values = tons_colors) +
   scale_fill_manual(values = tons_colors) +  
   facet_grid(fraction~Removed, scales = "free") +
@@ -386,7 +411,7 @@ ggplot(dplyr::filter(all_divs, measure == "Richness"),
 
 
 # Shannon Entropy
-```{r shannon-plots1, fig.width=7, fig.height=4}
+```{r shannon-plots1, fig.width=9, fig.height=4, dependson="all_divs"}
 ### PLOT
 ggplot(dplyr::filter(all_divs, measure == "Shannon_Entropy"), 
        aes(y = mean, x = Removed, color = Removed, fill = Removed)) +
@@ -415,16 +440,12 @@ summary(lm(frac_bacprod ~ mean + fraction, data = dplyr::filter(all_divs, measur
                                                        Removed == "1-tons")))
 
 
-
-summary(lm(frac_bacprod ~ mean/Removed, data = dplyr::filter(all_divs, measure == "Shannon_Entropy" & fraction == "WholePart")))
-
-
-# Are the slopes of Removed different from each other?
-summary(lm(frac_bacprod ~ mean*Removed, data = dplyr::filter(all_divs, measure == "Shannon_Entropy" & fraction == "WholePart")))
+# Are the linear models for different OTU removals significant? 
+summary(lm(frac_bacprod ~ mean/Removed, data = dplyr::filter(all_divs, measure == "Shannon_Entropy" & fraction == "Particle")))
 ```
 
 
-```{r shannon-plots, fig.width=8, fig.height=5}
+```{r shannon-plots, fig.width=10, fig.height=5, dependson="all_divs"}
 # Linear Model output
 lm_fraction_output(dataframe = dplyr::filter(all_divs,  measure == "Shannon_Entropy"))
 
@@ -433,7 +454,7 @@ ggplot(dplyr::filter(all_divs, measure == "Shannon_Entropy"),
   geom_point(size = 3) + 
   xlab("Shannon_Entropy") +
   ylab("Bacterial Production by Fraction") +
-  geom_smooth(method = "lm", data = filter(all_divs, measure == "Shannon_Entropy" & fraction == "WholePart" )) + 
+  geom_smooth(method = "lm", data = filter(all_divs, measure == "Shannon_Entropy" & fraction == "Particle" )) + 
   scale_color_manual(values = tons_colors) +
   scale_fill_manual(values = tons_colors) +  
   facet_grid(fraction~Removed, scales = "free") +
@@ -443,7 +464,7 @@ ggplot(dplyr::filter(all_divs, measure == "Shannon_Entropy"),
 
 
 # Inverse Simpson
-```{r invsimps-plots1, fig.width=7, fig.height=4}
+```{r invsimps-plots1, fig.width=9, fig.height=4, dependson="all_divs"}
 ### PLOT
 ggplot(dplyr::filter(all_divs, measure == "Inverse_Simpson"), 
        aes(y = mean, x = Removed, color = Removed, fill = Removed)) +
@@ -472,15 +493,11 @@ summary(lm(frac_bacprod ~ mean + fraction, data = dplyr::filter(all_divs, measur
                                                        Removed == "1-tons")))
 
 
-
-summary(lm(frac_bacprod ~ mean/Removed, data = dplyr::filter(all_divs, measure == "Inverse_Simpson" & fraction == "WholePart")))
-
-
-# Are the slopes of Removed different from each other?
-summary(lm(frac_bacprod ~ mean*Removed, data = dplyr::filter(all_divs, measure == "Inverse_Simpson" & fraction == "WholePart")))
+# Are the linear models for different OTU removals significant? 
+summary(lm(frac_bacprod ~ mean/Removed, data = dplyr::filter(all_divs, measure == "Inverse_Simpson" & fraction == "Particle")))
 ```
 
-```{r inverse-simpson-plots, fig.width=8, fig.height=5}
+```{r inverse-simpson-plots, fig.width=10, fig.height=5, dependson="all_divs"}
 # Linear Model output
 lm_fraction_output(dataframe = dplyr::filter(all_divs,  measure == "Inverse_Simpson"))
 
@@ -489,7 +506,7 @@ ggplot(dplyr::filter(all_divs, measure == "Inverse_Simpson"),
   geom_point(size = 3) + 
   xlab("Inverse_Simpson") +
   ylab("Bacterial Production by Fraction") +
-  geom_smooth(method = "lm", data = filter(all_divs, measure == "Inverse_Simpson" & fraction == "WholePart" )) + 
+  geom_smooth(method = "lm", data = filter(all_divs, measure == "Inverse_Simpson" & fraction == "Particle" )) + 
   scale_color_manual(values = tons_colors) +
   scale_fill_manual(values = tons_colors) +  
   facet_grid(fraction~Removed, scales = "free") +
@@ -499,7 +516,7 @@ ggplot(dplyr::filter(all_divs, measure == "Inverse_Simpson"),
 
 
 # Simpson's Evenness
-```{r simpseven-plots1, fig.width=7, fig.height=4}
+```{r simpseven-plots1, fig.width=9, fig.height=4, dependson="all_divs"}
 ### PLOT
 ggplot(dplyr::filter(all_divs, measure == "Simpsons_Evenness"), 
        aes(y = mean, x = Removed, color = Removed, fill = Removed)) +
@@ -528,15 +545,11 @@ summary(lm(frac_bacprod ~ mean + fraction, data = dplyr::filter(all_divs, measur
                                                        Removed == "1-tons")))
 
 
-
-summary(lm(frac_bacprod ~ mean/Removed, data = dplyr::filter(all_divs, measure == "Simpsons_Evenness" & fraction == "WholePart")))
-
-
-# Are the slopes of Removed different from each other?
-summary(lm(frac_bacprod ~ mean*Removed, data = dplyr::filter(all_divs, measure == "Simpsons_Evenness" & fraction == "WholePart")))
+# Are the linear models for different OTU removals significant? 
+summary(lm(frac_bacprod ~ mean/Removed, data = dplyr::filter(all_divs, measure == "Simpsons_Evenness" & fraction == "Particle")))
 ```
 
-```{r simps-evenness-plots, fig.width=8, fig.height=5}
+```{r simps-evenness-plots, fig.width=10, fig.height=5, dependson="all_divs"}
 # Linear Model output
 lm_fraction_output(dataframe = dplyr::filter(all_divs,  measure == "Simpsons_Evenness"))
 
@@ -545,198 +558,10 @@ ggplot(dplyr::filter(all_divs, measure == "Simpsons_Evenness"),
   geom_point(size = 3) + 
   xlab("Simpsons_Evenness") +
   ylab("Bacterial Production by Fraction") +
-  geom_smooth(method = "lm", data = filter(all_divs, measure == "Simpsons_Evenness" & fraction == "WholePart" )) + 
+  geom_smooth(method = "lm", data = filter(all_divs, measure == "Simpsons_Evenness" & fraction == "Particle" )) + 
   scale_color_manual(values = tons_colors) +
   scale_fill_manual(values = tons_colors) +  
   facet_grid(fraction~Removed, scales = "free") +
   theme(legend.position = "bottom", legend.title = element_blank(),
         axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
 ```
-
-
-
-
-
-
-
-
-
-
-
-## Subset Diversity Data 
-```{r subset-diversity, eval = FALSE, dependson = c("load-data","vean-otu-alphadiv-calc")}
-######################################################### RICHNESS
-# Subset only richness data 
-ML_rm1_rich_stats <- filter(otu_alphadiv, measure == "Richness" & 
-                              fraction %in% c("WholePart", "WholeFree") & year == "2015")
-
-######################################################### SHANNON ENTROPY
-# Subset only Shannon_Entropy data 
-ML_otu_shannon_stats <- filter(otu_alphadiv, measure == "Shannon_Entropy" & 
-                                 fraction %in% c("WholePart", "WholeFree") & year == "2015")
-
-######################################################### INVERSE SIMPSON
-# Subset only Inverse_Simpson data 
-ML_otu_invsimps_stats <- filter(otu_alphadiv, measure == "Inverse_Simpson" & 
-                                  fraction %in% c("WholePart", "WholeFree") & year == "2015")
-
-######################################################### SIMPSON'S EVENNESS
-# Subset only Simpsons_Evenness data 
-ML_otu_simpseven_stats <- filter(otu_alphadiv, measure == "Simpsons_Evenness" & 
-                                   fraction %in% c("WholePart", "WholeFree") & year == "2015")
-```
-
-
-
-# Diversity vs Fraction Production 
-```{r plot-vegan-fracprod, eval = FALSE, dependson = "subset-diversity", fig.width = 10, fig.height = 10, warnings = FALSE}
-######################################################### RICHNESS
-# Free-Living Richness vs fractional production 
-freeprod_ML_otu_rich <- lm(frac_bacprod ~ mean, data = filter(ML_otu_rich_stats, fraction == "WholeFree"))
-summary(freeprod_ML_otu_rich) 
-
-# Particle-Associated Richness vs fractional production 
-partprod_MLotu_rich <- lm(frac_bacprod ~ mean, data = filter(ML_otu_rich_stats, fraction == "WholePart"))
-summary(partprod_MLotu_rich) 
-
-# Both fractions together
-summary(lm(frac_bacprod ~ mean, data = ML_otu_rich_stats))
- 
-# Plot 
-ggplot(ML_otu_rich_stats, aes(x=mean, y=frac_bacprod, color = fraction)) + 
-  geom_point(size = 3.5) + 
-  geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd), alpha = 0.7) + # X-axis errorbars
-  # Y-axis errorbars
-  geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod),  alpha = 0.5) + 
-  scale_color_manual(values = c("firebrick3","cornflowerblue"), 
-                     limits = c("WholePart", "WholeFree"),
-                     breaks=c("WholePart", "WholeFree"),
-                     labels=c("Particle", "Free")) + 
-  ylab("Heterotrophic Production (μgC/L/hr)") + xlab("Observed Richness") +
-  geom_smooth(data=subset(ML_otu_rich_stats, fraction == "WholePart"), method='lm') + 
-  #scale_x_continuous(limits = c(180, 810), breaks = c(200, 400, 600, 800)) + 
-  theme(legend.position=c(0.15,0.9),        
-        legend.title=element_blank()) 
-  #annotate("text", x = 250, y=55, color = "cornflowerblue", fontface = "bold",
-  #         label = paste("R2 =", round(summary(freeprod_ML_otu_rich)$adj.r.squared, digits = 2), "\n", 
-  #                       "p =", round(unname(summary(freeprod_ML_otu_rich)$coefficients[,4][2]), digits = 2))) + 
-  #annotate("text", x = 650, y=3, color = "firebrick3", fontface = "bold",
-  #         label = paste("R2 =", round(summary(partprod_MLotu_rich)$adj.r.squared, digits = 2), "\n", 
-  #                       "p =", round(unname(summary(partprod_MLotu_rich)$coefficients[,4][2]), digits = 4)));
-
-
-######################################################### SHANNON ENTROPY
-# Free-Living Shannon vs fractional production 
-freeprod_ML_otu_shannon <- lm(frac_bacprod ~ mean, data = filter(ML_otu_shannon_stats, fraction == "WholeFree"))
-summary(freeprod_ML_otu_shannon)
-
-# Particle-Associated Shannon vs fractional production 
-partprod_MLotu_shannon <- lm(frac_bacprod ~ mean, data = filter(ML_otu_shannon_stats, fraction == "WholePart"))
-summary(partprod_MLotu_shannon)
-
-# Both fractions together
-summary(lm(frac_bacprod ~ mean, data = ML_otu_shannon_stats))
-
-# Plot 
-otu_shannon_vegan <- ggplot(ML_otu_shannon_stats, aes(x=mean, y=frac_bacprod, color = fraction)) + 
-  geom_point(size = 3.5) + 
-  geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd), alpha = 0.7) + # X-axis errorbars
-  # Y-axis errorbars
-  geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod),  alpha = 0.5) + 
-  scale_color_manual(values = c("firebrick3","cornflowerblue"), 
-                     limits = c("WholePart", "WholeFree"),
-                     breaks=c("WholeFree", "WholePart"),
-                     labels=c("Free-Living", "Particle-Associated")) + 
-  ylab("Secondary Production (μgC/L/hr)") + xlab("Shannon Entropy") +
-  scale_x_continuous(limits = c(3.4, 5.85), breaks = c(3.5, 4, 4.5, 5, 5.5)) + 
-  geom_smooth(data=subset(ML_otu_shannon_stats, fraction == "WholePart"), method='lm') + 
-  theme(legend.position=c(0.15,0.9),        
-        legend.title=element_blank()) +
-  annotate("text", x = 3.75, y=55, color = "cornflowerblue", fontface = "bold",
-           label = paste("R2 =", round(summary(freeprod_ML_otu_shannon)$adj.r.squared, digits = 2), "\n", 
-                         "p =", round(unname(summary(freeprod_ML_otu_shannon)$coefficients[,4][2]), digits = 2))) + 
-  annotate("text", x = 5.35, y=3, color = "firebrick3", fontface = "bold",
-           label = paste("R2 =", round(summary(partprod_MLotu_shannon)$adj.r.squared, digits = 2), "\n", 
-                         "p =", round(unname(summary(partprod_MLotu_shannon)$coefficients[,4][2]), digits = 4))); 
-
-
-######################################################### INVERSE SIMPSON
-# Free-Living Inverse Simpson vs fractional production 
-freeprod_ML_otu_invsimps <- lm(frac_bacprod ~ mean, data = filter(ML_otu_invsimps_stats, fraction == "WholeFree"))
-summary(freeprod_ML_otu_invsimps)
-
-# Particle-Associated Inverse Simpson vs fractional production 
-partprod_MLotu_invsimps <- lm(frac_bacprod ~ mean, data = filter(ML_otu_invsimps_stats, fraction == "WholePart"))
-summary(partprod_MLotu_invsimps)
-
-# Both fractions together
-summary(lm(frac_bacprod ~ mean, data = ML_otu_invsimps_stats))
-
-# Plot Simpson's Evenness
-otu_invsimps_vegan <- ggplot(ML_otu_invsimps_stats, aes(x=mean, y=frac_bacprod, color = fraction)) + 
-  geom_point(size = 3.5) +  
-  geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd), alpha = 0.7) + # X-axis errorbars
-  # Y-axis errorbars
-  geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod),  alpha = 0.5) + 
-  scale_color_manual(values = c("firebrick3","cornflowerblue"), 
-                     limits = c("WholePart", "WholeFree"),
-                     breaks=c("WholeFree", "WholePart"),
-                     labels=c("Free-Living", "Particle-Associated")) + 
-  scale_x_continuous(limits = c(0,95), breaks = c(0, 20, 40, 60, 80), expand = c(0,0)) + 
-  ylab("Secondary Production (μgC/L/hr)") + xlab("Inverse Simpson") +
-  geom_smooth(data=subset(ML_otu_invsimps_stats, fraction == "WholePart"), method='lm') + 
-  theme(legend.position=c(0.85,0.9),        
-        legend.title=element_blank()) +
-  annotate("text", x = 15, y=55, color = "cornflowerblue", fontface = "bold",
-           label = paste("R2 =", round(summary(freeprod_ML_otu_invsimps)$adj.r.squared, digits = 2), "\n", 
-                         "p =", round(unname(summary(freeprod_ML_otu_invsimps)$coefficients[,4][2]), digits = 2))) + 
-  annotate("text", x = 63, y=3, color = "firebrick3", fontface = "bold",
-           label = paste("R2 =", round(summary(partprod_MLotu_invsimps)$adj.r.squared, digits = 2), "\n", 
-                         "p =", round(unname(summary(partprod_MLotu_invsimps)$coefficients[,4][2]), digits = 4))); 
-
-
-
-######################################################### SIMPSON'S EVENNESS
-# Free-Living Simpson's Evenness vs fractional production 
-freeprod_ML_otu_simpseven <- lm(frac_bacprod ~ mean, data = filter(ML_otu_simpseven_stats, fraction == "WholeFree"))
-summary(freeprod_ML_otu_simpseven)
-
-# Particle-Associated Simpson's Evenness vs fractional production 
-partprod_MLotu_simpseven <- lm(frac_bacprod ~ mean, data = filter(ML_otu_simpseven_stats, fraction == "WholePart"))
-summary(partprod_MLotu_simpseven)
-
-# Both fractions together
-summary(lm(frac_bacprod ~ mean, data = ML_otu_simpseven_stats))
-
-# Plot 
-otu_simpseven_vegan <- ggplot(ML_otu_simpseven_stats, aes(x=mean, y=frac_bacprod, color = fraction)) + 
-  geom_point(size = 3.5) +  
-  geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd), alpha = 0.7) + # X-axis errorbars
-  # Y-axis errorbars
-  geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod),  alpha = 0.5) + 
-  scale_color_manual(values = c("firebrick3","cornflowerblue"), 
-                     limits = c("WholePart", "WholeFree"),
-                     breaks=c("WholeFree", "WholePart"),
-                     labels=c("Free-Living", "Particle-Associated")) + 
-  scale_x_continuous(limits = c(0.03,0.151), breaks = c(0.05, 0.1, 0.15))  +
-  ylab("Secondary Production (μgC/L/hr)") + xlab("Simpson's Evenness") +
-  geom_smooth(data=subset(ML_otu_simpseven_stats, fraction == "WholePart"), method='lm') + 
-  theme(legend.position=c(0.15,0.9),        
-        legend.title=element_blank()) +
-  annotate("text", x = 0.05, y=55, color = "cornflowerblue", fontface = "bold",
-           label = paste("R2 =", round(summary(freeprod_ML_otu_simpseven)$adj.r.squared, digits = 2), "\n", 
-                         "p =", round(unname(summary(freeprod_ML_otu_simpseven)$coefficients[,4][2]), digits = 2))) + 
-  annotate("text", x = 0.125, y=3, color = "firebrick3", fontface = "bold",
-           label = paste("R2 =", round(summary(partprod_MLotu_simpseven)$adj.r.squared, digits = 2), "\n", 
-                         "p =", round(unname(summary(partprod_MLotu_simpseven)$coefficients[,4][2]), digits = 4))); 
-
-otu_vegan <- plot_grid(otu_rich_vegan, otu_simpseven_vegan, otu_shannon_vegan, otu_invsimps_vegan,
-                       labels = c("A", "B", "C", "D"), 
-                       align = "h", nrow = 2, ncol = 2)
-otu_vegan
-```
-
-
-
-
-

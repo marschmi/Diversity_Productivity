@@ -626,23 +626,25 @@ lm_fraction_output <- function(dataframe) {
   
   # Check if factor level order is correct!
   removed_factors <- unique(dataframe$Removed)
-  removed_factor_order <- c("1-tons", "5-tons", "10-tons", "30-tons", "60-tons", "90-tons", "150-tons", "225-tons", "300-tons")
+  removed_factor_order <- c("1-tons", "5-tons", "10-tons", "20-tons", "30-tons", "60-tons", "90-tons", "150-tons", "225-tons", "300-tons")
   stopifnot(removed_factor_order == removed_factors) # Stop if it is incorrect!
   
-  lm_01_part <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe,Removed == "1-tons" & fraction == "WholePart"))
-  lm_05_part <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe, Removed == "5-tons" & fraction == "WholePart"))
-  lm_10_part <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe, Removed == "10-tons" & fraction == "WholePart"))
-  lm_30_part <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe, Removed == "30-tons" & fraction == "WholePart"))
-  lm_60_part <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe, Removed == "60-tons" & fraction == "WholePart"))
-  lm_90_part <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe, Removed == "90-tons" & fraction == "WholePart"))
-  lm_150_part <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe, Removed == "150-tons" & fraction == "WholePart"))
-  lm_225_part <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe, Removed == "225-tons" & fraction == "WholePart"))
-  lm_300_part <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe, Removed == "300-tons" & fraction == "WholePart"))
+  lm_01_part <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe,Removed == "1-tons" & fraction == "Particle"))
+  lm_05_part <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe, Removed == "5-tons" & fraction == "Particle"))
+  lm_10_part <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe, Removed == "10-tons" & fraction == "Particle"))
+  lm_20_part <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe, Removed == "20-tons" & fraction == "Particle"))
+  lm_30_part <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe, Removed == "30-tons" & fraction == "Particle"))
+  lm_60_part <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe, Removed == "60-tons" & fraction == "Particle"))
+  lm_90_part <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe, Removed == "90-tons" & fraction == "Particle"))
+  lm_150_part <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe, Removed == "150-tons" & fraction == "Particle"))
+  lm_225_part <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe, Removed == "225-tons" & fraction == "Particle"))
+  lm_300_part <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe, Removed == "300-tons" & fraction == "Particle"))
   
   part_lm_adj_r2 <- c(
     round(summary(lm_01_part)$adj.r.squared, digits = 2),
     round(summary(lm_05_part)$adj.r.squared, digits = 2),
     round(summary(lm_10_part)$adj.r.squared, digits = 2),
+    round(summary(lm_20_part)$adj.r.squared, digits = 2),
     round(summary(lm_30_part)$adj.r.squared, digits = 2),
     round(summary(lm_60_part)$adj.r.squared, digits = 2),
     round(summary(lm_90_part)$adj.r.squared, digits = 2),
@@ -654,6 +656,7 @@ lm_fraction_output <- function(dataframe) {
     round(unname(summary(lm_01_part)$coefficients[,4][2]), digits = 3),
     round(unname(summary(lm_05_part)$coefficients[,4][2]), digits = 3),
     round(unname(summary(lm_10_part)$coefficients[,4][2]), digits = 3),
+    round(unname(summary(lm_20_part)$coefficients[,4][2]), digits = 3),
     round(unname(summary(lm_30_part)$coefficients[,4][2]), digits = 3),
     round(unname(summary(lm_60_part)$coefficients[,4][2]), digits = 3),
     round(unname(summary(lm_90_part)$coefficients[,4][2]), digits = 3),
@@ -663,22 +666,24 @@ lm_fraction_output <- function(dataframe) {
   
   part_lm_df <- data.frame(removed_factors, part_lm_adj_r2, part_lm_pval) %>%
     rename(Removed = removed_factors, Adj_R2 = part_lm_adj_r2, pval = part_lm_pval) %>%
-    mutate(fraction = "WholePart")
+    mutate(fraction = "Particle")
   
-  lm_01_free <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe,  Removed == "1-tons" & fraction == "WholeFree"))
-  lm_05_free <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe, Removed == "5-tons" & fraction == "WholeFree"))
-  lm_10_free <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe, Removed == "10-tons" & fraction == "WholeFree"))
-  lm_30_free <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe,  Removed == "30-tons" & fraction == "WholeFree"))
-  lm_60_free <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe, Removed == "60-tons" & fraction == "WholeFree"))
-  lm_90_free <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe, Removed == "90-tons" & fraction == "WholeFree"))
-  lm_150_free <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe,  Removed == "150-tons" & fraction == "WholeFree"))
-  lm_225_free <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe, Removed == "225-tons" & fraction == "WholeFree"))
-  lm_300_free <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe, Removed == "300-tons" & fraction == "WholeFree"))
+  lm_01_free <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe,  Removed == "1-tons" & fraction == "Free"))
+  lm_05_free <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe, Removed == "5-tons" & fraction == "Free"))
+  lm_10_free <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe, Removed == "10-tons" & fraction == "Free"))
+  lm_20_free <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe, Removed == "20-tons" & fraction == "Free"))
+  lm_30_free <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe,  Removed == "30-tons" & fraction == "Free"))
+  lm_60_free <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe, Removed == "60-tons" & fraction == "Free"))
+  lm_90_free <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe, Removed == "90-tons" & fraction == "Free"))
+  lm_150_free <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe,  Removed == "150-tons" & fraction == "Free"))
+  lm_225_free <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe, Removed == "225-tons" & fraction == "Free"))
+  lm_300_free <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe, Removed == "300-tons" & fraction == "Free"))
   
   free_lm_adj_r2 <- c(
     round(summary(lm_01_free)$adj.r.squared, digits = 2),
     round(summary(lm_05_free)$adj.r.squared, digits = 2),
     round(summary(lm_10_free)$adj.r.squared, digits = 2),
+    round(summary(lm_20_free)$adj.r.squared, digits = 2),
     round(summary(lm_30_free)$adj.r.squared, digits = 2),
     round(summary(lm_60_free)$adj.r.squared, digits = 2),
     round(summary(lm_90_free)$adj.r.squared, digits = 2),
@@ -690,6 +695,7 @@ lm_fraction_output <- function(dataframe) {
     round(unname(summary(lm_01_free)$coefficients[,4][2]), digits = 3),
     round(unname(summary(lm_05_free)$coefficients[,4][2]), digits = 3),
     round(unname(summary(lm_10_free)$coefficients[,4][2]), digits = 3),
+    round(unname(summary(lm_20_free)$coefficients[,4][2]), digits = 3),
     round(unname(summary(lm_30_free)$coefficients[,4][2]), digits = 3),
     round(unname(summary(lm_60_free)$coefficients[,4][2]), digits = 3),
     round(unname(summary(lm_90_free)$coefficients[,4][2]), digits = 3),
@@ -699,7 +705,7 @@ lm_fraction_output <- function(dataframe) {
   
   free_lm_df <- data.frame(removed_factors, free_lm_adj_r2, free_lm_pval) %>%
     rename(Removed = removed_factors, Adj_R2 = free_lm_adj_r2, pval = free_lm_pval) %>%
-    mutate(fraction = "WholeFree")
+    mutate(fraction = "Free")
   
   return(list(free = free_lm_df, part = part_lm_df))
 }
