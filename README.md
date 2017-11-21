@@ -21,19 +21,19 @@ This is the repository for the manuscript "Microhabitats shape diversity-product
 **********
 
 
-####Information about this repository:  
+## Information about this repository:  
 
 ##### **Original fastq files:**
 The original Fastq files were submitted to the NCBI sequence read archive under BioProject PRJNA412984, SRA accession number XXXXXXX.
 
 
-##### **File Description:**
+### **File Description:**
 
 The files in the main directory named **Final_Analysis.Rmd**, **Final_Analysis.html**, **Final_Analysis.md**, and `Final_Figures/` folder have all of the final analysis contents. 
 
-A supplementary analysis files can be found in the `analysis`. Specifically: Files named **OTU_Removal_Analysis.Rmd**, **OTU_Removal_Analysis.md** , **OTU_Removal_Analysis.html** are for the rare OTU sensitivity analysis. Files named **PrunedTree_Analysis.html** and **PrunedTree_Analysis.Rmd** are for different types of phylogenetic analyses. 
+A supplementary analysis files can be found in the `analysis/` folder. Specifically: Files named **OTU_Removal_Analysis.Rmd**, **OTU_Removal_Analysis.md** , **OTU_Removal_Analysis.html** are for the rare OTU sensitivity analysis. Files named **PrunedTree_Analysis.html** and **PrunedTree_Analysis.Rmd** are for different types of phylogenetic analyses. 
 
-##### **File Structure:**
+### **File Structure:**
 
 ```
 .
