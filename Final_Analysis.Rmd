@@ -1,7 +1,8 @@
 ---
-title: "Phylogenetic Analysis"
+title: "Analysis: Microhabitats shape diversity-productivity 
+relationships in freshwater bacterial communities"
 author: "Marian L. Schmidt"
-date: "May 26th, 2017"
+date: "November 21st, 2017"
 output:
   html_document:
     code_folding: show
@@ -43,9 +44,9 @@ knitr::opts_chunk$set(eval = TRUE,
 
 ```
 
-
+# Load Libraries
 ```{r load-libraries, message = FALSE, warning = FALSE}
-library(ggplot2)
+library(ggplot2)  
 library(devtools)
 library(phyloseq)
 library(picante)
@@ -60,26 +61,31 @@ library(sandwich)   # for vcovHC function in post-hoc test
 library(MASS)       # For studres in plot_residuals function
 library(caret)      # For cross validation
 library(pander)     # For pretty tables 
-library(glmnet)     # For lasso and ridge regressions 
+library(glmnet)     # For lasso and ridge regressions
+library(broom)      # pvalues out of multiple regression
+library(DT)         # fancy HTML table output
 source("code/Muskegon_functions.R")
 source("code/set_colors.R")  
 ```
 
 
-# Map of Muskegon Lake
+# Figure S1
 
+**Map of Muskegon Lake**
 ```{r musk-map}
+# Load the ggmap package for plotting of Muskegon Lake
 library(ggmap)
 
+# Extract the coordinates for Muskegon Lake 
 lakesite_coordinates <- read.csv("data/metadata/ML_GPS_Coordinates.csv") %>%
   dplyr::select(lakesite, Latitude, Longitude) %>%
-  dplyr::rename(Lat = Latitude,
-                Long = Longitude)
+  dplyr::rename(Lat = Latitude, Long = Longitude)
 
-#geocode("Muskegon Lake")
-
+# Set the boundaries for the map 
 map <- get_map(c(-86.35, 43.21, -86.235, 43.265),  #left/bottom/right/top
                  zoom = 13, maptype = "toner-background")
+
+# Plot the Muskegon Lake Map 
 ggmap(map) + xlab("Longitude") + ylab("Latitude") +
   theme(axis.text = element_text(size = 10, color = "black"),
         axis.title = element_text(size = 12, color = "black", face = "bold")) +
@@ -87,8 +93,6 @@ ggmap(map) + xlab("Longitude") + ylab("Latitude") +
                aes(x=Long, y=Lat), color="red", size=4) +
     geom_text(data = lakesite_coordinates,
               aes(x=Long, y=Lat, label=lakesite), col="white", cex=4, vjust = 0.5,hjust = -0.25) 
-
-
 ```
 
 # Load data
@@ -118,114 +122,13 @@ row.names(metadata) <- metadata$norep_filter_name
 sample_data(surface_PAFL_otu_pruned_notree_rm2) <- metadata
 ```
 
+Removing the OTUs that are doubletons across the entire dataset leaves a total of `r ntaxa(surface_PAFL_otu_pruned_rm2)` OTUs, a decrease from `r ntaxa(surface_PAFL_otu_pruned_raw)`. This will help decrease the computational load for phylogenetic analysis and also further remove potential sequencing artifacts.
 
-# Production over Station and Season
-```{r cellabund-vs-fraction, eval = TRUE, fig.width = 6, fig.height = 3.5, include = TRUE}
+# Heterotrophic Production 
 
-ggplot(dplyr::filter(metadata, year == "2015" & fraction %in% c("Free", "Particle") &
-                       norep_filter_name != "MOTEJ515"), 
-       aes(x = lakesite, y = log10(as.numeric(fraction_bac_abund)), fill = fraction)) + 
-  geom_bar(stat = "identity", color = "black",  position=position_dodge()) + 
-  facet_grid(. ~ season) + 
-  scale_y_continuous(expand = c(0,0)) +
-  scale_fill_manual(values = fraction_colors) + 
-  guides(fill=guide_legend(nrow=1,byrow=TRUE)) +
-  xlab("Lake Station") +  ylab("Log10(Bacterial Cells/mL)") +
-  theme(axis.text.x = element_text(angle = 30, vjust = 1, hjust = 1),
-        legend.position = "bottom", legend.title = element_blank(),
-        plot.margin	= unit(c(0.25, 0.25, 0.25, 0.5), "cm")) #top, right, bottom, and left margins)
-```
-
-```{r prod-vs-fraction, eval = TRUE, fig.width = 6, fig.height = 5, include = TRUE}
-prod1 <- ggplot(dplyr::filter(metadata, year == "2015" & fraction %in% c("Free", "Particle")), 
-       aes(x = lakesite, y = frac_bacprod, fill = fraction)) + 
-  geom_bar(stat = "identity", color = "black",  position=position_dodge()) + 
-  geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod), 
-                position = position_dodge(width = 0.75), width = 0.25) +
-  facet_grid(. ~ season) + 
-  scale_y_continuous(expand = c(0,0), limits = c(0, 80), 
-                     breaks = seq(from = 0, to = 80, by = 15)) +
-  scale_fill_manual(values = fraction_colors) + 
-  guides(fill=guide_legend(nrow=1,byrow=TRUE)) +
-  xlab("Lake Station") + ylab("Community Production\n(ug C/L/day)") + 
-  theme(axis.text.x = element_blank(), #element_text(angle = 30, vjust = 1, hjust = 1),
-        axis.title.x = element_blank(),
-        legend.position = c(0.65, 0.9), legend.title = element_blank(),
-        plot.margin	= unit(c(0.25, 0.25, 0.25, 0.25), "cm")) #top, right, bottom, and left margins)
-
-
-prod2 <- ggplot(dplyr::filter(metadata, year == "2015" & fraction %in% c("Free", "Particle")), 
-       aes(x = lakesite, y = fracprod_per_cell_noinf, fill = fraction)) + 
-  geom_bar(stat = "identity", color = "black",  position=position_dodge()) + 
-  facet_grid(. ~ season) +
-  scale_y_continuous(expand = c(0,0)) +
-  scale_fill_manual(values = fraction_colors) + 
-  guides(fill=guide_legend(nrow=1,byrow=TRUE)) +
-  xlab("Lake Station") + ylab("Per-Capita Production \n(ug C/cell/day)") + 
-  theme(axis.text.x = element_text(angle = 30, vjust = 1, hjust = 1),
-        legend.position = c(0.65, 0.9), legend.title = element_blank(),
-        plot.margin	= unit(c(0.25, 0.25, 0.25, 0.5), "cm")) #top, right, bottom, and left margins)
-
-
-########## LONG FORMAT OF TOTAL PRODUCTIVITY
-ggplot(dplyr::filter(metadata, year == "2015" & fraction == "Free"), 
-       aes(x = lakesite, y = tot_bacprod)) + 
-  geom_bar(stat = "identity", color = "black", fill = "grey", position=position_dodge()) + 
-  geom_errorbar(aes(ymin = tot_bacprod - SD_tot_bacprod, ymax = tot_bacprod + SD_tot_bacprod),width = 0.25) +
-  facet_grid(season ~., scales = "free") + 
-  scale_y_continuous(expand = c(0,0), limits = c(0, 80), 
-                     breaks = seq(from = 0, to = 80, by = 15)) +
-  scale_fill_manual(values = fraction_colors) + 
-  guides(fill=guide_legend(nrow=1,byrow=TRUE)) +
-  xlab("Lake Station") + ylab("Community Production\n(ug C/L/day)") + 
-  theme(legend.position = c(0.85, 0.9), legend.title = element_blank(),
-        plot.margin	= unit(c(0.25, 0.25, 0.25, 0.25), "cm")) #top, right, bottom, and left margins)
-
-
-########## LONG FORMAT OF COMMUNITY PRODUCTIVITY
-community_prod_plot_long <- 
-  ggplot(dplyr::filter(metadata, year == "2015" & fraction %in% c("Free", "Particle")), 
-       aes(x = lakesite, y = frac_bacprod, fill = fraction)) + 
-  geom_bar(stat = "identity", color = "black",  position=position_dodge()) + 
-  geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod), 
-                position = position_dodge(width = 0.75), width = 0.25) +
-  facet_grid(season ~., scales = "free") + 
-  scale_y_continuous(expand = c(0,0), limits = c(0, 80), 
-                     breaks = seq(from = 0, to = 80, by = 15)) +
-  scale_fill_manual(values = fraction_colors) + 
-  guides(fill=guide_legend(nrow=1,byrow=TRUE)) +
-  xlab("Lake Station") + ylab("Community Production\n(ug C/L/day)") + 
-  theme(legend.position = "bottom", legend.title = element_blank(),
-        plot.margin	= unit(c(0.25, 0.25, 0.25, 0.25), "cm")) #top, right, bottom, and left margins)
-
-
-########## LONG FORMAT OF CELLULAR PRODUCTIVITY
-percapita_prod_plot_long <- 
-  ggplot(dplyr::filter(metadata, year == "2015" & fraction %in% c("Free", "Particle")), 
-       aes(x = lakesite, y = fracprod_per_cell_noinf, fill = fraction)) + 
-  geom_bar(stat = "identity", color = "black",  position=position_dodge()) + 
-  facet_grid(season ~ ., scales = "free_x") +
-  scale_y_continuous(expand = c(0,0)) +
-  scale_fill_manual(values = fraction_colors) + 
-  guides(fill=guide_legend(nrow=1,byrow=TRUE)) +
-  xlab("Lake Station") + ylab("Per-Capita Production \n(ug C/cell/day)") + 
-  theme(axis.text.x = element_text(angle = 30, vjust = 1, hjust = 1),
-        legend.position = "bottom", legend.title = element_blank(),
-        plot.margin	= unit(c(0.25, 0.25, 0.25, 0.5), "cm")) #top, right, bottom, and left margins)
-
-plot_grid(community_prod_plot_long, percapita_prod_plot_long, 
-          labels = c("A", "B"),
-          nrow = 1, ncol = 2,
-          align = "v")
-
-
-plot_grid(prod1, prod2, labels = c("A", "B"),
-          rel_heights = c(1, 1.3),
-          nrow = 2, ncol = 1,
-          align = "v")
-
-
-### BY STATION 
+## Total Production 
+```{r total-prod-vs-season-station, eval = TRUE, fig.width = 6, fig.height = 5, include = TRUE}
+### Total production by station 
 prod_by_station <- ggplot(dplyr::filter(metadata, year == "2015" & fraction %in% c("Free")), 
        aes(x = lakesite, y = tot_bacprod)) + 
   geom_boxplot(fill = "grey") + geom_point(size = 3.5, position = position_jitter()) +
@@ -237,6 +140,7 @@ prod_by_station <- ggplot(dplyr::filter(metadata, year == "2015" & fraction %in%
         legend.position = c(0.85, 0.9), legend.title = element_blank(),
         plot.margin	= unit(c(0.25, 0.25, 0.25, 0.5), "cm")) #top, right, bottom, and left margins)
 
+### Total production by Season 
 prod_by_season <- ggplot(dplyr::filter(metadata, year == "2015" & fraction %in% c("Free")), 
        aes(x = season, y = tot_bacprod)) + 
   geom_boxplot(fill = "grey") + geom_point(size = 3.5, position = position_jitter()) +
@@ -254,94 +158,48 @@ plot_grid(prod_by_station, prod_by_season, labels = c("A", "B"),
           nrow = 1, ncol = 2,
           align = "h")
 ```
-
-```{r pcoa, fig.width=8, fig.height=4, dependson = "load-data"}
-
-scaled_surface_PAFLA_pruned_rm2 <- scale_reads(surface_PAFL_otu_pruned_notree_rm2)
-
-set.seed(777)
-
-# Calculate the SOREN distance
-soren_whole_dist <- ordinate(
-  physeq = scaled_surface_PAFLA_pruned_rm2,
-  method = "PCoA",
-  distance = "bray",
-  binary = TRUE) # Make it presence/absence
- 
-p1 <- plot_ordination(
-  physeq = scaled_surface_PAFLA_pruned_rm2,
-  ordination = soren_whole_dist,
-  color = "fraction",
-  shape = "season",
-  title = "Sørensen") +
-  geom_point(size=5, alpha = 0.7, aes(fill =fraction,  color = fraction)) +
-  scale_colour_manual(values = fraction_colors) +
-  scale_fill_manual(values = fraction_colors) +
-  scale_shape_manual(values = season_shapes) +
-  theme(legend.position = "none")
+The highest total heterotrophic production rates occur in the river station and in the spring and summer. 
 
 
-# Calculate the BRAY-CURTIS distance
-bray_whole_dist <- ordinate(
-  physeq = scaled_surface_PAFLA_pruned_rm2,
-  method = "PCoA",
-  distance = "bray",
-  binary = FALSE) # Make it Abundance weighted 
- 
-p2 <- plot_ordination(
-  physeq = scaled_surface_PAFLA_pruned_rm2,
-  ordination = bray_whole_dist ,
-  color = "fraction",
-  shape = "season",
-  title = "Bray-Curtis") +
-  geom_point(size=5, alpha = 0.7, aes(fill =fraction,  color = fraction)) +
-  scale_colour_manual(values = fraction_colors) +
-  scale_fill_manual(values = fraction_colors) +
-  scale_shape_manual(values = season_shapes) +
-  theme(legend.position = "bottom", legend.title = element_blank())
 
+## Community-wide and Per-Capita Heterotrophic Production over Station and Season
 
-p_lakesite <- 
-  plot_ordination(
-  axes = 2:3,
-  physeq = scaled_surface_PAFLA_pruned_rm2,
-  ordination = bray_whole_dist ,
-  color = "fraction",
-  shape = "lakesite",
-  title = "Bray-Curtis") +
-  geom_point(size=5, alpha = 0.7, aes(fill =fraction,  color = fraction)) +
-  scale_colour_manual(values = fraction_colors) +
-  scale_size_manual(values = c(3.5, 3.5, 3.5, 3.5)) + 
-  scale_fill_manual(values = fraction_colors) +
-  scale_shape_manual(values = lakesite_shapes) +
-  theme(legend.position = "bottom", legend.title = element_blank())
+```{r prod-vs-fraction, eval = TRUE, fig.width = 6, fig.height = 5, include = TRUE}
+# Plot the community wide heterotrophic productivity over station and season
+prod1 <- ggplot(dplyr::filter(metadata, year == "2015" & fraction %in% c("Free", "Particle")), 
+       aes(x = lakesite, y = frac_bacprod, fill = fraction)) + 
+  geom_bar(stat = "identity", color = "black",  position=position_dodge()) + 
+  geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod), 
+                position = position_dodge(width = 0.75), width = 0.25) +
+  facet_grid(. ~ season) + 
+  scale_y_continuous(expand = c(0,0), limits = c(0, 80), 
+                     breaks = seq(from = 0, to = 80, by = 15)) +
+  scale_fill_manual(values = fraction_colors) + 
+  guides(fill=guide_legend(nrow=1,byrow=TRUE)) +
+  xlab("Lake Station") + ylab("Community Production\n(ug C/L/day)") + 
+  theme(axis.text.x = element_blank(), #element_text(angle = 30, vjust = 1, hjust = 1),
+        axis.title.x = element_blank(),
+        legend.position = c(0.65, 0.9), legend.title = element_blank(),
+        plot.margin	= unit(c(0.25, 0.25, 0.25, 0.25), "cm")) #top, right, bottom, and left margins)
 
-### PCOA FIGURE 
-pcoa_fig_row1 <- plot_grid(p1, 
-          p2 + theme(legend.position = "none"), 
-          labels = c("A", "B"), align = "h", ncol = 2,
-          rel_widths = c(1, 1))
+# Plot the per-capita heterotrophic productivity over station and season
+prod2 <- ggplot(dplyr::filter(metadata, year == "2015" & fraction %in% c("Free", "Particle")), 
+       aes(x = lakesite, y = fracprod_per_cell_noinf, fill = fraction)) + 
+  geom_bar(stat = "identity", color = "black",  position=position_dodge()) + 
+  facet_grid(. ~ season) +
+  scale_y_continuous(expand = c(0,0)) +
+  scale_fill_manual(values = fraction_colors) + 
+  guides(fill=guide_legend(nrow=1,byrow=TRUE)) +
+  xlab("Lake Station") + ylab("Per-Capita Production \n(ug C/cell/day)") + 
+  theme(axis.text.x = element_text(angle = 30, vjust = 1, hjust = 1),
+        legend.position = c(0.65, 0.9), legend.title = element_blank(),
+        plot.margin	= unit(c(0.25, 0.25, 0.25, 0.5), "cm")) #top, right, bottom, and left margins)
 
-
-season_legend <- get_legend(p2)
-lakesite_legend <- get_legend(p_lakesite)
-
-
-plot_grid(pcoa_fig_row1, season_legend, 
+# Put the two plots together 
+plot_grid(prod1, prod2, labels = c("A", "B"),
+          rel_heights = c(1, 1.3),
           nrow = 2, ncol = 1,
-          rel_heights = c(1, 0.05))
-
-
-
-# Calculate bray curtis distance matrix
-musk_bray <- phyloseq::distance(scaled_surface_PAFLA_pruned_rm2, method = "bray")
-
-# make a data frame from the sample_data
-sampledf <- data.frame(sample_data(scaled_surface_PAFLA_pruned_rm2))
-
-# Adonis test
-adonis(musk_bray ~ fraction + season , data = sampledf)
-
+          align = "v")
 ```
 
 
@@ -410,19 +268,22 @@ legend("right",
        pch=c(16, 17), col=c("cornflowerblue", "firebrick3"))
 ```
 
+The first two axes of the PCA explain `r summary(pca_environ)$cont$importance[3, 2]*100`% of the variation in the environmental data!
+
 
 # Linear Models with Environmental Variables
-```{r environ-lm, fig.height=3.5, fig.height=8, dependson = "euclidian-pcoa-varexplained"}
+```{r environ-lm, fig.height=3.5, fig.width=8, dependson = "euclidian-pcoa-varexplained"}
+# Pull out all of the PCA scores into a dataframe
 pca_scores_df <- summary(pca_environ)$sites %>%
   as.data.frame() %>%
   tibble::rownames_to_column(var = "norep_filter_name") %>%
   mutate(norep_water_name = paste(substr(norep_filter_name, 1, 4), substr(norep_filter_name, 6, 8), sep = "")) %>%
   dplyr::select(-norep_filter_name)
 
+# Combine the above dataframe with the rest of the metadata
 metadata_pca <- metadata %>%
   mutate(norep_water_name = paste(substr(norep_filter_name, 1, 4), substr(norep_filter_name, 6, 8), sep = "")) %>%
   left_join(pca_scores_df, by = "norep_water_name")
-
 
 
 #####  SINGLE REGRESSION with PC1
@@ -460,10 +321,6 @@ colnames(pca_lm_results_df) <- c("fraction", "Predictor","Prod_measure", "Adjust
 
 row.names(pca_lm_results_df) = NULL
 
-#pander(pca_lm_results_df,
-#               caption = "Single Linear regression statistics for PC1.")
-
-
 #####  SINGLE REGRESSION with PC2
 ## Free living
 comm_lm_PC2_free <- summary(lm(frac_bacprod ~ PC2, 
@@ -498,10 +355,6 @@ pca_lm2_results_df <-
 colnames(pca_lm2_results_df) <- c("fraction", "Predictor","Prod_measure", "Adjusted_R2", "p-value")
 
 row.names(pca_lm2_results_df) = NULL
-
-#pander(pca_lm2_results_df,
-#               caption = "Single Linear regression statistics for PC2.")
-
 
 #####  SINGLE REGRESSION with PC3
 ## Free living
@@ -538,11 +391,6 @@ colnames(pca_lm_results_df_PC3) <- c("fraction", "Predictor","Prod_measure", "Ad
 
 row.names(pca_lm_results_df_PC3) = NULL
 
-#pander(pca_lm_results_df_PC3,
-#               caption = "Single Linear regression statistics for PC3.")
-
-
-
 #####  SINGLE REGRESSION with PC4
 ## Free living
 comm_lm_PC4_free <- summary(lm(frac_bacprod ~ PC4, 
@@ -577,9 +425,6 @@ pca_lm_results_df_PC4 <-
 colnames(pca_lm_results_df_PC4) <- c("fraction", "Predictor","Prod_measure", "Adjusted_R2", "p-value")
 
 row.names(pca_lm_results_df_PC4) = NULL
-
-#pander(pca_lm_results_df_PC4,
-#               caption = "Single Linear regression statistics for PC4.")
 
 
 #####  SINGLE REGRESSION with PC5
@@ -617,10 +462,6 @@ colnames(pca_lm_results_df_PC5) <- c("fraction", "Predictor","Prod_measure", "Ad
 
 row.names(pca_lm_results_df_PC5) = NULL
 
-#pander(pca_lm_results_df_PC5,
-#               caption = "Single Linear regression statistics for PC5.")
-
-
 
 #####  SINGLE REGRESSION with PC6
 ## Free living
@@ -657,59 +498,71 @@ colnames(pca_lm_results_df_PC6) <- c("fraction", "Predictor","Prod_measure", "Ad
 
 row.names(pca_lm_results_df_PC6) = NULL
 
-#pander(pca_lm_results_df_PC6,
-#               caption = "Single Linear regression statistics for PC6.")
 
+################ Per-Capita production correlation with PC2
+## 1. Run the linear regression 
+lm_PC2_percap_part <- lm(log10(fracprod_per_cell_noinf) ~ PC2, data = dplyr::filter(metadata_pca, fraction == "Particle"))
 
+# Linear models with PC1 and free-living PC2 are NOT SIGNIFICANT
+summary(lm(log10(fracprod_per_cell_noinf) ~ PC2, data = dplyr::filter(metadata_pca, fraction == "Free")))
+summary(lm(log10(fracprod_per_cell_noinf) ~ PC1, data = dplyr::filter(metadata_pca, fraction == "Free")))
+summary(lm(log10(fracprod_per_cell_noinf) ~ PC1, data = dplyr::filter(metadata_pca, fraction == "Particle")))
 
+# 2. Extract the R2 and p-value from the linear model: 
+lm_lab_PC2_percap_part <- paste("atop(R^2 ==", round(summary(lm_PC2_percap_part)$adj.r.squared, digits = 3), ",",
+            "p ==", round(unname(summary(lm_PC2_percap_part)$coefficients[,4][2]), digits = 3), ")")
 
-
-#####  MULTIPLE REGRESSION 
-## Free living
-summary(lm(frac_bacprod ~ PC1 + PC2, 
-           data = filter(metadata_pca, fraction == "Free")))
-## Particle-associated
-summary(lm(frac_bacprod ~ PC1 + PC2, 
-           data = filter(metadata_pca, fraction == "Particle")))
-## PER CAPITA: Free living
-summary(lm(log10(fracprod_per_cell_noinf) ~ PC1 + PC2, 
-           data = filter(metadata_pca, fraction == "Free")))
-## PER CAPITA: Particle-associated
-summary(lm(log10(fracprod_per_cell_noinf) ~ PC1 + PC2, 
-           data = filter(metadata_pca, fraction == "Particle")))
-
+## 3. Plot Per-Capita production correlation between particle and free
 PC1_lm_plot <- 
   ggplot(metadata_pca, aes(x = PC1, y = log10(fracprod_per_cell_noinf), 
                          color = fraction,  fill = fraction)) +
-  geom_point() + ylab("log10(cellular production)") + 
+  geom_point() + ylab("log10(Per-Capita Production)") + 
   scale_color_manual(values = fraction_colors) + 
   scale_fill_manual(values = fraction_colors) + 
-  geom_smooth(method = "lm") +
   theme(legend.title = element_blank(), legend.position = "bottom")
 
 
 PC2_lm_plot <- 
-  ggplot(metadata_pca, aes(x = PC2, y = log10(fracprod_per_cell_noinf), 
-                         color = fraction,  fill = fraction)) +
-  geom_point() + ylab("log10(cellular production)") + 
+  ggplot(metadata_pca, aes(x = PC2, y = log10(fracprod_per_cell_noinf))) +
+  geom_point(aes(color = fraction,  fill = fraction)) + ylab("log10(Per-Capita Production)") + 
   scale_color_manual(values = fraction_colors) + 
   scale_fill_manual(values = fraction_colors) + 
-  geom_smooth(method = "lm") +
+  geom_smooth(method = "lm", color = "#FF6600", fill = "#FF6600", data = dplyr::filter(metadata_pca, fraction == "Particle")) +
+  # Add the R2 and p-value to the plot 
+  annotate("text", y = -5.8, x=0.5, label=lm_lab_PC2_percap_part, parse = TRUE, color = "#FF6600", size = 4) +
   theme(legend.title = element_blank(), legend.position = "bottom")  
 
-plot_grid(PC2_lm_plot, PC2_lm_plot, 
+plot_grid(PC1_lm_plot, PC2_lm_plot, 
           labels = c("A", "B"),
           nrow = 1, ncol = 2)
-
-
 ```
+
+# Multiple Regression with PCA results 
+```{r multiple-regression-PCA}
+## Community-wide: Free living with PC1 + PC2 = Not significant
+summary(lm(frac_bacprod ~ PC1 + PC2, data = filter(metadata_pca, fraction == "Free")))
+
+## Community-wide:Particle-associated with PC1 + PC2 = Not significant
+summary(lm(frac_bacprod ~ PC1 + PC2, data = filter(metadata_pca, fraction == "Particle")))
+
+## PER CAPITA: Free living with PC1 + PC2 = Not significant
+summary(lm(log10(fracprod_per_cell_noinf) ~ PC1 + PC2, data = filter(metadata_pca, fraction == "Free")))
+
+## PER CAPITA: Particle-associatedwith PC1 + PC2  = SIGNIFICANT (p = 0.015)
+lm_percap_PC12_part <- lm(log10(fracprod_per_cell_noinf) ~ PC1 + PC2, data = filter(metadata_pca, fraction == "Particle"))
+summary(lm_percap_PC12_part)
+```
+
+**Important!** In a multiple regression, PC1 and PC2 correlate with log~10~(per-capita heterotrophic production)! With an adjusted R^2^ of `r round(summary(lm_percap_PC12_part)$adj.r.squared, digits = 3)` and a p-value of  `r round(glance(lm_percap_PC12_part)$p.value, digits = 4)`
+
+
 
 ## Filtered PCA Linear Model Results
 
 Below represents the significant LM results from the individual PCA axes: 
 
-```{r table-with-PC-results}
-
+```{r table-with-PC-results, warnings = FALSE}
+# Put all of the PCA and environmental  linear model results together into one dataframe 
 all_pca_lm_results <- dplyr::bind_rows(
   data.frame(pca_lm_results_df), 
   data.frame(pca_lm2_results_df), 
@@ -718,11 +571,11 @@ all_pca_lm_results <- dplyr::bind_rows(
   data.frame(pca_lm_results_df_PC5), 
   data.frame(pca_lm_results_df_PC6))
 
+# Output the table in fancy form 
+datatable(all_pca_lm_results, options = list(pageLength = 10)) 
 
-pander(all_pca_lm_results,
-       caption = "All individual LM results from PCA axes.")
-
-pander(dplyr::filter(all_pca_lm_results, p.value < 0.06),
+# Output the results for models that have a pvalue of less than 0.05
+pander(dplyr::filter(all_pca_lm_results, p.value < 0.05),
        caption = "Individual Linear Model results from the individual PCA axes with a p-value less than 0.06.")
 ```
 
@@ -732,6 +585,8 @@ pander(dplyr::filter(all_pca_lm_results, p.value < 0.06),
 summary(lm(frac_bacprod ~ PC1 + PC2, data = filter(metadata_pca, fraction == "Particle")))
 
 summary(lm(Temp_C ~ PC2, data = filter(metadata_pca, fraction == "Particle")))
+summary(lm(pH ~ PC2, data = filter(metadata_pca, fraction == "Particle")))
+
 
 ggplot(metadata_pca, aes(PC2, Temp_C)) + 
   geom_point() +
@@ -743,11 +598,10 @@ ggplot(metadata_pca, aes(PC2, pH)) +
 
 # Multiple regression with per-capita production
 summary(lm(log10(fracprod_per_cell_noinf) ~ PC1 + PC2, data = filter(metadata_pca, fraction == "Free")))
-
 ```
 
 
-
+# Figure S10: PCA with Euclidian Distances 
 ```{r euclidian-pcoa, fig.height=6, fig.width=6, dependson = c("environmental-pairwise", "euclidian-pcoa-varexplained")}
 par(oma(0.1, 0.1, 0.1, 0.1))
 biplot(pca_environ,
@@ -755,24 +609,6 @@ biplot(pca_environ,
      ylab = paste("PC2", paste(round(summary(pca_environ)$cont$importance[2,2]*100, digits = 2), "%", sep = ""), sep = ": "))
 ```
 
-```{r}
-ggplot(filter(metadata, norep_filter_name != "MOTEJ515"), 
-       aes(y = log10(as.numeric(fraction_bac_abund)), x = fraction)) +
-  geom_jitter(size = 3, aes(fill = fraction, shape = season), width = 0.2) + 
-  geom_boxplot(alpha = 0.5, outlier.shape = NA, aes( fill = fraction)) +
-  ylab("Log10(Bacterial Counts) \n (cells/mL)") +
-  scale_fill_manual(values = fraction_colors) +
-  scale_shape_manual(values = season_shapes) +
-  ##### Particle vs free cell abundances 
-  geom_path(data = dat1, aes(x = a, y = b), linetype = 1, color = "gray40") +
-  annotate("text", x=1.5, y=6.5, fontface = "bold",  size = 3.5, color = "gray40",
-           label= paste("***\np =", round(frac_abund_wilcox$p.value, digits = 6))) +
-  theme(legend.position = "bottom",
-        legend.title = element_blank(),
-        axis.title.x = element_blank())
-
-
-```
 
 
 # Environmental Params: as they are
@@ -795,8 +631,6 @@ summary(lm(log10(fracprod_per_cell_noinf) ~ pH, data = metadata_pca_particle))
 # SO4_mgperL
 summary(lm(frac_bacprod ~ SO4_mgperL, data = metadata_pca_particle))
 summary(lm(log10(fracprod_per_cell_noinf) ~ SO4_mgperL, data = metadata_pca_particle))
-
-
 ```
 
 
