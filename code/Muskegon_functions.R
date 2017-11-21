@@ -796,5 +796,5 @@ lm_fraction_output <- function(dataframe) {
               part_comm = part_lm_df_comm, part_percap = part_lm_df_percap))
 }
 
-
+ 
 
