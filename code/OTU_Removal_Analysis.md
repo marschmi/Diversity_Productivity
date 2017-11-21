@@ -298,7 +298,142 @@ plot_grid(p1, p2, align = "v", labels = c("A", "B"), nrow = 2, ncol =1)
 <img src="OTU_Removal_Analysis_Figs/min-seqs-plots-1.png" style="display: block; margin: auto;" />
 
 
+## 15 and 25-tons analysis
 
+```r
+### 15-tons analysis
+notree_musk_surface_pruned_rm15 <- prune_taxa(taxa_sums(notree_musk_surface_pruned) > 15, notree_musk_surface_pruned)
+
+alpha_rm15 <- calc_alpha_diversity(physeq = notree_musk_surface_pruned_rm15)
+
+otu_alphadiv_rm15 <- calc_mean_alphadiv(physeq = notree_musk_surface_pruned_rm15,
+                            richness_df = alpha_rm15$Richness, 
+                            evenness_df = alpha_rm15$Inverse_Simpson, 
+                            shannon_df = alpha_rm15$Shannon) %>%
+     mutate(fraction = factor(fraction, levels = c("WholePart", "Particle", "WholeFree", "Free")),
+          lakesite = factor(lakesite,  levels = c("MOT", "MDP", "MBR", "MIN")),
+          measure = factor(measure, levels = c("Richness", "Simpsons_Evenness", "Shannon_Entropy", "Inverse_Simpson")),
+          Removed = "15-tons")  
+
+### To test for per-capita production
+summary(lm(log10(fracprod_per_cell_noinf) ~ mean, data = filter(otu_alphadiv_rm15, measure == "Richness" & fraction == "WholePart")))
+```
+
+```
+## 
+## Call:
+## lm(formula = log10(fracprod_per_cell_noinf) ~ mean, data = filter(otu_alphadiv_rm15, 
+##     measure == "Richness" & fraction == "WholePart"))
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -0.77786 -0.22168 -0.06477  0.19144  0.71107 
+## 
+## Coefficients:
+##              Estimate Std. Error t value Pr(>|t|)    
+## (Intercept) -9.333765   1.022764  -9.126 7.62e-06 ***
+## mean         0.007090   0.002758   2.570   0.0302 *  
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 0.4261 on 9 degrees of freedom
+##   (1 observation deleted due to missingness)
+## Multiple R-squared:  0.4233,	Adjusted R-squared:  0.3592 
+## F-statistic: 6.606 on 1 and 9 DF,  p-value: 0.03017
+```
+
+```r
+summary(lm(log10(fracprod_per_cell_noinf) ~ mean, data = filter(otu_alphadiv_rm15, measure == "Inverse_Simpson" & fraction == "WholePart")))
+```
+
+```
+## 
+## Call:
+## lm(formula = log10(fracprod_per_cell_noinf) ~ mean, data = filter(otu_alphadiv_rm15, 
+##     measure == "Inverse_Simpson" & fraction == "WholePart"))
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -0.37461 -0.18103 -0.00939  0.06518  0.58276 
+## 
+## Coefficients:
+##              Estimate Std. Error t value Pr(>|t|)    
+## (Intercept) -7.443951   0.178675 -41.662 1.32e-11 ***
+## mean         0.024073   0.005147   4.677  0.00116 ** 
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 0.303 on 9 degrees of freedom
+##   (1 observation deleted due to missingness)
+## Multiple R-squared:  0.7085,	Adjusted R-squared:  0.6761 
+## F-statistic: 21.87 on 1 and 9 DF,  p-value: 0.001158
+```
+
+```r
+### 25-tons analysis
+notree_musk_surface_pruned_rm25 <- prune_taxa(taxa_sums(notree_musk_surface_pruned) > 25, notree_musk_surface_pruned)
+
+alpha_rm25 <- calc_alpha_diversity(physeq = notree_musk_surface_pruned_rm25)
+
+otu_alphadiv_rm25 <- calc_mean_alphadiv(physeq = notree_musk_surface_pruned_rm25,
+                            richness_df = alpha_rm25$Richness, 
+                            evenness_df = alpha_rm25$Inverse_Simpson, 
+                            shannon_df = alpha_rm25$Shannon) %>%
+     mutate(fraction = factor(fraction, levels = c("WholePart", "Particle", "WholeFree", "Free")),
+          lakesite = factor(lakesite,  levels = c("MOT", "MDP", "MBR", "MIN")),
+          measure = factor(measure, levels = c("Richness", "Simpsons_Evenness", "Shannon_Entropy", "Inverse_Simpson")),
+          Removed = "25-tons")  
+
+summary(lm(frac_bacprod ~ mean, data = filter(otu_alphadiv_rm25, measure == "Richness" & fraction == "WholePart")))
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mean, data = filter(otu_alphadiv_rm25, 
+##     measure == "Richness" & fraction == "WholePart"))
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -13.1749  -3.5245  -0.3198   3.6579  13.7021 
+## 
+## Coefficients:
+##              Estimate Std. Error t value Pr(>|t|)  
+## (Intercept) -41.75450   22.50434  -1.855   0.0932 .
+## mean          0.16550    0.07173   2.307   0.0437 *
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 6.984 on 10 degrees of freedom
+## Multiple R-squared:  0.3474,	Adjusted R-squared:  0.2821 
+## F-statistic: 5.323 on 1 and 10 DF,  p-value: 0.04372
+```
+
+```r
+summary(lm(frac_bacprod ~ mean, data = filter(otu_alphadiv_rm25, measure == "Inverse_Simpson" & fraction == "WholePart")))
+```
+
+```
+## 
+## Call:
+## lm(formula = frac_bacprod ~ mean, data = filter(otu_alphadiv_rm25, 
+##     measure == "Inverse_Simpson" & fraction == "WholePart"))
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -8.6484 -1.3827 -0.4148  0.6290  7.9756 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)    
+## (Intercept) -2.45809    2.75764  -0.891 0.393670    
+## mean         0.43182    0.08436   5.119 0.000452 ***
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 4.544 on 10 degrees of freedom
+## Multiple R-squared:  0.7238,	Adjusted R-squared:  0.6961 
+## F-statistic:  26.2 on 1 and 10 DF,  p-value: 0.0004515
+```
 
 
 ## Combine all data 
@@ -350,6 +485,7 @@ ggplot(dplyr::filter(all_divs, measure == "Richness"),
 
 
 
+
 ```r
 # Linear Model output
 richness_lm_results <- lm_fraction_output(dataframe = dplyr::filter(all_divs,  measure == "Richness"))
@@ -357,52 +493,56 @@ richness_lm_results <- lm_fraction_output(dataframe = dplyr::filter(all_divs,  m
 richness_lm_results %>%
   bind_rows() %>%
   mutate(diversity_metric = "Richness") %>%
-  knitr::kable()
+  datatable(options = list(pageLength = 40))
 ```
 
-
-
-Removed     Adj_R2     pval  fraction   diversity_metric 
----------  -------  -------  ---------  -----------------
-1-tons        0.05   0.2412  Free       Richness         
-5-tons       -0.08   0.6664  Free       Richness         
-10-tons      -0.10   0.9519  Free       Richness         
-20-tons      -0.09   0.7787  Free       Richness         
-30-tons      -0.08   0.7017  Free       Richness         
-60-tons      -0.05   0.5037  Free       Richness         
-90-tons       0.04   0.2630  Free       Richness         
-150-tons      0.08   0.1905  Free       Richness         
-225-tons      0.05   0.2342  Free       Richness         
-300-tons      0.06   0.2232  Free       Richness         
-1-tons        0.57   0.0027  Particle   Richness         
-5-tons        0.55   0.0033  Particle   Richness         
-10-tons       0.50   0.0058  Particle   Richness         
-20-tons       0.35   0.0252  Particle   Richness         
-30-tons       0.16   0.1108  Particle   Richness         
-60-tons      -0.04   0.4655  Particle   Richness         
-90-tons      -0.07   0.6348  Particle   Richness         
-150-tons      0.09   0.1825  Particle   Richness         
-225-tons      0.02   0.2958  Particle   Richness         
-300-tons      0.12   0.1414  Particle   Richness         
+```
+## Error in datatable(., options = list(pageLength = 40)): could not find function "datatable"
+```
 
 ```r
+### Community-Wide Production vs Richness
 sig_rich_lms <- c("1-tons", "5-tons", "10-tons", "20-tons")
 
 ggplot(dplyr::filter(all_divs, measure == "Richness"), 
        aes(y = frac_bacprod, x = mean, color = Removed, fill = Removed)) +
-  geom_point(size = 3) + 
-  xlab("Richness") +
-  ylab("Bacterial Production by Fraction") +
+  geom_point(size = 3) + xlab("Richness") +
+  ylab("Community-Wide Production") +
   geom_smooth(method = "lm", data = filter(all_divs, 
                                            measure == "Richness" & fraction == "Particle" & Removed %in% sig_rich_lms)) + 
-  scale_color_manual(values = tons_colors) +
-  scale_fill_manual(values = tons_colors) +  
+  scale_color_manual(values = tons_colors) +scale_fill_manual(values = tons_colors) +  
   facet_grid(fraction~Removed, scales = "free") +
   theme(legend.position = "bottom", legend.title = element_blank(),
         axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
 ```
 
 <img src="OTU_Removal_Analysis_Figs/richness-plots-1.png" style="display: block; margin: auto;" />
+
+```r
+### Per-capita production vs Richness
+sig_rich_lms_percap <- c("1-tons", "5-tons", "10-tons")
+
+ggplot(dplyr::filter(all_divs, measure == "Richness"), 
+       aes(y = log10(fracprod_per_cell_noinf), x = mean, color = Removed, fill = Removed)) +
+  geom_point(size = 3) + xlab("Richness") +
+  ylab("log10(Per-Capita Production)") +
+  geom_smooth(method = "lm", data = filter(all_divs, 
+                                           measure == "Richness" & fraction == "Particle" & Removed %in% sig_rich_lms_percap)) + 
+  scale_color_manual(values = tons_colors) + scale_fill_manual(values = tons_colors) +  
+  facet_grid(fraction~Removed, scales = "free") +
+  theme(legend.position = "bottom", legend.title = element_blank(),
+        axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
+```
+
+```
+## Warning: Removed 3 rows containing non-finite values (stat_smooth).
+```
+
+```
+## Warning: Removed 10 rows containing missing values (geom_point).
+```
+
+<img src="OTU_Removal_Analysis_Figs/richness-plots-2.png" style="display: block; margin: auto;" />
 
 
 # Shannon Entropy
@@ -447,35 +587,15 @@ shannon_lm_results <- lm_fraction_output(dataframe = dplyr::filter(all_divs,  me
 shannon_lm_results %>%
   bind_rows() %>%
   mutate(diversity_metric = "Shannon_Entropy") %>%
-  knitr::kable()
+  datatable(options = list(pageLength = 40))
 ```
 
-
-
-Removed     Adj_R2     pval  fraction   diversity_metric 
----------  -------  -------  ---------  -----------------
-1-tons       -0.05   0.5035  Free       Shannon_Entropy  
-5-tons       -0.09   0.7450  Free       Shannon_Entropy  
-10-tons      -0.10   0.8437  Free       Shannon_Entropy  
-20-tons      -0.10   0.9004  Free       Shannon_Entropy  
-30-tons      -0.10   0.9528  Free       Shannon_Entropy  
-60-tons      -0.10   0.9873  Free       Shannon_Entropy  
-90-tons      -0.10   0.9272  Free       Shannon_Entropy  
-150-tons     -0.10   0.9498  Free       Shannon_Entropy  
-225-tons     -0.09   0.8321  Free       Shannon_Entropy  
-300-tons     -0.09   0.7705  Free       Shannon_Entropy  
-1-tons        0.52   0.0047  Particle   Shannon_Entropy  
-5-tons        0.52   0.0046  Particle   Shannon_Entropy  
-10-tons       0.53   0.0046  Particle   Shannon_Entropy  
-20-tons       0.53   0.0042  Particle   Shannon_Entropy  
-30-tons       0.53   0.0046  Particle   Shannon_Entropy  
-60-tons       0.53   0.0046  Particle   Shannon_Entropy  
-90-tons       0.51   0.0056  Particle   Shannon_Entropy  
-150-tons      0.47   0.0079  Particle   Shannon_Entropy  
-225-tons      0.45   0.0102  Particle   Shannon_Entropy  
-300-tons      0.42   0.0131  Particle   Shannon_Entropy  
+```
+## Error in datatable(., options = list(pageLength = 40)): could not find function "datatable"
+```
 
 ```r
+### Community-Wide production vs Richness
 ggplot(dplyr::filter(all_divs, measure == "Shannon_Entropy"), 
        aes(y = frac_bacprod, x = mean, color = Removed, fill = Removed)) +
   geom_point(size = 3) + 
@@ -490,6 +610,29 @@ ggplot(dplyr::filter(all_divs, measure == "Shannon_Entropy"),
 ```
 
 <img src="OTU_Removal_Analysis_Figs/shannon-plots-1.png" style="display: block; margin: auto;" />
+
+```r
+### Per-capita production vs Shannon Entropy
+ggplot(dplyr::filter(all_divs, measure == "Shannon_Entropy"), 
+       aes(y = log10(fracprod_per_cell_noinf), x = mean, color = Removed, fill = Removed)) +
+  geom_point(size = 3) + xlab("Shannon_Entropy") +
+  ylab("log10(Per-Capita Production)") +
+  geom_smooth(method = "lm", data = filter(all_divs, measure == "Shannon_Entropy" & fraction == "Particle")) + 
+  scale_color_manual(values = tons_colors) + scale_fill_manual(values = tons_colors) +  
+  facet_grid(fraction~Removed, scales = "free") +
+  theme(legend.position = "bottom", legend.title = element_blank(),
+        axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
+```
+
+```
+## Warning: Removed 10 rows containing non-finite values (stat_smooth).
+```
+
+```
+## Warning: Removed 10 rows containing missing values (geom_point).
+```
+
+<img src="OTU_Removal_Analysis_Figs/shannon-plots-2.png" style="display: block; margin: auto;" />
 
 
 # Inverse Simpson
@@ -533,39 +676,18 @@ invsimps_lm_results <- lm_fraction_output(dataframe = dplyr::filter(all_divs,  m
 invsimps_lm_results %>%
   bind_rows() %>%
   mutate(diversity_metric = "Inverse_Simpson") %>%
-  knitr::kable()
+  datatable(options = list(pageLength = 40))
 ```
 
-
-
-Removed     Adj_R2     pval  fraction   diversity_metric 
----------  -------  -------  ---------  -----------------
-1-tons       -0.02   0.3919  Free       Inverse_Simpson  
-5-tons       -0.04   0.4569  Free       Inverse_Simpson  
-10-tons      -0.04   0.4806  Free       Inverse_Simpson  
-20-tons      -0.04   0.4842  Free       Inverse_Simpson  
-30-tons      -0.05   0.4990  Free       Inverse_Simpson  
-60-tons      -0.05   0.5014  Free       Inverse_Simpson  
-90-tons      -0.05   0.5144  Free       Inverse_Simpson  
-150-tons     -0.05   0.5007  Free       Inverse_Simpson  
-225-tons     -0.03   0.4177  Free       Inverse_Simpson  
-300-tons     -0.02   0.3883  Free       Inverse_Simpson  
-1-tons        0.69   0.0005  Particle   Inverse_Simpson  
-5-tons        0.70   0.0004  Particle   Inverse_Simpson  
-10-tons       0.70   0.0004  Particle   Inverse_Simpson  
-20-tons       0.70   0.0004  Particle   Inverse_Simpson  
-30-tons       0.69   0.0005  Particle   Inverse_Simpson  
-60-tons       0.67   0.0007  Particle   Inverse_Simpson  
-90-tons       0.63   0.0012  Particle   Inverse_Simpson  
-150-tons      0.60   0.0020  Particle   Inverse_Simpson  
-225-tons      0.56   0.0030  Particle   Inverse_Simpson  
-300-tons      0.54   0.0041  Particle   Inverse_Simpson  
+```
+## Error in datatable(., options = list(pageLength = 40)): could not find function "datatable"
+```
 
 ```r
+### Community Wide production vs Inverse Simpson
 ggplot(dplyr::filter(all_divs, measure == "Inverse_Simpson"), 
        aes(y = frac_bacprod, x = mean, color = Removed, fill = Removed)) +
-  geom_point(size = 3) + 
-  xlab("Inverse_Simpson") +
+  geom_point(size = 3) +  xlab("Inverse_Simpson") +
   ylab("Bacterial Production by Fraction") +
   geom_smooth(method = "lm", data = filter(all_divs, measure == "Inverse_Simpson" & fraction == "Particle" )) + 
   scale_color_manual(values = tons_colors) +
@@ -576,6 +698,29 @@ ggplot(dplyr::filter(all_divs, measure == "Inverse_Simpson"),
 ```
 
 <img src="OTU_Removal_Analysis_Figs/inverse-simpson-plots-1.png" style="display: block; margin: auto;" />
+
+```r
+### Per-capita production vs Inverse Simpson
+ggplot(dplyr::filter(all_divs, measure == "Inverse_Simpson"), 
+       aes(y = log10(fracprod_per_cell_noinf), x = mean, color = Removed, fill = Removed)) +
+  geom_point(size = 3) + xlab("Inverse_Simpson") +
+  ylab("log10(Per-Capita Production)") +
+  geom_smooth(method = "lm", data = filter(all_divs, measure == "Inverse_Simpson" & fraction == "Particle")) + 
+  scale_color_manual(values = tons_colors) + scale_fill_manual(values = tons_colors) +  
+  facet_grid(fraction~Removed, scales = "free") +
+  theme(legend.position = "bottom", legend.title = element_blank(),
+        axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
+```
+
+```
+## Warning: Removed 10 rows containing non-finite values (stat_smooth).
+```
+
+```
+## Warning: Removed 10 rows containing missing values (geom_point).
+```
+
+<img src="OTU_Removal_Analysis_Figs/inverse-simpson-plots-2.png" style="display: block; margin: auto;" />
 
 
 # Simpson's Evenness
@@ -618,40 +763,16 @@ simpseven_lm_results <- lm_fraction_output(dataframe = dplyr::filter(all_divs,  
   bind_rows() %>%
   mutate(diversity_metric = "Simpsons_Evenness")
 
-# Which rows have pvalues less than 0.05?
-low_pvals_simseven <- simpseven_lm_results$pval < 0.05
-
 simpseven_lm_results %>%
-  knitr::kable() %>%
-  row_spec(which(low_pvals_simseven), bold = T, color = "white", background = "#D7261E")
+  datatable(options = list(pageLength = 40))
 ```
 
-
-
-Removed     Adj_R2     pval  fraction   diversity_metric  
----------  -------  -------  ---------  ------------------
-1-tons       -0.10   0.9123  Free       Simpsons_Evenness 
-5-tons       -0.05   0.5197  Free       Simpsons_Evenness 
-10-tons      -0.02   0.3927  Free       Simpsons_Evenness 
-20-tons       0.02   0.2984  Free       Simpsons_Evenness 
-30-tons       0.03   0.2779  Free       Simpsons_Evenness 
-60-tons       0.05   0.2331  Free       Simpsons_Evenness 
-90-tons       0.08   0.1861  Free       Simpsons_Evenness 
-150-tons      0.08   0.1918  Free       Simpsons_Evenness 
-225-tons      0.08   0.1959  Free       Simpsons_Evenness 
-300-tons      0.07   0.2004  Free       Simpsons_Evenness 
-1-tons        0.46   0.0091  Particle   Simpsons_Evenness 
-5-tons        0.53   0.0043  Particle   Simpsons_Evenness 
-10-tons       0.56   0.0031  Particle   Simpsons_Evenness 
-20-tons       0.60   0.0020  Particle   Simpsons_Evenness 
-30-tons       0.62   0.0014  Particle   Simpsons_Evenness 
-60-tons       0.62   0.0015  Particle   Simpsons_Evenness 
-90-tons       0.61   0.0016  Particle   Simpsons_Evenness 
-150-tons      0.60   0.0019  Particle   Simpsons_Evenness 
-225-tons      0.58   0.0025  Particle   Simpsons_Evenness 
-300-tons      0.56   0.0032  Particle   Simpsons_Evenness 
+```
+## Error in datatable(., options = list(pageLength = 40)): could not find function "datatable"
+```
 
 ```r
+### Community Wide Prodcution vs Simpson's Evennes
 ggplot(dplyr::filter(all_divs, measure == "Simpsons_Evenness"), 
        aes(y = frac_bacprod, x = mean, color = Removed, fill = Removed)) +
   geom_point(size = 3) + 
@@ -666,3 +787,26 @@ ggplot(dplyr::filter(all_divs, measure == "Simpsons_Evenness"),
 ```
 
 <img src="OTU_Removal_Analysis_Figs/simps-evenness-plots-1.png" style="display: block; margin: auto;" />
+
+```r
+### Per-capita production vs Inverse Simpson
+ggplot(dplyr::filter(all_divs, measure == "Simpsons_Evenness"), 
+       aes(y = log10(fracprod_per_cell_noinf), x = mean, color = Removed, fill = Removed)) +
+  geom_point(size = 3) + xlab("Simpsons_Evenness") +
+  ylab("log10(Per-Capita Production)") +
+  geom_smooth(method = "lm", data = filter(all_divs, measure == "Simpsons_Evenness" & fraction == "Particle")) + 
+  scale_color_manual(values = tons_colors) + scale_fill_manual(values = tons_colors) +  
+  facet_grid(fraction~Removed, scales = "free") +
+  theme(legend.position = "bottom", legend.title = element_blank(),
+        axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
+```
+
+```
+## Warning: Removed 10 rows containing non-finite values (stat_smooth).
+```
+
+```
+## Warning: Removed 10 rows containing missing values (geom_point).
+```
+
+<img src="OTU_Removal_Analysis_Figs/simps-evenness-plots-2.png" style="display: block; margin: auto;" />

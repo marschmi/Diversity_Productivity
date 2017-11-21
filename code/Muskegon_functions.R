@@ -629,85 +629,171 @@ lm_fraction_output <- function(dataframe) {
   removed_factor_order <- c("1-tons", "5-tons", "10-tons", "20-tons", "30-tons", "60-tons", "90-tons", "150-tons", "225-tons", "300-tons")
   stopifnot(removed_factor_order == removed_factors) # Stop if it is incorrect!
   
-  lm_01_part <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe,Removed == "1-tons" & fraction == "Particle"))
-  lm_05_part <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe, Removed == "5-tons" & fraction == "Particle"))
-  lm_10_part <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe, Removed == "10-tons" & fraction == "Particle"))
-  lm_20_part <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe, Removed == "20-tons" & fraction == "Particle"))
-  lm_30_part <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe, Removed == "30-tons" & fraction == "Particle"))
-  lm_60_part <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe, Removed == "60-tons" & fraction == "Particle"))
-  lm_90_part <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe, Removed == "90-tons" & fraction == "Particle"))
-  lm_150_part <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe, Removed == "150-tons" & fraction == "Particle"))
-  lm_225_part <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe, Removed == "225-tons" & fraction == "Particle"))
-  lm_300_part <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe, Removed == "300-tons" & fraction == "Particle"))
+  lm_01_part_comm <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe,Removed == "1-tons" & fraction == "Particle"))
+  lm_05_part_comm <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe, Removed == "5-tons" & fraction == "Particle"))
+  lm_10_part_comm <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe, Removed == "10-tons" & fraction == "Particle"))
+  lm_20_part_comm <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe, Removed == "20-tons" & fraction == "Particle"))
+  lm_30_part_comm <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe, Removed == "30-tons" & fraction == "Particle"))
+  lm_60_part_comm <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe, Removed == "60-tons" & fraction == "Particle"))
+  lm_90_part_comm <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe, Removed == "90-tons" & fraction == "Particle"))
+  lm_150_part_comm <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe, Removed == "150-tons" & fraction == "Particle"))
+  lm_225_part_comm <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe, Removed == "225-tons" & fraction == "Particle"))
+  lm_300_part_comm <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe, Removed == "300-tons" & fraction == "Particle"))
   
-  part_lm_adj_r2 <- c(
-    round(summary(lm_01_part)$adj.r.squared, digits = 2),
-    round(summary(lm_05_part)$adj.r.squared, digits = 2),
-    round(summary(lm_10_part)$adj.r.squared, digits = 2),
-    round(summary(lm_20_part)$adj.r.squared, digits = 2),
-    round(summary(lm_30_part)$adj.r.squared, digits = 2),
-    round(summary(lm_60_part)$adj.r.squared, digits = 2),
-    round(summary(lm_90_part)$adj.r.squared, digits = 2),
-    round(summary(lm_150_part)$adj.r.squared, digits = 2),
-    round(summary(lm_225_part)$adj.r.squared, digits = 2),
-    round(summary(lm_300_part)$adj.r.squared, digits = 2))
+  part_lm_adj_r2_comm <- c(
+    round(summary(lm_01_part_comm)$adj.r.squared, digits = 2),
+    round(summary(lm_05_part_comm)$adj.r.squared, digits = 2),
+    round(summary(lm_10_part_comm)$adj.r.squared, digits = 2),
+    round(summary(lm_20_part_comm)$adj.r.squared, digits = 2),
+    round(summary(lm_30_part_comm)$adj.r.squared, digits = 2),
+    round(summary(lm_60_part_comm)$adj.r.squared, digits = 2),
+    round(summary(lm_90_part_comm)$adj.r.squared, digits = 2),
+    round(summary(lm_150_part_comm)$adj.r.squared, digits = 2),
+    round(summary(lm_225_part_comm)$adj.r.squared, digits = 2),
+    round(summary(lm_300_part_comm)$adj.r.squared, digits = 2))
   
-  part_lm_pval <- c(
-    round(unname(summary(lm_01_part)$coefficients[,4][2]), digits = 4),
-    round(unname(summary(lm_05_part)$coefficients[,4][2]), digits = 4),
-    round(unname(summary(lm_10_part)$coefficients[,4][2]), digits = 4),
-    round(unname(summary(lm_20_part)$coefficients[,4][2]), digits = 4),
-    round(unname(summary(lm_30_part)$coefficients[,4][2]), digits = 4),
-    round(unname(summary(lm_60_part)$coefficients[,4][2]), digits = 4),
-    round(unname(summary(lm_90_part)$coefficients[,4][2]), digits = 4),
-    round(unname(summary(lm_150_part)$coefficients[,4][2]), digits = 4),
-    round(unname(summary(lm_225_part)$coefficients[,4][2]), digits = 4),
-    round(unname(summary(lm_300_part)$coefficients[,4][2]), digits = 4))
+  part_lm_pval_comm <- c(
+    round(unname(summary(lm_01_part_comm)$coefficients[,4][2]), digits = 4),
+    round(unname(summary(lm_05_part_comm)$coefficients[,4][2]), digits = 4),
+    round(unname(summary(lm_10_part_comm)$coefficients[,4][2]), digits = 4),
+    round(unname(summary(lm_20_part_comm)$coefficients[,4][2]), digits = 4),
+    round(unname(summary(lm_30_part_comm)$coefficients[,4][2]), digits = 4),
+    round(unname(summary(lm_60_part_comm)$coefficients[,4][2]), digits = 4),
+    round(unname(summary(lm_90_part_comm)$coefficients[,4][2]), digits = 4),
+    round(unname(summary(lm_150_part_comm)$coefficients[,4][2]), digits = 4),
+    round(unname(summary(lm_225_part_comm)$coefficients[,4][2]), digits = 4),
+    round(unname(summary(lm_300_part_comm)$coefficients[,4][2]), digits = 4))
   
-  part_lm_df <- data.frame(removed_factors, part_lm_adj_r2, part_lm_pval) %>%
-    rename(Removed = removed_factors, Adj_R2 = part_lm_adj_r2, pval = part_lm_pval) %>%
-    mutate(fraction = "Particle")
+  part_lm_df_comm <- data.frame(removed_factors, part_lm_adj_r2_comm, part_lm_pval_comm) %>%
+    rename(Removed = removed_factors, Adj_R2 = part_lm_adj_r2_comm, pval = part_lm_pval_comm) %>%
+    mutate(fraction = "Particle", test = "Community-Wide Production")
   
-  lm_01_free <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe,  Removed == "1-tons" & fraction == "Free"))
-  lm_05_free <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe, Removed == "5-tons" & fraction == "Free"))
-  lm_10_free <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe, Removed == "10-tons" & fraction == "Free"))
-  lm_20_free <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe, Removed == "20-tons" & fraction == "Free"))
-  lm_30_free <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe,  Removed == "30-tons" & fraction == "Free"))
-  lm_60_free <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe, Removed == "60-tons" & fraction == "Free"))
-  lm_90_free <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe, Removed == "90-tons" & fraction == "Free"))
-  lm_150_free <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe,  Removed == "150-tons" & fraction == "Free"))
-  lm_225_free <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe, Removed == "225-tons" & fraction == "Free"))
-  lm_300_free <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe, Removed == "300-tons" & fraction == "Free"))
   
-  free_lm_adj_r2 <- c(
-    round(summary(lm_01_free)$adj.r.squared, digits = 2),
-    round(summary(lm_05_free)$adj.r.squared, digits = 2),
-    round(summary(lm_10_free)$adj.r.squared, digits = 2),
-    round(summary(lm_20_free)$adj.r.squared, digits = 2),
-    round(summary(lm_30_free)$adj.r.squared, digits = 2),
-    round(summary(lm_60_free)$adj.r.squared, digits = 2),
-    round(summary(lm_90_free)$adj.r.squared, digits = 2),
-    round(summary(lm_150_free)$adj.r.squared, digits = 2),
-    round(summary(lm_225_free)$adj.r.squared, digits = 2),
-    round(summary(lm_300_free)$adj.r.squared, digits = 2))
+  ########## PER CAPITA PRODUCTION
+  lm_01_part_percap <- lm(log10(fracprod_per_cell_noinf) ~ mean, data = dplyr::filter(dataframe,Removed == "1-tons" & fraction == "Particle"))
+  lm_05_part_percap <- lm(log10(fracprod_per_cell_noinf)  ~ mean, data = dplyr::filter(dataframe, Removed == "5-tons" & fraction == "Particle"))
+  lm_10_part_percap <- lm(log10(fracprod_per_cell_noinf)  ~ mean, data = dplyr::filter(dataframe, Removed == "10-tons" & fraction == "Particle"))
+  lm_20_part_percap <- lm(log10(fracprod_per_cell_noinf)  ~ mean, data = dplyr::filter(dataframe, Removed == "20-tons" & fraction == "Particle"))
+  lm_30_part_percap <- lm(log10(fracprod_per_cell_noinf)  ~ mean, data = dplyr::filter(dataframe, Removed == "30-tons" & fraction == "Particle"))
+  lm_60_part_percap <- lm(log10(fracprod_per_cell_noinf)  ~ mean, data = dplyr::filter(dataframe, Removed == "60-tons" & fraction == "Particle"))
+  lm_90_part_percap <- lm(log10(fracprod_per_cell_noinf)  ~ mean, data = dplyr::filter(dataframe, Removed == "90-tons" & fraction == "Particle"))
+  lm_150_part_percap <- lm(log10(fracprod_per_cell_noinf)  ~ mean, data = dplyr::filter(dataframe, Removed == "150-tons" & fraction == "Particle"))
+  lm_225_part_percap <- lm(log10(fracprod_per_cell_noinf)  ~ mean, data = dplyr::filter(dataframe, Removed == "225-tons" & fraction == "Particle"))
+  lm_300_part_percap <- lm(log10(fracprod_per_cell_noinf)  ~ mean, data = dplyr::filter(dataframe, Removed == "300-tons" & fraction == "Particle"))
   
-  free_lm_pval <- c(
-    round(unname(summary(lm_01_free)$coefficients[,4][2]), digits = 4),
-    round(unname(summary(lm_05_free)$coefficients[,4][2]), digits = 4),
-    round(unname(summary(lm_10_free)$coefficients[,4][2]), digits = 4),
-    round(unname(summary(lm_20_free)$coefficients[,4][2]), digits = 4),
-    round(unname(summary(lm_30_free)$coefficients[,4][2]), digits = 4),
-    round(unname(summary(lm_60_free)$coefficients[,4][2]), digits = 4),
-    round(unname(summary(lm_90_free)$coefficients[,4][2]), digits = 4),
-    round(unname(summary(lm_150_free)$coefficients[,4][2]), digits = 4),
-    round(unname(summary(lm_225_free)$coefficients[,4][2]), digits = 4),
-    round(unname(summary(lm_300_free)$coefficients[,4][2]), digits = 4))
+  part_lm_adj_r2_percap <- c(
+    round(summary(lm_01_part_percap)$adj.r.squared, digits = 2),
+    round(summary(lm_05_part_percap)$adj.r.squared, digits = 2),
+    round(summary(lm_10_part_percap)$adj.r.squared, digits = 2),
+    round(summary(lm_20_part_percap)$adj.r.squared, digits = 2),
+    round(summary(lm_30_part_percap)$adj.r.squared, digits = 2),
+    round(summary(lm_60_part_percap)$adj.r.squared, digits = 2),
+    round(summary(lm_90_part_percap)$adj.r.squared, digits = 2),
+    round(summary(lm_150_part_percap)$adj.r.squared, digits = 2),
+    round(summary(lm_225_part_percap)$adj.r.squared, digits = 2),
+    round(summary(lm_300_part_percap)$adj.r.squared, digits = 2))
   
-  free_lm_df <- data.frame(removed_factors, free_lm_adj_r2, free_lm_pval) %>%
-    rename(Removed = removed_factors, Adj_R2 = free_lm_adj_r2, pval = free_lm_pval) %>%
-    mutate(fraction = "Free")
+  part_lm_pval_percap <- c(
+    round(unname(summary(lm_01_part_percap)$coefficients[,4][2]), digits = 4),
+    round(unname(summary(lm_05_part_percap)$coefficients[,4][2]), digits = 4),
+    round(unname(summary(lm_10_part_percap)$coefficients[,4][2]), digits = 4),
+    round(unname(summary(lm_20_part_percap)$coefficients[,4][2]), digits = 4),
+    round(unname(summary(lm_30_part_percap)$coefficients[,4][2]), digits = 4),
+    round(unname(summary(lm_60_part_percap)$coefficients[,4][2]), digits = 4),
+    round(unname(summary(lm_90_part_percap)$coefficients[,4][2]), digits = 4),
+    round(unname(summary(lm_150_part_percap)$coefficients[,4][2]), digits = 4),
+    round(unname(summary(lm_225_part_percap)$coefficients[,4][2]), digits = 4),
+    round(unname(summary(lm_300_part_percap)$coefficients[,4][2]), digits = 4))
   
-  return(list(free = free_lm_df, part = part_lm_df))
+  part_lm_df_percap <- data.frame(removed_factors, part_lm_adj_r2_percap, part_lm_pval_percap) %>%
+    rename(Removed = removed_factors, Adj_R2 = part_lm_adj_r2_percap, pval = part_lm_pval_percap) %>%
+    mutate(fraction = "Particle", test = "Per-Capita Production")
+  
+  
+  ########### FREE LIVING ANALYSIS
+  ##### Community-wide production
+  lm_01_free_comm <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe,  Removed == "1-tons" & fraction == "Free"))
+  lm_05_free_comm <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe, Removed == "5-tons" & fraction == "Free"))
+  lm_10_free_comm <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe, Removed == "10-tons" & fraction == "Free"))
+  lm_20_free_comm <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe, Removed == "20-tons" & fraction == "Free"))
+  lm_30_free_comm <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe,  Removed == "30-tons" & fraction == "Free"))
+  lm_60_free_comm <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe, Removed == "60-tons" & fraction == "Free"))
+  lm_90_free_comm <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe, Removed == "90-tons" & fraction == "Free"))
+  lm_150_free_comm <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe,  Removed == "150-tons" & fraction == "Free"))
+  lm_225_free_comm <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe, Removed == "225-tons" & fraction == "Free"))
+  lm_300_free_comm <- lm(frac_bacprod ~ mean, data = dplyr::filter(dataframe, Removed == "300-tons" & fraction == "Free"))
+  
+  free_lm_adj_r2_comm <- c(
+    round(summary(lm_01_free_comm)$adj.r.squared, digits = 2),
+    round(summary(lm_05_free_comm)$adj.r.squared, digits = 2),
+    round(summary(lm_10_free_comm)$adj.r.squared, digits = 2),
+    round(summary(lm_20_free_comm)$adj.r.squared, digits = 2),
+    round(summary(lm_30_free_comm)$adj.r.squared, digits = 2),
+    round(summary(lm_60_free_comm)$adj.r.squared, digits = 2),
+    round(summary(lm_90_free_comm)$adj.r.squared, digits = 2),
+    round(summary(lm_150_free_comm)$adj.r.squared, digits = 2),
+    round(summary(lm_225_free_comm)$adj.r.squared, digits = 2),
+    round(summary(lm_300_free_comm)$adj.r.squared, digits = 2))
+  
+  free_lm_pval_comm <- c(
+    round(unname(summary(lm_01_free_comm)$coefficients[,4][2]), digits = 4),
+    round(unname(summary(lm_05_free_comm)$coefficients[,4][2]), digits = 4),
+    round(unname(summary(lm_10_free_comm)$coefficients[,4][2]), digits = 4),
+    round(unname(summary(lm_20_free_comm)$coefficients[,4][2]), digits = 4),
+    round(unname(summary(lm_30_free_comm)$coefficients[,4][2]), digits = 4),
+    round(unname(summary(lm_60_free_comm)$coefficients[,4][2]), digits = 4),
+    round(unname(summary(lm_90_free_comm)$coefficients[,4][2]), digits = 4),
+    round(unname(summary(lm_150_free_comm)$coefficients[,4][2]), digits = 4),
+    round(unname(summary(lm_225_free_comm)$coefficients[,4][2]), digits = 4),
+    round(unname(summary(lm_300_free_comm)$coefficients[,4][2]), digits = 4))
+  
+  free_lm_df_comm <- data.frame(removed_factors, free_lm_adj_r2_comm, free_lm_pval_comm) %>%
+    rename(Removed = removed_factors, Adj_R2 = free_lm_adj_r2_comm, pval = free_lm_pval_comm) %>%
+    mutate(fraction = "Free", test = "Community-Wide Production")
+  
+  
+  ##### Per-capita 
+  lm_01_free_percap <- lm(log10(fracprod_per_cell_noinf) ~ mean, data = dplyr::filter(dataframe,  Removed == "1-tons" & fraction == "Free"))
+  lm_05_free_percap <- lm(log10(fracprod_per_cell_noinf) ~ mean, data = dplyr::filter(dataframe, Removed == "5-tons" & fraction == "Free"))
+  lm_10_free_percap <- lm(log10(fracprod_per_cell_noinf) ~ mean, data = dplyr::filter(dataframe, Removed == "10-tons" & fraction == "Free"))
+  lm_20_free_percap <- lm(log10(fracprod_per_cell_noinf) ~ mean, data = dplyr::filter(dataframe, Removed == "20-tons" & fraction == "Free"))
+  lm_30_free_percap <- lm(log10(fracprod_per_cell_noinf) ~ mean, data = dplyr::filter(dataframe,  Removed == "30-tons" & fraction == "Free"))
+  lm_60_free_percap <- lm(log10(fracprod_per_cell_noinf) ~ mean, data = dplyr::filter(dataframe, Removed == "60-tons" & fraction == "Free"))
+  lm_90_free_percap <- lm(log10(fracprod_per_cell_noinf) ~ mean, data = dplyr::filter(dataframe, Removed == "90-tons" & fraction == "Free"))
+  lm_150_free_percap <- lm(log10(fracprod_per_cell_noinf) ~ mean, data = dplyr::filter(dataframe,  Removed == "150-tons" & fraction == "Free"))
+  lm_225_free_percap <- lm(log10(fracprod_per_cell_noinf) ~ mean, data = dplyr::filter(dataframe, Removed == "225-tons" & fraction == "Free"))
+  lm_300_free_percap <- lm(log10(fracprod_per_cell_noinf) ~ mean, data = dplyr::filter(dataframe, Removed == "300-tons" & fraction == "Free"))
+  
+  free_lm_adj_r2_percap <- c(
+    round(summary(lm_01_free_percap)$adj.r.squared, digits = 2),
+    round(summary(lm_05_free_percap)$adj.r.squared, digits = 2),
+    round(summary(lm_10_free_percap)$adj.r.squared, digits = 2),
+    round(summary(lm_20_free_percap)$adj.r.squared, digits = 2),
+    round(summary(lm_30_free_percap)$adj.r.squared, digits = 2),
+    round(summary(lm_60_free_percap)$adj.r.squared, digits = 2),
+    round(summary(lm_90_free_percap)$adj.r.squared, digits = 2),
+    round(summary(lm_150_free_percap)$adj.r.squared, digits = 2),
+    round(summary(lm_225_free_percap)$adj.r.squared, digits = 2),
+    round(summary(lm_300_free_percap)$adj.r.squared, digits = 2))
+  
+  free_lm_pval_percap <- c(
+    round(unname(summary(lm_01_free_percap)$coefficients[,4][2]), digits = 4),
+    round(unname(summary(lm_05_free_percap)$coefficients[,4][2]), digits = 4),
+    round(unname(summary(lm_10_free_percap)$coefficients[,4][2]), digits = 4),
+    round(unname(summary(lm_20_free_percap)$coefficients[,4][2]), digits = 4),
+    round(unname(summary(lm_30_free_percap)$coefficients[,4][2]), digits = 4),
+    round(unname(summary(lm_60_free_percap)$coefficients[,4][2]), digits = 4),
+    round(unname(summary(lm_90_free_percap)$coefficients[,4][2]), digits = 4),
+    round(unname(summary(lm_150_free_percap)$coefficients[,4][2]), digits = 4),
+    round(unname(summary(lm_225_free_percap)$coefficients[,4][2]), digits = 4),
+    round(unname(summary(lm_300_free_percap)$coefficients[,4][2]), digits = 4))
+  
+  free_lm_df_percap <- data.frame(removed_factors, free_lm_adj_r2_percap, free_lm_pval_percap) %>%
+    rename(Removed = removed_factors, Adj_R2 = free_lm_adj_r2_percap, pval = free_lm_pval_percap) %>%
+    mutate(fraction = "Free", test = "Per-Capita Production")  
+  
+  return(list(free_comm = free_lm_df_comm, free_percap = free_lm_df_percap, 
+              part_comm = part_lm_df_comm, part_percap = part_lm_df_percap))
 }
 
 
