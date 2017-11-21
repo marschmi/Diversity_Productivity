@@ -35,6 +35,8 @@ A supplementary analysis files can be found in the `analysis`. Specifically: Fil
 
 ##### **File Structure:**
 
+```
+.
 ├── Final_Analysis.Rmd
 ├── Final_Analysis.html
 ├── Final_Analysis.md
@@ -61,6 +63,6 @@ A supplementary analysis files can be found in the `analysis`. Specifically: Fil
 │   └── old_analysis/
 ├── LICENSE
 └── README.md
-
+```
 
 **Note:**  This project is under the general MIT License.
