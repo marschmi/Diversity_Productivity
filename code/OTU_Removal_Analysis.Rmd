@@ -1,7 +1,7 @@
 ---
 title: "OTU Removal Analysis"
-author: "Marian L. Schmidt"
-date: "May 1st, 2017"
+author: "Marian L. Schmidt, marschmi@umich.edu, @micro_marian"
+date: "November 1st, 2017"
 output:
   html_document:
     code_folding: show
@@ -25,6 +25,13 @@ pre code, pre, code {
 }
 </style>
 
+#### Purpose of this analysis  
+The goal of this analysis is to check the sensitivity of the biodiversity-ecosystem function relationships to rare OTUs.  
+
+#### More specifically:
+We remove OTUs that have X number of sequences throughout the entire dataset and then check the relationship with diversity versus community-wide and per-capita heterotrophic production. This we call "singletons", "doubletons", "5-tons", "10-tons", etc all the way up to "300-tons". For context, removing 10-tons will be removing any OTUs that have a count of less than 10 throughout the entire dataset. 
+
+
 ```{r setup, include=FALSE}
 # For width of code chunks and scroll bar 
 options(width=250)
@@ -33,7 +40,7 @@ knitr::opts_chunk$set(eval = TRUE,
                       echo = TRUE, 
                       cache = TRUE,
                       include = TRUE,
-                      warning = TRUE,
+                      warning = FALSE,
                       collapse = FALSE,
                       message = FALSE,
                       engine = "R", # Chunks will always have R code, unless noted

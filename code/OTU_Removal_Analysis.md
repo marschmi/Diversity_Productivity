@@ -1,6 +1,6 @@
 # OTU Removal Analysis
-Marian L. Schmidt  
-May 1st, 2017  
+Marian L. Schmidt, marschmi@umich.edu, @micro_marian  
+November 1st, 2017  
 <style>
 pre code, pre, code {
   white-space: pre !important;
@@ -9,6 +9,13 @@ pre code, pre, code {
   word-wrap: initial !important;
 }
 </style>
+
+#### Purpose of this analysis  
+The goal of this analysis is to check the sensitivity of the biodiversity-ecosystem function relationships to rare OTUs.  
+
+#### More specifically:
+We remove OTUs that have X number of sequences throughout the entire dataset and then check the relationship with diversity versus community-wide and per-capita heterotrophic production. This we call "singletons", "doubletons", "5-tons", "10-tons", etc all the way up to "300-tons". For context, removing 10-tons will be removing any OTUs that have a count of less than 10 throughout the entire dataset. 
+
 
 
 
@@ -534,14 +541,6 @@ ggplot(dplyr::filter(all_divs, measure == "Richness"),
         axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
 ```
 
-```
-## Warning: Removed 3 rows containing non-finite values (stat_smooth).
-```
-
-```
-## Warning: Removed 10 rows containing missing values (geom_point).
-```
-
 <img src="OTU_Removal_Analysis_Figs/richness-plots-2.png" style="display: block; margin: auto;" />
 
 
@@ -624,14 +623,6 @@ ggplot(dplyr::filter(all_divs, measure == "Shannon_Entropy"),
         axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
 ```
 
-```
-## Warning: Removed 10 rows containing non-finite values (stat_smooth).
-```
-
-```
-## Warning: Removed 10 rows containing missing values (geom_point).
-```
-
 <img src="OTU_Removal_Analysis_Figs/shannon-plots-2.png" style="display: block; margin: auto;" />
 
 
@@ -710,14 +701,6 @@ ggplot(dplyr::filter(all_divs, measure == "Inverse_Simpson"),
   facet_grid(fraction~Removed, scales = "free") +
   theme(legend.position = "bottom", legend.title = element_blank(),
         axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
-```
-
-```
-## Warning: Removed 10 rows containing non-finite values (stat_smooth).
-```
-
-```
-## Warning: Removed 10 rows containing missing values (geom_point).
 ```
 
 <img src="OTU_Removal_Analysis_Figs/inverse-simpson-plots-2.png" style="display: block; margin: auto;" />
@@ -799,14 +782,6 @@ ggplot(dplyr::filter(all_divs, measure == "Simpsons_Evenness"),
   facet_grid(fraction~Removed, scales = "free") +
   theme(legend.position = "bottom", legend.title = element_blank(),
         axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
-```
-
-```
-## Warning: Removed 10 rows containing non-finite values (stat_smooth).
-```
-
-```
-## Warning: Removed 10 rows containing missing values (geom_point).
 ```
 
 <img src="OTU_Removal_Analysis_Figs/simps-evenness-plots-2.png" style="display: block; margin: auto;" />
