@@ -77,7 +77,6 @@ A supplementary analysis files can be found in the `analysis/` folder. Specifica
 │       ├── stability.file
 │       ├── stability.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.an.unique_list.0.03.cons.taxonomy
 │       ├── stability.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.an.unique_list.0.03.rep.fasta
-│       ├── stability.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.an.unique_list.0.03.rep.fasta
 │       └── stability.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.an.unique_list.shared
 ├── analysis/
 │   ├── OTU_Removal_Analysis.Rmd
