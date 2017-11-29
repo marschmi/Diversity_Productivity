@@ -53,18 +53,18 @@ knitr::opts_chunk$set(eval = TRUE,
 
 # Load Libraries
 ```{r load-libraries, message = FALSE, warning = FALSE}
-library(devtools)   # Reproducibility (see end of file)   
+library(devtools)   # Reproducibility (see end of file)    
 library(phyloseq)   # Easier data manipulation 
-library(picante)    # Phylogenetic Tree Analysis
-library(tidyverse)  # Pretty plotting and data manipulation
+library(picante)    # Phylogenetic Tree Analysis 
+library(tidyverse)  # Pretty plotting and data manipulation 
 library(forcats)    # Recoding factors 
 library(cowplot)    # Multiple plotting
-library(picante)    # Will also include ape and vegan 
+library(picante)    # Will also include ape and vegan  
 library(car)        # Residual analysis
 library(sandwich)   # vcovHC function in post-hoc test
-library(MASS)       # studres in plot_residuals function
+library(MASS)       # studres in plot_residuals function 
 library(caret)      # Cross validation
-library(pander)     # Pretty tables  
+library(pander)     # Pretty tables   
 library(glmnet)     # Lasso regressions
 library(broom)      # Stats from lm regression
 library(purrr)      # Exporting lm results
@@ -454,15 +454,12 @@ lm_divs_all_percap <- div_measures_all %>%
 lm_div_results <- 
   bind_rows(lm_divs_particle_comm, lm_divs_particle_percap,
           lm_divs_free_comm, lm_divs_free_percap,
-          lm_divs_all_comm, lm_divs_all_percap) %>%
-  mutate(adj.r.squared = round(adj.r.squared, digits = 4),
-         p.value = round(p.value, digits = 6))
-
-# Output the results for models that have a pvalue of less than 0.05
-datatable(dplyr::filter(lm_div_results, p.value < 0.05),
-       caption = "Linear Model results from diversity metrics with a p-value less than 0.05.")
+          lm_divs_all_comm, lm_divs_all_percap) %>% 
+  dplyr::rename(independent_var = measure,
+                dependent_var = dependent) 
 ```
 
+See supplemental table 1 header for the table output! 
 
 #### Cross Validation
 
@@ -547,7 +544,7 @@ cv_lm_percell_prod_vs_simpseven_PA <- train(
 cv_lm_percell_prod_vs_simpseven_PA$results      # Particle Per-Capita CV results  
 ```
 
-### Supplemental Table 1 
+### Table S2 
 ```{r r2-table, dependson = "div-prod-lm-models"}
 ########## PUT A TABLE TOGETHER  
 # Per Liter Production 
@@ -2016,8 +2013,8 @@ summary(pca_environ)$cont$importance[3, 2]*100
 The first two axes of the PCA explain ~70% of the variation in the environmental data!
 
 
-# Table 1
-```{r environ-lm, fig.height=3.5, fig.width=8, dependson = "euclidian-pcoa-varexplained"}
+# Table S1
+```{r environ-lm, dependson = "euclidian-pcoa-varexplained"}
 ## Prepare the dataframes for Free and Particle data
 metadata_pca_free <- filter(metadata_pca, fraction == "Free")
 metadata_pca_part <- filter(metadata_pca, fraction == "Particle")
@@ -2031,6 +2028,30 @@ lm_variables <- c("frac_bacprod", "fracprod_per_cell_noinf", "Temp_C", "SpCond_u
                   "PC1", "PC2", "PC3" ,"PC4", "PC5", "PC6") 
 
 ########################################################
+##############  All Samples: Community-wide 
+lm_summary_all_comm <- metadata_pca %>%
+  dplyr::select(one_of(lm_variables), -fracprod_per_cell_noinf) %>%
+  gather(key = independent, value = measurement, -frac_bacprod) %>%
+  mutate(measurement = as.numeric(measurement)) %>%
+  group_by(independent) %>% 
+  do(glance(lm(frac_bacprod ~ measurement, data = .))) %>% 
+  mutate(fraction = "All Samples", dependent = "Community Production") %>%
+  dplyr::select(fraction, dependent, independent, adj.r.squared, p.value) 
+
+##############  All Samples: Per-capita  
+lm_summary_all_percap <- metadata_pca %>%
+  dplyr::select(one_of(lm_variables), -frac_bacprod) %>%
+  filter(!is.na(fracprod_per_cell_noinf)) %>%   # Remove samples that are not NA
+  gather(key = independent, value = measurement, -fracprod_per_cell_noinf) %>%
+  mutate(measurement = as.numeric(measurement)) %>%
+  group_by(independent) %>% 
+  do(glance(lm(log10(fracprod_per_cell_noinf) ~ measurement, data = .))) %>% 
+  mutate(fraction = "All Samples", dependent = "Per-Capita Production") %>%
+  dplyr::select(fraction, dependent, independent, adj.r.squared, p.value) 
+
+
+
+########################################################
 ##############  Particle: Community-wide 
 lm_summary_particle_comm <- metadata_pca_part %>%
   dplyr::select(one_of(lm_variables), -fracprod_per_cell_noinf) %>%
@@ -2040,7 +2061,6 @@ lm_summary_particle_comm <- metadata_pca_part %>%
   do(glance(lm(frac_bacprod ~ measurement, data = .))) %>% 
   mutate(fraction = "Particle", dependent = "Community Production") %>%
   dplyr::select(fraction, dependent, independent, adj.r.squared, p.value) 
-
 
 ##############  Particle: Per-capita  
 lm_summary_particle_percap <- metadata_pca_part %>%
@@ -2081,44 +2101,164 @@ lm_summary_free_percap <- metadata_pca_free %>%
 # Put all of the PCA and environmental  linear model results together into one dataframe 
 all_pca_environ_lm_results <- 
   bind_rows(lm_summary_particle_comm, lm_summary_particle_percap,
-          lm_summary_free_comm, lm_summary_free_percap)
+          lm_summary_free_comm, lm_summary_free_percap,
+          lm_summary_all_comm, lm_summary_all_percap) %>%
+  dplyr::rename(independent_var = independent,
+                dependent_var = dependent) 
+
+## Combine the results with the diversity linear models 
+individual_lm_results <- bind_rows(lm_div_results, all_pca_environ_lm_results) %>%
+  mutate(adj.r.squared = round(adj.r.squared, digits = 4),
+         p.value = round(p.value, digits = 5))
+
 
 # Output the results for models that have a pvalue of less than 0.05
-datatable(dplyr::filter(all_pca_environ_lm_results, p.value < 0.05),
-       caption = "Single Linear Model results from environmental variables & PCA axes with a p-value less than 0.05.")
+datatable(dplyr::filter(individual_lm_results, p.value < 0.05),
+       caption = "Single Linear Model results from diversity, environmental, & PCA axes with a p-value less than 0.05.",
+       options = list(pageLength = 50))
 
 
-################ Per-Capita production correlation with PC2
+datatable(dplyr::filter(individual_lm_results, dependent_var == "Per-Capita Production" & p.value < 0.05) %>%
+            dplyr::select(-dependent_var),
+       caption = "Significant (< 0.05) Linear Predictions for Per-Capita Heterotrophic Production axes with a p-value less than 0.05.",
+       options = list(pageLength = 50))
+
+datatable(dplyr::filter(individual_lm_results, dependent_var == "Community Production" & p.value < 0.05) %>%
+            dplyr::select(-dependent_var),
+       caption = "Significant (< 0.05) Linear Predictions for Community-Wide Heterotrophic Production axes with a p-value less than 0.05.",
+       options = list(pageLength = 50))
+```
+
+
+
+## pH Analysis
+```{r pH-analysis, fig.height=8, fig.width=8}
+################ Free: Per-Capita production correlation with pH
 ## 1. Run the linear regression 
-lm_PC2_percap_part <- lm(log10(fracprod_per_cell_noinf) ~ PC2, data = dplyr::filter(metadata_pca, fraction == "Particle"))
-
+lm_pH_percap_free <- lm(log10(fracprod_per_cell_noinf) ~ pH, data = dplyr::filter(metadata_pca, fraction == "Free"))
+ 
 # 2. Extract the R2 and p-value from the linear model: 
-lm_lab_PC2_percap_part <- paste("atop(R^2 ==", round(summary(lm_PC2_percap_part)$adj.r.squared, digits = 3), ",",
-            "p ==", round(unname(summary(lm_PC2_percap_part)$coefficients[,4][2]), digits = 3), ")")
+lm_lab_pH_percap_free <- paste("atop(R^2 ==", round(summary(lm_pH_percap_free)$adj.r.squared, digits = 2), ",",
+            "p ==", round(unname(summary(lm_pH_percap_free)$coefficients[,4][2]), digits = 5), ")")
 
-## 3. Plot Per-Capita production correlation between particle and free
-PC1_lm_plot <- 
-  ggplot(metadata_pca, aes(x = PC1, y = log10(fracprod_per_cell_noinf), 
-                         color = fraction,  fill = fraction)) +
-  geom_point() + ylab("log10(Per-Capita Production)") + 
-  scale_color_manual(values = fraction_colors) + 
+################ Particle: Per-Capita production correlation with pH
+## 3. Run the linear regression  
+lm_pH_percap_part <- lm(log10(fracprod_per_cell_noinf) ~ pH, data = dplyr::filter(metadata_pca, fraction == "Particle"))
+
+# 4. Extract the R2 and p-value from the linear model: 
+lm_lab_pH_percap_part <- paste("atop(R^2 ==", round(summary(lm_pH_percap_part)$adj.r.squared, digits = 2), ",",
+            "p ==", round(unname(summary(lm_pH_percap_part)$coefficients[,4][2]), digits = 3), ")")
+
+## 5. Plot Per-Capita production correlation with pH: BOTH FRACTIONS!
+plot_pH_per_cap <- ggplot(data = metadata_pca,aes(x = pH, y = log10(fracprod_per_cell_noinf))) +
+  geom_point(size = 3, aes(fill = fraction, shape = season)) + 
+  ylab("log10(Per-Capita Production)") + 
+  scale_shape_manual(values = season_shapes) + 
   scale_fill_manual(values = fraction_colors) + 
-  theme(legend.title = element_blank(), legend.position = "bottom")
-
-
-PC2_lm_plot <- 
-  ggplot(metadata_pca, aes(x = PC2, y = log10(fracprod_per_cell_noinf))) +
-  geom_point(aes(color = fraction,  fill = fraction)) + ylab("log10(Per-Capita Production)") + 
-  scale_color_manual(values = fraction_colors) + 
-  scale_fill_manual(values = fraction_colors) + 
+  geom_smooth(method = "lm", color = "skyblue", fill = "skyblue", data = dplyr::filter(metadata_pca, fraction == "Free")) +
   geom_smooth(method = "lm", color = "#FF6600", fill = "#FF6600", data = dplyr::filter(metadata_pca, fraction == "Particle")) +
   # Add the R2 and p-value to the plot 
-  annotate("text", y = -5.8, x=0.5, label=lm_lab_PC2_percap_part, parse = TRUE, color = "#FF6600", size = 4) +
-  theme(legend.title = element_blank(), legend.position = "bottom")  
+  annotate("text", y = -5.9, x=8.4, label=lm_lab_pH_percap_part, parse = TRUE, color = "#FF6600", size = 4) +
+  annotate("text", y = -8, x=8.15, label=lm_lab_pH_percap_free, parse = TRUE, color = "deepskyblue3", size = 4) +
+  theme(legend.title = element_blank(), legend.position = "none")  
 
-plot_grid(PC1_lm_plot, PC2_lm_plot, 
-          labels = c("A", "B"),
-          nrow = 1, ncol = 2)
+# Do it again with community-wide production!
+################ Free: Community-Wide production correlation with pH
+## 1. Run the linear regression 
+lm_pH_comm_free <- lm(frac_bacprod ~ pH, data = dplyr::filter(metadata_pca, fraction == "Free"))
+
+# 2. Extract the R2 and p-value from the linear model: 
+lm_lab_pH_comm_free <- paste("atop(R^2 ==", round(summary(lm_pH_comm_free)$adj.r.squared, digits = 2), ",",
+            "p ==", round(unname(summary(lm_pH_comm_free)$coefficients[,4][2]), digits = 3), ")")
+
+################ Particle: Per-Capita production correlation with pH
+## 3. Run the linear regression 
+lm_pH_comm_part <- lm(frac_bacprod ~ pH, data = dplyr::filter(metadata_pca, fraction == "Particle"))
+
+# 4. Extract the R2 and p-value from the linear model: 
+lm_lab_pH_percap_comm <- paste("atop(R^2 ==", round(summary(lm_pH_comm_part)$adj.r.squared, digits = 2), ",",
+            "p ==", round(unname(summary(lm_pH_comm_part)$coefficients[,4][2]), digits = 3), ")")
+
+## 5. Plot Community-Wide production correlation with pH: BOTH FRACTIONS!
+plot_pH_comm <- ggplot(data = metadata_pca,aes(x = pH, y = frac_bacprod)) +
+  geom_point(size = 3, aes(fill = fraction, shape = season)) + 
+  ylab("Community-Wide Production") + 
+  scale_shape_manual(values = season_shapes) + 
+  scale_fill_manual(values = fraction_colors) + 
+  geom_smooth(method = "lm", color = "skyblue", fill = "skyblue", data = dplyr::filter(metadata_pca, fraction == "Free")) +
+  geom_smooth(method = "lm", color = "#FF6600", fill = "#FF6600", data = dplyr::filter(metadata_pca, fraction == "Particle")) +
+  # Add the R2 and p-value to the plot 
+  annotate("text", y = 0, x=8.15, label=lm_lab_pH_percap_comm, parse = TRUE, color = "#FF6600", size = 4) +
+  annotate("text", y = 55, x=8.3, label=lm_lab_pH_comm_free, parse = TRUE, color = "deepskyblue3", size = 4) +
+  theme(legend.title = element_blank(), legend.position = "none")  
+
+
+
+################ Free: Richness vs pH
+## 1. Run the linear regression 
+lm_pH_rich_free <- lm(mean ~ pH, data = dplyr::filter(richness, fraction == "Free"))
+
+# 2. Extract the R2 and p-value from the linear model: 
+lm_lab_pH_rich_free <- paste("atop(R^2 ==", round(summary(lm_pH_rich_free)$adj.r.squared, digits = 2), ",",
+            "p ==", round(unname(summary(lm_pH_rich_free)$coefficients[,4][2]), digits = 2), ")")
+
+################ Particle: Richness vs pH
+## 3. Run the linear regression 
+lm_pH_rich_part <- lm(mean ~ pH, data = dplyr::filter(richness, fraction == "Particle"))
+
+# 4. Extract the R2 and p-value from the linear model: 
+lm_lab_pH_rich_part <- paste("atop(R^2 ==", round(summary(lm_pH_rich_part)$adj.r.squared, digits = 2), ",",
+            "p ==", round(unname(summary(lm_pH_rich_part)$coefficients[,4][2]), digits = 3), ")")
+
+plot_rich_vs_pH <- 
+  ggplot(data = richness, aes(x = pH, y = mean)) +
+  geom_point(size = 3, aes(fill = fraction, shape = season)) + 
+  ylab("Observed Richness") + 
+  scale_shape_manual(values = season_shapes) + 
+  scale_fill_manual(values = fraction_colors) + 
+  #geom_smooth(method = "lm", color = "skyblue", fill = "skyblue", data = dplyr::filter(richness, fraction == "Free")) +
+  geom_smooth(method = "lm", color = "#FF6600", fill = "#FF6600", data = dplyr::filter(richness, fraction == "Particle")) +
+  # Add the R2 and p-value to the plot 
+  annotate("text", y = 800, x=8.4, label=lm_lab_pH_rich_part, parse = TRUE, color = "#FF6600", size = 4) +
+  annotate("text", y = 300, x=8.12, label=lm_lab_pH_rich_free, parse = TRUE, color = "deepskyblue3", size = 4) +
+  theme(legend.title = element_blank(), legend.position = "none")  
+
+
+################ Free: Inverse Simpson vs pH
+## 1. Run the linear regression 
+lm_pH_invsimps_free <- lm(mean ~ pH, data = dplyr::filter(invsimps, fraction == "Free"))
+
+# 2. Extract the R2 and p-value from the linear model: 
+lm_lab_pH_invsimps_free <- paste("atop(R^2 ==", round(summary(lm_pH_invsimps_free)$adj.r.squared, digits = 2), ",",
+            "p ==", round(unname(summary(lm_pH_invsimps_free)$coefficients[,4][2]), digits = 2), ")")
+
+################ Particle: Inverse Simpson vs pH
+## 3. Run the linear regression 
+lm_pH_invsimps_part <- lm(mean ~ pH, data = dplyr::filter(invsimps, fraction == "Particle"))
+
+# 4. Extract the R2 and p-value from the linear model: 
+lm_lab_pH_invsimps_part <- paste("atop(R^2 ==", round(summary(lm_pH_invsimps_part)$adj.r.squared, digits = 2), ",",
+            "p ==", round(unname(summary(lm_pH_invsimps_part)$coefficients[,4][2]), digits = 4), ")")
+
+plot_invsimps_vs_pH <-
+  ggplot(data = invsimps, aes(x = pH, y = mean)) +
+  geom_point(size = 3, aes(fill = fraction, shape = season)) + 
+  ylab("Inverse Simpson") + 
+  scale_shape_manual(values = season_shapes) + 
+  scale_fill_manual(values = fraction_colors) + 
+  #geom_smooth(method = "lm", color = "skyblue", fill = "skyblue", data = dplyr::filter(invsimps, fraction == "Free")) +
+  geom_smooth(method = "lm", color = "#FF6600", fill = "#FF6600", data = dplyr::filter(invsimps, fraction == "Particle")) +
+  # Add the R2 and p-value to the plot 
+  annotate("text", y = 70, x=8.4, label=lm_lab_pH_invsimps_part, parse = TRUE, color = "#FF6600", size = 4) +
+  annotate("text", y = 5, x=8.15, label=lm_lab_pH_invsimps_free, parse = TRUE, color = "deepskyblue3", size = 4) +
+  theme(legend.title = element_blank(), legend.position = "none")  
+
+
+pH_plots <- plot_grid(plot_pH_comm, plot_pH_per_cap, plot_rich_vs_pH, plot_invsimps_vs_pH, 
+                      labels = c("A", "B", "C", "D"),nrow = 2, ncol = 2)
+
+plot_grid(pH_plots, season_legend, 
+          nrow = 2, ncol = 1, rel_heights = c(1, 0.1))
 ```
 
 # Multiple Regression with PCA results 
