@@ -2,13 +2,13 @@
 title: "Analysis: Microhabitats shape diversity-productivity 
 relationships in freshwater bacterial communities"
 author: "Marian L. Schmidt"
-date: "November 21st, 2017"
+date: "November 28th, 2017"
 output:
   html_document:
     code_folding: show
-    highlight: haddock
+    highlight: default
     keep_md: no
-    theme: united
+    theme: journal
     toc: yes
     toc_float:
       collapsed: no
@@ -23,6 +23,9 @@ pre code, pre, code {
   word-wrap: initial !important;
 }
 </style>
+
+
+The code below represents the main analysis to reproduce all figures except Figure S6. To see how to reproduce figure S6 please see the github for this project.
 
 ```{r setup, include=FALSE}
 # For width of code chunks and scroll bar 
@@ -46,26 +49,24 @@ knitr::opts_chunk$set(eval = TRUE,
 
 # Load Libraries
 ```{r load-libraries, message = FALSE, warning = FALSE}
-library(ggplot2)  
-library(devtools)
-library(phyloseq)
-library(picante)
-library(tidyr)
-library(forcats) 
-library(dplyr)
-library(tibble)
-library(cowplot)
+library(devtools)   # Reproducibility (see end of file)  
+library(phyloseq)   # Easier data manipulation
+library(picante)    # Phylogenetic Tree Analysis   
+library(tidyverse)  # Pretty plotting and data manipulation
+library(forcats)    # Recoding factors 
+library(cowplot)    # Multiple plotting
 library(picante)    # Will also include ape and vegan 
-library(car)        # For residual analysis
-library(sandwich)   # for vcovHC function in post-hoc test
-library(MASS)       # For studres in plot_residuals function
-library(caret)      # For cross validation
-library(pander)     # For pretty tables 
-library(glmnet)     # For lasso and ridge regressions
-library(broom)      # pvalues out of multiple regression
-library(DT)         # fancy HTML table output
-source("code/Muskegon_functions.R")
-source("code/set_colors.R")  
+library(car)        # Residual analysis
+library(sandwich)   # vcovHC function in post-hoc test
+library(MASS)       # studres in plot_residuals function
+library(caret)      # Cross validation
+library(pander)     # Pretty tables  
+library(glmnet)     # Lasso regressions
+library(broom)      # Stats from lm regression
+library(purrr)      # Exporting lm results
+library(DT)         # Fancy HTML table output
+source("code/Muskegon_functions.R")   # Source custom functions  
+source("code/set_colors.R")           # Set Colors for plotting
 ```
 
 
@@ -243,15 +244,28 @@ weighted_df <- WEIGHTED_sesMPD_indepswap_RAREFIED_rm2 %>%
 # Main Figures
 
 ####  Have a legend for all plots 
+
+Since we have set a parameter in our `set_colors.R` file that we source at the beginning and use this throughout, we can assure that the below legends will represent the legends called afterwards. 
 ```{r legend}
+####### Legend for lakesite
 legend_plot <- ggplot(metadata, aes(y = frac_bacprod, x = fraction, fill = fraction, shape = season)) + 
   geom_jitter(size = 3, width = 0.2) + 
   scale_fill_manual(values = fraction_colors, guide = guide_legend(override.aes = list(shape = 22, size = 4))) +
-  scale_shape_manual(values = season_shapes) +
+  scale_shape_manual(values = season_shapes, guide = guide_legend(override.aes = list(size = 4))) +
   theme(legend.position = "bottom", axis.title.x = element_blank(),
         legend.title = element_blank())
-
+# Extract the legend
 season_legend <- get_legend(legend_plot)
+
+####### Legend for lakesite
+lakesite_legend <- ggplot(metadata, aes(y = frac_bacprod, x = fraction, fill = fraction, shape = lakesite)) + 
+  geom_jitter(size = 3, width = 0.2) + 
+  scale_fill_manual(values = fraction_colors, guide = guide_legend(override.aes = list(shape = 22, size = 4))) +
+  scale_shape_manual(values = lakesite_shapes, guide = guide_legend(override.aes = list(size = 4))) +
+  theme(legend.position = "bottom", axis.title.x = element_blank(),
+        legend.title = element_blank())
+# Extract the legend
+lakesite_legend <-  get_legend(lakesite_legend)
 ```
 
 
@@ -364,13 +378,95 @@ row1_plots <- plot_grid(poster_a + theme(legend.position = "none"), poster_b, po
 
 #### Linear Regressions with Fraction Diversity
 ```{r div-prod-lm-models}
-#################################### Bulk Measure Production #################################### 
-################### Richness ################### 
-summary(lm(frac_bacprod ~ mean, data = richness))  # All samples together
+# Free-Living samples only 
+div_measures_free <- otu_alphadiv %>%
+  dplyr::select(fraction, mean, measure, frac_bacprod, fracprod_per_cell_noinf) %>%
+  filter(fraction == "Free") %>%
+  dplyr::select(-fraction)
+# Particle-associated samples only 
+div_measures_part <- otu_alphadiv %>%
+  dplyr::select(fraction, mean, measure, frac_bacprod, fracprod_per_cell_noinf) %>%
+  filter(fraction == "Particle") %>%
+  dplyr::select(-fraction)
 
-# Particle-Associated 
+## All of the samples!
+div_measures_all <- otu_alphadiv %>%
+  dplyr::select(mean, measure, frac_bacprod, fracprod_per_cell_noinf)
+
+########################################################
+##############  Particle: Community-wide 
+lm_divs_particle_comm <- div_measures_part %>%
+  dplyr::select(-fracprod_per_cell_noinf) %>%
+  group_by(measure) %>% 
+  do(glance(lm(frac_bacprod ~ mean, data = .))) %>% 
+  mutate(fraction = "Particle", dependent = "Community Production") %>%
+  dplyr::select(fraction, dependent, measure, adj.r.squared, p.value) 
+
+##############  Particle: Community-wide 
+lm_divs_particle_percap <- div_measures_part %>%
+  dplyr::select(-frac_bacprod) %>%
+  group_by(measure) %>% 
+  do(glance(lm(log10(fracprod_per_cell_noinf) ~ mean, data = .))) %>% 
+  mutate(fraction = "Particle", dependent = "Per-Capita Production") %>%
+  dplyr::select(fraction, dependent, measure, adj.r.squared, p.value) 
+
+########################################################
+##############  Free: Community-wide 
+lm_divs_free_comm <- div_measures_free %>%
+  dplyr::select(-fracprod_per_cell_noinf) %>%
+  group_by(measure) %>% 
+  do(glance(lm(frac_bacprod ~ mean, data = .))) %>% 
+  mutate(fraction = "Free", dependent = "Community Production") %>%
+  dplyr::select(fraction, dependent, measure, adj.r.squared, p.value) 
+
+##############  Free: Community-wide 
+lm_divs_free_percap <- div_measures_free %>%
+  dplyr::select(-frac_bacprod) %>%
+  group_by(measure) %>% 
+  do(glance(lm(log10(fracprod_per_cell_noinf) ~ mean, data = .))) %>% 
+  mutate(fraction = "Free", dependent = "Per-Capita Production") %>%
+  dplyr::select(fraction, dependent, measure, adj.r.squared, p.value) 
+
+########################################################
+##############  All Samples: Community-wide 
+lm_divs_all_comm <- div_measures_all %>%
+  dplyr::select(-fracprod_per_cell_noinf) %>%
+  group_by(measure) %>% 
+  do(glance(lm(frac_bacprod ~ mean, data = .))) %>% 
+  mutate(fraction = "All Samples", dependent = "Community Production") %>%
+  dplyr::select(fraction, dependent, measure, adj.r.squared, p.value) 
+
+##############  All Samples: Community-wide 
+lm_divs_all_percap <- div_measures_all %>%
+  dplyr::select(-frac_bacprod) %>%
+  group_by(measure) %>% 
+  do(glance(lm(log10(fracprod_per_cell_noinf) ~ mean, data = .))) %>% 
+  mutate(fraction = "All Samples", dependent = "Per-Capita Production") %>%
+  dplyr::select(fraction, dependent, measure, adj.r.squared, p.value) 
+
+
+## Filtered PCA Linear Model Results
+# Put all of the PCA and environmental  linear model results together into one dataframe 
+lm_div_results <- 
+  bind_rows(lm_divs_particle_comm, lm_divs_particle_percap,
+          lm_divs_free_comm, lm_divs_free_percap,
+          lm_divs_all_comm, lm_divs_all_percap) %>%
+  mutate(adj.r.squared = round(adj.r.squared, digits = 4),
+         p.value = round(p.value, digits = 6))
+
+# Output the results for models that have a pvalue of less than 0.05
+datatable(dplyr::filter(lm_div_results, p.value < 0.05),
+       caption = "Linear Model results from diversity metrics with a p-value less than 0.05.")
+```
+
+
+#### Cross Validation
+
+Cross validation will provide a better estimate for the adjusted R-squared value of our diversity regressions. 
+```{r cross-validation}
+#################################### Community-Wide Production #################################### 
+################### Richness ################### 
 lm_prod_vs_rich_PA <- lm(frac_bacprod ~ mean, data = filter(richness, fraction == "Particle"))
-summary(lm_prod_vs_rich_PA)
 
 # Cross validate particle-associated for a better estimate of the adjusted R-squared
 cv_lm_prod_vs_rich_PA <- train(
@@ -378,172 +474,95 @@ cv_lm_prod_vs_rich_PA <- train(
       method ='lm', 
       trControl = trainControl(method ="repeatedcv", number = 3, repeats = 100), 
       tuneGrid = expand.grid(intercept = TRUE))
-
-cv_lm_prod_vs_rich_PA$results   # Particle-Associated CV results 
-
-summary(lm(frac_bacprod ~ mean, data = filter(richness, fraction == "Free"))) # Free Living 
-
-
+cv_lm_prod_vs_rich_PA$results   # Particle Community-Wide CV results 
 
 ################### Shannon Entropy ################### 
-summary(lm(frac_bacprod ~ mean, data = shannon))  # All samples together
-
-# Particle-Associated 
 lm_prod_vs_shannon_PA <- lm(frac_bacprod ~ mean, data = filter(shannon, fraction == "Particle"))
-summary(lm_prod_vs_shannon_PA)
-
-# Cross validate particle-associated for a better estimate of the adjusted R-squared
 cv_lm_prod_vs_shannon_PA <- train(
       frac_bacprod ~ mean, data = filter(shannon, fraction == "Particle"), 
       method ='lm', 
       trControl = trainControl(method ="repeatedcv", number = 3, repeats = 100), 
       tuneGrid = expand.grid(intercept = TRUE))
-
-cv_lm_prod_vs_shannon_PA$results   # Particle-Associated CV results 
-
-summary(lm(frac_bacprod ~ mean, data = filter(shannon, fraction == "Free"))) # Free Living 
-
-
+cv_lm_prod_vs_shannon_PA$results   # Particle Community-Wide CV results 
 
 ################### Inverse Simpson ################### 
-summary(lm(frac_bacprod ~ mean, data = invsimps))  # All samples together
-
-# Particle-Associated samples 
 lm_prod_vs_invsimps_PA <- lm(frac_bacprod ~ mean, data = filter(invsimps, fraction == "Particle"))
-summary(lm_prod_vs_invsimps_PA)
-
-# Cross validate particle-associated for a better estimate of the adjusted R-squared
 cv_lm_prod_vs_invsimps_PA <- train(
       frac_bacprod ~ mean, data = filter(invsimps, fraction == "Particle"), 
       method ='lm', 
       trControl = trainControl(method ="repeatedcv", number = 3, repeats = 100), 
       tuneGrid = expand.grid(intercept = TRUE))
-
-cv_lm_prod_vs_invsimps_PA$results       # Cross Validated PA results
-
-#Free Living Samples 
-summary(lm(frac_bacprod ~ mean, data = filter(invsimps, fraction == "Free")))
-
+cv_lm_prod_vs_invsimps_PA$results       # Particle Community-Wide CV results
 
 ################### Simpson's Evenness ################### 
-summary(lm(frac_bacprod ~ mean, data = simpseven))  # All samples together
-
-# Particle-Associated 
 lm_prod_vs_simpseven_PA <- lm(frac_bacprod ~ mean, data = filter(simpseven, fraction == "Particle"))
-summary(lm_prod_vs_simpseven_PA)
-
-# Cross validate particle-associated for a better estimate of the adjusted R-squared
 cv_lm_prod_vs_simpseven_PA <- train(
       frac_bacprod ~ mean, data = filter(simpseven, fraction == "Particle"), 
       method ='lm', 
       trControl = trainControl(method ="repeatedcv", number = 3, repeats = 100), 
       tuneGrid = expand.grid(intercept = TRUE))
-
-cv_lm_prod_vs_simpseven_PA$results   # Particle-Associated CV results 
-
-summary(lm(frac_bacprod ~ mean, data = filter(simpseven, fraction == "Free"))) # Free Living 
+cv_lm_prod_vs_simpseven_PA$results   # Particle Community-Wide CV results 
 
 
-#################################### Per-Cell Production #################################### 
+#################################### Per-Capita Production #################################### 
 ################### Richness ################### 
-summary(lm(log10(fracprod_per_cell_noinf) ~ mean, data = richness))  # All samples together 
-
-# Particle-Associated 
 lm_percell_prod_vs_rich_PA <- lm(log10(fracprod_per_cell_noinf) ~ mean, data = filter(richness, fraction == "Particle"))
-summary(lm_percell_prod_vs_rich_PA)
-
-# Cross validate particle-associated for a better estimate of the adjusted R-squared
 cv_lm_percell_prod_vs_rich_PA <- train(
       log10(fracprod_per_cell_noinf) ~ mean, data = filter(richness, fraction == "Particle" & norep_filter_name != "MOTEJ515"), 
       method ='lm', 
       trControl = trainControl(method ="repeatedcv", number = 3, repeats = 100), 
       tuneGrid = expand.grid(intercept = TRUE))
-
-cv_lm_percell_prod_vs_rich_PA$results      # Particle-Associated CV results 
-
-summary(lm(log10(fracprod_per_cell_noinf) ~ mean, data = filter(richness, fraction == "Free"))) # Free Living 
-
+cv_lm_percell_prod_vs_rich_PA$results      # Particle Per-Capita CV results 
 
 ################### Shannon Entropy ################### 
-summary(lm(log10(fracprod_per_cell_noinf) ~ mean, data = shannon))  # All samples together 
-
-# Particle-Associated 
 lm_percell_prod_vs_shannon_PA <- lm(log10(fracprod_per_cell_noinf) ~ mean, data = filter(shannon, fraction == "Particle"))
-summary(lm_percell_prod_vs_shannon_PA)
-
-# Cross validate particle-associated for a better estimate of the adjusted R-squared
 cv_lm_percell_prod_vs_shannon_PA <- train(
       log10(fracprod_per_cell_noinf) ~ mean, data = filter(shannon, fraction == "Particle" & norep_filter_name != "MOTEJ515"), 
       method ='lm', 
       trControl = trainControl(method ="repeatedcv", number = 3, repeats = 100), 
       tuneGrid = expand.grid(intercept = TRUE))
-
-cv_lm_percell_prod_vs_shannon_PA$results      # Particle-Associated CV results 
-
-summary(lm(log10(fracprod_per_cell_noinf) ~ mean, data = filter(shannon, fraction == "Free"))) # Free Living 
-
-
+cv_lm_percell_prod_vs_shannon_PA$results      # Particle Per-Capita CV results 
 
 ################### Inverse Simpson ################### 
-summary(lm(log10(fracprod_per_cell_noinf) ~ mean, data = invsimps))  # All samples together 
-
-# Particle-Associated 
 lm_percell_prod_vs_invsimps_PA <- lm(log10(fracprod_per_cell_noinf) ~ mean, data = filter(invsimps, fraction == "Particle"))
-summary(lm_percell_prod_vs_invsimps_PA)
-
-# Cross validate particle-associated for a better estimate of the adjusted R-squared
 cv_lm_percell_prod_vs_invsimps_PA <- train(
       log10(fracprod_per_cell_noinf) ~ mean, data = filter(invsimps, fraction == "Particle" & norep_filter_name != "MOTEJ515"), 
       method ='lm', 
       trControl = trainControl(method ="repeatedcv", number = 3, repeats = 100), 
       tuneGrid = expand.grid(intercept = TRUE))
-
-cv_lm_percell_prod_vs_invsimps_PA$results      # Particle-Associated CV results 
-
-summary(lm(log10(fracprod_per_cell_noinf) ~ mean, data = filter(invsimps, fraction == "Free"))) # Free Living 
-
+cv_lm_percell_prod_vs_invsimps_PA$results      # Particle Per-Capita CV results 
 
 
 ################### Simpson's Evenness ################### 
-summary(lm(log10(fracprod_per_cell_noinf) ~ mean, data = simpseven))  # All samples together 
-
-# Particle-Associated 
 lm_percell_prod_vs_simpseven_PA <- lm(log10(fracprod_per_cell_noinf) ~ mean, data = filter(simpseven, fraction == "Particle"))
-summary(lm_percell_prod_vs_simpseven_PA)
-
-# Cross validate particle-associated for a better estimate of the adjusted R-squared
 cv_lm_percell_prod_vs_simpseven_PA <- train(
       log10(fracprod_per_cell_noinf) ~ mean, data = filter(simpseven, fraction == "Particle" & norep_filter_name != "MOTEJ515"), 
       method ='lm', 
       trControl = trainControl(method ="repeatedcv", number = 3, repeats = 100), 
       tuneGrid = expand.grid(intercept = TRUE))
-
-cv_lm_percell_prod_vs_simpseven_PA$results      # Particle-Associated CV results 
-
-summary(lm(log10(fracprod_per_cell_noinf) ~ mean, data = filter(simpseven, fraction == "Free"))) # Free Living 
+cv_lm_percell_prod_vs_simpseven_PA$results      # Particle Per-Capita CV results  
 ```
 
-#### R2 table 
+### Supplemental Table 1 
 ```{r r2-table, dependson = "div-prod-lm-models"}
-
-########## PUT A TABLE TOGETHER 
+########## PUT A TABLE TOGETHER  
 # Per Liter Production 
-perliter_row1 <- c("Richness", "Per-Liter",
+perliter_row1 <- c("Richness", "Community-Wide",
           round(summary(lm_prod_vs_rich_PA)$adj.r.squared, digits = 3),
           round(cv_lm_prod_vs_rich_PA$results$Rsquared, digits = 3), 
           round(cv_lm_prod_vs_rich_PA$results$RsquaredSD, digits = 3))
 
-perliter_row2 <- c("Shannon_Entropy", "Per-Liter",
+perliter_row2 <- c("Shannon_Entropy", "Community-Wide",
           round(summary(lm_prod_vs_shannon_PA)$adj.r.squared, digits = 3),
           round(cv_lm_prod_vs_shannon_PA$results$Rsquared, digits = 3), 
           round(cv_lm_prod_vs_shannon_PA$results$RsquaredSD, digits = 3))
 
-perliter_row3 <- c("Inverse_Simpson", "Per-Liter",
+perliter_row3 <- c("Inverse_Simpson", "Community-Wide",
           round(summary(lm_prod_vs_invsimps_PA)$adj.r.squared, digits = 3),
           round(cv_lm_prod_vs_invsimps_PA$results$Rsquared, digits = 3), 
           round(cv_lm_prod_vs_invsimps_PA$results$RsquaredSD, digits = 3))
 
-perliter_row4 <- c("Simpsons_Evenness","Per-Liter",
+perliter_row4 <- c("Simpsons_Evenness","Community-Wide",
           round(summary(lm_prod_vs_simpseven_PA)$adj.r.squared, digits = 3),
           round(cv_lm_prod_vs_simpseven_PA$results$Rsquared, digits = 3), 
           round(cv_lm_prod_vs_simpseven_PA$results$RsquaredSD, digits = 3))
@@ -551,22 +570,22 @@ perliter_row4 <- c("Simpsons_Evenness","Per-Liter",
 
 
 # Per cell production 
-percell_row1 <- c("Richness", "Per-Cell",
+percell_row1 <- c("Richness", "Per-Capita",
           round(summary(lm_percell_prod_vs_rich_PA)$adj.r.squared, digits = 3),
           round(cv_lm_percell_prod_vs_rich_PA$results$Rsquared, digits = 3), 
           round(cv_lm_percell_prod_vs_rich_PA$results$RsquaredSD, digits = 3))
 
-percell_row2 <- c("Shannon_Entropy", "Per-Cell",
+percell_row2 <- c("Shannon Entropy", "Per-Capita",
           round(summary(lm_percell_prod_vs_shannon_PA)$adj.r.squared, digits = 3),
           round(cv_lm_percell_prod_vs_shannon_PA$results$Rsquared, digits = 3), 
           round(cv_lm_percell_prod_vs_shannon_PA$results$RsquaredSD, digits = 3))
 
-percell_row3 <- c("Inverse_Simpson", "Per-Cell",
+percell_row3 <- c("Inverse Simpson", "Per-Capita",
           round(summary(lm_percell_prod_vs_invsimps_PA)$adj.r.squared, digits = 3),
           round(cv_lm_percell_prod_vs_invsimps_PA$results$Rsquared, digits = 3), 
           round(cv_lm_percell_prod_vs_invsimps_PA$results$RsquaredSD, digits = 3))
 
-percell_row4 <- c("Simpsons_Evenness", "Per-Cell",
+percell_row4 <- c("Simpsons Evenness", "Per-Capita",
           round(summary(lm_percell_prod_vs_simpseven_PA)$adj.r.squared, digits = 3),
           round(cv_lm_percell_prod_vs_simpseven_PA$results$Rsquared, digits = 3), 
           round(cv_lm_percell_prod_vs_simpseven_PA$results$RsquaredSD, digits = 3))
@@ -916,10 +935,10 @@ plot_grid(figure3_row1, season_legend,
                    rel_heights = c(1, 0.05))
 ```
 
-### LASSO
+### Lasso Regressions
 
 
-#### Prepare the data for Ridge & Lasso Regressions
+#### Prepare the data for Lasso Regressions
 ```{r prepare-data}
 unweight_vals <- unweighted_df %>%
   dplyr::select(mpd.obs.z, norep_filter_name) %>%
@@ -976,12 +995,11 @@ all_dat_lasso_percapita <- lasso_data_df  %>%
 ```
 
 
-#### Perform Ridge and Lasso regression
-#### Lasso: Bulk Community Production: PARTICLE 
-```{r part-bulk-lasso-ridge, dependson = c("calc-div"), fig.width=8, fig.height=4}
+#### Perform Lasso regression
+#### Bulk Community Production: Particle 
+```{r comm-part-lasso, dependson = c("calc-div"), fig.width=8, fig.height=4}
 # Set the seed for reproducibility of the grid values 
 set.seed(777)
-
 
 ################ PREPARE DATA ################ 
 # Subset data needed and scale all o
@@ -1003,26 +1021,6 @@ train <- sample(1:nrow(x), nrow(x)/2)
 test <- -train
 y_test <- y[test]
 
-################ RIDGE ################ 
-# Run RIDGE regression with alpha = 0
-ridge_divs_train <- glmnet(x[train,], y[train], alpha = 0, lambda = grid, thresh = 1e-12, standardize = TRUE)
-par(mfrow = c(1,2)) 
-plot(ridge_divs_train)
-
-# Cross validation
-cv_ridge_divs <- cv.glmnet(x[train,], y[train], alpha = 0)
-plot(cv_ridge_divs)
-best_ridge_lambda <- cv_ridge_divs$lambda.min
-ridge_divs_pred <- predict(ridge_divs_train, s = best_ridge_lambda, newx = x[test,])
-mean((ridge_divs_pred - y_test)^2) # Test MSE
-
-
-## Run ridge on the entire dataset 
-ridge_divs <- glmnet(x, y, alpha = 0, lambda = grid, standardize = TRUE)
-par(mfrow = c(1,1))
-plot(ridge_divs)
-
-
 ################ LASSO ################ 
 # Run lasso regression with alpha = 1
 lasso_divs_train <- glmnet(x[train,], y[train], alpha = 1, lambda = grid, standardize = TRUE)
@@ -1034,8 +1032,7 @@ cv_lasso_divs <- cv.glmnet(x[train,], y[train], alpha = 1)
 plot(cv_lasso_divs)
 best_lasso_lambda <- cv_lasso_divs$lambda.min
 lasso_divs_pred <- predict(lasso_divs_train, s = best_lasso_lambda, newx = x[test,])
-mean((lasso_divs_pred - y_test)^2)
-
+mean((lasso_divs_pred - y_test)^2) # Test
 
 ## Run lasso on the entire dataset with the best lambda value 
 lasso_divs <- glmnet(x, y, alpha = 1, lambda = grid, standardize = TRUE)
@@ -1050,15 +1047,12 @@ plot(lasso_divs, xvar = "dev", label = TRUE)
 predict(lasso_divs, type = "coefficients", s = best_lasso_lambda)
 ```
 
-The test MSE for ridge regression is `r mean((ridge_divs_pred - y_test)^2)` while the test MSE for lasso is `r mean((lasso_divs_pred - y_test)^2)`.  
-
-Additionally, the lasso model uses Inverse Simpson as the **best and only** predictor of production!
+The lasso model uses Inverse Simpson as the **best and only** predictor of production!
 
 
 
-
-#### Lasso: Per capita Production: PARTICLE
-```{r percapita-lasso-ridge, dependson = c("calc-div", "prepare-data"), fig.width=8, fig.height=4}
+#### Per-capita Production: Particle
+```{r percapita-part-lasso, dependson = c("calc-div", "prepare-data"), fig.width=8, fig.height=4}
 scaled_percapita_data <- percell_lasso_data_df_particle_noprod %>%
   dplyr::filter(!is.na(fracprod_per_cell_noinf)) %>%
   mutate(log10_percell = log10(fracprod_per_cell_noinf)) %>%
@@ -1079,25 +1073,6 @@ grid = 10^seq(10,-2,length = 100)
 train <- sample(1:nrow(x), nrow(x)/2)
 test <- -train
 y_test <- y[test]
-
-################ RIDGE
-# Run RIDGE regression with alpha = 0
-ridge_divs_train <- glmnet(x[train,], y[train], alpha = 0, lambda = grid, thresh = 1e-12, standardize = FALSE)
-par(mfrow = c(1,2)) 
-plot(ridge_divs_train)
-
-# Cross validation
-cv_ridge_divs <- cv.glmnet(x[train,], y[train], alpha = 0)
-plot(cv_ridge_divs)
-best_ridge_lambda <- cv_ridge_divs$lambda.min
-ridge_divs_pred <- predict(ridge_divs_train, s = best_ridge_lambda, newx = x[test,])
-mean((ridge_divs_pred - y_test)^2) # Test MSE
-
-
-## Run ridge on the entire dataset 
-ridge_divs <- glmnet(x, y, alpha = 0, lambda = grid, standardize = FALSE)
-par(mfrow = c(1,1))
-plot(ridge_divs)
 
 ################ LASSO
 # Run lasso regression with alpha = 1
@@ -1126,8 +1101,8 @@ predict(lasso_divs, type = "coefficients", s = best_lasso_lambda)
 ```
 
 
-#### Lasso: Community-wide Production:  ALL SAMPLES 
-```{r ALL-bulk-lasso-ridge, dependson = c("calc-div"), fig.width=8, fig.height=4}
+#### Community-wide Production: All Samples 
+```{r all-comm-lasso, dependson = c("calc-div"), fig.width=8, fig.height=4}
 # Set the seed for reproducibility of the grid values 
 set.seed(777)
 
@@ -1179,8 +1154,8 @@ plot(lasso_divs, xvar = "dev", label = TRUE)
 predict(lasso_divs, type = "coefficients", s = best_lasso_lambda)
 ```
 
-#### Lasso: Per-capita Production:  ALL SAMPLES 
-```{r all-percapita-lasso-ridge, dependson = c("calc-div"), fig.width=8, fig.height=4}
+#### Per-capita Production:  All Samples
+```{r all-percapita-lasso, dependson = c("calc-div"), fig.width=8, fig.height=4}
 set.seed(777)
 
 scaled_percapita_ALL <- all_dat_lasso_percapita %>%
@@ -1201,27 +1176,6 @@ grid = 10^seq(10,-2,length = 100)
 # We will use half the set to train the model and the 2nd half of the dataset to test the model 
 train <- sample(1:nrow(x), nrow(x)/2)
 test <- -train
-y_test <- y[test]
-
-################ RIDGE
-# Run RIDGE regression with alpha = 0
-ridge_divs_train <- glmnet(x[train,], y[train], alpha = 0, lambda = grid, thresh = 1e-12, standardize = TRUE)
-par(mfrow = c(1,2)) 
-plot(ridge_divs_train)
-
-# Cross validation
-cv_ridge_divs <- cv.glmnet(x[train,], y[train], alpha = 0)
-plot(cv_ridge_divs)
-best_ridge_lambda <- cv_ridge_divs$lambda.min
-ridge_divs_pred <- predict(ridge_divs_train, s = best_ridge_lambda, newx = x[test,])
-mean((ridge_divs_pred - y_test)^2) # Test MSE
-
-
-## Run ridge on the entire dataset 
-ridge_divs <- glmnet(x, y, alpha = 0, lambda = grid, standardize = TRUE)
-par(mfrow = c(1,1))
-plot(ridge_divs)
-
 
 ################ LASSO
 # Run lasso regression with alpha = 1
@@ -1599,7 +1553,7 @@ prod_vs_simpseven_plot <-
   geom_smooth(data=filter(simpseven, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
   scale_x_continuous(limits = c(0,0.15), breaks = seq(from = 0, to = 0.15, by = 0.03)) + 
   # Add the R2 and p-value to the plot 
-  annotate("text", x=0.14, y=15, label=lm_lab_perliter_simpseven_PA, parse = TRUE, color = "#FF6600", size = 4) +
+  annotate("text", x=0.13, y=15, label=lm_lab_perliter_simpseven_PA, parse = TRUE, color = "#FF6600", size = 4) +
   theme(legend.position = "none", axis.title.x = element_blank(), axis.text.x = element_blank()) 
 
 
@@ -1622,7 +1576,7 @@ percell_prod_vs_simpseven_plot <-
   geom_smooth(data=filter(simpseven, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
   scale_x_continuous(limits = c(0,0.15), breaks = seq(from = 0, to = 0.15, by = 0.03)) + 
   # Add the R2 and p-value to the plot 
-  annotate("text", x=0.14, y=-6.3, label=lm_lab_percell_simpseven_PA, parse = TRUE, color = "#FF6600", size = 4) +
+  annotate("text", x=0.13, y=-6.3, label=lm_lab_percell_simpseven_PA, parse = TRUE, color = "#FF6600", size = 4) +
   theme(legend.title = element_blank(), legend.position ="none")
 
 
@@ -2022,7 +1976,7 @@ plot_grid(randomized_rich_plot, season_legend,
 #### PCA with Euclidian Distances  
 ```{r euclidian-pcoa-varexplained, fig.height=4, fig.width=5}
 # Make the Supplemental Figure
-par(oma(0.1, 0.1, 0.1, 0.1))
+par(mar = c(4.5, 4.5, 1, 1))
 biplot(pca_environ,
      xlab = paste("PC1", paste(round(summary(pca_environ)$cont$importance[2,1]*100, digits = 2), "%", sep = ""), sep = ": "),
      ylab = paste("PC2", paste(round(summary(pca_environ)$cont$importance[2,2]*100, digits = 2), "%", sep = ""), sep = ": "))
@@ -2050,234 +2004,89 @@ mtext(side = 4, line = 3, "Total Accumulated Variation")
 legend("right",
        legend=c("Per Axis", "Total"),
        pch=c(16, 17), col=c("cornflowerblue", "firebrick3"))
+
+# Amount of variation explained by the first two axes
+summary(pca_environ)$cont$importance[3, 2]*100
 ```
 
-The first two axes of the PCA explain `r summary(pca_environ)$cont$importance[3, 2]*100`% of the variation in the environmental data!
+The first two axes of the PCA explain ~70% of the variation in the environmental data!
 
 
-# Linear Models with Environmental Variables
+# Table 1
 ```{r environ-lm, fig.height=3.5, fig.width=8, dependson = "euclidian-pcoa-varexplained"}
-#####  SINGLE REGRESSION with PC1
-## Free living
-comm_lm_PC1_free <- summary(lm(frac_bacprod ~ PC1, 
-           data = filter(metadata_pca, fraction == "Free")))
-## Particle-associated
-comm_lm_PC1_part <- summary(lm(frac_bacprod ~ PC1, 
-           data = filter(metadata_pca, fraction == "Particle")))
-## PER CAPITA: Free living
-percap_lm_PC1_free <- summary(lm(log10(fracprod_per_cell_noinf) ~ PC1, 
-           data = filter(metadata_pca, fraction == "Free")))
-## PER CAPITA: Particle-associated
-percap_lm_PC1_part <- summary(lm(log10(fracprod_per_cell_noinf) ~ PC1, 
-           data = filter(metadata_pca, fraction == "Particle")))
+## Prepare the dataframes for Free and Particle data
+metadata_pca_free <- filter(metadata_pca, fraction == "Free")
+metadata_pca_part <- filter(metadata_pca, fraction == "Particle")
 
-# Put the results all together 
-pca_lm_row1 <- c("Free", "Per-Liter","PC1",
-          round(comm_lm_PC1_free$adj.r.squared, digits = 3),
-          round(comm_lm_PC1_free$coefficients[2,4], digits = 3))
-pca_lm_row2 <- c("Particle", "Per-Liter","PC1",
-          round(comm_lm_PC1_part$adj.r.squared, digits = 3),
-          round(comm_lm_PC1_part$coefficients[2,4], digits = 3))
-pca_lm_row3 <- c("Free", "Per-Capita","PC1",
-          round(percap_lm_PC1_free$adj.r.squared, digits = 3),
-          round(percap_lm_PC1_free$coefficients[2,4], digits = 3))
-pca_lm_row4 <- c("Particle", "Per-Capita", "PC1",
-          round(percap_lm_PC1_part$adj.r.squared, digits = 3),
-          round(percap_lm_PC1_part$coefficients[2,4], digits = 3))
+# List of environmental variables to run linear models on 
+        # BGA_cellspermL and Turb_NTU do not have enough data points for regression
+lm_variables <- c("frac_bacprod", "fracprod_per_cell_noinf", "Temp_C", "SpCond_uSpercm", "TDS_mgperL", 
+                  "pH", "ORP_mV", "Chl_Lab_ugperL", "Cl_mgperL", "SO4_mgperL", "NO3_mgperL", 
+                  "NH3_mgperL", "TKN_mgperL", "SRP_ugperL", "TP_ugperL", "Alk_mgperL", "DO_mgperL", 
+                  "DO_percent", "total_bac_abund","attached_bac", "dnaconcrep1", 
+                  "PC1", "PC2", "PC3" ,"PC4", "PC5", "PC6") 
 
-pca_lm_results_df <- 
-  rbind(pca_lm_row1, pca_lm_row2, pca_lm_row3, pca_lm_row4)
-
-colnames(pca_lm_results_df) <- c("fraction", "Predictor","Prod_measure", "Adjusted_R2", "p-value")
-
-row.names(pca_lm_results_df) = NULL
-
-#####  SINGLE REGRESSION with PC2
-## Free living
-comm_lm_PC2_free <- summary(lm(frac_bacprod ~ PC2, 
-           data = filter(metadata_pca, fraction == "Free")))
-## Particle-associated
-comm_lm_PC2_part <- summary(lm(frac_bacprod ~ PC2, 
-           data = filter(metadata_pca, fraction == "Particle")))
-## PER CAPITA: Free living
-percap_lm_PC2_free <- summary(lm(log10(fracprod_per_cell_noinf) ~ PC2, 
-           data = filter(metadata_pca, fraction == "Free")))
-## PER CAPITA: Particle-associated
-percap_lm_PC2_part <- summary(lm(log10(fracprod_per_cell_noinf) ~ PC2, 
-           data = filter(metadata_pca, fraction == "Particle")))
-
-# Put the results all together 
-pca_lm2_row1 <- c("Free", "Per-Liter","PC2",
-          round(comm_lm_PC2_free$adj.r.squared, digits = 3),
-          round(comm_lm_PC2_free$coefficients[2,4], digits = 3))
-pca_lm2_row2 <- c("Particle", "Per-Liter","PC2",
-          round(comm_lm_PC2_part$adj.r.squared, digits = 3),
-          round(comm_lm_PC2_part$coefficients[2,4], digits = 3))
-pca_lm2_row3 <- c("Free", "Per-Capita","PC2",
-          round(percap_lm_PC2_free$adj.r.squared, digits = 3),
-          round(percap_lm_PC2_free$coefficients[2,4], digits = 3))
-pca_lm2_row4 <- c("Particle", "Per-Capita", "PC2",
-          round(percap_lm_PC2_part$adj.r.squared, digits = 3),
-          round(percap_lm_PC2_part$coefficients[2,4], digits = 3))
-
-pca_lm2_results_df <- 
-  rbind(pca_lm2_row1, pca_lm2_row2, pca_lm2_row3, pca_lm2_row4)
-
-colnames(pca_lm2_results_df) <- c("fraction", "Predictor","Prod_measure", "Adjusted_R2", "p-value")
-
-row.names(pca_lm2_results_df) = NULL
-
-#####  SINGLE REGRESSION with PC3
-## Free living
-comm_lm_PC3_free <- summary(lm(frac_bacprod ~ PC3, 
-           data = filter(metadata_pca, fraction == "Free")))
-## Particle-associated
-comm_lm_PC3_part <- summary(lm(frac_bacprod ~ PC3, 
-           data = filter(metadata_pca, fraction == "Particle")))
-## PER CAPITA: Free living
-percap_lm_PC3_free <- summary(lm(log10(fracprod_per_cell_noinf) ~ PC3, 
-           data = filter(metadata_pca, fraction == "Free")))
-## PER CAPITA: Particle-associated
-percap_lm_PC3_part <- summary(lm(log10(fracprod_per_cell_noinf) ~ PC3, 
-           data = filter(metadata_pca, fraction == "Particle")))
-
-# Put the results all together 
-pca_lm_row1_PC3 <- c("Free", "Per-Liter","PC3",
-          round(comm_lm_PC3_free$adj.r.squared, digits = 3),
-          round(comm_lm_PC3_free$coefficients[2,4], digits = 3))
-pca_lm_row2_PC3 <- c("Particle", "Per-Liter","PC3",
-          round(comm_lm_PC3_part$adj.r.squared, digits = 3),
-          round(comm_lm_PC3_part$coefficients[2,4], digits = 3))
-pca_lm_row3_PC3 <- c("Free", "Per-Capita","PC3",
-          round(percap_lm_PC3_free$adj.r.squared, digits = 3),
-          round(percap_lm_PC3_free$coefficients[2,4], digits = 3))
-pca_lm_row4_PC3 <- c("Particle", "Per-Capita", "PC3",
-          round(percap_lm_PC3_part$adj.r.squared, digits = 3),
-          round(percap_lm_PC3_part$coefficients[2,4], digits = 3))
-
-pca_lm_results_df_PC3 <- 
-  rbind(pca_lm_row1_PC3, pca_lm_row2_PC3, pca_lm_row3_PC3, pca_lm_row4_PC3)
-
-colnames(pca_lm_results_df_PC3) <- c("fraction", "Predictor","Prod_measure", "Adjusted_R2", "p-value")
-
-row.names(pca_lm_results_df_PC3) = NULL
-
-#####  SINGLE REGRESSION with PC4
-## Free living
-comm_lm_PC4_free <- summary(lm(frac_bacprod ~ PC4, 
-           data = filter(metadata_pca, fraction == "Free")))
-## Particle-associated
-comm_lm_PC4_part <- summary(lm(frac_bacprod ~ PC4, 
-           data = filter(metadata_pca, fraction == "Particle")))
-## PER CAPITA: Free living
-percap_lm_PC4_free <- summary(lm(log10(fracprod_per_cell_noinf) ~ PC4, 
-           data = filter(metadata_pca, fraction == "Free")))
-## PER CAPITA: Particle-associated
-percap_lm_PC4_part <- summary(lm(log10(fracprod_per_cell_noinf) ~ PC4, 
-           data = filter(metadata_pca, fraction == "Particle")))
-
-# Put the results all together 
-pca_lm_row1_PC4 <- c("Free", "Per-Liter","PC4",
-          round(comm_lm_PC4_free$adj.r.squared, digits = 3),
-          round(comm_lm_PC4_free$coefficients[2,4], digits = 3))
-pca_lm_row2_PC4 <- c("Particle", "Per-Liter","PC4",
-          round(comm_lm_PC4_part$adj.r.squared, digits = 3),
-          round(comm_lm_PC4_part$coefficients[2,4], digits = 3))
-pca_lm_row3_PC4 <- c("Free", "Per-Capita","PC4",
-          round(percap_lm_PC4_free$adj.r.squared, digits = 3),
-          round(percap_lm_PC4_free$coefficients[2,4], digits = 3))
-pca_lm_row4_PC4 <- c("Particle", "Per-Capita", "PC4",
-          round(percap_lm_PC4_part$adj.r.squared, digits = 3),
-          round(percap_lm_PC4_part$coefficients[2,4], digits = 3))
-
-pca_lm_results_df_PC4 <- 
-  rbind(pca_lm_row1_PC4, pca_lm_row2_PC4, pca_lm_row3_PC4, pca_lm_row4_PC4)
-
-colnames(pca_lm_results_df_PC4) <- c("fraction", "Predictor","Prod_measure", "Adjusted_R2", "p-value")
-
-row.names(pca_lm_results_df_PC4) = NULL
+########################################################
+##############  Particle: Community-wide 
+lm_summary_particle_comm <- metadata_pca_part %>%
+  dplyr::select(one_of(lm_variables), -fracprod_per_cell_noinf) %>%
+  gather(key = independent, value = measurement, -frac_bacprod) %>%
+  mutate(measurement = as.numeric(measurement)) %>%
+  group_by(independent) %>% 
+  do(glance(lm(frac_bacprod ~ measurement, data = .))) %>% 
+  mutate(fraction = "Particle", dependent = "Community Production") %>%
+  dplyr::select(fraction, dependent, independent, adj.r.squared, p.value) 
 
 
-#####  SINGLE REGRESSION with PC5
-## Free living
-comm_lm_PC5_free <- summary(lm(frac_bacprod ~ PC5, 
-           data = filter(metadata_pca, fraction == "Free")))
-## Particle-associated
-comm_lm_PC5_part <- summary(lm(frac_bacprod ~ PC5, 
-           data = filter(metadata_pca, fraction == "Particle")))
-## PER CAPITA: Free living
-percap_lm_PC5_free <- summary(lm(log10(fracprod_per_cell_noinf) ~ PC5, 
-           data = filter(metadata_pca, fraction == "Free")))
-## PER CAPITA: Particle-associated
-percap_lm_PC5_part <- summary(lm(log10(fracprod_per_cell_noinf) ~ PC5, 
-           data = filter(metadata_pca, fraction == "Particle")))
-
-# Put the results all together 
-pca_lm_row1_PC5 <- c("Free", "Per-Liter","PC5",
-          round(comm_lm_PC5_free$adj.r.squared, digits = 3),
-          round(comm_lm_PC5_free$coefficients[2,4], digits = 3))
-pca_lm_row2_PC5 <- c("Particle", "Per-Liter","PC5",
-          round(comm_lm_PC5_part$adj.r.squared, digits = 3),
-          round(comm_lm_PC5_part$coefficients[2,4], digits = 3))
-pca_lm_row3_PC5 <- c("Free", "Per-Capita","PC5",
-          round(percap_lm_PC5_free$adj.r.squared, digits = 3),
-          round(percap_lm_PC5_free$coefficients[2,4], digits = 3))
-pca_lm_row4_PC5 <- c("Particle", "Per-Capita", "PC5",
-          round(percap_lm_PC5_part$adj.r.squared, digits = 3),
-          round(percap_lm_PC5_part$coefficients[2,4], digits = 3))
-
-pca_lm_results_df_PC5 <- 
-  rbind(pca_lm_row1_PC5, pca_lm_row2_PC5, pca_lm_row3_PC5, pca_lm_row4_PC5)
-
-colnames(pca_lm_results_df_PC5) <- c("fraction", "Predictor","Prod_measure", "Adjusted_R2", "p-value")
-
-row.names(pca_lm_results_df_PC5) = NULL
+##############  Particle: Per-capita  
+lm_summary_particle_percap <- metadata_pca_part %>%
+  dplyr::select(one_of(lm_variables), -frac_bacprod) %>%
+  filter(!is.na(fracprod_per_cell_noinf)) %>%   # Remove samples that are not NA
+  gather(key = independent, value = measurement, -fracprod_per_cell_noinf) %>%
+  mutate(measurement = as.numeric(measurement)) %>%
+  group_by(independent) %>% 
+  do(glance(lm(log10(fracprod_per_cell_noinf) ~ measurement, data = .))) %>% 
+  mutate(fraction = "Particle", dependent = "Per-Capita Production") %>%
+  dplyr::select(fraction, dependent, independent, adj.r.squared, p.value) 
 
 
-#####  SINGLE REGRESSION with PC6
-## Free living
-comm_lm_PC6_free <- summary(lm(frac_bacprod ~ PC6, 
-           data = filter(metadata_pca, fraction == "Free")))
-## Particle-associated
-comm_lm_PC6_part <- summary(lm(frac_bacprod ~ PC6, 
-           data = filter(metadata_pca, fraction == "Particle")))
-## PER CAPITA: Free living
-percap_lm_PC6_free <- summary(lm(log10(fracprod_per_cell_noinf) ~ PC6, 
-           data = filter(metadata_pca, fraction == "Free")))
-## PER CAPITA: Particle-associated
-percap_lm_PC6_part <- summary(lm(log10(fracprod_per_cell_noinf) ~ PC6, 
-           data = filter(metadata_pca, fraction == "Particle")))
+########################################################
+##############  Free: Community-wide 
+lm_summary_free_comm <- metadata_pca_free %>%
+  dplyr::select(one_of(lm_variables), -fracprod_per_cell_noinf) %>%
+  gather(key = independent, value = measurement, -frac_bacprod) %>%
+  mutate(measurement = as.numeric(measurement)) %>%
+  group_by(independent) %>% 
+  do(glance(lm(frac_bacprod ~ measurement, data = .))) %>% 
+  mutate(fraction = "Free", dependent = "Community Production") %>%
+  dplyr::select(fraction, dependent, independent, adj.r.squared, p.value) 
 
-# Put the results all together 
-pca_lm_row1_PC6 <- c("Free", "Per-Liter","PC6",
-          round(comm_lm_PC6_free$adj.r.squared, digits = 3),
-          round(comm_lm_PC6_free$coefficients[2,4], digits = 3))
-pca_lm_row2_PC6 <- c("Particle", "Per-Liter","PC6",
-          round(comm_lm_PC6_part$adj.r.squared, digits = 3),
-          round(comm_lm_PC6_part$coefficients[2,4], digits = 3))
-pca_lm_row3_PC6 <- c("Free", "Per-Capita","PC6",
-          round(percap_lm_PC6_free$adj.r.squared, digits = 3),
-          round(percap_lm_PC6_free$coefficients[2,4], digits = 3))
-pca_lm_row4_PC6 <- c("Particle", "Per-Capita", "PC6",
-          round(percap_lm_PC6_part$adj.r.squared, digits = 3),
-          round(percap_lm_PC6_part$coefficients[2,4], digits = 3))
+##############  Free: Per-capita  
+lm_summary_free_percap <- metadata_pca_free %>%
+  dplyr::select(one_of(lm_variables), -frac_bacprod) %>%
+  filter(!is.na(fracprod_per_cell_noinf)) %>%   # Remove samples that are not NA
+  gather(key = independent, value = measurement, -fracprod_per_cell_noinf) %>%
+  mutate(measurement = as.numeric(measurement)) %>%
+  group_by(independent) %>% 
+  do(glance(lm(log10(fracprod_per_cell_noinf) ~ measurement, data = .))) %>% 
+  mutate(fraction = "Free", dependent = "Per-Capita Production") %>%
+  dplyr::select(fraction, dependent, independent, adj.r.squared, p.value) 
 
-pca_lm_results_df_PC6 <- 
-  rbind(pca_lm_row1_PC6, pca_lm_row2_PC6, pca_lm_row3_PC6, pca_lm_row4_PC6)
 
-colnames(pca_lm_results_df_PC6) <- c("fraction", "Predictor","Prod_measure", "Adjusted_R2", "p-value")
+## Filtered PCA Linear Model Results
+# Put all of the PCA and environmental  linear model results together into one dataframe 
+all_pca_environ_lm_results <- 
+  bind_rows(lm_summary_particle_comm, lm_summary_particle_percap,
+          lm_summary_free_comm, lm_summary_free_percap)
 
-row.names(pca_lm_results_df_PC6) = NULL
+# Output the results for models that have a pvalue of less than 0.05
+datatable(dplyr::filter(all_pca_environ_lm_results, p.value < 0.05),
+       caption = "Single Linear Model results from environmental variables & PCA axes with a p-value less than 0.05.")
 
 
 ################ Per-Capita production correlation with PC2
 ## 1. Run the linear regression 
 lm_PC2_percap_part <- lm(log10(fracprod_per_cell_noinf) ~ PC2, data = dplyr::filter(metadata_pca, fraction == "Particle"))
-
-# Linear models with PC1 and free-living PC2 are NOT SIGNIFICANT
-summary(lm(log10(fracprod_per_cell_noinf) ~ PC2, data = dplyr::filter(metadata_pca, fraction == "Free")))
-summary(lm(log10(fracprod_per_cell_noinf) ~ PC1, data = dplyr::filter(metadata_pca, fraction == "Free")))
-summary(lm(log10(fracprod_per_cell_noinf) ~ PC1, data = dplyr::filter(metadata_pca, fraction == "Particle")))
 
 # 2. Extract the R2 and p-value from the linear model: 
 lm_lab_PC2_percap_part <- paste("atop(R^2 ==", round(summary(lm_PC2_percap_part)$adj.r.squared, digits = 3), ",",
@@ -2324,87 +2133,8 @@ lm_percap_PC12_part <- lm(log10(fracprod_per_cell_noinf) ~ PC1 + PC2, data = fil
 summary(lm_percap_PC12_part)
 ```
 
-**Important!** In a multiple regression, PC1 and PC2 correlate with log~10~(per-capita heterotrophic production)! With an adjusted R^2^ of `r round(summary(lm_percap_PC12_part)$adj.r.squared, digits = 3)` and a p-value of  `r round(glance(lm_percap_PC12_part)$p.value, digits = 4)`
+**Important!** In a multiple regression, PC1 and PC2 correlate with log~10~(per-capita heterotrophic production)!
 
-
-
-## Filtered PCA Linear Model Results
-Below represents the significant LM results from the individual PCA axes: 
-```{r table-with-PC-results, warnings = FALSE}
-# Put all of the PCA and environmental  linear model results together into one dataframe 
-all_pca_lm_results <- dplyr::bind_rows(
-  data.frame(pca_lm_results_df), 
-  data.frame(pca_lm2_results_df), 
-  data.frame(pca_lm_results_df_PC3),
-  data.frame(pca_lm_results_df_PC4), 
-  data.frame(pca_lm_results_df_PC5), 
-  data.frame(pca_lm_results_df_PC6))
-
-# Output the table in fancy form 
-datatable(all_pca_lm_results, options = list(pageLength = 10)) 
-
-# Output the results for models that have a pvalue of less than 0.05
-pander(dplyr::filter(all_pca_lm_results, p.value < 0.05),
-       caption = "Individual Linear Model results from the individual PCA axes with a p-value less than 0.06.")
-```
-
-
-```{r multiple-regression-PCs, fig.width=3.5, fig.height=3.5}
-# Multiple regression with community-wide production
-summary(lm(frac_bacprod ~ PC1 + PC2, data = filter(metadata_pca, fraction == "Particle")))
-
-summary(lm(Temp_C ~ PC2, data = filter(metadata_pca, fraction == "Particle")))
-summary(lm(pH ~ PC2, data = filter(metadata_pca, fraction == "Particle")))
-
-
-ggplot(metadata_pca, aes(PC2, Temp_C)) + 
-  geom_point() +
-  geom_smooth(method = "lm")
-
-ggplot(metadata_pca, aes(PC2, pH)) + 
-  geom_point() +
-  geom_smooth(method = "lm")
-
-# Multiple regression with per-capita production
-summary(lm(log10(fracprod_per_cell_noinf) ~ PC1 + PC2, data = filter(metadata_pca, fraction == "Free")))
-
-
-## Community Bulk Production: No correlation with PC2
-summary(lm(frac_bacprod ~ Inverse_Simpson, data = lasso_data_df_particle)) 
-
-summary(lm(frac_bacprod ~ PC2, data = lasso_data_df_particle)) 
-
-## Per Capita Production --> Correlations for both Simpson and PC2
-summary(lm(log10(fracprod_per_cell_noinf) ~ Inverse_Simpson, data = lasso_data_df_particle)) 
-
-summary(lm(log10(fracprod_per_cell_noinf) ~ PC2, data = lasso_data_df_particle)) 
-
-summary(lm(log10(fracprod_per_cell_noinf) ~ Inverse_Simpson + PC2, data = lasso_data_df_particle)) 
-summary(lm(log10(fracprod_per_cell_noinf) ~ unweighted_div, data = lasso_data_df_particle)) 
-```
-
-
-
-### Environmental Params: as they are
-```{r basic-env-regressions}
-metadata_pca_particle <- metadata_pca %>%
-  filter(fraction == "Particle")
-
-# Temperature
-summary(lm(frac_bacprod ~ Temp_C, data = metadata_pca_particle))
-summary(lm(log10(fracprod_per_cell_noinf) ~ Temp_C, data = metadata_pca_particle))
-
-summary(lm(log10(fracprod_per_cell_noinf) ~ Temp_C, data = metadata_pca_particle))
-
-# pH
-summary(lm(frac_bacprod ~ pH, data = metadata_pca_particle))
-summary(lm(log10(fracprod_per_cell_noinf) ~ pH, data = metadata_pca_particle))
-
-
-# SO4_mgperL
-summary(lm(frac_bacprod ~ SO4_mgperL, data = metadata_pca_particle))
-summary(lm(log10(fracprod_per_cell_noinf) ~ SO4_mgperL, data = metadata_pca_particle))
-```
 
 
 # Bonus Visualizations/Analysis
@@ -2452,7 +2182,7 @@ plot_grid(prod1, prod2, labels = c("A", "B"),
 
 
 ## Total Production 
-```{r total-prod-vs-season-station, eval = TRUE, fig.width = 6, fig.height = 5, include = TRUE}
+```{r total-prod-vs-season-station, eval = TRUE, fig.width = 6, fig.height = 4, include = TRUE}
 ### Total production by station 
 prod_by_station <- ggplot(dplyr::filter(metadata, year == "2015" & fraction %in% c("Free")), 
        aes(x = lakesite, y = tot_bacprod)) + 
