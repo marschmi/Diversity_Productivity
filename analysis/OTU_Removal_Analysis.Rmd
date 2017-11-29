@@ -744,3 +744,8 @@ plot_grid(p1, p2, p3, p4,
           align = "v")
 ```
 
+
+# Session Information 
+```{r session-info}
+devtools::session_info() # This will include session info with all R package version information
+```

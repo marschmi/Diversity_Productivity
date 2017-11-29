@@ -1,7 +1,7 @@
 ---
 title: "Analysis: Microhabitats shape diversity-productivity 
 relationships in freshwater bacterial communities"
-author: "Marian L. Schmidt"
+author: "Marian L. Schmidt, marschmi@umich.edu, @micro_marian"
 date: "November 28th, 2017"
 output:
   html_document:
@@ -25,7 +25,11 @@ pre code, pre, code {
 </style>
 
 
-The code below represents the main analysis to reproduce all figures except Figure S6. To see how to reproduce figure S6 please see the github for this project.
+#### Purpose of this file  
+
+This file has all of the code for the the main analysis to reproduce all figures except Figure S6 in the Schmidt et al. manuscript entitled **"Microhabitats shape diversity-productivity relationships in freshwater bacterial communities"**. To see how to reproduce figure S6 please see the github for this project and go to `analysis/OTU_Removal_Analysis.html`.
+
+##### If you have any questions, please be welcome to email the corresponding author at marschmi@umich.edu
 
 ```{r setup, include=FALSE}
 # For width of code chunks and scroll bar 
@@ -49,9 +53,9 @@ knitr::opts_chunk$set(eval = TRUE,
 
 # Load Libraries
 ```{r load-libraries, message = FALSE, warning = FALSE}
-library(devtools)   # Reproducibility (see end of file)  
-library(phyloseq)   # Easier data manipulation
-library(picante)    # Phylogenetic Tree Analysis   
+library(devtools)   # Reproducibility (see end of file)   
+library(phyloseq)   # Easier data manipulation 
+library(picante)    # Phylogenetic Tree Analysis
 library(tidyverse)  # Pretty plotting and data manipulation
 library(forcats)    # Recoding factors 
 library(cowplot)    # Multiple plotting

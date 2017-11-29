@@ -914,3 +914,121 @@ plot_grid(p1, p2, p3, p4,
 
 <img src="OTU_Removal_Analysis_Figs/figS6-1.png" style="display: block; margin: auto;" />
 
+
+# Session Information 
+
+```r
+devtools::session_info() # This will include session info with all R package version information
+```
+
+```
+##  setting  value                       
+##  version  R version 3.4.2 (2017-09-28)
+##  system   x86_64, darwin15.6.0        
+##  ui       X11                         
+##  language (EN)                        
+##  collate  en_US.UTF-8                 
+##  tz       America/Detroit             
+##  date     2017-11-29                  
+## 
+##  package      * version date       source         
+##  ade4           1.7-8   2017-08-09 CRAN (R 3.4.1) 
+##  ape          * 4.1     2017-02-14 CRAN (R 3.4.0) 
+##  assertthat     0.2.0   2017-04-11 CRAN (R 3.4.0) 
+##  backports      1.1.1   2017-09-25 CRAN (R 3.4.2) 
+##  base         * 3.4.2   2017-10-04 local          
+##  bindr          0.1     2016-11-13 CRAN (R 3.4.0) 
+##  bindrcpp     * 0.2     2017-06-17 CRAN (R 3.4.0) 
+##  Biobase        2.36.2  2017-05-04 cran (@2.36.2) 
+##  BiocGenerics   0.22.1  2017-10-07 Bioconductor   
+##  biomformat     1.4.0   2017-04-25 Bioconductor   
+##  Biostrings     2.44.2  2017-07-21 Bioconductor   
+##  boot         * 1.3-20  2017-08-06 CRAN (R 3.4.2) 
+##  car          * 2.1-5   2017-07-04 CRAN (R 3.4.1) 
+##  cluster        2.0.6   2017-03-10 CRAN (R 3.4.2) 
+##  codetools      0.2-15  2016-10-05 CRAN (R 3.4.2) 
+##  colorspace     1.3-2   2016-12-14 CRAN (R 3.4.0) 
+##  compiler       3.4.2   2017-10-04 local          
+##  cowplot      * 0.8.0   2017-07-30 CRAN (R 3.4.1) 
+##  data.table     1.10.4  2017-02-01 CRAN (R 3.4.0) 
+##  datasets     * 3.4.2   2017-10-04 local          
+##  devtools     * 1.13.4  2017-11-09 cran (@1.13.4) 
+##  digest         0.6.12  2017-01-27 CRAN (R 3.4.0) 
+##  dplyr        * 0.7.4   2017-09-28 CRAN (R 3.4.2) 
+##  DT           * 0.2     2016-08-09 CRAN (R 3.4.0) 
+##  evaluate       0.10.1  2017-06-24 CRAN (R 3.4.1) 
+##  forcats      * 0.2.0   2017-01-23 CRAN (R 3.4.0) 
+##  foreach        1.4.3   2015-10-13 CRAN (R 3.4.0) 
+##  ggplot2      * 2.2.1   2016-12-30 CRAN (R 3.4.0) 
+##  glue           1.1.1   2017-06-21 cran (@1.1.1)  
+##  graphics     * 3.4.2   2017-10-04 local          
+##  grDevices    * 3.4.2   2017-10-04 local          
+##  grid           3.4.2   2017-10-04 local          
+##  gtable         0.2.0   2016-02-26 CRAN (R 3.4.0) 
+##  hms            0.3     2016-11-22 CRAN (R 3.4.0) 
+##  htmltools      0.3.6   2017-04-28 CRAN (R 3.4.0) 
+##  htmlwidgets    0.9     2017-07-10 CRAN (R 3.4.1) 
+##  httr           1.3.1   2017-08-20 CRAN (R 3.4.1) 
+##  igraph         1.1.2   2017-07-21 CRAN (R 3.4.1) 
+##  IRanges        2.10.5  2017-10-08 Bioconductor   
+##  iterators      1.0.8   2015-10-13 CRAN (R 3.4.0) 
+##  jsonlite       1.5     2017-06-01 CRAN (R 3.4.0) 
+##  kableExtra   * 0.6.1   2017-11-01 CRAN (R 3.4.2) 
+##  knitr          1.17    2017-08-10 CRAN (R 3.4.1) 
+##  lattice      * 0.20-35 2017-03-25 CRAN (R 3.4.2) 
+##  lazyeval       0.2.0   2016-06-12 CRAN (R 3.4.0) 
+##  lme4           1.1-14  2017-09-27 CRAN (R 3.4.2) 
+##  magrittr       1.5     2014-11-22 CRAN (R 3.4.0) 
+##  MASS         * 7.3-47  2017-02-26 CRAN (R 3.4.2) 
+##  Matrix         1.2-11  2017-08-21 CRAN (R 3.4.2) 
+##  MatrixModels   0.4-1   2015-08-22 CRAN (R 3.4.0) 
+##  memoise        1.1.0   2017-04-21 CRAN (R 3.4.0) 
+##  methods      * 3.4.2   2017-10-04 local          
+##  mgcv           1.8-22  2017-09-19 CRAN (R 3.4.2) 
+##  minqa          1.2.4   2014-10-09 CRAN (R 3.4.0) 
+##  multtest       2.32.0  2017-04-25 Bioconductor   
+##  munsell        0.4.3   2016-02-13 CRAN (R 3.4.0) 
+##  nlme         * 3.1-131 2017-02-06 CRAN (R 3.4.2) 
+##  nloptr         1.0.4   2014-08-04 CRAN (R 3.4.0) 
+##  nnet           7.3-12  2016-02-02 CRAN (R 3.4.2) 
+##  parallel       3.4.2   2017-10-04 local          
+##  pbkrtest       0.4-7   2017-03-15 CRAN (R 3.4.0) 
+##  permute      * 0.9-4   2016-09-09 CRAN (R 3.4.0) 
+##  phyloseq     * 1.20.0  2017-04-25 Bioconductor   
+##  picante      * 1.6-2   2014-03-05 CRAN (R 3.4.0) 
+##  pkgconfig      2.0.1   2017-03-21 CRAN (R 3.4.0) 
+##  plyr           1.8.4   2016-06-08 CRAN (R 3.4.0) 
+##  purrr          0.2.4   2017-10-18 CRAN (R 3.4.2) 
+##  quantreg       5.33    2017-04-18 CRAN (R 3.4.0) 
+##  R6             2.2.2   2017-06-17 CRAN (R 3.4.0) 
+##  Rcpp           0.12.14 2017-11-23 cran (@0.12.14)
+##  readr          1.1.1   2017-05-16 CRAN (R 3.4.0) 
+##  reshape2       1.4.2   2016-10-22 CRAN (R 3.4.0) 
+##  rhdf5          2.20.0  2017-04-25 Bioconductor   
+##  rlang          0.1.2   2017-08-09 cran (@0.1.2)  
+##  rmarkdown      1.8     2017-11-17 cran (@1.8)    
+##  rprojroot      1.2     2017-01-16 CRAN (R 3.4.0) 
+##  rvest          0.3.2   2016-06-17 CRAN (R 3.4.0) 
+##  S4Vectors      0.14.7  2017-10-08 Bioconductor   
+##  sandwich     * 2.4-0   2017-07-26 CRAN (R 3.4.1) 
+##  scales         0.5.0   2017-08-24 CRAN (R 3.4.1) 
+##  SparseM        1.77    2017-04-23 CRAN (R 3.4.0) 
+##  splines        3.4.2   2017-10-04 local          
+##  stats        * 3.4.2   2017-10-04 local          
+##  stats4         3.4.2   2017-10-04 local          
+##  stringi        1.1.5   2017-04-07 CRAN (R 3.4.0) 
+##  stringr        1.2.0   2017-02-18 CRAN (R 3.4.0) 
+##  survival       2.41-3  2017-04-04 CRAN (R 3.4.2) 
+##  tibble         1.3.4   2017-08-22 CRAN (R 3.4.1) 
+##  tidyr        * 0.7.2   2017-10-16 CRAN (R 3.4.2) 
+##  tools          3.4.2   2017-10-04 local          
+##  utils        * 3.4.2   2017-10-04 local          
+##  vegan        * 2.4-4   2017-08-24 CRAN (R 3.4.1) 
+##  viridisLite    0.2.0   2017-03-24 CRAN (R 3.4.0) 
+##  withr          2.1.0   2017-11-01 cran (@2.1.0)  
+##  xml2           1.1.1   2017-01-24 CRAN (R 3.4.0) 
+##  XVector        0.16.0  2017-04-25 Bioconductor   
+##  yaml           2.1.14  2016-11-12 CRAN (R 3.4.0) 
+##  zlibbioc       1.16.0  2017-10-05 Bioconductor   
+##  zoo            1.8-0   2017-04-12 CRAN (R 3.4.0)
+```
