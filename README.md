@@ -4,9 +4,10 @@
 
 ###  **Authors:** Marian L. Schmidt, Bopaiah A. Biddanda, Anthony D. Weinke, Edna Chiang, Fallon Januska, Ruben Props, & Vincent J. Denef
 
-### **Link to the rendered code file for production of all figures and statistical analyses: ADDME**
 
-Please also see 
+> [Link to the Main Analysis](Final_Analysis.html)
+
+> [Link to the Supplemental Analysis](analysis/OTU_Removal_Analysis.html)
 
 #### Submitted to:  ADDME
 

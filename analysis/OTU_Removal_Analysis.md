@@ -1,6 +1,21 @@
-# OTU Removal Analysis
-Marian L. Schmidt, marschmi@umich.edu, @micro_marian  
-November 1st, 2017  
+---
+title: "OTU Removal Analysis"
+author: "Marian L. Schmidt, marschmi@umich.edu, @micro_marian"
+date: "November 29th, 2017"
+output:
+  html_document:
+    code_folding: show
+    highlight: default
+    keep_md: yes
+    theme: journal
+    toc: yes
+    toc_float:
+      collapsed: no
+      smooth_scroll: yes
+      toc_depth: 3
+editor_options: 
+  chunk_output_type: console
+---
 <style>
 pre code, pre, code {
   white-space: pre !important;
@@ -30,13 +45,14 @@ library(tidyr)
 library(dplyr)
 library(cowplot)
 library(forcats)
-library(picante) # Will also include ape and vegan 
-library(car) # For residual analysis
-library(sandwich) # for vcovHC function in post-hoc test
-library(MASS) # For studres in plot_residuals function
-library(boot) # For cross validation
-source("Muskegon_functions.R")
-source("set_colors.R")
+library(picante)    # Will also include ape and vegan 
+library(car)        # For residual analysis
+library(sandwich)   # for vcovHC function in post-hoc test
+library(MASS)       # For studres in plot_residuals function
+library(boot)       # For cross validation
+library(DT)         # Pretty HTML Table Output
+source("../code/Muskegon_functions.R")
+source("../code/set_colors.R")
 ```
 
 # Prepare the data 
@@ -497,37 +513,45 @@ ggplot(dplyr::filter(all_divs, measure == "Richness"),
 # Linear Model output
 richness_lm_results <- lm_fraction_output(dataframe = dplyr::filter(all_divs,  measure == "Richness"))
 
-richness_lm_results %>%
+sig_rich_lms_df <- richness_lm_results %>%
   bind_rows() %>%
   mutate(diversity_metric = "Richness") %>%
-  datatable(options = list(pageLength = 40))
+  filter(pval < 0.05)
+
+# Display significant models in a dataframe
+datatable(sig_rich_lms_df, options = list(pageLength = 40))
 ```
 
-```
-## Error in datatable(., options = list(pageLength = 40)): could not find function "datatable"
-```
+<!--html_preserve--><div id="htmlwidget-7c2be68d9115df618b5b" style="width:100%;height:auto;" class="datatables html-widget"></div>
+<script type="application/json" data-for="htmlwidget-7c2be68d9115df618b5b">{"x":{"filter":"none","data":[["1","2","3","4","5","6","7","8","9"],["1-tons","5-tons","10-tons","20-tons","1-tons","5-tons","10-tons","150-tons","300-tons"],[0.57,0.55,0.5,0.35,0.58,0.54,0.45,0.35,0.42],[0.0027,0.0033,0.0058,0.0252,0.0039,0.0058,0.0139,0.0324,0.0189],["Particle","Particle","Particle","Particle","Particle","Particle","Particle","Particle","Particle"],["Community-Wide Production","Community-Wide Production","Community-Wide Production","Community-Wide Production","Per-Capita Production","Per-Capita Production","Per-Capita Production","Per-Capita Production","Per-Capita Production"],["Richness","Richness","Richness","Richness","Richness","Richness","Richness","Richness","Richness"]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th> <\/th>\n      <th>Removed<\/th>\n      <th>Adj_R2<\/th>\n      <th>pval<\/th>\n      <th>fraction<\/th>\n      <th>test<\/th>\n      <th>diversity_metric<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"pageLength":40,"columnDefs":[{"className":"dt-right","targets":[2,3]},{"orderable":false,"targets":0}],"order":[],"autoWidth":false,"orderClasses":false,"lengthMenu":[10,25,40,50,100]}},"evals":[],"jsHooks":[]}</script><!--/html_preserve-->
 
 ```r
 ### Community-Wide Production vs Richness
-sig_rich_lms <- c("1-tons", "5-tons", "10-tons", "20-tons")
+sig_rich_lms_comm <- sig_rich_lms_df %>%
+  filter(test == "Community-Wide Production" & fraction == "Particle") %>%
+  dplyr::select(Removed) %>%
+  .$Removed
 
 ggplot(dplyr::filter(all_divs, measure == "Richness"), 
        aes(y = frac_bacprod, x = mean, color = Removed, fill = Removed)) +
   geom_point(size = 3) + xlab("Richness") +
   ylab("Community-Wide Production") +
   geom_smooth(method = "lm", data = filter(all_divs, 
-                                           measure == "Richness" & fraction == "Particle" & Removed %in% sig_rich_lms)) + 
+                                           measure == "Richness" & fraction == "Particle" & Removed %in% sig_rich_lms_comm)) + 
   scale_color_manual(values = tons_colors) +scale_fill_manual(values = tons_colors) +  
   facet_grid(fraction~Removed, scales = "free") +
   theme(legend.position = "bottom", legend.title = element_blank(),
         axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
 ```
 
-<img src="OTU_Removal_Analysis_Figs/richness-plots-1.png" style="display: block; margin: auto;" />
+<img src="OTU_Removal_Analysis_Figs/richness-plots-2.png" style="display: block; margin: auto;" />
 
 ```r
 ### Per-capita production vs Richness
-sig_rich_lms_percap <- c("1-tons", "5-tons", "10-tons")
+sig_rich_lms_percap <- sig_rich_lms_df %>%
+  filter(test == "Per-Capita Production") %>%
+  dplyr::select(Removed) %>%
+  .$Removed
 
 ggplot(dplyr::filter(all_divs, measure == "Richness"), 
        aes(y = log10(fracprod_per_cell_noinf), x = mean, color = Removed, fill = Removed)) +
@@ -541,7 +565,7 @@ ggplot(dplyr::filter(all_divs, measure == "Richness"),
         axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
 ```
 
-<img src="OTU_Removal_Analysis_Figs/richness-plots-2.png" style="display: block; margin: auto;" />
+<img src="OTU_Removal_Analysis_Figs/richness-plots-3.png" style="display: block; margin: auto;" />
 
 
 # Shannon Entropy
@@ -583,24 +607,33 @@ ggplot(dplyr::filter(all_divs, measure == "Shannon_Entropy"),
 # Linear Model output
 shannon_lm_results <- lm_fraction_output(dataframe = dplyr::filter(all_divs,  measure == "Shannon_Entropy"))
 
-shannon_lm_results %>%
+sig_shannon_lms_df <- shannon_lm_results %>%
   bind_rows() %>%
   mutate(diversity_metric = "Shannon_Entropy") %>%
-  datatable(options = list(pageLength = 40))
+  filter(pval < 0.05)
+
+# Display significant models in a table
+datatable(sig_shannon_lms_df, options = list(pageLength = 40))
 ```
 
-```
-## Error in datatable(., options = list(pageLength = 40)): could not find function "datatable"
-```
+<!--html_preserve--><div id="htmlwidget-51ee7eaf2f3be5c35597" style="width:100%;height:auto;" class="datatables html-widget"></div>
+<script type="application/json" data-for="htmlwidget-51ee7eaf2f3be5c35597">{"x":{"filter":"none","data":[["1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20"],["1-tons","5-tons","10-tons","20-tons","30-tons","60-tons","90-tons","150-tons","225-tons","300-tons","1-tons","5-tons","10-tons","20-tons","30-tons","60-tons","90-tons","150-tons","225-tons","300-tons"],[0.52,0.52,0.53,0.53,0.53,0.53,0.51,0.47,0.45,0.42,0.55,0.55,0.54,0.54,0.53,0.52,0.5,0.48,0.46,0.43],[0.0047,0.0046,0.0046,0.0042,0.0046,0.0046,0.0056,0.0079,0.0102,0.0131,0.0057,0.0057,0.0061,0.006,0.0068,0.0071,0.0088,0.0111,0.0131,0.0162],["Particle","Particle","Particle","Particle","Particle","Particle","Particle","Particle","Particle","Particle","Particle","Particle","Particle","Particle","Particle","Particle","Particle","Particle","Particle","Particle"],["Community-Wide Production","Community-Wide Production","Community-Wide Production","Community-Wide Production","Community-Wide Production","Community-Wide Production","Community-Wide Production","Community-Wide Production","Community-Wide Production","Community-Wide Production","Per-Capita Production","Per-Capita Production","Per-Capita Production","Per-Capita Production","Per-Capita Production","Per-Capita Production","Per-Capita Production","Per-Capita Production","Per-Capita Production","Per-Capita Production"],["Shannon_Entropy","Shannon_Entropy","Shannon_Entropy","Shannon_Entropy","Shannon_Entropy","Shannon_Entropy","Shannon_Entropy","Shannon_Entropy","Shannon_Entropy","Shannon_Entropy","Shannon_Entropy","Shannon_Entropy","Shannon_Entropy","Shannon_Entropy","Shannon_Entropy","Shannon_Entropy","Shannon_Entropy","Shannon_Entropy","Shannon_Entropy","Shannon_Entropy"]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th> <\/th>\n      <th>Removed<\/th>\n      <th>Adj_R2<\/th>\n      <th>pval<\/th>\n      <th>fraction<\/th>\n      <th>test<\/th>\n      <th>diversity_metric<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"pageLength":40,"columnDefs":[{"className":"dt-right","targets":[2,3]},{"orderable":false,"targets":0}],"order":[],"autoWidth":false,"orderClasses":false,"lengthMenu":[10,25,40,50,100]}},"evals":[],"jsHooks":[]}</script><!--/html_preserve-->
 
 ```r
-### Community-Wide production vs Richness
+### Community-Wide Production vs Shannon Entropy
+sig_shannon_lms_comm <- sig_shannon_lms_df %>%
+  filter(test == "Community-Wide Production" & fraction == "Particle") %>%
+  dplyr::select(Removed) %>%
+  .$Removed
+
+### Community-Wide production vs Shannon Entropy
 ggplot(dplyr::filter(all_divs, measure == "Shannon_Entropy"), 
        aes(y = frac_bacprod, x = mean, color = Removed, fill = Removed)) +
   geom_point(size = 3) + 
-  xlab("Shannon_Entropy") +
+  xlab("Shannon Entropy") +
   ylab("Bacterial Production by Fraction") +
-  geom_smooth(method = "lm", data = filter(all_divs, measure == "Shannon_Entropy" & fraction == "Particle" )) + 
+  geom_smooth(method = "lm", 
+              data = filter(all_divs, measure == "Shannon_Entropy" & fraction == "Particle" & Removed %in% sig_shannon_lms_comm)) + 
   scale_color_manual(values = tons_colors) +
   scale_fill_manual(values = tons_colors) +  
   facet_grid(fraction~Removed, scales = "free") +
@@ -608,22 +641,29 @@ ggplot(dplyr::filter(all_divs, measure == "Shannon_Entropy"),
         axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
 ```
 
-<img src="OTU_Removal_Analysis_Figs/shannon-plots-1.png" style="display: block; margin: auto;" />
+<img src="OTU_Removal_Analysis_Figs/shannon-plots-2.png" style="display: block; margin: auto;" />
 
 ```r
+### Per-Capita Production vs Shannon Entropy
+sig_shannon_lms_percap <- sig_shannon_lms_df %>%
+  filter(test == "Per-Capita Production" & fraction == "Particle") %>%
+  dplyr::select(Removed) %>%
+  .$Removed
+
 ### Per-capita production vs Shannon Entropy
 ggplot(dplyr::filter(all_divs, measure == "Shannon_Entropy"), 
        aes(y = log10(fracprod_per_cell_noinf), x = mean, color = Removed, fill = Removed)) +
-  geom_point(size = 3) + xlab("Shannon_Entropy") +
+  geom_point(size = 3) + xlab("Shannon Entropy") +
   ylab("log10(Per-Capita Production)") +
-  geom_smooth(method = "lm", data = filter(all_divs, measure == "Shannon_Entropy" & fraction == "Particle")) + 
+  geom_smooth(method = "lm", 
+              data = filter(all_divs, measure == "Shannon_Entropy" & fraction == "Particle" & Removed %in% sig_shannon_lms_percap)) + 
   scale_color_manual(values = tons_colors) + scale_fill_manual(values = tons_colors) +  
   facet_grid(fraction~Removed, scales = "free") +
   theme(legend.position = "bottom", legend.title = element_blank(),
         axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
 ```
 
-<img src="OTU_Removal_Analysis_Figs/shannon-plots-2.png" style="display: block; margin: auto;" />
+<img src="OTU_Removal_Analysis_Figs/shannon-plots-3.png" style="display: block; margin: auto;" />
 
 
 # Inverse Simpson
@@ -664,23 +704,32 @@ ggplot(dplyr::filter(all_divs, measure == "Inverse_Simpson"),
 # Linear Model output
 invsimps_lm_results <- lm_fraction_output(dataframe = dplyr::filter(all_divs,  measure == "Inverse_Simpson"))
 
-invsimps_lm_results %>%
+sig_invsimps_lms_df <- invsimps_lm_results %>%
   bind_rows() %>%
   mutate(diversity_metric = "Inverse_Simpson") %>%
-  datatable(options = list(pageLength = 40))
+  filter(pval < 0.05)
+
+# Display significant models in a dataframe
+datatable(sig_invsimps_lms_df, options = list(pageLength = 40))
 ```
 
-```
-## Error in datatable(., options = list(pageLength = 40)): could not find function "datatable"
-```
+<!--html_preserve--><div id="htmlwidget-267ef725fa9caf256836" style="width:100%;height:auto;" class="datatables html-widget"></div>
+<script type="application/json" data-for="htmlwidget-267ef725fa9caf256836">{"x":{"filter":"none","data":[["1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20"],["1-tons","5-tons","10-tons","20-tons","30-tons","60-tons","90-tons","150-tons","225-tons","300-tons","1-tons","5-tons","10-tons","20-tons","30-tons","60-tons","90-tons","150-tons","225-tons","300-tons"],[0.69,0.7,0.7,0.7,0.69,0.67,0.63,0.6,0.56,0.54,0.69,0.69,0.68,0.67,0.65,0.62,0.58,0.55,0.51,0.49],[0.0005,0.0004,0.0004,0.0004,0.0005,0.0007,0.0012,0.002,0.003,0.0041,0.001,0.0009,0.0011,0.0013,0.0017,0.0024,0.0038,0.0057,0.0079,0.0101],["Particle","Particle","Particle","Particle","Particle","Particle","Particle","Particle","Particle","Particle","Particle","Particle","Particle","Particle","Particle","Particle","Particle","Particle","Particle","Particle"],["Community-Wide Production","Community-Wide Production","Community-Wide Production","Community-Wide Production","Community-Wide Production","Community-Wide Production","Community-Wide Production","Community-Wide Production","Community-Wide Production","Community-Wide Production","Per-Capita Production","Per-Capita Production","Per-Capita Production","Per-Capita Production","Per-Capita Production","Per-Capita Production","Per-Capita Production","Per-Capita Production","Per-Capita Production","Per-Capita Production"],["Inverse_Simpson","Inverse_Simpson","Inverse_Simpson","Inverse_Simpson","Inverse_Simpson","Inverse_Simpson","Inverse_Simpson","Inverse_Simpson","Inverse_Simpson","Inverse_Simpson","Inverse_Simpson","Inverse_Simpson","Inverse_Simpson","Inverse_Simpson","Inverse_Simpson","Inverse_Simpson","Inverse_Simpson","Inverse_Simpson","Inverse_Simpson","Inverse_Simpson"]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th> <\/th>\n      <th>Removed<\/th>\n      <th>Adj_R2<\/th>\n      <th>pval<\/th>\n      <th>fraction<\/th>\n      <th>test<\/th>\n      <th>diversity_metric<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"pageLength":40,"columnDefs":[{"className":"dt-right","targets":[2,3]},{"orderable":false,"targets":0}],"order":[],"autoWidth":false,"orderClasses":false,"lengthMenu":[10,25,40,50,100]}},"evals":[],"jsHooks":[]}</script><!--/html_preserve-->
 
 ```r
+### Community-Wide Production vs Inverse Simpson
+sig_invsimps_lms_comm <- sig_invsimps_lms_df %>%
+  filter(test == "Community-Wide Production" & fraction == "Particle") %>%
+  dplyr::select(Removed) %>%
+  .$Removed
+
 ### Community Wide production vs Inverse Simpson
 ggplot(dplyr::filter(all_divs, measure == "Inverse_Simpson"), 
        aes(y = frac_bacprod, x = mean, color = Removed, fill = Removed)) +
-  geom_point(size = 3) +  xlab("Inverse_Simpson") +
-  ylab("Bacterial Production by Fraction") +
-  geom_smooth(method = "lm", data = filter(all_divs, measure == "Inverse_Simpson" & fraction == "Particle" )) + 
+  geom_point(size = 3) +  xlab("Inverse Simpson") +
+  ylab("Community-Wide Production") +
+  geom_smooth(method = "lm", 
+              data = filter(all_divs, measure == "Inverse_Simpson" & fraction == "Particle" & Removed %in% sig_invsimps_lms_comm)) + 
   scale_color_manual(values = tons_colors) +
   scale_fill_manual(values = tons_colors) +  
   facet_grid(fraction~Removed, scales = "free") +
@@ -688,22 +737,29 @@ ggplot(dplyr::filter(all_divs, measure == "Inverse_Simpson"),
         axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
 ```
 
-<img src="OTU_Removal_Analysis_Figs/inverse-simpson-plots-1.png" style="display: block; margin: auto;" />
+<img src="OTU_Removal_Analysis_Figs/inverse-simpson-plots-2.png" style="display: block; margin: auto;" />
 
 ```r
+### Per-Capita Production vs Inverse Simpson
+sig_invsimps_lms_percap <- sig_invsimps_lms_df %>%
+  filter(test == "Per-Capita Production" & fraction == "Particle") %>%
+  dplyr::select(Removed) %>%
+  .$Removed
+
 ### Per-capita production vs Inverse Simpson
 ggplot(dplyr::filter(all_divs, measure == "Inverse_Simpson"), 
        aes(y = log10(fracprod_per_cell_noinf), x = mean, color = Removed, fill = Removed)) +
-  geom_point(size = 3) + xlab("Inverse_Simpson") +
+  geom_point(size = 3) + xlab("Inverse Simpson") +
   ylab("log10(Per-Capita Production)") +
-  geom_smooth(method = "lm", data = filter(all_divs, measure == "Inverse_Simpson" & fraction == "Particle")) + 
+  geom_smooth(method = "lm", 
+              data = filter(all_divs, measure == "Inverse_Simpson" & fraction == "Particle" & Removed %in% sig_invsimps_lms_percap)) + 
   scale_color_manual(values = tons_colors) + scale_fill_manual(values = tons_colors) +  
   facet_grid(fraction~Removed, scales = "free") +
   theme(legend.position = "bottom", legend.title = element_blank(),
         axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
 ```
 
-<img src="OTU_Removal_Analysis_Figs/inverse-simpson-plots-2.png" style="display: block; margin: auto;" />
+<img src="OTU_Removal_Analysis_Figs/inverse-simpson-plots-3.png" style="display: block; margin: auto;" />
 
 
 # Simpson's Evenness
@@ -742,26 +798,31 @@ ggplot(dplyr::filter(all_divs, measure == "Simpsons_Evenness"),
 
 ```r
 # Linear Model output
-simpseven_lm_results <- lm_fraction_output(dataframe = dplyr::filter(all_divs,  measure == "Simpsons_Evenness")) %>%
+sig_simpseven_lms_df <- lm_fraction_output(dataframe = dplyr::filter(all_divs,  measure == "Simpsons_Evenness")) %>%
   bind_rows() %>%
-  mutate(diversity_metric = "Simpsons_Evenness")
+  mutate(diversity_metric = "Simpsons_Evenness") %>%
+  filter(pval < 0.05)
 
-simpseven_lm_results %>%
-  datatable(options = list(pageLength = 40))
+# Display significant models in a dataframe
+datatable(sig_simpseven_lms_df, options = list(pageLength = 40))
 ```
 
-```
-## Error in datatable(., options = list(pageLength = 40)): could not find function "datatable"
-```
+<!--html_preserve--><div id="htmlwidget-6c5f0d0c2ce99d1d8e4d" style="width:100%;height:auto;" class="datatables html-widget"></div>
+<script type="application/json" data-for="htmlwidget-6c5f0d0c2ce99d1d8e4d">{"x":{"filter":"none","data":[["1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20"],["1-tons","5-tons","10-tons","20-tons","30-tons","60-tons","90-tons","150-tons","225-tons","300-tons","1-tons","5-tons","10-tons","20-tons","30-tons","60-tons","90-tons","150-tons","225-tons","300-tons"],[0.46,0.53,0.56,0.6,0.62,0.62,0.61,0.6,0.58,0.56,0.49,0.54,0.58,0.62,0.64,0.64,0.63,0.61,0.59,0.56],[0.0091,0.0043,0.0031,0.002,0.0014,0.0015,0.0016,0.0019,0.0025,0.0032,0.0102,0.0057,0.004,0.0026,0.0019,0.0018,0.002,0.0027,0.0035,0.0048],["Particle","Particle","Particle","Particle","Particle","Particle","Particle","Particle","Particle","Particle","Particle","Particle","Particle","Particle","Particle","Particle","Particle","Particle","Particle","Particle"],["Community-Wide Production","Community-Wide Production","Community-Wide Production","Community-Wide Production","Community-Wide Production","Community-Wide Production","Community-Wide Production","Community-Wide Production","Community-Wide Production","Community-Wide Production","Per-Capita Production","Per-Capita Production","Per-Capita Production","Per-Capita Production","Per-Capita Production","Per-Capita Production","Per-Capita Production","Per-Capita Production","Per-Capita Production","Per-Capita Production"],["Simpsons_Evenness","Simpsons_Evenness","Simpsons_Evenness","Simpsons_Evenness","Simpsons_Evenness","Simpsons_Evenness","Simpsons_Evenness","Simpsons_Evenness","Simpsons_Evenness","Simpsons_Evenness","Simpsons_Evenness","Simpsons_Evenness","Simpsons_Evenness","Simpsons_Evenness","Simpsons_Evenness","Simpsons_Evenness","Simpsons_Evenness","Simpsons_Evenness","Simpsons_Evenness","Simpsons_Evenness"]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th> <\/th>\n      <th>Removed<\/th>\n      <th>Adj_R2<\/th>\n      <th>pval<\/th>\n      <th>fraction<\/th>\n      <th>test<\/th>\n      <th>diversity_metric<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"pageLength":40,"columnDefs":[{"className":"dt-right","targets":[2,3]},{"orderable":false,"targets":0}],"order":[],"autoWidth":false,"orderClasses":false,"lengthMenu":[10,25,40,50,100]}},"evals":[],"jsHooks":[]}</script><!--/html_preserve-->
 
 ```r
-### Community Wide Prodcution vs Simpson's Evennes
+### Community-Wide Production vs Simpson's Evenness
+sig_simpseven_lms_comm <- sig_simpseven_lms_df %>%
+  filter(test == "Community-Wide Production" & fraction == "Particle") %>%
+  dplyr::select(Removed) %>%
+  .$Removed
+
+### Community Wide Prodcution vs Simpson's Evenness
 ggplot(dplyr::filter(all_divs, measure == "Simpsons_Evenness"), 
        aes(y = frac_bacprod, x = mean, color = Removed, fill = Removed)) +
-  geom_point(size = 3) + 
-  xlab("Simpsons_Evenness") +
-  ylab("Bacterial Production by Fraction") +
-  geom_smooth(method = "lm", data = filter(all_divs, measure == "Simpsons_Evenness" & fraction == "Particle" )) + 
+  geom_point(size = 3) + xlab("Simpsons Evenness") + ylab("Bacterial Production by Fraction") +
+  geom_smooth(method = "lm", 
+              data = filter(all_divs, measure == "Simpsons_Evenness" & fraction == "Particle" & Removed %in% sig_invsimps_lms_comm)) + 
   scale_color_manual(values = tons_colors) +
   scale_fill_manual(values = tons_colors) +  
   facet_grid(fraction~Removed, scales = "free") +
@@ -769,19 +830,87 @@ ggplot(dplyr::filter(all_divs, measure == "Simpsons_Evenness"),
         axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
 ```
 
-<img src="OTU_Removal_Analysis_Figs/simps-evenness-plots-1.png" style="display: block; margin: auto;" />
+<img src="OTU_Removal_Analysis_Figs/simps-evenness-plots-2.png" style="display: block; margin: auto;" />
 
 ```r
-### Per-capita production vs Inverse Simpson
+### Per-Capita Production vs Simpson's Evenness
+sig_simpseven_lms_percap <- sig_simpseven_lms_df %>%
+  filter(test == "Per-Capita Production" & fraction == "Particle") %>%
+  dplyr::select(Removed) %>%
+  .$Removed
+
+### Per-capita production vs Simpson's Evenness
 ggplot(dplyr::filter(all_divs, measure == "Simpsons_Evenness"), 
        aes(y = log10(fracprod_per_cell_noinf), x = mean, color = Removed, fill = Removed)) +
-  geom_point(size = 3) + xlab("Simpsons_Evenness") +
+  geom_point(size = 3) + xlab("Simpsons Evenness") +
   ylab("log10(Per-Capita Production)") +
-  geom_smooth(method = "lm", data = filter(all_divs, measure == "Simpsons_Evenness" & fraction == "Particle")) + 
+  geom_smooth(method = "lm", 
+              data = filter(all_divs, measure == "Simpsons_Evenness" & fraction == "Particle" & Removed %in% sig_simpseven_lms_percap)) + 
   scale_color_manual(values = tons_colors) + scale_fill_manual(values = tons_colors) +  
   facet_grid(fraction~Removed, scales = "free") +
   theme(legend.position = "bottom", legend.title = element_blank(),
         axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
 ```
 
-<img src="OTU_Removal_Analysis_Figs/simps-evenness-plots-2.png" style="display: block; margin: auto;" />
+<img src="OTU_Removal_Analysis_Figs/simps-evenness-plots-3.png" style="display: block; margin: auto;" />
+
+
+# Figure S6
+
+```r
+p1 <- ggplot(dplyr::filter(all_divs, measure == "Richness"  & fraction == "Particle"), 
+       aes(y = frac_bacprod, x = mean, color = Removed, fill = Removed)) +
+  geom_point(size = 3) + xlab("Richness") +
+  ylab("Community-Wide \nProduction") +
+  geom_smooth(method = "lm", data = filter(all_divs, 
+                                           measure == "Richness" & fraction == "Particle" & Removed %in% sig_rich_lms_comm)) + 
+  scale_color_manual(values = tons_colors) +scale_fill_manual(values = tons_colors) +  
+  facet_grid(~Removed, scales = "free") +
+  theme(legend.position = "none", legend.title = element_blank(),
+        axis.text.x = element_text(angle = 60, hjust = 1, vjust = 1, size = 10),
+        axis.title.x = element_blank())
+
+p2 <- ggplot(dplyr::filter(all_divs, measure == "Richness" & fraction == "Particle"), 
+       aes(y = log10(fracprod_per_cell_noinf), x = mean, color = Removed, fill = Removed)) +
+  geom_point(size = 3) + xlab("Richness") +
+  ylab("log10(Per-Capita \nProduction)") +
+  geom_smooth(method = "lm", data = filter(all_divs, 
+                                           measure == "Richness" & fraction == "Particle" & Removed %in% sig_rich_lms_percap)) + 
+  scale_color_manual(values = tons_colors) + scale_fill_manual(values = tons_colors) +  
+  facet_grid(~Removed, scales = "free") +
+  theme(legend.position = "none", legend.title = element_blank(),
+        axis.text.x = element_text(angle = 60, hjust = 1, vjust = 1, size = 10))
+
+p3 <- ggplot(dplyr::filter(all_divs, measure == "Inverse_Simpson" & fraction == "Particle"), 
+       aes(y = frac_bacprod, x = mean, color = Removed, fill = Removed)) +
+  geom_point(size = 3) +  xlab("Inverse Simpson") +
+  ylab("Community-Wide \nProduction") +
+  geom_smooth(method = "lm", 
+              data = filter(all_divs, measure == "Inverse_Simpson" & fraction == "Particle" & Removed %in% sig_invsimps_lms_comm)) + 
+  scale_color_manual(values = tons_colors) +
+  scale_fill_manual(values = tons_colors) +  
+  facet_grid(~Removed, scales = "free") +
+  theme(legend.position = "none", legend.title = element_blank(),
+        axis.text.x = element_text(angle = 60, hjust = 1, vjust = 1, size = 10),
+        axis.title.x = element_blank())
+
+p4 <- ggplot(dplyr::filter(all_divs, measure == "Inverse_Simpson"  & fraction == "Particle"), 
+       aes(y = log10(fracprod_per_cell_noinf), x = mean, color = Removed, fill = Removed)) +
+  geom_point(size = 3) + xlab("Inverse Simpson") +
+  ylab("log10(Per-Capita \nProduction)") +
+  geom_smooth(method = "lm", 
+              data = filter(all_divs, measure == "Inverse_Simpson" & fraction == "Particle" & Removed %in% sig_invsimps_lms_percap)) + 
+  scale_color_manual(values = tons_colors) + scale_fill_manual(values = tons_colors) +  
+  facet_grid(~Removed, scales = "free") +
+  theme(legend.position = "bottom", legend.title = element_blank(),
+        axis.text.x = element_text(angle = 60, hjust = 1, vjust = 1, size = 10))
+
+plot_grid(p1, p2, p3, p4, 
+          nrow = 4, ncol = 1,
+          rel_heights = c(0.9, 1, 0.9, 1.2),
+          labels = c("A", "B", "C", "D"),
+          align = "v")
+```
+
+<img src="OTU_Removal_Analysis_Figs/figS6-1.png" style="display: block; margin: auto;" />
+

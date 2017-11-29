@@ -1,13 +1,13 @@
 ---
 title: "OTU Removal Analysis"
 author: "Marian L. Schmidt, marschmi@umich.edu, @micro_marian"
-date: "November 1st, 2017"
+date: "November 29th, 2017"
 output:
   html_document:
     code_folding: show
-    highlight: haddock
+    highlight: default
     keep_md: yes
-    theme: united
+    theme: journal
     toc: yes
     toc_float:
       collapsed: no
@@ -62,13 +62,14 @@ library(tidyr)
 library(dplyr)
 library(cowplot)
 library(forcats)
-library(picante) # Will also include ape and vegan 
-library(car) # For residual analysis
-library(sandwich) # for vcovHC function in post-hoc test
-library(MASS) # For studres in plot_residuals function
-library(boot) # For cross validation
-source("Muskegon_functions.R")
-source("set_colors.R")
+library(picante)    # Will also include ape and vegan 
+library(car)        # For residual analysis
+library(sandwich)   # for vcovHC function in post-hoc test
+library(MASS)       # For studres in plot_residuals function
+library(boot)       # For cross validation
+library(DT)         # Pretty HTML Table Output
+source("../code/Muskegon_functions.R")
+source("../code/set_colors.R")
 ```
 
 # Prepare the data 
@@ -408,20 +409,26 @@ ggplot(dplyr::filter(all_divs, measure == "Richness"),
 # Linear Model output
 richness_lm_results <- lm_fraction_output(dataframe = dplyr::filter(all_divs,  measure == "Richness"))
 
-richness_lm_results %>%
+sig_rich_lms_df <- richness_lm_results %>%
   bind_rows() %>%
   mutate(diversity_metric = "Richness") %>%
-  datatable(options = list(pageLength = 40))
+  filter(pval < 0.05)
+
+# Display significant models in a dataframe
+datatable(sig_rich_lms_df, options = list(pageLength = 40))
   
 ### Community-Wide Production vs Richness
-sig_rich_lms <- c("1-tons", "5-tons", "10-tons", "20-tons")
+sig_rich_lms_comm <- sig_rich_lms_df %>%
+  filter(test == "Community-Wide Production" & fraction == "Particle") %>%
+  dplyr::select(Removed) %>%
+  .$Removed
 
 ggplot(dplyr::filter(all_divs, measure == "Richness"), 
        aes(y = frac_bacprod, x = mean, color = Removed, fill = Removed)) +
   geom_point(size = 3) + xlab("Richness") +
   ylab("Community-Wide Production") +
   geom_smooth(method = "lm", data = filter(all_divs, 
-                                           measure == "Richness" & fraction == "Particle" & Removed %in% sig_rich_lms)) + 
+                                           measure == "Richness" & fraction == "Particle" & Removed %in% sig_rich_lms_comm)) + 
   scale_color_manual(values = tons_colors) +scale_fill_manual(values = tons_colors) +  
   facet_grid(fraction~Removed, scales = "free") +
   theme(legend.position = "bottom", legend.title = element_blank(),
@@ -429,7 +436,10 @@ ggplot(dplyr::filter(all_divs, measure == "Richness"),
 
 
 ### Per-capita production vs Richness
-sig_rich_lms_percap <- c("1-tons", "5-tons", "10-tons")
+sig_rich_lms_percap <- sig_rich_lms_df %>%
+  filter(test == "Per-Capita Production") %>%
+  dplyr::select(Removed) %>%
+  .$Removed
 
 ggplot(dplyr::filter(all_divs, measure == "Richness"), 
        aes(y = log10(fracprod_per_cell_noinf), x = mean, color = Removed, fill = Removed)) +
@@ -475,31 +485,47 @@ ggplot(dplyr::filter(all_divs, measure == "Shannon_Entropy"),
 # Linear Model output
 shannon_lm_results <- lm_fraction_output(dataframe = dplyr::filter(all_divs,  measure == "Shannon_Entropy"))
 
-shannon_lm_results %>%
+sig_shannon_lms_df <- shannon_lm_results %>%
   bind_rows() %>%
   mutate(diversity_metric = "Shannon_Entropy") %>%
-  datatable(options = list(pageLength = 40))
+  filter(pval < 0.05)
 
-### Community-Wide production vs Richness
+# Display significant models in a table
+datatable(sig_shannon_lms_df, options = list(pageLength = 40))
+
+### Community-Wide Production vs Shannon Entropy
+sig_shannon_lms_comm <- sig_shannon_lms_df %>%
+  filter(test == "Community-Wide Production" & fraction == "Particle") %>%
+  dplyr::select(Removed) %>%
+  .$Removed
+
+### Community-Wide production vs Shannon Entropy
 ggplot(dplyr::filter(all_divs, measure == "Shannon_Entropy"), 
        aes(y = frac_bacprod, x = mean, color = Removed, fill = Removed)) +
   geom_point(size = 3) + 
-  xlab("Shannon_Entropy") +
+  xlab("Shannon Entropy") +
   ylab("Bacterial Production by Fraction") +
-  geom_smooth(method = "lm", data = filter(all_divs, measure == "Shannon_Entropy" & fraction == "Particle" )) + 
+  geom_smooth(method = "lm", 
+              data = filter(all_divs, measure == "Shannon_Entropy" & fraction == "Particle" & Removed %in% sig_shannon_lms_comm)) + 
   scale_color_manual(values = tons_colors) +
   scale_fill_manual(values = tons_colors) +  
   facet_grid(fraction~Removed, scales = "free") +
   theme(legend.position = "bottom", legend.title = element_blank(),
         axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
 
+### Per-Capita Production vs Shannon Entropy
+sig_shannon_lms_percap <- sig_shannon_lms_df %>%
+  filter(test == "Per-Capita Production" & fraction == "Particle") %>%
+  dplyr::select(Removed) %>%
+  .$Removed
 
 ### Per-capita production vs Shannon Entropy
 ggplot(dplyr::filter(all_divs, measure == "Shannon_Entropy"), 
        aes(y = log10(fracprod_per_cell_noinf), x = mean, color = Removed, fill = Removed)) +
-  geom_point(size = 3) + xlab("Shannon_Entropy") +
+  geom_point(size = 3) + xlab("Shannon Entropy") +
   ylab("log10(Per-Capita Production)") +
-  geom_smooth(method = "lm", data = filter(all_divs, measure == "Shannon_Entropy" & fraction == "Particle")) + 
+  geom_smooth(method = "lm", 
+              data = filter(all_divs, measure == "Shannon_Entropy" & fraction == "Particle" & Removed %in% sig_shannon_lms_percap)) + 
   scale_color_manual(values = tons_colors) + scale_fill_manual(values = tons_colors) +  
   facet_grid(fraction~Removed, scales = "free") +
   theme(legend.position = "bottom", legend.title = element_blank(),
@@ -537,29 +563,47 @@ ggplot(dplyr::filter(all_divs, measure == "Inverse_Simpson"),
 # Linear Model output
 invsimps_lm_results <- lm_fraction_output(dataframe = dplyr::filter(all_divs,  measure == "Inverse_Simpson"))
 
-invsimps_lm_results %>%
+sig_invsimps_lms_df <- invsimps_lm_results %>%
   bind_rows() %>%
   mutate(diversity_metric = "Inverse_Simpson") %>%
-  datatable(options = list(pageLength = 40))
+  filter(pval < 0.05)
+
+# Display significant models in a dataframe
+datatable(sig_invsimps_lms_df, options = list(pageLength = 40))
+
+### Community-Wide Production vs Inverse Simpson
+sig_invsimps_lms_comm <- sig_invsimps_lms_df %>%
+  filter(test == "Community-Wide Production" & fraction == "Particle") %>%
+  dplyr::select(Removed) %>%
+  .$Removed
 
 ### Community Wide production vs Inverse Simpson
 ggplot(dplyr::filter(all_divs, measure == "Inverse_Simpson"), 
        aes(y = frac_bacprod, x = mean, color = Removed, fill = Removed)) +
-  geom_point(size = 3) +  xlab("Inverse_Simpson") +
-  ylab("Bacterial Production by Fraction") +
-  geom_smooth(method = "lm", data = filter(all_divs, measure == "Inverse_Simpson" & fraction == "Particle" )) + 
+  geom_point(size = 3) +  xlab("Inverse Simpson") +
+  ylab("Community-Wide Production") +
+  geom_smooth(method = "lm", 
+              data = filter(all_divs, measure == "Inverse_Simpson" & fraction == "Particle" & Removed %in% sig_invsimps_lms_comm)) + 
   scale_color_manual(values = tons_colors) +
   scale_fill_manual(values = tons_colors) +  
   facet_grid(fraction~Removed, scales = "free") +
   theme(legend.position = "bottom", legend.title = element_blank(),
         axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
 
+
+### Per-Capita Production vs Inverse Simpson
+sig_invsimps_lms_percap <- sig_invsimps_lms_df %>%
+  filter(test == "Per-Capita Production" & fraction == "Particle") %>%
+  dplyr::select(Removed) %>%
+  .$Removed
+
 ### Per-capita production vs Inverse Simpson
 ggplot(dplyr::filter(all_divs, measure == "Inverse_Simpson"), 
        aes(y = log10(fracprod_per_cell_noinf), x = mean, color = Removed, fill = Removed)) +
-  geom_point(size = 3) + xlab("Inverse_Simpson") +
+  geom_point(size = 3) + xlab("Inverse Simpson") +
   ylab("log10(Per-Capita Production)") +
-  geom_smooth(method = "lm", data = filter(all_divs, measure == "Inverse_Simpson" & fraction == "Particle")) + 
+  geom_smooth(method = "lm", 
+              data = filter(all_divs, measure == "Inverse_Simpson" & fraction == "Particle" & Removed %in% sig_invsimps_lms_percap)) + 
   scale_color_manual(values = tons_colors) + scale_fill_manual(values = tons_colors) +  
   facet_grid(fraction~Removed, scales = "free") +
   theme(legend.position = "bottom", legend.title = element_blank(),
@@ -595,34 +639,108 @@ ggplot(dplyr::filter(all_divs, measure == "Simpsons_Evenness"),
 
 ```{r simps-evenness-plots, fig.width=10, fig.height=5, dependson="all_divs"}
 # Linear Model output
-simpseven_lm_results <- lm_fraction_output(dataframe = dplyr::filter(all_divs,  measure == "Simpsons_Evenness")) %>%
+sig_simpseven_lms_df <- lm_fraction_output(dataframe = dplyr::filter(all_divs,  measure == "Simpsons_Evenness")) %>%
   bind_rows() %>%
-  mutate(diversity_metric = "Simpsons_Evenness")
+  mutate(diversity_metric = "Simpsons_Evenness") %>%
+  filter(pval < 0.05)
 
-simpseven_lm_results %>%
-  datatable(options = list(pageLength = 40))
+# Display significant models in a dataframe
+datatable(sig_simpseven_lms_df, options = list(pageLength = 40))
 
-### Community Wide Prodcution vs Simpson's Evennes
+
+### Community-Wide Production vs Simpson's Evenness
+sig_simpseven_lms_comm <- sig_simpseven_lms_df %>%
+  filter(test == "Community-Wide Production" & fraction == "Particle") %>%
+  dplyr::select(Removed) %>%
+  .$Removed
+
+### Community Wide Prodcution vs Simpson's Evenness
 ggplot(dplyr::filter(all_divs, measure == "Simpsons_Evenness"), 
        aes(y = frac_bacprod, x = mean, color = Removed, fill = Removed)) +
-  geom_point(size = 3) + 
-  xlab("Simpsons_Evenness") +
-  ylab("Bacterial Production by Fraction") +
-  geom_smooth(method = "lm", data = filter(all_divs, measure == "Simpsons_Evenness" & fraction == "Particle" )) + 
+  geom_point(size = 3) + xlab("Simpsons Evenness") + ylab("Bacterial Production by Fraction") +
+  geom_smooth(method = "lm", 
+              data = filter(all_divs, measure == "Simpsons_Evenness" & fraction == "Particle" & Removed %in% sig_invsimps_lms_comm)) + 
   scale_color_manual(values = tons_colors) +
   scale_fill_manual(values = tons_colors) +  
   facet_grid(fraction~Removed, scales = "free") +
   theme(legend.position = "bottom", legend.title = element_blank(),
         axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
 
-### Per-capita production vs Inverse Simpson
+
+### Per-Capita Production vs Simpson's Evenness
+sig_simpseven_lms_percap <- sig_simpseven_lms_df %>%
+  filter(test == "Per-Capita Production" & fraction == "Particle") %>%
+  dplyr::select(Removed) %>%
+  .$Removed
+
+### Per-capita production vs Simpson's Evenness
 ggplot(dplyr::filter(all_divs, measure == "Simpsons_Evenness"), 
        aes(y = log10(fracprod_per_cell_noinf), x = mean, color = Removed, fill = Removed)) +
-  geom_point(size = 3) + xlab("Simpsons_Evenness") +
+  geom_point(size = 3) + xlab("Simpsons Evenness") +
   ylab("log10(Per-Capita Production)") +
-  geom_smooth(method = "lm", data = filter(all_divs, measure == "Simpsons_Evenness" & fraction == "Particle")) + 
+  geom_smooth(method = "lm", 
+              data = filter(all_divs, measure == "Simpsons_Evenness" & fraction == "Particle" & Removed %in% sig_simpseven_lms_percap)) + 
   scale_color_manual(values = tons_colors) + scale_fill_manual(values = tons_colors) +  
   facet_grid(fraction~Removed, scales = "free") +
   theme(legend.position = "bottom", legend.title = element_blank(),
         axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
 ```
+
+
+# Figure S6
+```{r figS6, fig.height=10, fig.width=10}
+
+p1 <- ggplot(dplyr::filter(all_divs, measure == "Richness"  & fraction == "Particle"), 
+       aes(y = frac_bacprod, x = mean, color = Removed, fill = Removed)) +
+  geom_point(size = 3) + xlab("Richness") +
+  ylab("Community-Wide \nProduction") +
+  geom_smooth(method = "lm", data = filter(all_divs, 
+                                           measure == "Richness" & fraction == "Particle" & Removed %in% sig_rich_lms_comm)) + 
+  scale_color_manual(values = tons_colors) +scale_fill_manual(values = tons_colors) +  
+  facet_grid(~Removed, scales = "free") +
+  theme(legend.position = "none", legend.title = element_blank(),
+        axis.text.x = element_text(angle = 60, hjust = 1, vjust = 1, size = 10),
+        axis.title.x = element_blank())
+
+p2 <- ggplot(dplyr::filter(all_divs, measure == "Richness" & fraction == "Particle"), 
+       aes(y = log10(fracprod_per_cell_noinf), x = mean, color = Removed, fill = Removed)) +
+  geom_point(size = 3) + xlab("Richness") +
+  ylab("log10(Per-Capita \nProduction)") +
+  geom_smooth(method = "lm", data = filter(all_divs, 
+                                           measure == "Richness" & fraction == "Particle" & Removed %in% sig_rich_lms_percap)) + 
+  scale_color_manual(values = tons_colors) + scale_fill_manual(values = tons_colors) +  
+  facet_grid(~Removed, scales = "free") +
+  theme(legend.position = "none", legend.title = element_blank(),
+        axis.text.x = element_text(angle = 60, hjust = 1, vjust = 1, size = 10))
+
+p3 <- ggplot(dplyr::filter(all_divs, measure == "Inverse_Simpson" & fraction == "Particle"), 
+       aes(y = frac_bacprod, x = mean, color = Removed, fill = Removed)) +
+  geom_point(size = 3) +  xlab("Inverse Simpson") +
+  ylab("Community-Wide \nProduction") +
+  geom_smooth(method = "lm", 
+              data = filter(all_divs, measure == "Inverse_Simpson" & fraction == "Particle" & Removed %in% sig_invsimps_lms_comm)) + 
+  scale_color_manual(values = tons_colors) +
+  scale_fill_manual(values = tons_colors) +  
+  facet_grid(~Removed, scales = "free") +
+  theme(legend.position = "none", legend.title = element_blank(),
+        axis.text.x = element_text(angle = 60, hjust = 1, vjust = 1, size = 10),
+        axis.title.x = element_blank())
+
+p4 <- ggplot(dplyr::filter(all_divs, measure == "Inverse_Simpson"  & fraction == "Particle"), 
+       aes(y = log10(fracprod_per_cell_noinf), x = mean, color = Removed, fill = Removed)) +
+  geom_point(size = 3) + xlab("Inverse Simpson") +
+  ylab("log10(Per-Capita \nProduction)") +
+  geom_smooth(method = "lm", 
+              data = filter(all_divs, measure == "Inverse_Simpson" & fraction == "Particle" & Removed %in% sig_invsimps_lms_percap)) + 
+  scale_color_manual(values = tons_colors) + scale_fill_manual(values = tons_colors) +  
+  facet_grid(~Removed, scales = "free") +
+  theme(legend.position = "bottom", legend.title = element_blank(),
+        axis.text.x = element_text(angle = 60, hjust = 1, vjust = 1, size = 10))
+
+plot_grid(p1, p2, p3, p4, 
+          nrow = 4, ncol = 1,
+          rel_heights = c(0.9, 1, 0.9, 1.2),
+          labels = c("A", "B", "C", "D"),
+          align = "v")
+```
+
