@@ -58,13 +58,13 @@ library(phyloseq)   # Easier data manipulation
 library(picante)    # Phylogenetic Tree Analysis 
 library(tidyverse)  # Pretty plotting and data manipulation 
 library(forcats)    # Recoding factors 
-library(cowplot)    # Multiple plotting 
+library(cowplot)    # Multiple plotting  
 library(picante)    # Will also include ape and vegan  
-library(car)        # Residual analysis
+library(car)        # Residual analysis 
 library(sandwich)   # vcovHC function in post-hoc test 
-library(MASS)       # studres in plot_residuals function 
+library(MASS)       # studres in plot_residuals function  
 library(caret)      # Cross validation
-library(pander)     # Pretty tables   
+library(pander)     # Pretty tables    
 library(glmnet)     # Lasso regressions
 library(broom)      # Stats from lm regression
 library(purrr)      # Exporting lm results 
@@ -2111,7 +2111,7 @@ individual_lm_results <- bind_rows(lm_div_results, all_pca_environ_lm_results) %
   mutate(adj.r.squared = round(adj.r.squared, digits = 2),
          p.value = round(p.value, digits = 4))
 
-
+ 
 # Output the results for models that have a pvalue of less than 0.05
 datatable(dplyr::filter(individual_lm_results, p.value < 0.05),
        caption = "Single Linear Model results from diversity, environmental, & PCA axes with a p-value less than 0.05.",
@@ -2121,9 +2121,9 @@ datatable(dplyr::filter(individual_lm_results, p.value < 0.05),
 
 #### Per-Capita Production
 ```{r}
-datatable(dplyr::filter(individual_lm_results, dependent_var == "Per-Capita Production" & p.value < 0.05),
+datatable(dplyr::filter(individual_lm_results, dependent_var == "Per-Capita Production" & p.value < 0.05), 
        caption = "Significant (< 0.05) Linear Predictions for Per-Capita Heterotrophic Production axes with a p-value less than 0.05.",
-       options = list(pageLength = 50))
+       options = list(pageLength = 50)) 
 ```
 
 #### Community-Wide Production
