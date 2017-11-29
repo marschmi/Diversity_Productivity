@@ -1,6 +1,7 @@
 # Microhabitats shape diversity-productivity relationships in freshwater bacterial communities
 
 
+
 ###  **Authors:** Marian L. Schmidt, Bopaiah A. Biddanda, Anthony D. Weinke, Edna Chiang, Fallon Januska, Ruben Props, & Vincent J. Denef
 
 ### **Link to the rendered code file for production of all figures and statistical analyses: ADDME**
