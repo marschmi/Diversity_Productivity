@@ -55,11 +55,11 @@ knitr::opts_chunk$set(eval = TRUE,
 ```{r load-libraries, message = FALSE, warning = FALSE}
 library(devtools)   # Reproducibility (see end of file)    
 library(phyloseq)   # Easier data manipulation 
-library(picante)    # Phylogenetic Tree Analysis 
+library(picante)    # Phylogenetic Tree Analysis  
 library(tidyverse)  # Pretty plotting and data manipulation 
 library(forcats)    # Recoding factors 
 library(cowplot)    # Multiple plotting  
-library(picante)    # Will also include ape and vegan  
+library(picante)    # Will also include ape and vegan
 library(car)        # Residual analysis 
 library(sandwich)   # vcovHC function in post-hoc test  
 library(MASS)       # studres in plot_residuals function  
@@ -67,7 +67,7 @@ library(caret)      # Cross validation
 library(pander)     # Pretty tables    
 library(glmnet)     # Lasso regressions
 library(broom)      # Stats from lm regression
-library(purrr)      # Exporting lm results 
+library(purrr)      # Exporting lm results  
 library(DT)         # Fancy HTML table output
 source("code/Muskegon_functions.R")   # Source custom functions  
 source("code/set_colors.R")           # Set Colors for plotting
@@ -940,8 +940,8 @@ plot_grid(figure3_row1, season_legend,
 
 
 #### Prepare the data for Lasso Regressions
-```{r prepare-data}
-unweight_vals <- unweighted_df %>%
+```{r prepare-data-lasso, warning = TRUE}
+unweight_vals <- unweighted_df %>% 
   dplyr::select(mpd.obs.z, norep_filter_name) %>%
   rename(Unweighted_PD = mpd.obs.z)
   
@@ -958,7 +958,7 @@ lasso_data_df <- metadata_pca %>%
   left_join(wide_all_divs, by = "norep_filter_name") %>%
   left_join(unweight_vals, by = "norep_filter_name") %>%
   left_join(weighted_vals, by = "norep_filter_name") %>%
-  dplyr::select(-c(project, year, Date, limnion, norep_water_name, dnaconcrep1, 
+  dplyr::select(-c(project, year, Date, limnion, norep_water_name, dnaconcrep1, perc_attached_bacprod,
                    SD_perc_attached_bacprod, SE_total_bac_abund, SE_perc_attached_abund, SE_attached_bac))
 
 
@@ -980,6 +980,26 @@ percell_lasso_data_df_particle_noprod <- lasso_data_df_particle %>%
   dplyr::filter(Temp_C != 14.28) # Remove the missing row of data :( )
 
 
+
+### FREE DATA 
+lasso_data_df_free <- lasso_data_df %>%
+  filter(fraction == "Free" ) %>%
+  dplyr::select(-fraction)
+
+lasso_data_df_free_noprod <- lasso_data_df_free %>%
+  dplyr::select(-c(fracprod_per_cell, fracprod_per_cell_noinf, 
+                   tot_bacprod, SD_tot_bacprod,SD_frac_bacprod, 
+                   norep_filter_name, BGA_cellspermL, Turb_NTU,
+                   lakesite, season, station)) 
+  
+percell_lasso_data_df_free_noprod <- lasso_data_df_free %>%
+  dplyr::select(-c(fracprod_per_cell, frac_bacprod,
+                   tot_bacprod, SD_tot_bacprod,SD_frac_bacprod, 
+                   lakesite, season, norep_filter_name, station, BGA_cellspermL, Turb_NTU)) %>%
+  dplyr::filter(Temp_C != 14.28) # Remove the missing row of data :( )
+
+
+
 ## ALL DATA 
 all_dat_lasso_comm <- lasso_data_df %>%
     dplyr::select(-c(fracprod_per_cell, fracprod_per_cell_noinf, 
@@ -998,9 +1018,9 @@ all_dat_lasso_percapita <- lasso_data_df  %>%
 
 #### Perform Lasso regression
 #### Bulk Community Production: Particle 
-```{r comm-part-lasso, dependson = c("calc-div"), fig.width=8, fig.height=4}
+```{r comm-part-lasso, dependson = c("calc-div", "prepare-data-lasso"), fig.width=8, fig.height=4, warning = TRUE}
 # Set the seed for reproducibility of the grid values 
-set.seed(777)
+set.seed(777) 
 
 ################ PREPARE DATA ################ 
 # Subset data needed and scale all o
@@ -1050,17 +1070,69 @@ predict(lasso_divs, type = "coefficients", s = best_lasso_lambda)
 
 The lasso model uses Inverse Simpson as the **best and only** predictor of production!
 
+#### Community-Wide Production: Free
+```{r comm-free-lasso, dependson = c("calc-div", "prepare-data-lasso"), fig.width=8, fig.height=4, warning = TRUE}
+# Set the seed for reproducibility of the grid values 
+set.seed(777) 
+     
+################ PREPARE DATA ################ 
+# Subset data needed and scale all o
+scaled_comm_data_free <- 
+  lasso_data_df_free_noprod %>%        # Use data only for the free-living samples  
+  scale() %>%                          # Scale all of the variables to have mean = 0 and sd = 1
+  as.data.frame()                      # Make it a dataframe so that model.matrix function works (does not take a matrix)
+
+# Set model parameters for community level data
+## NOTE: there cannot be any data with NA
+x <- model.matrix(frac_bacprod ~ ., scaled_comm_data_free)[,-1]
+y <- scaled_comm_data_free$frac_bacprod
+grid <- 10^seq(10,-2,length = 100)
+
+################ PREPARE TRAINING & TESTING DATA FOR CROSS VALIDATION ################ 
+# Pull out test and training sets for cross validation
+# We will use half the set to train the model and the 2nd half of the dataset to test the model 
+train <- sample(1:nrow(x), nrow(x)/2)
+test <- -train
+y_test <- y[test]
+
+################ LASSO ################ 
+# Run lasso regression with alpha = 1
+lasso_divs_train_free_comm <- glmnet(x[train,], y[train], alpha = 1, lambda = grid, standardize = TRUE)
+par(mfrow = c(1,2))
+plot(lasso_divs_train_free_comm)
+
+# Cross validation
+cv_lasso_divs <- cv.glmnet(x[train,], y[train], alpha = 1)
+plot(cv_lasso_divs)
+best_lasso_lambda <- cv_lasso_divs$lambda.min
+lasso_divs_pred <- predict(lasso_divs_train_free_comm, s = best_lasso_lambda, newx = x[test,])
+mean((lasso_divs_pred - y_test)^2) # Test
+
+## Run lasso on the entire dataset with the best lambda value 
+lasso_divs <- glmnet(x, y, alpha = 1, lambda = grid, standardize = TRUE)
+par(mfrow = c(1,1))
+plot(lasso_divs)
+
+plot(lasso_divs, xvar = "lambda", label = TRUE)
+plot(lasso_divs, xvar = "dev", label = TRUE)
+
+
+# What are the lasso coefficients? (Anything with a . is not selected by the model)
+predict(lasso_divs, type = "coefficients", s = best_lasso_lambda)
+```
+
+The lasso model for predicting the community-wide heterotrophic bacterial production for the free-living habitat uses *only* pH as the **best and only** predictor!
 
 
 #### Per-capita Production: Particle
-```{r percapita-part-lasso, dependson = c("calc-div", "prepare-data"), fig.width=8, fig.height=4}
-scaled_percapita_data <- percell_lasso_data_df_particle_noprod %>%
+```{r percapita-part-lasso, dependson = c("calc-div", "prepare-data-lasso"), fig.width=8, fig.height=4, warning = TRUE}
+scaled_percapita_data <- percell_lasso_data_df_particle_noprod %>%   
   dplyr::filter(!is.na(fracprod_per_cell_noinf)) %>%
   mutate(log10_percell = log10(fracprod_per_cell_noinf)) %>%
   dplyr::select(-c(fracprod_per_cell_noinf)) %>%
   scale() %>%
   as.data.frame()
-
+   
 set.seed(777)
 
 # Set model parameters for community level data
@@ -1102,23 +1174,75 @@ predict(lasso_divs, type = "coefficients", s = best_lasso_lambda)
 ```
 
 
+#### Per-capita Production: Free
+```{r percapita-free-lasso, dependson = c("calc-div", "prepare-data-lasso"), fig.width=8, fig.height=4, warning = TRUE}
+scaled_percapita_data_free <- percell_lasso_data_df_free_noprod %>%    
+  dplyr::filter(!is.na(fracprod_per_cell_noinf)) %>%
+  mutate(log10_percell = log10(fracprod_per_cell_noinf)) %>%
+  dplyr::select(-c(fracprod_per_cell_noinf)) %>%
+  scale() %>%
+  as.data.frame()
+
+set.seed(777)
+
+# Set model parameters for community level data
+## NOTE: there cannot be any data with NA
+x = model.matrix(log10_percell ~ ., scaled_percapita_data_free)[,-1]
+y = scaled_percapita_data_free$log10_percell
+grid = 10^seq(10,-2,length = 100)
+
+# Pull out test and training sets for cross validation
+# We will use half the set to train the model and the 2nd half of the dataset to test the model 
+train <- sample(1:nrow(x), nrow(x)/2)
+test <- -train
+y_test <- y[test]
+
+################ LASSO
+# Run lasso regression with alpha = 1
+lasso_divs_train <- glmnet(x[train,], y[train], alpha = 1, lambda = grid, standardize = FALSE)
+par(mfrow = c(1,2))
+plot(lasso_divs_train)
+
+# Cross validation
+cv_lasso_divs <- cv.glmnet(x[train,], y[train], alpha = 1)
+plot(cv_lasso_divs)
+best_lasso_lambda <- cv_lasso_divs$lambda.min
+lasso_divs_pred <- predict(lasso_divs_train, s = best_lasso_lambda, newx = x[test,])
+mean((lasso_divs_pred - y_test)^2)
+
+
+## Run lasso on the entire dataset 
+lasso_divs <- glmnet(x, y, alpha = 1, lambda = grid, standardize = FALSE)
+par(mfrow = c(1,1))
+plot(lasso_divs)
+
+plot(lasso_divs, xvar = "lambda", label = TRUE)
+plot(lasso_divs, xvar = "dev", label = TRUE)
+
+# What are the lasso coefficients?
+predict(lasso_divs, type = "coefficients", s = best_lasso_lambda)
+```
+
+
+
+
 #### Community-wide Production: All Samples 
 ```{r all-comm-lasso, dependson = c("calc-div"), fig.width=8, fig.height=4}
 # Set the seed for reproducibility of the grid values 
-set.seed(777)
-
+set.seed(777)      
+   
 ################ PREPARE DATA ################ 
 # Subset data needed and scale all o
 scaled_comm_data_ALL <- 
-  all_dat_lasso_percapita %>%    # Use data only for the particle samples  
+  all_dat_lasso_comm %>%               # Use community-wide production data only for the all samples  
   scale() %>%                          # Scale all of the variables to have mean =0 and sd = 1
   as.data.frame()                      # Make it a dataframe so that model.matrix function works (does not take a matrix)
 
 # Set model parameters for community level data
 ## NOTE: there cannot be any data with NA
-x = model.matrix(frac_bacprod ~ ., scaled_comm_data_ALL)[,-1]
-y = scaled_comm_data$frac_bacprod
-grid = 10^seq(10,-2,length = 100)
+x <- model.matrix(frac_bacprod ~ ., scaled_comm_data_ALL)[,-1]
+y <- scaled_comm_data_ALL$frac_bacprod
+grid <- 10^seq(10,-2,length = 100)
 
 ################ PREPARE TRAINING & TESTING DATA FOR CROSS VALIDATION ################ 
 # Pull out test and training sets for cross validation
@@ -1157,8 +1281,8 @@ predict(lasso_divs, type = "coefficients", s = best_lasso_lambda)
 
 #### Per-capita Production:  All Samples
 ```{r all-percapita-lasso, dependson = c("calc-div"), fig.width=8, fig.height=4}
-set.seed(777)
-
+set.seed(777) 
+      
 scaled_percapita_ALL <- all_dat_lasso_percapita %>%
   dplyr::filter(!is.na(fracprod_per_cell_noinf)) %>%
   mutate(log10_percell = log10(fracprod_per_cell_noinf)) %>%
@@ -1375,7 +1499,7 @@ plot_grid(top_row_S1, legend_s1,
 
 ## Figure S4
 #### Compare Diversity Estimates across Station and Season
-```{r figs4-div-station-season, fig.width = 14, fig.height = 7, dependson= c("calc-div", "prepare-data")}
+```{r figs4-div-station-season, fig.width = 14, fig.height = 7, dependson= c("calc-div", "prepare-data-lasso")}
 
 long_div_df <- lasso_data_df %>%
   dplyr::select(norep_filter_name, lakesite:season, Richness:Weighted_PD) %>%
