@@ -1,6 +1,5 @@
 ---
-title: "Analysis: Microhabitats shape diversity-productivity 
-relationships in freshwater bacterial communities"
+title: "Analysis: Microhabitats shape diversity-productivity" 
 author: "Marian L. Schmidt, marschmi@umich.edu, @micro_marian"
 date: "November 28th, 2017"
 output:
@@ -14,6 +13,8 @@ output:
       collapsed: no
       smooth_scroll: yes
       toc_depth: 3
+editor_options: 
+  chunk_output_type: console
 ---
 <style>
 pre code, pre, code {
@@ -54,15 +55,15 @@ knitr::opts_chunk$set(eval = TRUE,
 # Load Libraries
 ```{r load-libraries, message = FALSE, warning = FALSE}
 library(devtools)   # Reproducibility (see end of file)    
-library(phyloseq)   # Easier data manipulation 
+library(phyloseq)   # Easier data manipulation  
 library(picante)    # Phylogenetic Tree Analysis  
 library(tidyverse)  # Pretty plotting and data manipulation 
-library(forcats)    # Recoding factors 
-library(cowplot)    # Multiple plotting  
+library(forcats)    # Recoding factors  
+library(cowplot)    # Multiple plotting   
 library(picante)    # Will also include ape and vegan
 library(car)        # Residual analysis 
 library(sandwich)   # vcovHC function in post-hoc test  
-library(MASS)       # studres in plot_residuals function  
+library(MASS)       # studres in plot_residuals function   
 library(caret)      # Cross validation
 library(pander)     # Pretty tables    
 library(glmnet)     # Lasso regressions
@@ -544,7 +545,7 @@ cv_lm_percell_prod_vs_simpseven_PA <- train(
 cv_lm_percell_prod_vs_simpseven_PA$results      # Particle Per-Capita CV results  
 ```
 
-### Table S2 
+## Table S3 
 ```{r r2-table, dependson = "div-prod-lm-models"}
 ########## PUT A TABLE TOGETHER  
 # Per Liter Production 
@@ -889,7 +890,7 @@ unweight_prod_vs_mpd_plot <-
 
 
 
-################ Figure 3D: Unweighted Phylogenetic Diversity vs Per Capitra (Per-Cell) Production 
+################ Figure 3D: Unweighted Phylogenetic Diversity vs Per Capita (Per-Cell) Production 
 ## 1. Run the linear model: Is there a relationship between PER-CELL PRODUCTION and Unweighted Mean Pairwise distance?
 unweight_vs_percell <- lm(log10(fracprod_per_cell_noinf) ~ mpd.obs.z, data = unweighted_df)
 
@@ -941,10 +942,10 @@ plot_grid(figure3_row1, season_legend,
 
 #### Prepare the data for Lasso Regressions
 ```{r prepare-data-lasso, warning = TRUE}
-unweight_vals <- unweighted_df %>% 
+unweight_vals <- unweighted_df %>%  
   dplyr::select(mpd.obs.z, norep_filter_name) %>%
   rename(Unweighted_PD = mpd.obs.z)
-  
+   
 weighted_vals <- weighted_df %>%
   dplyr::select(mpd.obs.z, norep_filter_name) %>%
   rename(Weighted_PD = mpd.obs.z)
@@ -1044,28 +1045,31 @@ y_test <- y[test]
 
 ################ LASSO ################ 
 # Run lasso regression with alpha = 1
-lasso_divs_train <- glmnet(x[train,], y[train], alpha = 1, lambda = grid, standardize = TRUE)
+lasso_divs_train <- glmnet(x[train,], y[train], alpha = 1, lambda = grid, standardize = FALSE)
 par(mfrow = c(1,2))
 plot(lasso_divs_train)
 
 # Cross validation
 cv_lasso_divs <- cv.glmnet(x[train,], y[train], alpha = 1)
 plot(cv_lasso_divs)
-best_lasso_lambda <- cv_lasso_divs$lambda.min
+best_lasso_lambda <- cv_lasso_divs$lambda.min # Minimum lambda
+# https://stats.stackexchange.com/questions/138569/why-is-lambda-plus-1-standard-error-a-recommended-value-for-lambda-in-an-elastic
+lasso_lambda_1se <- cv_lasso_divs$lambda.1se # simplest model whose accuracy is comparable with the best model
+best_lasso_lambda == lasso_lambda_1se
+
 lasso_divs_pred <- predict(lasso_divs_train, s = best_lasso_lambda, newx = x[test,])
 mean((lasso_divs_pred - y_test)^2) # Test
 
 ## Run lasso on the entire dataset with the best lambda value 
-lasso_divs <- glmnet(x, y, alpha = 1, lambda = grid, standardize = TRUE)
-par(mfrow = c(1,1))
-plot(lasso_divs)
-
-plot(lasso_divs, xvar = "lambda", label = TRUE)
-plot(lasso_divs, xvar = "dev", label = TRUE)
-
-
+lasso_divs <- glmnet(x, y, alpha = 1, lambda = best_lasso_lambda, standardize = FALSE)
 # What are the lasso coefficients? (Anything with a . is not selected by the model)
 predict(lasso_divs, type = "coefficients", s = best_lasso_lambda)
+
+
+## Run lasso on the entire dataset with the best lambda value 
+lasso_divs_1se <- glmnet(x, y, alpha = 1, lambda = lasso_lambda_1se, standardize = FALSE)
+# What are the lasso coefficients? (Anything with a . is not selected by the model)
+predict(lasso_divs_1se, type = "coefficients", s = lasso_lambda_1se)
 ```
 
 The lasso model uses Inverse Simpson as the **best and only** predictor of production!
@@ -1097,7 +1101,7 @@ y_test <- y[test]
 
 ################ LASSO ################ 
 # Run lasso regression with alpha = 1
-lasso_divs_train_free_comm <- glmnet(x[train,], y[train], alpha = 1, lambda = grid, standardize = TRUE)
+lasso_divs_train_free_comm <- glmnet(x[train,], y[train], alpha = 1, lambda = grid, standardize = FALSE)
 par(mfrow = c(1,2))
 plot(lasso_divs_train_free_comm)
 
@@ -1105,20 +1109,21 @@ plot(lasso_divs_train_free_comm)
 cv_lasso_divs <- cv.glmnet(x[train,], y[train], alpha = 1)
 plot(cv_lasso_divs)
 best_lasso_lambda <- cv_lasso_divs$lambda.min
+# https://stats.stackexchange.com/questions/138569/why-is-lambda-plus-1-standard-error-a-recommended-value-for-lambda-in-an-elastic
+lasso_lambda_1se <- cv_lasso_divs$lambda.1se # simplest model whose accuracy is comparable with the best model
+best_lasso_lambda == lasso_lambda_1se
 lasso_divs_pred <- predict(lasso_divs_train_free_comm, s = best_lasso_lambda, newx = x[test,])
 mean((lasso_divs_pred - y_test)^2) # Test
 
 ## Run lasso on the entire dataset with the best lambda value 
-lasso_divs <- glmnet(x, y, alpha = 1, lambda = grid, standardize = TRUE)
-par(mfrow = c(1,1))
-plot(lasso_divs)
-
-plot(lasso_divs, xvar = "lambda", label = TRUE)
-plot(lasso_divs, xvar = "dev", label = TRUE)
-
-
+lasso_divs <- glmnet(x, y, alpha = 1, lambda = best_lasso_lambda, standardize = FALSE)
 # What are the lasso coefficients? (Anything with a . is not selected by the model)
 predict(lasso_divs, type = "coefficients", s = best_lasso_lambda)
+ 
+## Run lasso on the entire dataset with the best lambda value 
+lasso_divs_1se <- glmnet(x, y, alpha = 1, lambda = lasso_lambda_1se, standardize = FALSE)
+# What are the lasso coefficients? (Anything with a . is not selected by the model)
+predict(lasso_divs_1se, type = "coefficients", s = lasso_lambda_1se)
 ```
 
 The lasso model for predicting the community-wide heterotrophic bacterial production for the free-living habitat uses *only* pH as the **best and only** predictor!
@@ -1150,27 +1155,30 @@ y_test <- y[test]
 ################ LASSO
 # Run lasso regression with alpha = 1
 lasso_divs_train <- glmnet(x[train,], y[train], alpha = 1, lambda = grid, standardize = FALSE)
-par(mfrow = c(1,2))
+par(mfrow = c(1,2)) 
 plot(lasso_divs_train)
 
 # Cross validation
 cv_lasso_divs <- cv.glmnet(x[train,], y[train], alpha = 1)
 plot(cv_lasso_divs)
 best_lasso_lambda <- cv_lasso_divs$lambda.min
+# https://stats.stackexchange.com/questions/138569/why-is-lambda-plus-1-standard-error-a-recommended-value-for-lambda-in-an-elastic
+lasso_lambda_1se <- cv_lasso_divs$lambda.1se # simplest model whose accuracy is comparable with the best model
+best_lasso_lambda == lasso_lambda_1se
 lasso_divs_pred <- predict(lasso_divs_train, s = best_lasso_lambda, newx = x[test,])
 mean((lasso_divs_pred - y_test)^2)
 
 
-## Run lasso on the entire dataset 
-lasso_divs <- glmnet(x, y, alpha = 1, lambda = grid, standardize = FALSE)
-par(mfrow = c(1,1))
-plot(lasso_divs)
-
-plot(lasso_divs, xvar = "lambda", label = TRUE)
-plot(lasso_divs, xvar = "dev", label = TRUE)
-
+## Run lasso on the entire dataset with the best lasso 
+lasso_divs <- glmnet(x, y, alpha = 1, lambda = best_lasso_lambda, standardize = FALSE)
 # What are the lasso coefficients?
 predict(lasso_divs, type = "coefficients", s = best_lasso_lambda)
+
+ 
+## Run lasso on the entire dataset with the best lasso 
+lasso_divs_1se <- glmnet(x, y, alpha = 1, lambda = lasso_lambda_1se, standardize = FALSE)
+# What are the lasso coefficients?
+predict(lasso_divs_1se, type = "coefficients", s = lasso_lambda_1se)
 ```
 
 
@@ -1207,27 +1215,29 @@ plot(lasso_divs_train)
 cv_lasso_divs <- cv.glmnet(x[train,], y[train], alpha = 1)
 plot(cv_lasso_divs)
 best_lasso_lambda <- cv_lasso_divs$lambda.min
+# https://stats.stackexchange.com/questions/138569/why-is-lambda-plus-1-standard-error-a-recommended-value-for-lambda-in-an-elastic
+lasso_lambda_1se <- cv_lasso_divs$lambda.1se # simplest model whose accuracy is comparable with the best model
+best_lasso_lambda == lasso_lambda_1se
 lasso_divs_pred <- predict(lasso_divs_train, s = best_lasso_lambda, newx = x[test,])
 mean((lasso_divs_pred - y_test)^2)
 
 
 ## Run lasso on the entire dataset 
-lasso_divs <- glmnet(x, y, alpha = 1, lambda = grid, standardize = FALSE)
-par(mfrow = c(1,1))
-plot(lasso_divs)
-
-plot(lasso_divs, xvar = "lambda", label = TRUE)
-plot(lasso_divs, xvar = "dev", label = TRUE)
-
+lasso_divs <- glmnet(x, y, alpha = 1, lambda = best_lasso_lambda, standardize = FALSE)
 # What are the lasso coefficients?
 predict(lasso_divs, type = "coefficients", s = best_lasso_lambda)
+
+## Run lasso on the entire dataset 
+lasso_divs_1se <- glmnet(x, y, alpha = 1, lambda = lasso_lambda_1se, standardize = FALSE)
+# What are the lasso coefficients?
+predict(lasso_divs_1se, type = "coefficients", s = lasso_lambda_1se) 
 ```
 
 
 
 
 #### Community-wide Production: All Samples 
-```{r all-comm-lasso, dependson = c("calc-div"), fig.width=8, fig.height=4}
+```{r all-comm-lasso, dependson = c("calc-div"), fig.width=8, fig.height=4, warning = TRUE}
 # Set the seed for reproducibility of the grid values 
 set.seed(777)      
    
@@ -1236,7 +1246,7 @@ set.seed(777)
 scaled_comm_data_ALL <- 
   all_dat_lasso_comm %>%               # Use community-wide production data only for the all samples  
   scale() %>%                          # Scale all of the variables to have mean =0 and sd = 1
-  as.data.frame()                      # Make it a dataframe so that model.matrix function works (does not take a matrix)
+  as.data.frame()                     # Make it a dataframe so that model.matrix function works (does not take a matrix)
 
 # Set model parameters for community level data
 ## NOTE: there cannot be any data with NA
@@ -1254,7 +1264,7 @@ y_test <- y[test]
 
 ################ LASSO ################ 
 # Run lasso regression with alpha = 1
-lasso_divs_train <- glmnet(x[train,], y[train], alpha = 1, lambda = grid, standardize = TRUE)
+lasso_divs_train <- glmnet(x[train,], y[train], alpha = 1, lambda = grid, standardize = FALSE)
 par(mfrow = c(1,2))
 plot(lasso_divs_train)
 
@@ -1262,25 +1272,32 @@ plot(lasso_divs_train)
 cv_lasso_divs <- cv.glmnet(x[train,], y[train], alpha = 1)
 plot(cv_lasso_divs)
 best_lasso_lambda <- cv_lasso_divs$lambda.min
+# https://stats.stackexchange.com/questions/138569/why-is-lambda-plus-1-standard-error-a-recommended-value-for-lambda-in-an-elastic
+lasso_lambda_1se <- cv_lasso_divs$lambda.1se # simplest model whose accuracy is comparable with the best model
+best_lasso_lambda == lasso_lambda_1se
+best_lasso_lambda
+lasso_lambda_1se
 lasso_divs_pred <- predict(lasso_divs_train, s = best_lasso_lambda, newx = x[test,])
 mean((lasso_divs_pred - y_test)^2)
 
 
 ## Run lasso on the entire dataset with the best lambda value 
-lasso_divs <- glmnet(x, y, alpha = 1, lambda = grid, standardize = TRUE)
-par(mfrow = c(1,1))
-plot(lasso_divs)
-
-plot(lasso_divs, xvar = "lambda", label = TRUE)
-plot(lasso_divs, xvar = "dev", label = TRUE)
-
-
+lasso_divs <- glmnet(x, y, alpha = 1, lambda = best_lasso_lambda, standardize = FALSE)
 # What are the lasso coefficients? (Anything with a . is not selected by the model)
 predict(lasso_divs, type = "coefficients", s = best_lasso_lambda)
+
+## Run lasso on the entire dataset with the best lambda value 
+lasso_divs_1se <- glmnet(x, y, alpha = 1, lambda = lasso_lambda_1se, standardize = FALSE)
+# What are the lasso coefficients? (Anything with a . is not selected by the model)
+predict(lasso_divs_1se, type = "coefficients", s = lasso_lambda_1se)
 ```
 
+The "one-standard-error" approach to lasso is not effective in the above approach and therefore, we will use the `lambda.min`.
+
+
+
 #### Per-capita Production:  All Samples
-```{r all-percapita-lasso, dependson = c("calc-div"), fig.width=8, fig.height=4}
+```{r all-percapita-lasso, dependson = c("calc-div"), fig.width=8, fig.height=4, warning = TRUE}
 set.seed(777) 
       
 scaled_percapita_ALL <- all_dat_lasso_percapita %>%
@@ -1304,7 +1321,7 @@ test <- -train
 
 ################ LASSO
 # Run lasso regression with alpha = 1
-lasso_divs_train <- glmnet(x[train,], y[train], alpha = 1, lambda = grid, standardize = TRUE)
+lasso_divs_train <- glmnet(x[train,], y[train], alpha = 1, lambda = grid, standardize = FALSE)
 par(mfrow = c(1,2))
 plot(lasso_divs_train)
 
@@ -1312,21 +1329,22 @@ plot(lasso_divs_train)
 cv_lasso_divs <- cv.glmnet(x[train,], y[train], alpha = 1)
 plot(cv_lasso_divs)
 best_lasso_lambda <- cv_lasso_divs$lambda.min
+# https://stats.stackexchange.com/questions/138569/why-is-lambda-plus-1-standard-error-a-recommended-value-for-lambda-in-an-elastic
+lasso_lambda_1se <- cv_lasso_divs$lambda.1se # simplest model whose accuracy is comparable with the best model
+best_lasso_lambda == lasso_lambda_1se
 lasso_divs_pred <- predict(lasso_divs_train, s = best_lasso_lambda, newx = x[test,])
 mean((lasso_divs_pred - y_test)^2)
 
 
 ## Run lasso on the entire dataset 
-lasso_divs <- glmnet(x, y, alpha = 1, lambda = grid, standardize = TRUE)
-par(mfrow = c(1,1))
-plot(lasso_divs)
-
-plot(lasso_divs, xvar = "lambda", label = TRUE)
-plot(lasso_divs, xvar = "dev", label = TRUE)
-
-
+lasso_divs <- glmnet(x, y, alpha = 1, lambda = best_lasso_lambda, standardize = FALSE)
 # What are the lasso coefficients?
 predict(lasso_divs, type = "coefficients", s = best_lasso_lambda)
+
+## Run lasso on the entire dataset 
+lasso_divs_1se <- glmnet(x, y, alpha = 1, lambda = lasso_lambda_1se, standardize = FALSE)
+# What are the lasso coefficients?
+predict(lasso_divs_1se, type = "coefficients", s = lasso_lambda_1se)
 ```
 
 
@@ -2137,7 +2155,7 @@ summary(pca_environ)$cont$importance[3, 2]*100
 The first two axes of the PCA explain ~70% of the variation in the environmental data!
 
 
-# Table S1
+### Prepare 
 ```{r environ-lm, dependson = "euclidian-pcoa-varexplained"}
 ## Prepare the dataframes for Free and Particle data
 metadata_pca_free <- filter(metadata_pca, fraction == "Free")
@@ -2234,24 +2252,19 @@ all_pca_environ_lm_results <-
 individual_lm_results <- bind_rows(lm_div_results, all_pca_environ_lm_results) %>%
   mutate(adj.r.squared = round(adj.r.squared, digits = 2),
          p.value = round(p.value, digits = 4))
- 
- 
-# Output the results for models that have a pvalue of less than 0.05
-datatable(dplyr::filter(individual_lm_results, p.value < 0.05),
-       caption = "Single Linear Model results from diversity, environmental, & PCA axes with a p-value less than 0.05.",
-       options = list(pageLength = 50))
 ```
 
-
-#### Per-Capita Production
-```{r}
+## Table S1
+```{r table-s1}
+### Per-Capita Production
 datatable(dplyr::filter(data.frame(individual_lm_results), dependent_var == "Per-Capita Production" & p.value < 0.05), 
        caption = "Significant (< 0.05) Linear Predictions for Per-Capita Heterotrophic Production axes with a p-value less than 0.05.",
        options = list(pageLength = 50))  
 ```
 
+## Table S2
+```{r table-s2}
 #### Community-Wide Production
-```{r}
 datatable(dplyr::filter(individual_lm_results, dependent_var == "Community Production" & p.value < 0.05),
        caption = "Significant (< 0.05) Linear Predictions for Community-Wide Heterotrophic Production axes with a p-value less than 0.05.",
        options = list(pageLength = 50)) 
