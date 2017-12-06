@@ -54,12 +54,12 @@ knitr::opts_chunk$set(eval = TRUE,
 
 # Load Libraries
 ```{r load-libraries, message = FALSE, warning = FALSE}
-library(devtools)   # Reproducibility (see end of file)    
-library(phyloseq)   # Easier data manipulation  
-library(picante)    # Phylogenetic Tree Analysis  
-library(tidyverse)  # Pretty plotting and data manipulation 
-library(forcats)    # Recoding factors  
-library(cowplot)    # Multiple plotting   
+library(devtools)   # Reproducibility (see end of file)
+library(phyloseq)   # Easier data manipulation
+library(picante)    # Phylogenetic Tree Analysis
+library(tidyverse)  # Pretty plotting and data manipulation
+library(forcats)    # Recoding factors
+library(cowplot)    # Multiple plotting
 library(picante)    # Will also include ape and vegan
 library(car)        # Residual analysis 
 library(sandwich)   # vcovHC function in post-hoc test  
@@ -405,7 +405,7 @@ lm_divs_particle_comm <- div_measures_part %>%
   group_by(measure) %>% 
   do(glance(lm(frac_bacprod ~ mean, data = .))) %>% 
   mutate(fraction = "Particle", dependent = "Community Production") %>%
-  dplyr::select(fraction, dependent, measure, adj.r.squared, p.value) 
+  dplyr::select(fraction, dependent, measure, AIC, adj.r.squared, p.value) 
 
 ##############  Particle: Community-wide 
 lm_divs_particle_percap <- div_measures_part %>%
@@ -413,7 +413,7 @@ lm_divs_particle_percap <- div_measures_part %>%
   group_by(measure) %>% 
   do(glance(lm(log10(fracprod_per_cell_noinf) ~ mean, data = .))) %>% 
   mutate(fraction = "Particle", dependent = "Per-Capita Production") %>%
-  dplyr::select(fraction, dependent, measure, adj.r.squared, p.value) 
+  dplyr::select(fraction, dependent, measure, AIC, adj.r.squared, p.value) 
 
 ########################################################
 ##############  Free: Community-wide 
@@ -422,7 +422,7 @@ lm_divs_free_comm <- div_measures_free %>%
   group_by(measure) %>% 
   do(glance(lm(frac_bacprod ~ mean, data = .))) %>% 
   mutate(fraction = "Free", dependent = "Community Production") %>%
-  dplyr::select(fraction, dependent, measure, adj.r.squared, p.value) 
+  dplyr::select(fraction, dependent, measure, AIC, adj.r.squared, p.value) 
 
 ##############  Free: Community-wide 
 lm_divs_free_percap <- div_measures_free %>%
@@ -430,7 +430,7 @@ lm_divs_free_percap <- div_measures_free %>%
   group_by(measure) %>% 
   do(glance(lm(log10(fracprod_per_cell_noinf) ~ mean, data = .))) %>% 
   mutate(fraction = "Free", dependent = "Per-Capita Production") %>%
-  dplyr::select(fraction, dependent, measure, adj.r.squared, p.value) 
+  dplyr::select(fraction, dependent, measure, AIC, adj.r.squared, p.value) 
 
 ########################################################
 ##############  All Samples: Community-wide 
@@ -439,7 +439,7 @@ lm_divs_all_comm <- div_measures_all %>%
   group_by(measure) %>% 
   do(glance(lm(frac_bacprod ~ mean, data = .))) %>% 
   mutate(fraction = "All Samples", dependent = "Community Production") %>%
-  dplyr::select(fraction, dependent, measure, adj.r.squared, p.value) 
+  dplyr::select(fraction, dependent, measure, AIC, adj.r.squared, p.value) 
 
 ##############  All Samples: Community-wide 
 lm_divs_all_percap <- div_measures_all %>%
@@ -447,7 +447,7 @@ lm_divs_all_percap <- div_measures_all %>%
   group_by(measure) %>% 
   do(glance(lm(log10(fracprod_per_cell_noinf) ~ mean, data = .))) %>% 
   mutate(fraction = "All Samples", dependent = "Per-Capita Production") %>%
-  dplyr::select(fraction, dependent, measure, adj.r.squared, p.value) 
+  dplyr::select(fraction, dependent, measure, AIC, adj.r.squared, p.value) 
 
 
 ## Filtered PCA Linear Model Results
@@ -1126,7 +1126,7 @@ lasso_divs_1se <- glmnet(x, y, alpha = 1, lambda = lasso_lambda_1se, standardize
 predict(lasso_divs_1se, type = "coefficients", s = lasso_lambda_1se)
 ```
 
-The lasso model for predicting the community-wide heterotrophic bacterial production for the free-living habitat uses *only* pH as the **best and only** predictor!
+The lasso model for predicting the community-wide heterotrophic bacterial production for the free-living habitat uses pH and PC5 as the **best and only two** predictors!
 
 
 #### Per-capita Production: Particle
@@ -1181,6 +1181,7 @@ lasso_divs_1se <- glmnet(x, y, alpha = 1, lambda = lasso_lambda_1se, standardize
 predict(lasso_divs_1se, type = "coefficients", s = lasso_lambda_1se)
 ```
 
+Temperature and Inverse Simpson's Index are the two best predictors of particle-associated per-capita production!
 
 #### Per-capita Production: Free
 ```{r percapita-free-lasso, dependson = c("calc-div", "prepare-data-lasso"), fig.width=8, fig.height=4, warning = TRUE}
@@ -1233,6 +1234,7 @@ lasso_divs_1se <- glmnet(x, y, alpha = 1, lambda = lasso_lambda_1se, standardize
 predict(lasso_divs_1se, type = "coefficients", s = lasso_lambda_1se) 
 ```
 
+pH is the **only** predictors of free-living per-capita production!
 
 
 
@@ -2178,7 +2180,7 @@ lm_summary_all_comm <- metadata_pca %>%
   group_by(independent) %>% 
   do(glance(lm(frac_bacprod ~ measurement, data = .))) %>% 
   mutate(fraction = "All Samples", dependent = "Community Production") %>%
-  dplyr::select(fraction, dependent, independent, adj.r.squared, p.value) 
+  dplyr::select(fraction, dependent, independent, AIC, adj.r.squared, p.value) 
 
 ##############  All Samples: Per-capita  
 lm_summary_all_percap <- metadata_pca %>%
@@ -2189,7 +2191,7 @@ lm_summary_all_percap <- metadata_pca %>%
   group_by(independent) %>% 
   do(glance(lm(log10(fracprod_per_cell_noinf) ~ measurement, data = .))) %>% 
   mutate(fraction = "All Samples", dependent = "Per-Capita Production") %>%
-  dplyr::select(fraction, dependent, independent, adj.r.squared, p.value) 
+  dplyr::select(fraction, dependent, independent, AIC, adj.r.squared, p.value) 
 
 
 
@@ -2202,7 +2204,7 @@ lm_summary_particle_comm <- metadata_pca_part %>%
   group_by(independent) %>% 
   do(glance(lm(frac_bacprod ~ measurement, data = .))) %>% 
   mutate(fraction = "Particle", dependent = "Community Production") %>%
-  dplyr::select(fraction, dependent, independent, adj.r.squared, p.value) 
+  dplyr::select(fraction, dependent, independent, AIC, adj.r.squared, p.value) 
 
 ##############  Particle: Per-capita  
 lm_summary_particle_percap <- metadata_pca_part %>%
@@ -2213,7 +2215,7 @@ lm_summary_particle_percap <- metadata_pca_part %>%
   group_by(independent) %>% 
   do(glance(lm(log10(fracprod_per_cell_noinf) ~ measurement, data = .))) %>% 
   mutate(fraction = "Particle", dependent = "Per-Capita Production") %>%
-  dplyr::select(fraction, dependent, independent, adj.r.squared, p.value) 
+  dplyr::select(fraction, dependent, independent, AIC, adj.r.squared, p.value) 
 
 
 ########################################################
@@ -2225,7 +2227,7 @@ lm_summary_free_comm <- metadata_pca_free %>%
   group_by(independent) %>% 
   do(glance(lm(frac_bacprod ~ measurement, data = .))) %>% 
   mutate(fraction = "Free", dependent = "Community Production") %>%
-  dplyr::select(fraction, dependent, independent, adj.r.squared, p.value) 
+  dplyr::select(fraction, dependent, independent, AIC, adj.r.squared, p.value) 
 
 ##############  Free: Per-capita  
 lm_summary_free_percap <- metadata_pca_free %>%
@@ -2236,7 +2238,7 @@ lm_summary_free_percap <- metadata_pca_free %>%
   group_by(independent) %>% 
   do(glance(lm(log10(fracprod_per_cell_noinf) ~ measurement, data = .))) %>% 
   mutate(fraction = "Free", dependent = "Per-Capita Production") %>%
-  dplyr::select(fraction, dependent, independent, adj.r.squared, p.value) 
+  dplyr::select(fraction, dependent, independent, AIC, adj.r.squared, p.value) 
 
 
 ## Filtered PCA Linear Model Results
@@ -2250,7 +2252,8 @@ all_pca_environ_lm_results <-
 
 ## Combine the results with the diversity linear models 
 individual_lm_results <- bind_rows(lm_div_results, all_pca_environ_lm_results) %>%
-  mutate(adj.r.squared = round(adj.r.squared, digits = 2),
+  mutate(AIC = round(AIC, digits = 2),
+         adj.r.squared = round(adj.r.squared, digits = 2),
          p.value = round(p.value, digits = 4))
 ```
 
