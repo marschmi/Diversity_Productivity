@@ -65,7 +65,7 @@ library(car)        # Residual analysis
 library(sandwich)   # vcovHC function in post-hoc test   
 library(MASS)       # studres in plot_residuals function   
 library(caret)      # Cross validation
-library(pander)     # Pretty tables    
+library(pander)     # Pretty tables     
 library(glmnet)     # Lasso regressions
 library(broom)      # Stats from lm regression
 library(purrr)      # Exporting lm results  
@@ -597,8 +597,9 @@ r2_table <- as.data.frame(rbind(perliter_row1, perliter_row2, perliter_row3, per
 colnames(r2_table) <- c("Diversity_Metric", "Production_Measure","Adjusted_R2","CV_R2", "CV_R2_SD")
 row.names(r2_table) = NULL
 
-pander(r2_table,
-               caption = "Supplemental Table 2: \n R2 estimates for heterotrophic production vs particle-associated diversity linear regressions.")
+datatable(r2_table,
+       caption = "Table S3: \n R2 estimates for heterotrophic production vs particle-associated diversity linear regressions.", 
+       options = list(pageLength = 50), rownames = FALSE)  
 ```
 
 
@@ -2262,7 +2263,7 @@ individual_lm_results <- bind_rows(lm_div_results, all_pca_environ_lm_results) %
 #### Community-Wide Production    
 datatable(dplyr::filter(individual_lm_results, dependent_var == "Community Production" & p.value < 0.05),
        caption = "Significant (< 0.05) Linear Predictions for Community-Wide Heterotrophic Production axes with a p-value less than 0.05.", 
-       options = list(pageLength = 50))   
+       options = list(pageLength = 50), rownames = FALSE)   
 ```
 
 
@@ -2271,7 +2272,7 @@ datatable(dplyr::filter(individual_lm_results, dependent_var == "Community Produ
 ### Per-Capita Production   
 datatable(dplyr::filter(data.frame(individual_lm_results), dependent_var == "Per-Capita Production" & p.value < 0.05), 
        caption = "Significant (< 0.05) Linear Predictions for Per-Capita Heterotrophic Production axes with a p-value less than 0.05.", 
-       options = list(pageLength = 50))    
+       options = list(pageLength = 50), rownames = FALSE)    
 ```
 
 
