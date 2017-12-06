@@ -62,7 +62,7 @@ library(forcats)    # Recoding factors
 library(cowplot)    # Multiple plotting
 library(picante)    # Will also include ape and vegan
 library(car)        # Residual analysis 
-library(sandwich)   # vcovHC function in post-hoc test  
+library(sandwich)   # vcovHC function in post-hoc test   
 library(MASS)       # studres in plot_residuals function   
 library(caret)      # Cross validation
 library(pander)     # Pretty tables    
@@ -454,7 +454,7 @@ lm_divs_all_percap <- div_measures_all %>%
 # Put all of the PCA and environmental  linear model results together into one dataframe 
 lm_div_results <- 
   bind_rows(lm_divs_particle_comm, lm_divs_particle_percap,
-          lm_divs_free_comm, lm_divs_free_percap,
+          lm_divs_free_comm, lm_divs_free_percap,     
           lm_divs_all_comm, lm_divs_all_percap) %>% 
   dplyr::rename(independent_var = measure,
                 dependent_var = dependent) 
@@ -2162,7 +2162,7 @@ The first two axes of the PCA explain ~70% of the variation in the environmental
 ## Prepare the dataframes for Free and Particle data
 metadata_pca_free <- filter(metadata_pca, fraction == "Free")
 metadata_pca_part <- filter(metadata_pca, fraction == "Particle")
-
+   
 # List of environmental variables to run linear models on 
         # BGA_cellspermL and Turb_NTU do not have enough data points for regression
 lm_variables <- c("frac_bacprod", "fracprod_per_cell_noinf", "Temp_C", "SpCond_uSpercm", "TDS_mgperL", 
@@ -2254,23 +2254,23 @@ all_pca_environ_lm_results <-
 individual_lm_results <- bind_rows(lm_div_results, all_pca_environ_lm_results) %>%
   mutate(AIC = round(AIC, digits = 2),
          adj.r.squared = round(adj.r.squared, digits = 2),
-         p.value = round(p.value, digits = 4))
+         p.value = round(p.value, digits = 4))  
 ```
 
 ## Table S1
 ```{r table-s1}
-### Per-Capita Production
+### Per-Capita Production   
 datatable(dplyr::filter(data.frame(individual_lm_results), dependent_var == "Per-Capita Production" & p.value < 0.05), 
        caption = "Significant (< 0.05) Linear Predictions for Per-Capita Heterotrophic Production axes with a p-value less than 0.05.",
-       options = list(pageLength = 50))  
+       options = list(pageLength = 50))    
 ```
 
 ## Table S2
 ```{r table-s2}
-#### Community-Wide Production
+#### Community-Wide Production    
 datatable(dplyr::filter(individual_lm_results, dependent_var == "Community Production" & p.value < 0.05),
        caption = "Significant (< 0.05) Linear Predictions for Community-Wide Heterotrophic Production axes with a p-value less than 0.05.",
-       options = list(pageLength = 50)) 
+       options = list(pageLength = 50))   
 ```
 
 
