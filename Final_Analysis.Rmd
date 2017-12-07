@@ -30,7 +30,7 @@ pre code, pre, code {
 
 This file has all of the code for the the main analysis to reproduce all figures except Figure S6 in the Schmidt et al. manuscript entitled **"Microhabitats shape diversity-productivity relationships in freshwater bacterial communities"**. To see how to reproduce figure S6 please see the github for this project and go to [analysis/OTU_Removal_Analysis.html](https://deneflab.github.io/Diversity_Productivity/analysis/OTU_Removal_Analysis.html)  on the github page.
 
-##### If you have any questions, please be welcome to email the corresponding author at marschmi@umich.edu
+##### If you have any questions, please be welcome to email the corresponding author at marschmi@umich.edu or tweet her at [micro_marian](https://twitter.com/micro_marian?lang=en).
 
 ```{r setup, include=FALSE}
 # For width of code chunks and scroll bar 
@@ -55,8 +55,8 @@ knitr::opts_chunk$set(eval = TRUE,
 # Load Libraries
 ```{r load-libraries, message = FALSE, warning = FALSE}
 library(devtools)   # Reproducibility (see end of file)
-library(phyloseq)   # Easier data manipulation 
-library(picante)    # Phylogenetic Tree Analysis
+library(phyloseq)   # Easier data manipulation  
+library(picante)    # Phylogenetic Tree Analysis 
 library(tidyverse)  # Pretty plotting and data manipulation
 library(forcats)    # Recoding factors
 library(cowplot)    # Multiple plotting

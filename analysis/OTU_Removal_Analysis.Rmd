@@ -31,6 +31,7 @@ The goal of this analysis is to check the sensitivity of the biodiversity-ecosys
 #### More specifically:
 We remove OTUs that have X number of sequences throughout the entire dataset and then check the relationship with diversity versus community-wide and per-capita heterotrophic production. This we call "singletons", "doubletons", "5-tons", "10-tons", etc all the way up to "300-tons". For context, removing 10-tons will be removing any OTUs that have a count of less than 10 throughout the entire dataset. 
 
+##### If you have any questions, please be welcome to email the corresponding author at marschmi@umich.edu or tweet her at [micro_marian](https://twitter.com/micro_marian?lang=en).
 
 ```{r setup, include=FALSE}
 # For width of code chunks and scroll bar 
