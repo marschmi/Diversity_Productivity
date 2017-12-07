@@ -1,12 +1,12 @@
 ---
-title: "OTU Removal Analysis"
+title: "OTU Removal Analysis: Figure S6"
 author: "Marian L. Schmidt, marschmi@umich.edu, @micro_marian"
-date: "November 29th, 2017"
+date: "December 7th, 2017"
 output:
   html_document:
     code_folding: show
     highlight: default
-    keep_md: yes
+    keep_md: no
     theme: journal
     toc: yes
     toc_float:
