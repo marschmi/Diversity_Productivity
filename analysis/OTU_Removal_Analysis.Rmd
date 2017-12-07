@@ -699,8 +699,7 @@ p1 <- ggplot(dplyr::filter(all_divs, measure == "Richness"  & fraction == "Parti
   scale_color_manual(values = tons_colors) +scale_fill_manual(values = tons_colors) +  
   facet_grid(~Removed, scales = "free") +
   theme(legend.position = "none", legend.title = element_blank(),
-        axis.text.x = element_text(angle = 60, hjust = 1, vjust = 1, size = 10),
-        axis.title.x = element_blank())
+        axis.text.x = element_blank(),axis.title.x = element_blank())
 
 p2 <- ggplot(dplyr::filter(all_divs, measure == "Richness" & fraction == "Particle"), 
        aes(y = log10(fracprod_per_cell_noinf), x = mean, color = Removed, fill = Removed)) +
@@ -723,8 +722,7 @@ p3 <- ggplot(dplyr::filter(all_divs, measure == "Inverse_Simpson" & fraction == 
   scale_fill_manual(values = tons_colors) +  
   facet_grid(~Removed, scales = "free") +
   theme(legend.position = "none", legend.title = element_blank(),
-        axis.text.x = element_text(angle = 60, hjust = 1, vjust = 1, size = 10),
-        axis.title.x = element_blank())
+        axis.text.x = element_blank(),axis.title.x = element_blank())
 
 p4 <- ggplot(dplyr::filter(all_divs, measure == "Inverse_Simpson"  & fraction == "Particle"), 
        aes(y = log10(fracprod_per_cell_noinf), x = mean, color = Removed, fill = Removed)) +
