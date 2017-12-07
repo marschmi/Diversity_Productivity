@@ -26,7 +26,7 @@ This is the repository for the manuscript "Microhabitats shape diversity-product
 
 ## Information about this repository:  
 
-##### **Original fastq files:**
+### **Original fastq files:**
 The original Fastq files were submitted to the NCBI sequence read archive under BioProject accession number PRJNA412984.
 
 
@@ -34,7 +34,7 @@ The original Fastq files were submitted to the NCBI sequence read archive under 
 
 The files in the main directory named [Final_Analysis.Rmd](https://github.com/marschmi/Diversity_Productivity/blob/master/Final_Analysis.Rmd), [Final_Analysis.html](Final_Analysis.html), and [Final_Figures/](https://github.com/marschmi/Diversity_Productivity/tree/master/Final_Figures/)` folder have all of the final analysis contents. 
 
-Two supplementary analysis files can be found in the [analysis/](https://github.com/DenefLab/Diversity_Productivity/tree/master/analysis) folder. Specifically: Files named [analysis/OTU_Removal_Analysis.Rmd](analyis/OTU_Removal_Analysis.Rmd), and [OTU_Removal_Analysis.html](analysis/OTU_Removal_Analysis.html) are for the rare OTU sensitivity analysis. Files named [PrunedTree_Analysis.html](analysis/PrunedTree_Analysis.html) and [PrunedTree_Analysis.Rmd](https://github.com/DenefLab/Diversity_Productivity/blob/master/analysis/PrunedTree_Analysis.Rmd) are for different types of phylogenetic analyses. 
+Two supplementary analysis files can be found in the [analysis/](https://github.com/DenefLab/Diversity_Productivity/tree/master/analysis) folder. Specifically: Files named [OTU_Removal_Analysis.Rmd](https://github.com/marschmi/Diversity_Productivity/blob/master/analysis/OTU_Removal_Analysis.Rmd), and [OTU_Removal_Analysis.html](analysis/OTU_Removal_Analysis.html) are for the rare OTU sensitivity analysis. Files named [PrunedTree_Analysis.html](analysis/PrunedTree_Analysis.html) and [PrunedTree_Analysis.Rmd](https://github.com/DenefLab/Diversity_Productivity/blob/master/analysis/PrunedTree_Analysis.Rmd) are for different types of phylogenetic analyses. 
 
 ### **File Structure:**
 
