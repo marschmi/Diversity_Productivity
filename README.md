@@ -31,7 +31,7 @@ The original Fastq files were submitted to the NCBI sequence read archive under 
 
 ### **File Description:**
 
-The files in the main directory named [Final_Analysis.Rmd](https://github.com/marschmi/Diversity_Productivity/blob/master/Final_Analysis.Rmd), [Final_Analysis.html](Final_Analysis.html), and [Final_Figures/](https://github.com/marschmi/Diversity_Productivity/tree/master/Final_Figures/)` folder have all of the final analysis contents. 
+The files in the main directory named [Final_Analysis.Rmd](https://github.com/marschmi/Diversity_Productivity/blob/master/Final_Analysis.Rmd), [Final_Analysis.html](Final_Analysis.html), and [Final_Figures/}(https://github.com/marschmi/Diversity_Productivity/tree/master/Final_Figures/) folder have all of the final analysis contents. **Please note that the [Final_Figures/}(https://github.com/marschmi/Diversity_Productivity/tree/master/Final_Figures/) folder has all of the figures in the manuscript except Figure S6, which can be found [here](https://github.com/marschmi/Diversity_Productivity/blob/master/analysis/OTU_Removal_Analysis_Figs/figS6-1.png).**
 
 Two supplementary analysis files can be found in the [analysis/](https://github.com/DenefLab/Diversity_Productivity/tree/master/analysis) folder. Specifically: Files named [OTU_Removal_Analysis.Rmd](https://github.com/marschmi/Diversity_Productivity/blob/master/analysis/OTU_Removal_Analysis.Rmd), and [OTU_Removal_Analysis.html](analysis/OTU_Removal_Analysis.html) are for the rare OTU sensitivity analysis. Files named [PrunedTree_Analysis.html](analysis/PrunedTree_Analysis.html) and [PrunedTree_Analysis.Rmd](https://github.com/DenefLab/Diversity_Productivity/blob/master/analysis/PrunedTree_Analysis.Rmd) are for different types of phylogenetic analyses. 
 
