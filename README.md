@@ -4,7 +4,6 @@
 
 ###  **Authors:** Marian L. Schmidt, Bopaiah A. Biddanda, Anthony D. Weinke, Edna Chiang, Fallon Januska, Ruben Props, & Vincent J. Denef
 
-
 ## [Link to the Main Analysis](Final_Analysis.html)
 
 ## [Link to the Supplemental Analysis](analysis/OTU_Removal_Analysis.html)
@@ -17,14 +16,14 @@
 
 **********
 
-This is the repository for the manuscript "Microhabitats shape diversity-productivity relationships in freshwater bacterial communities" written by Marian L. Schmidt, Bopaiah A. Biddanda, Anthony D. Weinke, Edna Chiang, Fallon Januska, Ruben Props, & Vincent J. Denef.  The raw data can be obtained from the Sequence Read Archive at NCBI under BioProject accession number PRJNA412984.
-
 **Abstract:** Eukaryotic communities commonly display a positive relationship between biodiversity and ecosystem function (BEF). Based on current studies, it remains uncertain to what extent these findings extend to bacterial communities. An extrapolation from eukaryotic relationships would predict there to be no BEF relationships for bacterial communities because they are generally composed of an order of magnitude more taxa than the communities in most eukaryotic BEF studies. Here, we sampled surface water of a freshwater, estuarine lake to evaluate BEF relationships in bacterial communities across a natural productivity gradient. We assessed the impact of habitat heterogeneity - an important factor influencing eukaryotic BEFs - on the relationship between species richness, evenness, phylogenetic diversity, and heterotrophic productivity by sampling co-occurring free-living (more homogenous) and particle-associated (more heterogeneous) bacterial habitats. Diversity measures, and not environmental variables, were the best predictors of particles-associated heterotrophic production. There was a strong, positive, linear relationship between particle-associated bacterial richness and heterotrophic productivity that was strengthened when considering evenness. There were no observable BEF trends in free-living bacterial communities. In contrast, per-capita but not community-wide heterotrophic productivity increased across both habitats as communities were composed of taxa that were more phylogenetically clustered. This association indicates that communities with more phylogenetically related taxa have higher per-capita heterotrophic production than communities of phylogenetically distantly related taxa. Our findings show that lake heterotrophic bacterial productivity can be positively affected by evenness and richness, negatively by phylogenetic diversity, and that BEF relationships are contingent on microhabitats. These results provide a stepping stone to compare biodiversity-productivity theory developed for Eukarya to bacterial ecosystems.  
 
 **********
 
 
 ## Information about this repository:  
+
+This is the repository for the manuscript "Microhabitats shape diversity-productivity relationships in freshwater bacterial communities" written by Marian L. Schmidt, Bopaiah A. Biddanda, Anthony D. Weinke, Edna Chiang, Fallon Januska, Ruben Props, & Vincent J. Denef.  
 
 ### **Original fastq files:**
 The original Fastq files were submitted to the NCBI sequence read archive under BioProject accession number PRJNA412984.
