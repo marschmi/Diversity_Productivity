@@ -5,16 +5,14 @@
 ###  **Authors:** Marian L. Schmidt, Bopaiah A. Biddanda, Anthony D. Weinke, Edna Chiang, Fallon Januska, Ruben Props, & Vincent J. Denef
 
 
-# [Link to the Main Analysis](Final_Analysis.html)
+## [Link to the Main Analysis](Final_Analysis.html)
 
-# [Link to the Supplemental Analysis](analysis/OTU_Removal_Analysis.html)
+## [Link to the Supplemental Analysis](analysis/OTU_Removal_Analysis.html)
 
 #### Submitted to:  ADDME
 
   1. BioRxiv: 
   2. Journal on December XXXX, 2017  
-
-- **Link to the article on BioRxiv: ADDME**
 
 
 **********
