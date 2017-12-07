@@ -1,7 +1,7 @@
 ---
 title: "Analysis: Microhabitats shape diversity-productivity" 
 author: "Marian L. Schmidt, marschmi@umich.edu, @micro_marian"
-date: "November 28th, 2017"
+date: "December 7th, 2017"
 output:
   html_document:
     code_folding: show
@@ -28,7 +28,7 @@ pre code, pre, code {
 
 #### Purpose of this file  
 
-This file has all of the code for the the main analysis to reproduce all figures except Figure S6 in the Schmidt et al. manuscript entitled **"Microhabitats shape diversity-productivity relationships in freshwater bacterial communities"**. To see how to reproduce figure S6 please see the github for this project and go to `analysis/OTU_Removal_Analysis.html`.
+This file has all of the code for the the main analysis to reproduce all figures except Figure S6 in the Schmidt et al. manuscript entitled **"Microhabitats shape diversity-productivity relationships in freshwater bacterial communities"**. To see how to reproduce figure S6 please see the github for this project and go to [analysis/OTU_Removal_Analysis.html](https://deneflab.github.io/Diversity_Productivity/analysis/OTU_Removal_Analysis.html)  on the github page.
 
 ##### If you have any questions, please be welcome to email the corresponding author at marschmi@umich.edu
 
@@ -55,18 +55,18 @@ knitr::opts_chunk$set(eval = TRUE,
 # Load Libraries
 ```{r load-libraries, message = FALSE, warning = FALSE}
 library(devtools)   # Reproducibility (see end of file)
-library(phyloseq)   # Easier data manipulation
+library(phyloseq)   # Easier data manipulation 
 library(picante)    # Phylogenetic Tree Analysis
 library(tidyverse)  # Pretty plotting and data manipulation
 library(forcats)    # Recoding factors
 library(cowplot)    # Multiple plotting
-library(picante)    # Will also include ape and vegan
+library(picante)    # Will also include ape and vegan 
 library(car)        # Residual analysis  
 library(sandwich)   # vcovHC function in post-hoc test   
 library(MASS)       # studres in plot_residuals function   
 library(caret)      # Cross validation
-library(pander)     # Pretty tables     
-library(glmnet)     # Lasso regressions
+library(pander)     # Pretty tables      
+library(glmnet)     # Lasso regressions 
 library(broom)      # Stats from lm regression
 library(purrr)      # Exporting lm results  
 library(DT)         # Fancy HTML table output
@@ -544,64 +544,6 @@ cv_lm_percell_prod_vs_simpseven_PA <- train(
       tuneGrid = expand.grid(intercept = TRUE))
 cv_lm_percell_prod_vs_simpseven_PA$results      # Particle Per-Capita CV results  
 ```
-
-## Table S3 
-```{r Table_S3, dependson = "div-prod-lm-models"}
-########## PUT A TABLE TOGETHER  
-# Per Liter Production 
-perliter_row1 <- c("Richness", "Community-Wide",
-          round(summary(lm_prod_vs_rich_PA)$adj.r.squared, digits = 3),
-          round(cv_lm_prod_vs_rich_PA$results$Rsquared, digits = 3), 
-          round(cv_lm_prod_vs_rich_PA$results$RsquaredSD, digits = 3))
-
-perliter_row2 <- c("Shannon_Entropy", "Community-Wide",
-          round(summary(lm_prod_vs_shannon_PA)$adj.r.squared, digits = 3),
-          round(cv_lm_prod_vs_shannon_PA$results$Rsquared, digits = 3), 
-          round(cv_lm_prod_vs_shannon_PA$results$RsquaredSD, digits = 3))
-
-perliter_row3 <- c("Inverse_Simpson", "Community-Wide",
-          round(summary(lm_prod_vs_invsimps_PA)$adj.r.squared, digits = 3),
-          round(cv_lm_prod_vs_invsimps_PA$results$Rsquared, digits = 3), 
-          round(cv_lm_prod_vs_invsimps_PA$results$RsquaredSD, digits = 3))
-
-perliter_row4 <- c("Simpsons_Evenness","Community-Wide",
-          round(summary(lm_prod_vs_simpseven_PA)$adj.r.squared, digits = 3),
-          round(cv_lm_prod_vs_simpseven_PA$results$Rsquared, digits = 3), 
-          round(cv_lm_prod_vs_simpseven_PA$results$RsquaredSD, digits = 3))
-
-
-
-# Per cell production 
-percell_row1 <- c("Richness", "Per-Capita",
-          round(summary(lm_percell_prod_vs_rich_PA)$adj.r.squared, digits = 3),
-          round(cv_lm_percell_prod_vs_rich_PA$results$Rsquared, digits = 3), 
-          round(cv_lm_percell_prod_vs_rich_PA$results$RsquaredSD, digits = 3))
-
-percell_row2 <- c("Shannon Entropy", "Per-Capita",
-          round(summary(lm_percell_prod_vs_shannon_PA)$adj.r.squared, digits = 3),
-          round(cv_lm_percell_prod_vs_shannon_PA$results$Rsquared, digits = 3), 
-          round(cv_lm_percell_prod_vs_shannon_PA$results$RsquaredSD, digits = 3))
-
-percell_row3 <- c("Inverse Simpson", "Per-Capita",
-          round(summary(lm_percell_prod_vs_invsimps_PA)$adj.r.squared, digits = 3),
-          round(cv_lm_percell_prod_vs_invsimps_PA$results$Rsquared, digits = 3), 
-          round(cv_lm_percell_prod_vs_invsimps_PA$results$RsquaredSD, digits = 3))
-
-percell_row4 <- c("Simpsons Evenness", "Per-Capita",
-          round(summary(lm_percell_prod_vs_simpseven_PA)$adj.r.squared, digits = 3),
-          round(cv_lm_percell_prod_vs_simpseven_PA$results$Rsquared, digits = 3), 
-          round(cv_lm_percell_prod_vs_simpseven_PA$results$RsquaredSD, digits = 3))
-
-r2_table <- as.data.frame(rbind(perliter_row1, perliter_row2, perliter_row3, perliter_row4,
-                                percell_row1, percell_row2, percell_row3, percell_row4))
-colnames(r2_table) <- c("Diversity_Metric", "Production_Measure","Adjusted_R2","CV_R2", "CV_R2_SD")
-row.names(r2_table) = NULL
-
-datatable(r2_table,
-       caption = "Table S3: \n R2 estimates for heterotrophic production vs particle-associated diversity linear regressions.", 
-       options = list(pageLength = 50), rownames = FALSE)  
-```
-
 
 
 ## Figure 2
@@ -1129,7 +1071,7 @@ lasso_divs_1se <- glmnet(x, y, alpha = 1, lambda = lasso_lambda_1se, standardize
 predict(lasso_divs_1se, type = "coefficients", s = lasso_lambda_1se)
 ```
 
-The lasso model for predicting the community-wide heterotrophic bacterial production for the free-living habitat uses pH and PC5 as the **best and only two** predictors!
+PC5 and pH are the two best predictors of community-wide heterotrophic bacterial production in the free-living habitat.
 
 
 #### Per-capita Production: Particle
@@ -1184,7 +1126,7 @@ lasso_divs_1se <- glmnet(x, y, alpha = 1, lambda = lasso_lambda_1se, standardize
 predict(lasso_divs_1se, type = "coefficients", s = lasso_lambda_1se)
 ```
 
-Temperature and Inverse Simpson's Index are the two best predictors of particle-associated per-capita production!
+Temperature and Inverse Simpson's Index are the two best predictors of particle-associated per-capita production.
 
 #### Per-capita Production: Free
 ```{r percapita-free-lasso, dependson = c("calc-div", "prepare-data-lasso"), fig.width=8, fig.height=4, warning = TRUE}
@@ -1237,7 +1179,7 @@ lasso_divs_1se <- glmnet(x, y, alpha = 1, lambda = lasso_lambda_1se, standardize
 predict(lasso_divs_1se, type = "coefficients", s = lasso_lambda_1se) 
 ```
 
-pH is the **only** predictors of free-living per-capita production!
+pH is the **only** predictors of free-living per-capita production.
 
 
 
@@ -1297,7 +1239,7 @@ lasso_divs_1se <- glmnet(x, y, alpha = 1, lambda = lasso_lambda_1se, standardize
 predict(lasso_divs_1se, type = "coefficients", s = lasso_lambda_1se)
 ```
 
-As we can see in Figure 2 and Table S1, there is much less variation explained in this model by a linear regression. Here, the result of the "one-standard-error" approach shows that the lasso is unable to stably pick one variable.  Therefore, no variables are chosen.
+As we can see in Figure 2 and Table S1, there is much less variation explained in this model by a linear regression. Here, the result of the "one-standard-error" approach shows that the lasso is unable to pick a variable.  Therefore, no variables are chosen.
 
 
 #### Per-capita Production:  All Samples
@@ -1352,6 +1294,7 @@ predict(lasso_divs_1se, type = "coefficients", s = lasso_lambda_1se)
 ```
 
 
+As we can see in Figure S7 and Table S2, Richness is the best predictor of per-capita heterotrophic production when all samples are used in the model. 
 
 # Supplemental Figures 
 
@@ -2158,7 +2101,7 @@ summary(pca_environ)$cont$importance[3, 2]*100
 The first two axes of the PCA explain ~70% of the variation in the environmental data!
 
 
-### Prepare 
+#### Prepare data frames for table S1 and S2
 ```{r environ-lm, dependson = "euclidian-pcoa-varexplained"}
 ## Prepare the dataframes for Free and Particle data
 metadata_pca_free <- filter(metadata_pca, fraction == "Free")
@@ -2278,6 +2221,69 @@ datatable(dplyr::filter(data.frame(individual_lm_results), dependent_var == "Per
 
 
 
+
+
+# Bonus Analysis
+
+## Cross Validation 
+```{r Table_S3, dependson = "div-prod-lm-models"}
+########## PUT A TABLE TOGETHER  
+# Per Liter Production 
+perliter_row1 <- c("Richness", "Community-Wide",
+          round(summary(lm_prod_vs_rich_PA)$adj.r.squared, digits = 3),
+          round(cv_lm_prod_vs_rich_PA$results$Rsquared, digits = 3), 
+          round(cv_lm_prod_vs_rich_PA$results$RsquaredSD, digits = 3))
+
+perliter_row2 <- c("Shannon_Entropy", "Community-Wide",
+          round(summary(lm_prod_vs_shannon_PA)$adj.r.squared, digits = 3),
+          round(cv_lm_prod_vs_shannon_PA$results$Rsquared, digits = 3), 
+          round(cv_lm_prod_vs_shannon_PA$results$RsquaredSD, digits = 3))
+
+perliter_row3 <- c("Inverse_Simpson", "Community-Wide",
+          round(summary(lm_prod_vs_invsimps_PA)$adj.r.squared, digits = 3),
+          round(cv_lm_prod_vs_invsimps_PA$results$Rsquared, digits = 3), 
+          round(cv_lm_prod_vs_invsimps_PA$results$RsquaredSD, digits = 3))
+
+perliter_row4 <- c("Simpsons_Evenness","Community-Wide",
+          round(summary(lm_prod_vs_simpseven_PA)$adj.r.squared, digits = 3),
+          round(cv_lm_prod_vs_simpseven_PA$results$Rsquared, digits = 3), 
+          round(cv_lm_prod_vs_simpseven_PA$results$RsquaredSD, digits = 3))
+
+
+
+# Per cell production 
+percell_row1 <- c("Richness", "Per-Capita",
+          round(summary(lm_percell_prod_vs_rich_PA)$adj.r.squared, digits = 3),
+          round(cv_lm_percell_prod_vs_rich_PA$results$Rsquared, digits = 3), 
+          round(cv_lm_percell_prod_vs_rich_PA$results$RsquaredSD, digits = 3))
+
+percell_row2 <- c("Shannon Entropy", "Per-Capita",
+          round(summary(lm_percell_prod_vs_shannon_PA)$adj.r.squared, digits = 3),
+          round(cv_lm_percell_prod_vs_shannon_PA$results$Rsquared, digits = 3), 
+          round(cv_lm_percell_prod_vs_shannon_PA$results$RsquaredSD, digits = 3))
+
+percell_row3 <- c("Inverse Simpson", "Per-Capita",
+          round(summary(lm_percell_prod_vs_invsimps_PA)$adj.r.squared, digits = 3),
+          round(cv_lm_percell_prod_vs_invsimps_PA$results$Rsquared, digits = 3), 
+          round(cv_lm_percell_prod_vs_invsimps_PA$results$RsquaredSD, digits = 3))
+
+percell_row4 <- c("Simpsons Evenness", "Per-Capita",
+          round(summary(lm_percell_prod_vs_simpseven_PA)$adj.r.squared, digits = 3),
+          round(cv_lm_percell_prod_vs_simpseven_PA$results$Rsquared, digits = 3), 
+          round(cv_lm_percell_prod_vs_simpseven_PA$results$RsquaredSD, digits = 3))
+
+r2_table <- as.data.frame(rbind(perliter_row1, perliter_row2, perliter_row3, perliter_row4,
+                                percell_row1, percell_row2, percell_row3, percell_row4))
+colnames(r2_table) <- c("Diversity_Metric", "Production_Measure","Adjusted_R2","CV_R2", "CV_R2_SD")
+row.names(r2_table) = NULL
+
+datatable(r2_table,
+       caption = "Table S3: \n R2 estimates for heterotrophic production vs particle-associated diversity linear regressions.", 
+       options = list(pageLength = 50), rownames = FALSE)  
+```
+
+
+
 ## pH Analysis
 ```{r pH-analysis, fig.height=4, fig.width=8}
 ################ Free: Per-Capita production correlation with pH
@@ -2347,7 +2353,6 @@ plot_grid(pH_plots, season_legend,
 ```
 
 
-# Bonus Analysis
 
 ## Community-wide and Per-Capita Heterotrophic Production over Station and Season
 
