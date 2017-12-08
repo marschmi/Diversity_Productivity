@@ -56,7 +56,7 @@ knitr::opts_chunk$set(eval = TRUE,
 ```{r load-libraries, message = FALSE, warning = FALSE}
 library(devtools)   # Reproducibility (see end of file)
 library(phyloseq)   # Easier data manipulation  
-library(picante)    # Phylogenetic Tree Analysis 
+library(picante)    # Phylogenetic Tree Analysis  
 library(tidyverse)  # Pretty plotting and data manipulation
 library(forcats)    # Recoding factors
 library(cowplot)    # Multiple plotting
@@ -1463,58 +1463,11 @@ plot_grid(top_row_S1, legend_s1,
 
 
 ## Figure S4
-#### Compare Diversity Estimates across Station and Season
-```{r Figure_S4, fig.width = 14, fig.height = 7, dependson= c("calc-div", "prepare-data-lasso")}
-long_div_df <- lasso_data_df %>%
-  dplyr::select(norep_filter_name, lakesite:season, Richness:Weighted_PD) %>%
-  gather(measure, mean, Richness:Weighted_PD) %>%
-  mutate(measure = factor(measure, levels = 
-                            c("Richness", "Shannon_Entropy", "Inverse_Simpson", "Simpsons_Evenness", "Unweighted_PD", "Weighted_PD")))
-
-
-divs_PAFLA_plot_lakesite <- ggplot(long_div_df, aes(y = mean, x = lakesite, shape = lakesite)) +
-  ylab("Mean Diversity Value\n By Lake Station") +
-  facet_wrap(~measure, scale = "free_y", ncol = 6) +
-    geom_point(size = 3, aes(fill = fraction), color = "black", position = position_jitterdodge()) +
-  geom_boxplot(alpha = 0.5, outlier.shape = NA, color = "black", aes(fill = fraction)) +
-  scale_fill_manual(values = fraction_colors) + 
-  scale_shape_manual(values = lakesite_shapes) + 
-  scale_color_manual(values = fraction_colors) + 
-  theme(legend.position = "none", axis.title.x = element_blank(), 
-        axis.text.x = element_text(angle = 30, vjust = 1, hjust = 1)) 
-
-plot_A <- plot_grid(divs_PAFLA_plot_lakesite, lakesite_legend,
-          nrow = 2, ncol = 1,  labels = c("A",""),
-          rel_heights = c(1, 0.05))
-
-
-divs_PAFLA_plot_season <- ggplot(long_div_df, aes(y = mean, x = season, shape = season)) +
-  ylab("Mean Diversity Value \n By Season") +
-  facet_wrap(~measure, scale = "free_y", ncol = 6) +
-   geom_point(size = 3, aes(fill = fraction), color = "black", position = position_jitterdodge()) +
-  geom_boxplot(alpha = 0.5, outlier.shape = NA, color = "black", aes(fill = fraction)) +
-  scale_fill_manual(values = fraction_colors) + 
-  scale_shape_manual(values = season_shapes) + 
-  scale_color_manual(values = fraction_colors) + 
-  theme(legend.position = "none", axis.title.x = element_blank(), 
-        axis.text.x = element_text(angle = 30, vjust = 1, hjust = 1)) 
-
-plot_B <- plot_grid(divs_PAFLA_plot_season, season_legend,
-          nrow = 2, ncol = 1, labels = c("B",""),
-          rel_heights = c(1, 0.05))
-
-###### PLOT FIGURE S6
-plot_grid(plot_A, plot_B,
-          nrow = 2, ncol = 1)
-```
-
-
-## Figure S5
 #### Shannon and Simpson's Evenness 
-```{r Figure_S5, fig.width = 7, fig.height = 7, dependson = "calc-div"}
+```{r Figure_S4, fig.width = 7, fig.height = 7, dependson = "calc-div"}
 ######################################################### SHANNON ENTROPY ######################################################### 
 shannon_fraction_wilcox <- wilcox.test(mean ~ fraction, data = shannon)
-shannon_fraction_wilcox
+shannon_fraction_wilcox   
 
 filter(shannon) %>%
   group_by(fraction) %>%
@@ -1692,6 +1645,56 @@ figS2_row1 <- plot_grid(shannon_plots, simpseven_plots_noyaxis,
 plot_grid(figS2_row1, season_legend,
           ncol = 1, nrow = 2, rel_heights = c(1, 0.05))
 ```
+
+
+
+## Figure S5
+#### Compare Diversity Estimates across Station and Season
+```{r Figure_S5, fig.width = 14, fig.height = 7, dependson= c("calc-div", "prepare-data-lasso")}
+long_div_df <- lasso_data_df %>%  
+  dplyr::select(norep_filter_name, lakesite:season, Richness:Weighted_PD) %>%
+  gather(measure, mean, Richness:Weighted_PD) %>%
+  mutate(measure = factor(measure, levels = 
+                            c("Richness", "Shannon_Entropy", "Inverse_Simpson", "Simpsons_Evenness", "Unweighted_PD", "Weighted_PD")))
+
+
+divs_PAFLA_plot_lakesite <- ggplot(long_div_df, aes(y = mean, x = lakesite, shape = lakesite)) +
+  ylab("Mean Diversity Value\n By Lake Station") +
+  facet_wrap(~measure, scale = "free_y", ncol = 6) +
+    geom_point(size = 3, aes(fill = fraction), color = "black", position = position_jitterdodge()) +
+  geom_boxplot(alpha = 0.5, outlier.shape = NA, color = "black", aes(fill = fraction)) +
+  scale_fill_manual(values = fraction_colors) + 
+  scale_shape_manual(values = lakesite_shapes) + 
+  scale_color_manual(values = fraction_colors) + 
+  theme(legend.position = "none", axis.title.x = element_blank(), 
+        axis.text.x = element_text(angle = 30, vjust = 1, hjust = 1)) 
+
+plot_A <- plot_grid(divs_PAFLA_plot_lakesite, lakesite_legend,
+          nrow = 2, ncol = 1,  labels = c("A",""),
+          rel_heights = c(1, 0.05))
+
+
+divs_PAFLA_plot_season <- ggplot(long_div_df, aes(y = mean, x = season, shape = season)) +
+  ylab("Mean Diversity Value \n By Season") +
+  facet_wrap(~measure, scale = "free_y", ncol = 6) +
+   geom_point(size = 3, aes(fill = fraction), color = "black", position = position_jitterdodge()) +
+  geom_boxplot(alpha = 0.5, outlier.shape = NA, color = "black", aes(fill = fraction)) +
+  scale_fill_manual(values = fraction_colors) + 
+  scale_shape_manual(values = season_shapes) + 
+  scale_color_manual(values = fraction_colors) + 
+  theme(legend.position = "none", axis.title.x = element_blank(), 
+        axis.text.x = element_text(angle = 30, vjust = 1, hjust = 1)) 
+
+plot_B <- plot_grid(divs_PAFLA_plot_season, season_legend,
+          nrow = 2, ncol = 1, labels = c("B",""),
+          rel_heights = c(1, 0.05))
+
+###### PLOT FIGURE S6
+plot_grid(plot_A, plot_B,
+          nrow = 2, ncol = 1)
+```
+
+
 
 
 ## Figure S6
