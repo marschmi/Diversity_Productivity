@@ -59,10 +59,10 @@ library(phyloseq)   # Easier data manipulation
 library(picante)    # Phylogenetic Tree Analysis  
 library(tidyverse)  # Pretty plotting and data manipulation
 library(forcats)    # Recoding factors
-library(cowplot)    # Multiple plotting
+library(cowplot)    # Multiple plotting  
 library(picante)    # Will also include ape and vegan 
 library(car)        # Residual analysis  
-library(sandwich)   # vcovHC function in post-hoc test   
+library(sandwich)   # vcovHC function in post-hoc test
 library(MASS)       # studres in plot_residuals function   
 library(caret)      # Cross validation
 library(pander)     # Pretty tables      
@@ -405,7 +405,9 @@ lm_divs_particle_comm <- div_measures_part %>%
   group_by(measure) %>% 
   do(glance(lm(frac_bacprod ~ mean, data = .))) %>% 
   mutate(fraction = "Particle", dependent = "Community Production") %>%
-  dplyr::select(fraction, dependent, measure, AIC, adj.r.squared, p.value) 
+  dplyr::select(fraction, dependent, measure, AIC, adj.r.squared, p.value) %>%
+  ungroup() %>%
+  mutate(FDR.p = p.adjust(p.value, method = "fdr")) 
 
 ##############  Particle: Community-wide 
 lm_divs_particle_percap <- div_measures_part %>%
@@ -413,7 +415,9 @@ lm_divs_particle_percap <- div_measures_part %>%
   group_by(measure) %>% 
   do(glance(lm(log10(fracprod_per_cell_noinf) ~ mean, data = .))) %>% 
   mutate(fraction = "Particle", dependent = "Per-Capita Production") %>%
-  dplyr::select(fraction, dependent, measure, AIC, adj.r.squared, p.value) 
+  dplyr::select(fraction, dependent, measure, AIC, adj.r.squared, p.value) %>%
+  ungroup() %>%
+  mutate(FDR.p = p.adjust(p.value, method = "fdr")) 
 
 ########################################################
 ##############  Free: Community-wide 
@@ -422,7 +426,9 @@ lm_divs_free_comm <- div_measures_free %>%
   group_by(measure) %>% 
   do(glance(lm(frac_bacprod ~ mean, data = .))) %>% 
   mutate(fraction = "Free", dependent = "Community Production") %>%
-  dplyr::select(fraction, dependent, measure, AIC, adj.r.squared, p.value) 
+  dplyr::select(fraction, dependent, measure, AIC, adj.r.squared, p.value) %>%
+  ungroup() %>%
+  mutate(FDR.p = p.adjust(p.value, method = "fdr")) 
 
 ##############  Free: Community-wide 
 lm_divs_free_percap <- div_measures_free %>%
@@ -430,7 +436,9 @@ lm_divs_free_percap <- div_measures_free %>%
   group_by(measure) %>% 
   do(glance(lm(log10(fracprod_per_cell_noinf) ~ mean, data = .))) %>% 
   mutate(fraction = "Free", dependent = "Per-Capita Production") %>%
-  dplyr::select(fraction, dependent, measure, AIC, adj.r.squared, p.value) 
+  dplyr::select(fraction, dependent, measure, AIC, adj.r.squared, p.value) %>%
+  ungroup() %>%
+  mutate(FDR.p = p.adjust(p.value, method = "fdr")) 
 
 ########################################################
 ##############  All Samples: Community-wide 
@@ -439,7 +447,9 @@ lm_divs_all_comm <- div_measures_all %>%
   group_by(measure) %>% 
   do(glance(lm(frac_bacprod ~ mean, data = .))) %>% 
   mutate(fraction = "All Samples", dependent = "Community Production") %>%
-  dplyr::select(fraction, dependent, measure, AIC, adj.r.squared, p.value) 
+  dplyr::select(fraction, dependent, measure, AIC, adj.r.squared, p.value) %>%
+  ungroup() %>%
+  mutate(FDR.p = p.adjust(p.value, method = "fdr")) 
 
 ##############  All Samples: Community-wide 
 lm_divs_all_percap <- div_measures_all %>%
@@ -447,7 +457,9 @@ lm_divs_all_percap <- div_measures_all %>%
   group_by(measure) %>% 
   do(glance(lm(log10(fracprod_per_cell_noinf) ~ mean, data = .))) %>% 
   mutate(fraction = "All Samples", dependent = "Per-Capita Production") %>%
-  dplyr::select(fraction, dependent, measure, AIC, adj.r.squared, p.value) 
+  dplyr::select(fraction, dependent, measure, AIC, adj.r.squared, p.value) %>%
+  ungroup() %>%
+  mutate(FDR.p = p.adjust(p.value, method = "fdr")) 
 
 
 ## Filtered PCA Linear Model Results
@@ -1877,15 +1889,13 @@ weight_prod_vs_mpd_plot <-
   geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) +
   geom_point(size = 3.5, aes(shape = season)) + 
   scale_shape_manual(values = season_shapes) + 
-  ylab("Heterotrophic Production \n (μgC/L/day)") +
+  ylab("\n Community Production \n (μgC/L/day)") + 
   xlab("Standardized Effect Size \n Weighted Mean Pairwise Dist") +
   scale_fill_manual(values = fraction_colors) +
+  scale_color_manual(values = fraction_colors) +
   scale_x_continuous(limits = c(-1.5,1.75), breaks = seq(from = -1.5, to = 1.5, by = 0.5)) + 
   theme(legend.title = element_blank(), legend.position = "none",
         axis.text.x = element_blank(), axis.title.x = element_blank())
-
-
-
 
 
 
@@ -1907,7 +1917,7 @@ weight_percell_vs_mpd_plot <-
   geom_vline(xintercept = 0, linetype = "dashed", size = 1.5) +
   geom_point(size = 3.5, aes(shape = season)) + 
   scale_shape_manual(values = season_shapes) + 
-  ylab("log10(Per-Capita Production)\n (μgC/cell/day)") +
+  ylab("\n log10(Per-Capita Production)\n (μgC/cell/day)") +
   xlab("Weighted Phylogenetic Diversity") +
   scale_fill_manual(values = fraction_colors) +
   geom_smooth(method = "lm", data = filter(weighted_df, fraction == "Free"), color = "skyblue", fill = "skyblue", alpha = 0.3) +
@@ -2106,31 +2116,48 @@ The first two axes of the PCA explain ~70% of the variation in the environmental
 
 #### Prepare data frames for table S1 and S2
 ```{r environ-lm, dependson = "euclidian-pcoa-varexplained"}
+# Add the phylogenetic diversity to the dataframes
+weighted_PD_df <- weighted_df %>%
+  dplyr::select(norep_filter_name, mpd.obs.z) %>%
+  rename(weighted_PD = mpd.obs.z)
+
+unweighted_PD_df <- unweighted_df %>%
+  dplyr::select(norep_filter_name, mpd.obs.z) %>%
+  rename(unweighted_PD = mpd.obs.z)
+
+metadata_pca_PD <- metadata_pca %>%
+  left_join(unweighted_PD_df, by = "norep_filter_name") %>%
+  left_join(weighted_PD_df, by = "norep_filter_name")
+  
+
 ## Prepare the dataframes for Free and Particle data
-metadata_pca_free <- filter(metadata_pca, fraction == "Free")
-metadata_pca_part <- filter(metadata_pca, fraction == "Particle")
-   
+metadata_pca_PD_free <- filter(metadata_pca_PD, fraction == "Free")
+metadata_pca_PD_part <- filter(metadata_pca_PD, fraction == "Particle")  
+
 # List of environmental variables to run linear models on 
         # BGA_cellspermL and Turb_NTU do not have enough data points for regression
 lm_variables <- c("frac_bacprod", "fracprod_per_cell_noinf", "Temp_C", "SpCond_uSpercm", "TDS_mgperL", 
                   "pH", "ORP_mV", "Chl_Lab_ugperL", "Cl_mgperL", "SO4_mgperL", "NO3_mgperL", 
                   "NH3_mgperL", "TKN_mgperL", "SRP_ugperL", "TP_ugperL", "Alk_mgperL", "DO_mgperL", 
-                  "DO_percent", "total_bac_abund","attached_bac", "dnaconcrep1", 
-                  "PC1", "PC2", "PC3" ,"PC4", "PC5", "PC6") 
+                  "total_bac_abund","attached_bac", "dnaconcrep1", 
+                  "PC1", "PC2", "PC3" ,"PC4", "PC5", "PC6",
+                  "unweighted_PD", "weighted_PD") 
 
 ########################################################
 ##############  All Samples: Community-wide 
-lm_summary_all_comm <- metadata_pca %>%
+lm_summary_all_comm <- metadata_pca_PD %>%
   dplyr::select(one_of(lm_variables), -fracprod_per_cell_noinf) %>%
   gather(key = independent, value = measurement, -frac_bacprod) %>%
   mutate(measurement = as.numeric(measurement)) %>%
   group_by(independent) %>% 
   do(glance(lm(frac_bacprod ~ measurement, data = .))) %>% 
   mutate(fraction = "All Samples", dependent = "Community Production") %>%
-  dplyr::select(fraction, dependent, independent, AIC, adj.r.squared, p.value) 
+  dplyr::select(fraction, dependent, independent, AIC, adj.r.squared, p.value) %>%
+  ungroup() %>%
+  mutate(FDR.p = p.adjust(p.value, method = "fdr")) 
 
 ##############  All Samples: Per-capita  
-lm_summary_all_percap <- metadata_pca %>%
+lm_summary_all_percap <- metadata_pca_PD %>%
   dplyr::select(one_of(lm_variables), -frac_bacprod) %>%
   filter(!is.na(fracprod_per_cell_noinf)) %>%   # Remove samples that are not NA
   gather(key = independent, value = measurement, -fracprod_per_cell_noinf) %>%
@@ -2138,23 +2165,27 @@ lm_summary_all_percap <- metadata_pca %>%
   group_by(independent) %>% 
   do(glance(lm(log10(fracprod_per_cell_noinf) ~ measurement, data = .))) %>% 
   mutate(fraction = "All Samples", dependent = "Per-Capita Production") %>%
-  dplyr::select(fraction, dependent, independent, AIC, adj.r.squared, p.value) 
+  dplyr::select(fraction, dependent, independent, AIC, adj.r.squared, p.value) %>%
+  ungroup() %>%
+  mutate(FDR.p = p.adjust(p.value, method = "fdr")) 
 
 
 
 ########################################################
 ##############  Particle: Community-wide 
-lm_summary_particle_comm <- metadata_pca_part %>%
+lm_summary_particle_comm <- metadata_pca_PD_part %>%
   dplyr::select(one_of(lm_variables), -fracprod_per_cell_noinf) %>%
   gather(key = independent, value = measurement, -frac_bacprod) %>%
   mutate(measurement = as.numeric(measurement)) %>%
   group_by(independent) %>% 
   do(glance(lm(frac_bacprod ~ measurement, data = .))) %>% 
   mutate(fraction = "Particle", dependent = "Community Production") %>%
-  dplyr::select(fraction, dependent, independent, AIC, adj.r.squared, p.value) 
+  dplyr::select(fraction, dependent, independent, AIC, adj.r.squared, p.value) %>%
+  ungroup() %>%
+  mutate(FDR.p = p.adjust(p.value, method = "fdr")) 
 
 ##############  Particle: Per-capita  
-lm_summary_particle_percap <- metadata_pca_part %>%
+lm_summary_particle_percap <- metadata_pca_PD_part %>%
   dplyr::select(one_of(lm_variables), -frac_bacprod) %>%
   filter(!is.na(fracprod_per_cell_noinf)) %>%   # Remove samples that are not NA
   gather(key = independent, value = measurement, -fracprod_per_cell_noinf) %>%
@@ -2162,22 +2193,26 @@ lm_summary_particle_percap <- metadata_pca_part %>%
   group_by(independent) %>% 
   do(glance(lm(log10(fracprod_per_cell_noinf) ~ measurement, data = .))) %>% 
   mutate(fraction = "Particle", dependent = "Per-Capita Production") %>%
-  dplyr::select(fraction, dependent, independent, AIC, adj.r.squared, p.value) 
+  dplyr::select(fraction, dependent, independent, AIC, adj.r.squared, p.value) %>%
+  ungroup() %>%
+  mutate(FDR.p = p.adjust(p.value, method = "fdr")) 
 
 
 ########################################################
 ##############  Free: Community-wide 
-lm_summary_free_comm <- metadata_pca_free %>%
+lm_summary_free_comm <- metadata_pca_PD_free %>%
   dplyr::select(one_of(lm_variables), -fracprod_per_cell_noinf) %>%
   gather(key = independent, value = measurement, -frac_bacprod) %>%
   mutate(measurement = as.numeric(measurement)) %>%
   group_by(independent) %>% 
   do(glance(lm(frac_bacprod ~ measurement, data = .))) %>% 
   mutate(fraction = "Free", dependent = "Community Production") %>%
-  dplyr::select(fraction, dependent, independent, AIC, adj.r.squared, p.value) 
+  dplyr::select(fraction, dependent, independent, AIC, adj.r.squared, p.value) %>%
+  ungroup() %>%
+  mutate(FDR.p = p.adjust(p.value, method = "fdr")) 
 
 ##############  Free: Per-capita  
-lm_summary_free_percap <- metadata_pca_free %>%
+lm_summary_free_percap <- metadata_pca_PD_free %>%
   dplyr::select(one_of(lm_variables), -frac_bacprod) %>%
   filter(!is.na(fracprod_per_cell_noinf)) %>%   # Remove samples that are not NA
   gather(key = independent, value = measurement, -fracprod_per_cell_noinf) %>%
@@ -2185,7 +2220,9 @@ lm_summary_free_percap <- metadata_pca_free %>%
   group_by(independent) %>% 
   do(glance(lm(log10(fracprod_per_cell_noinf) ~ measurement, data = .))) %>% 
   mutate(fraction = "Free", dependent = "Per-Capita Production") %>%
-  dplyr::select(fraction, dependent, independent, AIC, adj.r.squared, p.value) 
+  dplyr::select(fraction, dependent, independent, AIC, adj.r.squared, p.value) %>%
+  ungroup() %>%
+  mutate(FDR.p = p.adjust(p.value, method = "fdr")) 
 
 
 ## Filtered PCA Linear Model Results
@@ -2201,26 +2238,36 @@ all_pca_environ_lm_results <-
 individual_lm_results <- bind_rows(lm_div_results, all_pca_environ_lm_results) %>%
   mutate(AIC = round(AIC, digits = 2), 
          adj.r.squared = round(adj.r.squared, digits = 2),
-         p.value = round(p.value, digits = 4))   
+         p.value = round(p.value, digits = 4),
+         FDR.p = round(FDR.p, digits = 4)) %>%
+  dplyr::select(-p.value) %>%
+  rename(FDR.p.value = FDR.p)
 ``` 
 
 ## Table S1
 ```{r Table_S1}
+tableS1 <- individual_lm_results %>%
+  dplyr::filter(dependent_var == "Community Production" & FDR.p.value < 0.05) %>%
+  dplyr::select(-dependent_var)
+
 #### Community-Wide Production    
-datatable(dplyr::filter(individual_lm_results, dependent_var == "Community Production" & p.value < 0.05),
-       caption = "Significant (< 0.05) Linear Predictions for Community-Wide Heterotrophic Production axes with a p-value less than 0.05.", 
+datatable(tableS1,
+       caption = "Table S1: Ordinary least squares regression statistics for community-wide heterotrophic production with a FDR-corrected p-value of less than 0.05.", 
        options = list(pageLength = 50), rownames = FALSE)   
 ```
 
 
 ## Table S2
 ```{r Table_S2}
+tableS2 <- individual_lm_results %>%
+  dplyr::filter(dependent_var == "Per-Capita Production" & FDR.p.value < 0.05) %>%
+  dplyr::select(-dependent_var)
+
 ### Per-Capita Production   
-datatable(dplyr::filter(data.frame(individual_lm_results), dependent_var == "Per-Capita Production" & p.value < 0.05), 
-       caption = "Significant (< 0.05) Linear Predictions for Per-Capita Heterotrophic Production axes with a p-value less than 0.05.", 
+datatable(tableS2,
+       caption = "Table S2: Ordinary least squares regression statistics for per-capita heterotrophic production with a FDR-corrected p-value of less than 0.05.", 
        options = list(pageLength = 50), rownames = FALSE)    
 ```
-
 
 
 
