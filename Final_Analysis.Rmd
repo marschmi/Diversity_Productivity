@@ -57,17 +57,17 @@ knitr::opts_chunk$set(eval = TRUE,
 library(devtools)   # Reproducibility (see end of file)
 library(phyloseq)   # Easier data manipulation  
 library(picante)    # Phylogenetic Tree Analysis  
-library(tidyverse)  # Pretty plotting and data manipulation
+library(tidyverse)  # Pretty plotting and data manipulation 
 library(forcats)    # Recoding factors
-library(cowplot)    # Multiple plotting  
-library(picante)    # Will also include ape and vegan 
-library(car)        # Residual analysis  
-library(sandwich)   # vcovHC function in post-hoc test
-library(MASS)       # studres in plot_residuals function   
+library(cowplot)    # Multiple plotting
+library(picante)    # Will also include ape and vegan  
+library(car)        # Residual analysis 
+library(sandwich)   # vcovHC function in post-hoc test 
+library(MASS)       # studres in plot_residuals function    
 library(caret)      # Cross validation
 library(pander)     # Pretty tables      
 library(glmnet)     # Lasso regressions 
-library(broom)      # Stats from lm regression
+library(broom)      # Stats from lm regression 
 library(purrr)      # Exporting lm results  
 library(DT)         # Fancy HTML table output
 source("code/Muskegon_functions.R")   # Source custom functions  
@@ -1832,10 +1832,8 @@ filter(weighted_df) %>%
   group_by(fraction) %>%
   summarize(mean(mpd.obs.z))
 
-
 # Make a data frame to draw significance line in boxplot (visually calculated)
 dat5 <- data.frame(a = c(1.15,1.15,1.85,1.85), b = c(1.6,1.7,1.7,1.6)) # WholePart vs WholeFree
-
 
 weight_distribution_plot <- 
   ggplot(weighted_df, aes(y = mpd.obs.z, x = fraction)) +
@@ -1857,11 +1855,6 @@ weight_distribution_plot <-
 
 
 # Is there a relationship between inverse simpson and Weighted Mean Pairwise distance?
-#summary(lm(mean ~ mpd.obs.z, data = weighted_df)) # NS
-  
-summary(lm(mean ~ mpd.obs.z, data = filter(weighted_df, fraction == "Particle")))
-summary(lm(mean ~ mpd.obs.z, data = filter(weighted_df, fraction == "Free")))
-
 weight_invsimps_vs_mpd_plot <- 
   ggplot(weighted_df, aes(y = mean, x = mpd.obs.z, fill = fraction)) +
   geom_errorbar(aes(ymin = mean - sd, ymax = mean + sd, color = fraction), alpha = 0.7) + # X-axis errorbars
@@ -1878,11 +1871,6 @@ weight_invsimps_vs_mpd_plot <-
 
 
 # Is there a relationship between PER-LITER PRODUCTION and WEIGHTED Mean Pairwise distance?
-summary(lm(frac_bacprod ~ mpd.obs.z, data = weighted_df))
-
-summary(lm(frac_bacprod ~ mpd.obs.z, data = filter(weighted_df, fraction == "Particle")))
-summary(lm(frac_bacprod ~ mpd.obs.z, data = filter(weighted_df, fraction == "Free")))
-
 weight_prod_vs_mpd_plot <- 
   ggplot(weighted_df, aes(y = frac_bacprod, x = mpd.obs.z, fill = fraction)) +
   geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod, color = fraction), alpha = 0.7) + # X-axis errorbars
@@ -1900,17 +1888,6 @@ weight_prod_vs_mpd_plot <-
 
 
 ################ Weighted Phylogenetic Diversity vs Per Capita (Per-Cell) Production 
-# Is there a relationship between PER-CELL PRODUCTION and WEIGHTED Mean Pairwise distance?
-summary(lm(log10(fracprod_per_cell_noinf) ~ mpd.obs.z, data = weighted_df))
-summary(lm(log10(fracprod_per_cell_noinf) ~ mpd.obs.z, data = filter(weighted_df, fraction == "Particle")))
-lm_percell_free_mpd <- lm(log10(fracprod_per_cell_noinf) ~ mpd.obs.z, data = filter(weighted_df, fraction == "Free"))
-summary(lm_percell_free_mpd)
-
-## 1. Extract the R2 and p-value from the linear model: 
-lm_lab_percell_free_mpd <- paste("atop(R^2 ==", round(summary(lm_percell_free_mpd)$adj.r.squared, digits = 2), ",",
-             "p ==", round(unname(summary(lm_percell_free_mpd)$coefficients[,4][2]), digits = 3), ")")
-
-## 2. Plot Weighted Pylogenetic Diersity vs Per Capita (Per-Cell) Production 
 weight_percell_vs_mpd_plot <- 
   ggplot(weighted_df, 
        aes(y = log10(fracprod_per_cell_noinf), x = mpd.obs.z, fill = fraction)) +
@@ -1920,11 +1897,8 @@ weight_percell_vs_mpd_plot <-
   ylab("\n log10(Per-Capita Production)\n (μgC/cell/day)") +
   xlab("Weighted Phylogenetic Diversity") +
   scale_fill_manual(values = fraction_colors) +
-  geom_smooth(method = "lm", data = filter(weighted_df, fraction == "Free"), color = "skyblue", fill = "skyblue", alpha = 0.3) +
   scale_x_continuous(limits = c(-1.5,1.75), breaks = seq(from = -1.5, to = 1.5, by = 0.5)) + 
   scale_y_continuous(limits = c(-8.5,-5), breaks = c(-8, -7, -6)) + 
-  # Add the R2 and p-value to the plot 
-  annotate("text", x=0.65, y=-7.9, label=lm_lab_percell_free_mpd, parse = TRUE, color = "deepskyblue3", size = 4) +
   theme(legend.title = element_blank(), legend.position ="none", 
         legend.text = element_text(size = 14))
 
@@ -2115,7 +2089,7 @@ The first two axes of the PCA explain ~70% of the variation in the environmental
 
 
 #### Prepare data frames for table S1 and S2
-```{r environ-lm, dependson = "euclidian-pcoa-varexplained"}
+```{r lm-models-df, dependson = c("calc-div", "calc-sesmpd","euclidian-pcoa-varexplained")}
 # Add the phylogenetic diversity to the dataframes
 weighted_PD_df <- weighted_df %>%
   dplyr::select(norep_filter_name, mpd.obs.z) %>%
@@ -2236,20 +2210,19 @@ all_pca_environ_lm_results <-
 
 ## Combine the results with the diversity linear models 
 individual_lm_results <- bind_rows(lm_div_results, all_pca_environ_lm_results) %>%
-  mutate(AIC = round(AIC, digits = 2), 
+  mutate(AIC = round(AIC, digits = 2),  
          adj.r.squared = round(adj.r.squared, digits = 2),
          p.value = round(p.value, digits = 4),
          FDR.p = round(FDR.p, digits = 4)) %>%
-  dplyr::select(-p.value) %>%
   rename(FDR.p.value = FDR.p)
 ``` 
 
 ## Table S1
-```{r Table_S1}
+```{r Table_S1, dependson="lm-models-df"}
 tableS1 <- individual_lm_results %>%
-  dplyr::filter(dependent_var == "Community Production" & FDR.p.value < 0.05) %>%
-  dplyr::select(-dependent_var)
-
+  dplyr::filter(dependent_var == "Community Production" & FDR.p.value < 0.05) %>%  
+  dplyr::select(-c(dependent_var, p.value)) 
+ 
 #### Community-Wide Production    
 datatable(tableS1,
        caption = "Table S1: Ordinary least squares regression statistics for community-wide heterotrophic production with a FDR-corrected p-value of less than 0.05.", 
@@ -2258,11 +2231,11 @@ datatable(tableS1,
 
 
 ## Table S2
-```{r Table_S2}
-tableS2 <- individual_lm_results %>%
+```{r Table_S2, dependson="lm-models-df"}
+tableS2 <- individual_lm_results %>%  
   dplyr::filter(dependent_var == "Per-Capita Production" & FDR.p.value < 0.05) %>%
-  dplyr::select(-dependent_var)
-
+  dplyr::select(-c(dependent_var, p.value)) 
+ 
 ### Per-Capita Production   
 datatable(tableS2,
        caption = "Table S2: Ordinary least squares regression statistics for per-capita heterotrophic production with a FDR-corrected p-value of less than 0.05.", 
@@ -2270,6 +2243,12 @@ datatable(tableS2,
 ```
 
 
+### All Regression Results
+```{r all-lm-results, dependson = "lm-models-df"}
+### Per-Capita Production     
+datatable(individual_lm_results, 
+       options = list(pageLength = 20), rownames = FALSE)    
+```
 
 
 
