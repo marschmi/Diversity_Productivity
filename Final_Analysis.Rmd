@@ -48,7 +48,7 @@ knitr::opts_chunk$set(eval = TRUE,
                       fig.path="Final_Figures/",  # Set the figure options
                       fig.align = "center", 
                       fig.width = 7, 
-                      fig.height = 7)
+                      fig.height = 7) 
 
 ```
 
@@ -56,7 +56,7 @@ knitr::opts_chunk$set(eval = TRUE,
 ```{r load-libraries, message = FALSE, warning = FALSE}
 library(devtools)   # Reproducibility (see end of file)
 library(phyloseq)   # Easier data manipulation  
-library(picante)    # Phylogenetic Tree Analysis  
+library(picante)    # Phylogenetic Tree Analysis   
 library(tidyverse)  # Pretty plotting and data manipulation 
 library(forcats)    # Recoding factors
 library(cowplot)    # Multiple plotting
@@ -78,7 +78,7 @@ source("code/set_colors.R")           # Set Colors for plotting
 # Load data
 ```{r load-data, eval = TRUE}
 # Loads a phyloseq object named otu_merged_musk_pruned)
-load("data/surface_PAFL_otu_pruned_raw.RData")
+load("data/surface_PAFL_otu_pruned_raw.RData") 
 # The name of the phyloseq object is: 
 surface_PAFL_otu_pruned_raw 
 
@@ -170,12 +170,12 @@ otu_alphadiv <- otu_alphadiv %>%
 richness <- filter(otu_alphadiv, measure == "Richness")
 shannon <- filter(otu_alphadiv, measure == "Shannon_Entropy")
 invsimps <- filter(otu_alphadiv, measure == "Inverse_Simpson")
-simpseven <- filter(otu_alphadiv, measure == "Simpsons_Evenness")
+simpseven <- filter(otu_alphadiv, measure == "Simpsons_Evenness") 
 ```
 
 ## Calculate the Phylogenetic Diversity
 ```{r calc-sesmpd, fig.width = 4, fig.height = 4, dependson = "calc-div"}  
-# Read in the tree
+# Read in the tree 
 RAREFIED_rm2_fasttree <- read.tree(file = "data/PhyloTree/newick_tree_rm2_rmN.tre")
   
 # Load in data that has doubletons removed 
@@ -373,9 +373,19 @@ row1_plots <- plot_grid(poster_a + theme(legend.position = "none"), poster_b, po
           ncol = 3, nrow = 1)
 
 #fig_1 <- 
-  plot_grid(row1_plots, season_legend,
-                   ncol = 1, nrow = 2, 
-                   rel_heights = c(1, 0.05))
+tiff(file="Cornell_prodcells.tiff", width = 8.5, height = 3.5, units = "in", res = 300)
+
+prezzzz <- plot_grid(poster_a + theme_minimal() + theme(legend.position = "none"), 
+          poster_b + theme_minimal() + theme(legend.position = "none"),  
+          poster_c + theme_minimal() + theme(legend.position = "none"), 
+          labels = c("A", "B", "C"),
+          ncol = 3, nrow = 1)
+
+plot_grid(prezzzz, season_legend ,
+           ncol = 1, nrow = 2, 
+           rel_heights = c(1, 0.05))
+dev.off()
+
 ```
 
 
@@ -482,6 +492,30 @@ Cross validation will provide a better estimate for the adjusted R-squared value
 ################### Richness ################### 
 lm_prod_vs_rich_PA <- lm(frac_bacprod ~ mean, data = filter(richness, fraction == "Particle"))
 
+summary(lm(frac_bacprod ~ mean, data = filter(richness, fraction == "Particle")))
+summary(lm(frac_bacprod ~ mean, data = filter(richness, fraction == "Free")))
+
+# Without the 2 high samples 
+summary(lm(frac_bacprod ~ mean, data = filter(richness, fraction == "Particle" & mean < 700)))
+
+rich_test_df <- 
+  richness %>%
+  mutate(frac_boolean = (fraction == "Particle")*1) 
+
+# Correlation of richness between PA and FL
+rich_test_df_sorted <- arrange(rich_test_df, norep_water_name)
+rich_test_df_sorted_PA <- filter(rich_test_df_sorted, fraction == "Particle")
+rich_test_df_sorted_FL <- filter(rich_test_df_sorted, fraction == "Free")
+cor.test(rich_test_df_sorted_PA$mean, rich_test_df_sorted_FL$mean)
+
+# Look into car::vif() for multicollinearity 
+cor(rich_test_df$mean, rich_test_df$frac_boolean)
+summary(lm(frac_bacprod ~ mean + frac_boolean, data = rich_test_df))
+
+
+PA_rich_residplot <- plot_residuals(lm_prod_vs_rich_PA, filter(richness, fraction == "Particle")$frac_bacprod, "Community Production vs Particle-Associated Richness")
+
+
 # Cross validate particle-associated for a better estimate of the adjusted R-squared
 cv_lm_prod_vs_rich_PA <- train(
       frac_bacprod ~ mean, data = filter(richness, fraction == "Particle"), 
@@ -501,6 +535,27 @@ cv_lm_prod_vs_shannon_PA$results   # Particle Community-Wide CV results
 
 ################### Inverse Simpson ################### 
 lm_prod_vs_invsimps_PA <- lm(frac_bacprod ~ mean, data = filter(invsimps, fraction == "Particle"))
+summary(lm_prod_vs_invsimps_PA)
+
+# Without the 2 high samples 
+summary(lm(frac_bacprod ~ mean, data = filter(invsimps, fraction == "Particle" & mean < 70)))
+
+PA_invsimps_residplot <- plot_residuals(lm_prod_vs_invsimps_PA, filter(invsimps, fraction == "Particle")$frac_bacprod, "Community Production vs Particle-Associated Inverse Simpson")
+
+invsimps_test_df <- 
+  invsimps %>%
+  mutate(frac_boolean = (fraction == "Particle")*1) 
+
+cor(invsimps_test_df$mean, invsimps_test_df$frac_boolean)
+summary(lm(frac_bacprod ~ mean + frac_boolean, data = invsimps_test_df))
+
+# Correlation of inverse Simpson's index between PA and FL
+invsimps_test_df_sorted <- arrange(invsimps_test_df, norep_water_name)
+invsimps_test_df_sorted_PA <- filter(invsimps_test_df_sorted, fraction == "Particle")
+invsimps_test_df_sorted_FL <- filter(invsimps_test_df_sorted, fraction == "Free")
+cor.test(invsimps_test_df_sorted_PA$mean, invsimps_test_df_sorted_FL$mean)
+
+
 cv_lm_prod_vs_invsimps_PA <- train(
       frac_bacprod ~ mean, data = filter(invsimps, fraction == "Particle"), 
       method ='lm', 
@@ -521,6 +576,15 @@ cv_lm_prod_vs_simpseven_PA$results   # Particle Community-Wide CV results
 #################################### Per-Capita Production #################################### 
 ################### Richness ################### 
 lm_percell_prod_vs_rich_PA <- lm(log10(fracprod_per_cell_noinf) ~ mean, data = filter(richness, fraction == "Particle"))
+summary(lm_percell_prod_vs_rich_PA)
+
+# Dummy variable regression
+summary(lm(log10(fracprod_per_cell_noinf) ~ mean + frac_boolean, 
+           data = rich_test_df))
+
+
+PA_rich_percell_residplot <- plot_residuals(lm_percell_prod_vs_rich_PA, filter(richness, fraction == "Particle")$lm(log10(fracprod_per_cell_noinf)), "Log10(Cellular Production) vs Particle-Associated Richness")
+
 cv_lm_percell_prod_vs_rich_PA <- train(
       log10(fracprod_per_cell_noinf) ~ mean, data = filter(richness, fraction == "Particle" & norep_filter_name != "MOTEJ515"), 
       method ='lm', 
@@ -539,6 +603,14 @@ cv_lm_percell_prod_vs_shannon_PA$results      # Particle Per-Capita CV results
 
 ################### Inverse Simpson ################### 
 lm_percell_prod_vs_invsimps_PA <- lm(log10(fracprod_per_cell_noinf) ~ mean, data = filter(invsimps, fraction == "Particle"))
+
+summary(lm_percell_prod_vs_invsimps_PA)
+
+# Dummy variable regression
+summary(lm(log10(fracprod_per_cell_noinf) ~ mean + frac_boolean, data = invsimps_test_df))
+
+PA_invsimps_percell_residplot <- plot_residuals(lm_percell_prod_vs_invsimps_PA, filter(invsimps, fraction == "Particle")$lm(log10(fracprod_per_cell_noinf)), "Log10(Cellular Production) vs Particle-Associated Inverse Simpson")
+
 cv_lm_percell_prod_vs_invsimps_PA <- train(
       log10(fracprod_per_cell_noinf) ~ mean, data = filter(invsimps, fraction == "Particle" & norep_filter_name != "MOTEJ515"), 
       method ='lm', 
@@ -557,6 +629,54 @@ cv_lm_percell_prod_vs_simpseven_PA <- train(
 cv_lm_percell_prod_vs_simpseven_PA$results      # Particle Per-Capita CV results  
 ```
 
+#### Diversity distributions
+```{r}
+rich_fraction_wilcox <- wilcox.test(mean ~ fraction, data = richness)
+
+# Make a data frame to draw significance line in boxplot (visually calculated)
+rich_nums <- data.frame(a = c(1.15,1.15,1.85,1.85), b = c(920, 930, 930, 920)) # WholePart vs WholeFree
+
+rich_vert_distribution_plot <- 
+  ggplot(richness, aes(y = mean, x = fraction)) +
+  scale_fill_manual(values = fraction_colors) +
+  geom_jitter(size = 3, aes(fill = fraction, shape = season), width = 0.2) + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(fill = fraction)) +
+  scale_y_continuous(limits = c(150,980), breaks = seq(from = 0, to =925, by = 150)) + 
+  ylab("Observed Richness") + xlab("Fraction") + 
+  scale_shape_manual(values = season_shapes) +
+  geom_path(data = rich_nums, aes(x = a, y = b), linetype = 1, color = "#424645") +
+  annotate("text", x=1.5, y=980, size = 8, color = "#424645", 
+           label= paste("***")) +
+  annotate("text", x=1.5, y=880, size = 4, color = "#424645",
+           label= paste("p =", round(rich_fraction_wilcox$p.value, digits = 5))) +
+  theme(legend.position = "none", axis.title.x = element_blank()) 
+  
+  
+######################################################### INVERSE SIMPSON ######################################################### 
+invsimps_fraction_wilcox <- wilcox.test(mean ~ fraction, data = invsimps)
+
+# Make a data frame to draw significance line in boxplot (visually calculated)
+invsimps_nums <- data.frame(a = c(1.15,1.15,1.85,1.85), b = c(83,85,85,83)) # WholePart vs WholeFree
+
+invsimps_vert_distribution_plot <- 
+  ggplot(invsimps, aes(y = mean, x = fraction)) +
+  scale_fill_manual(values = fraction_colors) +
+  scale_shape_manual(values = season_shapes) +
+  geom_jitter(size = 3,  aes(fill = fraction, shape = season), width = 0.2) + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(fill = fraction)) +
+  scale_y_continuous(limits = c(0,85), breaks = seq(from = 0, to = 85, by = 20)) + 
+  ylab("Inverse Simpson") + xlab("Fraction") + 
+  geom_path(data = invsimps_nums, aes(x = a, y = b), linetype = 1, color = "#424645") +
+  annotate("text", x=1.5, y=80, size = 4, color = "#424645", label= "NS") +
+  theme(legend.position = "none", axis.title.x = element_blank()) 
+
+plot_grid(rich_vert_distribution_plot, invsimps_vert_distribution_plot,
+          ncol = 2, nrow = 1, labels = c("A", "B")) 
+
+ggsave("div.png", width = 6, height = 3.5)
+  
+```
+
 
 ## Figure 2
 ```{r Figure_2, fig.width = 7, fig.height = 7, dependson= "calc-div"}
@@ -566,7 +686,8 @@ rich_fraction_wilcox
 
 filter(richness) %>%
   group_by(fraction) %>%
-  summarize(mean(mean), sd(mean))
+  summarize(mean(mean), sd(mean), min(mean), max(mean))
+
 
 # Make a data frame to draw significance line in boxplot (visually calculated)
 rich_nums <- data.frame(a = c(1.15,1.15,1.85,1.85), b = c(920, 930, 930, 920)) # WholePart vs WholeFree
@@ -603,11 +724,19 @@ prod_vs_rich_plot <-
   scale_shape_manual(values = season_shapes) +
   ylab("\n Community Production \n (μgC/L/day)") + 
   xlab("Observed Richness") +
-  geom_smooth(data=filter(richness, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
+  geom_smooth(data=filter(richness, fraction == "Particle"), method='lm', color = "firebrick", fill = "firebrick") + 
   scale_x_continuous(limits = c(150,980), breaks = seq(from = 0, to =925, by = 150)) + 
    # Add the R2 and p-value to the plot 
-  annotate("text", x=790, y=45, label=lm_lab_perliter_rich_PA, parse = TRUE, color = "#FF6600", size = 4) +
+  annotate("text", x=790, y=45, label=lm_lab_perliter_rich_PA, parse = TRUE, color = "firebrick", size = 4) +
   theme(legend.position = "none", axis.title.x = element_blank(), axis.text.x = element_blank()) 
+
+
+# Summary stats  
+summary(lm(frac_bacprod ~ mean, data = filter(richness, fraction == "Particle")))
+
+# WITHOUT THE TWO HIGH POINTS 
+summary(lm(frac_bacprod ~ mean, data = filter(richness, fraction == "Particle" & mean < 800)))  
+
 
 
 ################ Richness vs Per Capita (Per-Cell) Production 
@@ -625,14 +754,19 @@ percell_prod_vs_rich_plot <-
   scale_shape_manual(values = season_shapes) +
   ylab("\n log10(Per-Capita Production)\n (μgC/cell/day)") +
   xlab("Observed Richness") +
-  geom_smooth(data=filter(richness, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
+  geom_smooth(data=filter(richness, fraction == "Particle"), method='lm', color = "firebrick", fill = "firebrick") + 
   scale_x_continuous(limits = c(150,980), breaks = seq(from = 0, to =925, by = 150)) + 
   #scale_y_continuous(limits = c(-8e-7,5e-6), breaks = seq(from = 0, to = 6e-7, by = 3e-7)) + 
   # Add the R2 and p-value to the plot 
-  annotate("text", x=790, y=-7.5, label=lm_lab_percell_rich_PA, parse = TRUE, color = "#FF6600", size = 4) +
+  annotate("text", x=790, y=-7.5, label=lm_lab_percell_rich_PA, parse = TRUE, color = "firebrick", size = 4) +
   theme(legend.title = element_blank(), legend.position ="bottom", 
         legend.text = element_text(size = 14))
 
+# Summary stats 
+summary(lm(log10(fracprod_per_cell_noinf) ~ mean, data = filter(richness, fraction == "Particle")))
+
+# WITHOUT THE TWO HIGH POINTS 
+summary(lm(log10(fracprod_per_cell_noinf) ~ mean, data = filter(richness, fraction == "Particle" & mean < 800)))
 
 
 
@@ -678,12 +812,17 @@ prod_vs_invsimps_plot <-
   scale_shape_manual(values = season_shapes) +
   ylab("Community Production \n (μgC/L/day)") + 
   xlab("Inverse Simpson") +
-  geom_smooth(data=filter(invsimps, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
+  geom_smooth(data=filter(invsimps, fraction == "Particle"), method='lm', color = "firebrick", fill = "firebrick") + 
   scale_x_continuous(limits = c(0,85), breaks = seq(from = 0, to = 85, by = 20)) + 
   # Add the R2 and p-value to the plot 
-  annotate("text", x=70, y=45, label=lm_lab_perliter_invsimps_PA, parse = TRUE, color = "#FF6600", size = 4) +
+  annotate("text", x=70, y=45, label=lm_lab_perliter_invsimps_PA, parse = TRUE, color = "firebrick", size = 4) +
   theme(legend.position = "none", axis.title.x = element_blank(), axis.text.x = element_blank()) 
 
+# Summary stats 
+summary(lm(frac_bacprod ~ mean, data = filter(invsimps, fraction == "Particle")))
+
+# WITHOUT THE TWO HIGH POINTS 
+summary(lm(frac_bacprod ~ mean, data = filter(invsimps, fraction == "Particle" & mean < 70)))
 
 
 ################ Inverse Simpson vs Per Capitra (Per-Cell) Production 
@@ -701,14 +840,21 @@ percell_prod_vs_invsimps_plot <-
   scale_shape_manual(values = season_shapes) +
   ylab("log10(production/cell)\n (μgC/cell/day)") +
   xlab("Inverse Simpson") +
-  geom_smooth(data=filter(invsimps, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
+  geom_smooth(data=filter(invsimps, fraction == "Particle"), method='lm', color = "firebrick", fill = "firebrick") + 
   scale_x_continuous(limits = c(0,85), breaks = seq(from = 0, to = 85, by = 20)) + 
   #scale_y_continuous(limits = c(-8e-7,5e-6), breaks = seq(from = 0, to = 6e-7, by = 3e-7)) + 
   # Add the R2 and p-value to the plot 
-  annotate("text", x=70, y=-7.5, label=lm_lab_percell_invsimps_PA, parse = TRUE, color = "#FF6600", size = 4) +
+  annotate("text", x=70, y=-7.5, label=lm_lab_percell_invsimps_PA, parse = TRUE, color = "firebrick", size = 4) +
   guides(color = guide_legend(override.aes = list(shape = 15))) +
   theme(legend.title = element_blank(), legend.position ="bottom", 
         legend.text = element_text(size = 14))
+
+# Summary stats 
+summary(lm(log10(fracprod_per_cell_noinf) ~ mean, data = filter(invsimps, fraction == "Particle")))
+
+# WITHOUT THE TWO HIGH POINTS 
+summary(lm(log10(fracprod_per_cell_noinf) ~ mean, data = filter(invsimps, fraction == "Particle" & mean < 70)))
+summary(lm(log10(fracprod_per_cell_noinf) ~ mean, data = filter(invsimps, fraction == "Particle" & mean < 70 & log10(fracprod_per_cell_noinf) < 1e-7)))
 
 
 # Plot Inverse simpson plots altogether
@@ -745,6 +891,64 @@ plot_grid(figure2_row1, season_legend,
                    ncol = 1, nrow = 2, 
                    rel_heights = c(1, 0.05))
 ```
+
+
+
+# CORNELL PRES
+
+```{r}
+
+p1 <- 
+  ggplot(richness, aes(x=mean, y=frac_bacprod)) + 
+  geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd, color = fraction), alpha = 0.7) + # X-axis errorbars
+  geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod, color = fraction)) +  # Y-axis errorbars
+  geom_point(size = 3.5, color = "black", aes(fill = fraction, shape = season)) +
+  scale_color_manual(values = fraction_colors) +
+  scale_fill_manual(values = fraction_colors) +
+  scale_shape_manual(values = season_shapes) +
+  ylab("\n Community Production \n (μgC/L/day)") + 
+  xlab("Observed Richness") +
+  theme_minimal() + 
+  geom_smooth(data=filter(richness, fraction == "Particle"), method='lm', color = "firebrick", fill = "firebrick") + 
+  scale_x_continuous(limits = c(150,980), breaks = seq(from = 0, to =925, by = 150)) + 
+   # Add the R2 and p-value to the plot 
+  annotate("text", x=790, y=45, label=lm_lab_perliter_rich_PA, parse = TRUE, color = "firebrick", size = 4) +
+  theme(legend.position = "none") 
+
+
+p2 <-
+  ggplot(invsimps, aes(x=mean, y=frac_bacprod)) + 
+  geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd, color = fraction), alpha = 0.7) + # X-axis errorbars
+  geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod, color = fraction)) +  # Y-axis errorbars
+  geom_point(size = 3.5, color = "black", aes(fill = fraction, shape = season)) +
+  scale_color_manual(values = fraction_colors) +
+  scale_fill_manual(values = fraction_colors) +
+  scale_shape_manual(values = season_shapes) +
+  ylab("Community Production \n (μgC/L/day)") + 
+  xlab("Inverse Simpson") +
+  theme_minimal() +
+  geom_smooth(data=filter(invsimps, fraction == "Particle"), method='lm', color = "firebrick", fill = "firebrick") + 
+  scale_x_continuous(limits = c(0,85), breaks = seq(from = 0, to = 85, by = 20)) + 
+  # Add the R2 and p-value to the plot 
+  annotate("text", x=70, y=45, label=lm_lab_perliter_invsimps_PA, parse = TRUE, color = "firebrick", size = 4) +
+  theme(legend.position = "none") 
+
+
+
+
+tiff(file="Cornell_BEFs.tiff", width = 7, height = 3, units = "in", res = 300)
+plot_grid(p1, p2,
+          ncol = 2, nrow = 1, 
+          labels = c("A", "B"),
+          rel_widths = c(1, 1))
+dev.off()
+
+
+```
+
+
+
+
 
 
 
@@ -850,6 +1054,22 @@ unweight_prod_vs_mpd_plot <-
 ################ Figure 3D: Unweighted Phylogenetic Diversity vs Per Capita (Per-Cell) Production 
 ## 1. Run the linear model: Is there a relationship between PER-CELL PRODUCTION and Unweighted Mean Pairwise distance?
 unweight_vs_percell <- lm(log10(fracprod_per_cell_noinf) ~ mpd.obs.z, data = unweighted_df)
+summary(unweight_vs_percell)
+
+summary(aov(log10(fracprod_per_cell_noinf) ~ mpd.obs.z +fraction, data = unweighted_df))
+summary(aov(log10(fracprod_per_cell_noinf) ~ fraction + mpd.obs.z, data = unweighted_df))
+
+lmer(log10(fracprod_per_cell_noinf) ~ mpd.obs.z + (fraction) +
+     (0+dummy(fraction, "Particle")), data = Orthodont)
+
+library(lme4)
+# Look for the marginal R2 
+null<-lmer(log10(fracprod_per_cell_noinf)~(1|fraction),data=unweighted_df)
+full<-lmer(log10(fracprod_per_cell_noinf)~mpd.obs.z+(1| fraction),data=unweighted_df)
+anova(null,full)
+anova(full)
+
+summary(lm(log10(fracprod_per_cell_noinf) ~ fraction, data = unweighted_df))
 
   # Linear model results for particle-associated only 
   summary(lm(log10(fracprod_per_cell_noinf) ~ mpd.obs.z, data = filter(unweighted_df, fraction == "Particle")))
@@ -2254,6 +2474,60 @@ datatable(individual_lm_results,
 
 # Bonus Analysis
 
+## Structural Equation Modeling
+
+
+```{r structural-equation-models}
+colnames(lasso_data_df)
+
+lasso_data_subset <- 
+  lasso_data_df %>%
+  dplyr::select(
+                # Basic location info
+                lakesite, fraction, season, Sample_depth_m, 
+                
+                # Environmental Data 
+                Temp_C, SpCond_uSpercm, TDS_mgperL, pH,  ORP_mV, 
+                Chl_Lab_ugperL, BGA_cellspermL, Cl_mgperL, SO4_mgperL, 
+                NO3_mgperL, NH3_mgperL, TKN_mgperL, SRP_ugperL, TP_ugperL,
+                Alk_mgperL, DO_mgperL, DO_percent, Turb_NTU, 
+                
+                # Bacterial abundances 
+                total_bac_abund, attached_bac, perc_attached_abund, fraction_bac_abund,
+                
+                # PRODUCTION 
+                tot_bacprod, frac_bacprod, fracprod_per_cell_noinf,
+                
+                # PC axes
+                PC1, PC2, PC3, PC4, PC5, PC6, 
+                
+                # Biodiversity 
+                Richness, Shannon_Entropy, Inverse_Simpson, Simpsons_Evenness, 
+                Unweighted_PD, Weighted_PD)
+
+
+free_sem_data <- lasso_data_subset %>%
+  dplyr::filter(fraction == "Free")
+  
+particle_sem_data <- lasso_data_subset %>%
+  dplyr::filter(fraction == "Particle")
+
+library(lavaan)
+
+## FREE MODEL
+lavaan_free_m <- 'frac_bacprod ~ frac_bacprod'
+mlav_free <- sem(lavaan_free_m, data = free_sem_data, meanstructure = TRUE)
+summary(mlav_free)
+
+## Particle MODEL
+lavaan_part_m <- 'frac_bacprod ~ frac_bacprod'
+mlav_part <- sem(lavaan_part_m, data = particle_sem_data)
+summary(mlav_part)
+
+```
+
+
+
 ## Cross Validation 
 ```{r Table_S3, dependson = "div-prod-lm-models"}
 ########## PUT A TABLE TOGETHER  
@@ -2397,7 +2671,7 @@ prod1 <- ggplot(dplyr::filter(metadata, year == "2015" & fraction %in% c("Free",
                      breaks = seq(from = 0, to = 80, by = 15)) +
   scale_fill_manual(values = fraction_colors) + 
   guides(fill=guide_legend(nrow=1,byrow=TRUE)) +
-  xlab("Lake Station") + ylab("Community Production\n(ug C/L/day)") + 
+  xlab("Lake Station") + ylab("Community Production\n(μg C/L/day)") + 
   theme(axis.text.x = element_blank(), #element_text(angle = 30, vjust = 1, hjust = 1),
         axis.title.x = element_blank(),
         legend.position = c(0.65, 0.9), legend.title = element_blank(),
@@ -2425,8 +2699,9 @@ plot_grid(prod1, prod2, labels = c("A", "B"),
 
 
 
+
 ## Total Production 
-```{r total-prod-vs-season-station, eval = TRUE, fig.width = 6, fig.height = 4, include = TRUE}
+```{r total-prod-vs-season-station, eval = TRUE, fig.width = 6, fig.height = 3.5, include = TRUE}
 ### Total production by station 
 prod_by_station <- ggplot(dplyr::filter(metadata, year == "2015" & fraction %in% c("Free")), 
        aes(x = lakesite, y = tot_bacprod)) + 
@@ -2434,28 +2709,29 @@ prod_by_station <- ggplot(dplyr::filter(metadata, year == "2015" & fraction %in%
   scale_y_continuous(expand = c(0,0), limits = c(0,100)) +
   scale_fill_manual(values = fraction_colors) + 
   guides(fill=guide_legend(nrow=1,byrow=TRUE)) +
-  xlab("Lake Station") + ylab("Total Production (ug C/cell/day)") + 
-  theme(axis.text.x = element_text(angle = 30, vjust = 1, hjust = 1),
+  xlab("Lake Station") + ylab("Total Production \n (μg C/cell/day)") + 
+  theme(#axis.text.x = element_text(angle = 30, vjust = 1, hjust = 1),
         legend.position = c(0.85, 0.9), legend.title = element_blank(),
         plot.margin	= unit(c(0.25, 0.25, 0.25, 0.5), "cm")) #top, right, bottom, and left margins)
 
 ### Total production by Season 
 prod_by_season <- ggplot(dplyr::filter(metadata, year == "2015" & fraction %in% c("Free")), 
        aes(x = season, y = tot_bacprod)) + 
-  geom_boxplot(fill = "grey") + geom_point(size = 3.5, position = position_jitter()) +
+  geom_boxplot(fill = "grey", outlier.shape = NA) + geom_point(size = 3.5, position = position_jitter()) +
   scale_y_continuous(expand = c(0,0), limits = c(0,100)) +
   scale_fill_manual(values = fraction_colors) + 
   guides(fill=guide_legend(nrow=1,byrow=TRUE)) +
-  xlab("Season") + 
-  theme(axis.text.x = element_text(angle = 30, vjust = 1, hjust = 1),
-        axis.title.y = element_blank(),
+  xlab("Season") + ylab("") + 
+  theme(#axis.text.x = element_text(angle = 30, vjust = 1, hjust = 1),
         legend.position = c(0.85, 0.9), legend.title = element_blank(),
         plot.margin	= unit(c(0.25, 0.25, 0.25, 0.5), "cm")) #top, right, bottom, and left margins)
 
 plot_grid(prod_by_station, prod_by_season, labels = c("A", "B"),
-          rel_widths = c(1, 0.75),
+          rel_widths = c(1, 0.8),
           nrow = 1, ncol = 2,
           align = "h")
+
+#ggsave("station-season.png", width = 6.5, height = 3.5)
 ```
 The highest total heterotrophic production rates occur in the river station and in the spring and summer. 
 
