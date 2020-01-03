@@ -500,14 +500,14 @@ grid_arrange_shared_legend <- function(..., nrow = 1, ncol = length(list(...)), 
 # Calculate Alpha Diversity Values and combine into dataframe 
 
 
-calc_mean_alphadiv <- function(physeq, richness_df, evenness_df, shannon_df){
+calc_mean_alphadiv <- function(physeq, richness_df, simpson_df, exp_shannon_df){
   
   # How many samples?
   nsamp <- nsamples(physeq)
   
   # Check that all sample names are the same
-  stopifnot(row.names(richness_df) == row.names(evenness_df))
-  stopifnot(row.names(richness_df) == row.names(shannon_df))
+  stopifnot(row.names(richness_df) == row.names(simpson_df))
+  stopifnot(row.names(richness_df) == row.names(exp_shannon_df))
   
   # Create sample names for the dataframes
   norep_filter_name <- row.names(richness_df)
@@ -519,20 +519,20 @@ calc_mean_alphadiv <- function(physeq, richness_df, evenness_df, shannon_df){
   otu_rich_stats <- data.frame(norep_filter_name, mean, sd, measure)
   
   # Create a new dataframe to hold the means and standard deviations of evenness estimates
-  mean <- apply(evenness_df, 1, mean)
-  sd <- apply(evenness_df, 1, sd)
+  mean <- apply(simpson_df, 1, mean)
+  sd <- apply(simpson_df, 1, sd)
   measure <- rep("Inverse_Simpson", nsamp)
   otu_even_stats <- data.frame(norep_filter_name, mean, sd, measure)
   
   # Create a new dataframe to hold the means and standard deviations of shannon entropy estimates
-  mean <- apply(shannon_df, 1, mean)
-  sd <- apply(shannon_df, 1, sd)
-  measure <- rep("Shannon_Entropy", nsamp)
+  mean <- apply(exp_shannon_df, 1, mean)
+  sd <- apply(exp_shannon_df, 1, sd)
+  measure <- rep("Exponential_Shannon", nsamp)
   otu_shan_stats <- data.frame(norep_filter_name, mean, sd, measure)
   
   # Create a new dataframe to hold the means and standard deviations of simpsons evenness estimates
-  mean <- apply(evenness_df, 1, mean)
-  sd <- apply(evenness_df, 1, sd)
+  mean <- apply(simpson_df, 1, mean)
+  sd <- apply(simpson_df, 1, sd)
   measure <- rep("Inverse_Simpson", nsamp)
   otu_simpseven_stats <- data.frame(norep_filter_name, mean, sd, measure)
   
@@ -597,17 +597,18 @@ for (i in 1:iters) {
     # Subsample
     r <- rarefy_even_depth(physeq, sample.size = min_seqs, verbose = FALSE, replace = TRUE)
    
-    # Calculate richness
+    # Calculate richness; hill = 0
     calc_rich <- as.numeric(as.matrix(estimate_richness(r, measures = "Observed")))
     richness[ ,i] <- calc_rich
-   
-    # Calculate evenness
+    
+    # Calculate the Shannon Exponential; hill = 1 
+    calc_shan <- as.numeric(as.matrix(exp(estimate_richness(r, measures = "Shannon"))))
+    shannon[ ,i] <- calc_shan
+    
+    # Calculate the Inverse Simpson; hill = 2
     calc_simps <- as.numeric(as.matrix(estimate_richness(r, measures = "InvSimpson")))
     simpson[ ,i] <- calc_simps
-   
-    # Calculate evenness
-    calc_shan <- as.numeric(as.matrix(estimate_richness(r, measures = "Shannon")))
-    shannon[ ,i] <- calc_shan
+
   }
 
   # Return a list of 3 named matrices 

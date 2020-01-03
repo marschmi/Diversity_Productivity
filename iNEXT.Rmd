@@ -1,0 +1,190 @@
+---
+title: "iNEXT"
+author: "Marian L Schmidt"
+date: "1/2/2020"
+output:
+  html_document:
+    code_folding: show
+    highlight: default
+    keep_md: no
+    theme: journal
+    toc: yes
+    toc_float:
+      collapsed: no
+      smooth_scroll: yes
+      toc_depth: 3
+editor_options: 
+  chunk_output_type: console
+---
+<style>
+pre code, pre, code {
+  white-space: pre !important;
+  overflow-x: scroll !important;
+  word-break: keep-all !important;
+  word-wrap: initial !important;
+}
+</style>
+
+
+
+```{r setup, include=FALSE}
+# For width of code chunks and scroll bar 
+options(width=250)
+
+knitr::opts_chunk$set(eval = TRUE, 
+                      echo = TRUE, 
+                      cache = TRUE,
+                      include = TRUE,
+                      warning = FALSE,
+                      collapse = FALSE,
+                      message = FALSE,
+                      engine = "R", # Chunks will always have R code, unless noted
+                      error = TRUE,
+                      fig.path="Final_Figures/",  # Set the figure options
+                      fig.align = "center", 
+                      fig.width = 7, 
+                      fig.height = 7) 
+
+```
+
+# Load Libraries
+```{r load-libraries, message = FALSE, warning = FALSE}
+library(devtools)   # Reproducibility (see end of file)
+library(phyloseq)   # Easier data manipulation  
+library(picante)    # Phylogenetic Tree Analysis   
+library(tidyverse)  # Pretty plotting and data manipulation 
+library(forcats)    # Recoding factors
+library(cowplot)    # Multiple plotting
+library(picante)    # Will also include ape and vegan  
+library(car)        # Residual analysis 
+library(sandwich)   # vcovHC function in post-hoc test 
+library(MASS)       # studres in plot_residuals function    
+library(caret)      # Cross validation
+library(pander)     # Pretty tables      
+library(glmnet)     # Lasso regressions 
+library(broom)      # Stats from lm regression 
+library(purrr)      # Exporting lm results  
+library(DT)         # Fancy HTML table output
+library(lme4)       # linear mixed effects model
+library(iNEXT)
+source("code/Muskegon_functions.R")   # Source custom functions  
+source("code/set_colors.R")           # Set Colors for plotting
+```
+
+
+# Load data
+```{r load-data, eval = TRUE}
+# Loads a phyloseq object named otu_merged_musk_pruned)
+load("data/surface_PAFL_otu_pruned_raw.RData") 
+# The name of the phyloseq object is: 
+surface_PAFL_otu_pruned_raw 
+
+# Remove doubletons!
+surface_PAFL_otu_pruned_rm2 <- prune_taxa(taxa_sums(surface_PAFL_otu_pruned_raw) > 2, surface_PAFL_otu_pruned_raw) 
+surface_PAFL_otu_pruned_rm2
+
+# Remove tree for computational efficiency 
+surface_PAFL_otu_pruned_notree_rm2 <- phyloseq(tax_table(surface_PAFL_otu_pruned_rm2), otu_table(surface_PAFL_otu_pruned_rm2), sample_data(surface_PAFL_otu_pruned_rm2)) 
+
+# Gather the metadata in a dataframe
+metadata <- data.frame(sample_data(surface_PAFL_otu_pruned_notree_rm2)) %>%
+      mutate(fraction = factor(fraction, levels = c("WholePart","WholeFree")),
+         lakesite = factor(lakesite,  levels = c("MOT", "MDP", "MBR", "MIN")),
+         fraction = fct_recode(fraction, Particle = "WholePart", Free = "WholeFree"),
+         lakesite = fct_recode(lakesite, Outlet = "MOT", Deep = "MDP", Bear = "MBR", River = "MIN"))
+row.names(metadata) <- metadata$norep_filter_name
+
+# Replace the sample data 
+sample_data(surface_PAFL_otu_pruned_notree_rm2) <- metadata
+
+# Create a dataframe for environmental data only
+environmental_data <- metadata %>%
+  dplyr::select(Temp_C:DO_percent, -BGA_cellspermL, -SRP_ugperL, fraction, norep_filter_name, -DO_percent) %>%
+  dplyr::filter(fraction == "Free") %>%
+  dplyr::select(-fraction) %>%
+  tibble::column_to_rownames(var = "norep_filter_name") %>%
+  dplyr::rename(Temp = Temp_C, SPC = SpCond_uSpercm,
+         TDS = TDS_mgperL, ORP = ORP_mV,
+         Chla = Chl_Lab_ugperL, Cl = Cl_mgperL,
+         SO4 = SO4_mgperL, NO3 = NO3_mgperL,
+         NH3 = NH3_mgperL, TKN = TKN_mgperL,
+         TP = TP_ugperL, Alk = Alk_mgperL,
+         DO = DO_mgperL) %>%
+  as.matrix()
+
+#### PCA DATA 
+# Scale the data so their variances are the same!
+scaled_enviro <- scale(environmental_data)
+
+# Sanity Checks: check that we get mean of 0 and sd of 1
+apply(scaled_enviro, 2, mean)
+apply(scaled_enviro, 2, sd)
+
+# Run a principal component analysis via the vegan package
+pca_environ <- rda(scaled_enviro) 
+
+# What is the proportion explained by each of the PCA axes? 
+summary(pca_environ)$cont$importance
+
+# Pull out all of the PCA scores into a dataframe
+pca_scores_df <- summary(pca_environ)$sites %>%
+  as.data.frame() %>%
+  tibble::rownames_to_column(var = "norep_filter_name") %>%
+  mutate(norep_water_name = paste(substr(norep_filter_name, 1, 4), substr(norep_filter_name, 6, 8), sep = "")) %>%
+  dplyr::select(-c(norep_filter_name, PC3, PC4, PC5, PC6))
+
+# Combine the above dataframe with the rest of the metadata
+metadata_pca <- metadata %>%
+  mutate(norep_water_name = paste(substr(norep_filter_name, 1, 4), substr(norep_filter_name, 6, 8), sep = "")) %>%
+  left_join(pca_scores_df, by = "norep_water_name")
+```
+
+# iNEXT
+
+```{r iNEXT}
+iNEXT_table <- otu_table(surface_PAFL_otu_pruned_rm2) %>%
+  t() %>%
+  data.frame()
+
+# Run iNEXT on the data 
+#richness_iNEXT <- iNEXT(iNEXT_table, q = 0, datatype = "abundance")
+#shannon_iNEXT <- iNEXT(iNEXT_table, q = 1, datatype = "abundance")
+#simpson_iNEXT <- iNEXT(iNEXT_table, q = 2, datatype = "abundance")
+
+# Create a new file called "Phyloseq.RData" that has the phyloseq object
+#save(list=c("richness_iNEXT", "shannon_iNEXT", "simpson_iNEXT"),
+#     file=paste0("data/iNEXT/iNEXT_surface_PAFL_otu_pruned_rm2")) 
+
+load("data/iNEXT/iNEXT_surface_PAFL_otu_pruned_rm2")
+```
+
+```{r metadata-plot}
+dat <- colnames(iNEXT_table) %>%
+  data.frame() 
+colnames(dat)[1] <- "norep_filter_name"  
+
+sub_metadata <- metadata[,1:6] %>%
+  tibble::rownames_to_column(var = "norep_filter_name")
+
+dat_iNEXT <- dat %>%
+  left_join(sub_metadata, by = "norep_filter_name") %>%
+  mutate(color = ifelse(fraction == "Particle", "#FF6600", "skyblue"), 
+         shape = ifelse(season == "Spring", 25, 
+                        ifelse(season == "Summer", 23, 
+                               21)))
+```
+
+
+```{r plot-iNEXT}
+# Sample‐size‐based R/E curves, separating by "site""
+ggiNEXT(richness_iNEXT, type=1, facet.var="order") + facet_wrap(~order, scales="free") + 
+  scale_shape_manual(values = dat_iNEXT$shape) +
+  scale_color_manual(values = dat_iNEXT$color) +
+  scale_fill_manual(values = dat_iNEXT$color) + 
+  theme_minimal() + 
+  theme(legend.position = "bottom", legend.title = element_blank())
+
+#ggiNEXT(richness_iNEXT, type=2, facet.var="none", color.var="site")
+#ggiNEXT(richness_iNEXT, type=3, facet.var="order", color.var="site")
+
+```

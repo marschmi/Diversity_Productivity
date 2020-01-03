@@ -70,6 +70,7 @@ library(glmnet)     # Lasso regressions
 library(broom)      # Stats from lm regression 
 library(purrr)      # Exporting lm results  
 library(DT)         # Fancy HTML table output
+library(lme4)       # linear mixed effects model
 source("code/Muskegon_functions.R")   # Source custom functions  
 source("code/set_colors.R")           # Set Colors for plotting
 ```
@@ -89,7 +90,7 @@ surface_PAFL_otu_pruned_rm2
 # Remove tree for computational efficiency 
 surface_PAFL_otu_pruned_notree_rm2 <- phyloseq(tax_table(surface_PAFL_otu_pruned_rm2), otu_table(surface_PAFL_otu_pruned_rm2), sample_data(surface_PAFL_otu_pruned_rm2)) 
 
-# Gather the metadata in a dataframe to play with 
+# Gather the metadata in a dataframe
 metadata <- data.frame(sample_data(surface_PAFL_otu_pruned_notree_rm2)) %>%
       mutate(fraction = factor(fraction, levels = c("WholePart","WholeFree")),
          lakesite = factor(lakesite,  levels = c("MOT", "MDP", "MBR", "MIN")),
@@ -126,12 +127,15 @@ apply(scaled_enviro, 2, sd)
 # Run a principal component analysis via the vegan package
 pca_environ <- rda(scaled_enviro) 
 
+# What is the proportion explained by each of the PCA axes? 
+summary(pca_environ)$cont$importance
+
 # Pull out all of the PCA scores into a dataframe
 pca_scores_df <- summary(pca_environ)$sites %>%
   as.data.frame() %>%
   tibble::rownames_to_column(var = "norep_filter_name") %>%
   mutate(norep_water_name = paste(substr(norep_filter_name, 1, 4), substr(norep_filter_name, 6, 8), sep = "")) %>%
-  dplyr::select(-norep_filter_name)
+  dplyr::select(-c(norep_filter_name, PC3, PC4, PC5, PC6))
 
 # Combine the above dataframe with the rest of the metadata
 metadata_pca <- metadata %>%
@@ -156,11 +160,11 @@ min(sample_sums(surface_PAFL_otu_pruned_notree_rm2)) - 1
 # Put it altogether in a dataframe 
 otu_alphadiv <- calc_mean_alphadiv(physeq = surface_PAFL_otu_pruned_notree_rm2,
                            richness_df = alpha_calc$Richness, 
-                           evenness_df = alpha_calc$Inverse_Simpson, 
-                           shannon_df = alpha_calc$Shannon) %>%
+                           exp_shannon_df = alpha_calc$Shannon,
+                           simpson_df = alpha_calc$Inverse_Simpson) %>%
   mutate(fraction = factor(fraction, levels = c("Particle","Free")),
          lakesite = factor(lakesite,  levels = c("Outlet", "Deep", "Bear", "River")),
-         measure = factor(measure, levels = c("Richness",  "Shannon_Entropy", "Inverse_Simpson", "Simpsons_Evenness")),
+         measure = factor(measure, levels = c("Richness",  "Exponential_Shannon", "Inverse_Simpson", "Simpsons_Evenness")),
          norep_water_name = paste(substr(norep_filter_name, 1, 4), substr(norep_filter_name, 6, 8), sep = ""))
 
 otu_alphadiv <- otu_alphadiv %>%
@@ -168,7 +172,7 @@ otu_alphadiv <- otu_alphadiv %>%
 
 # Make subsetted dataframes for each diversity metric
 richness <- filter(otu_alphadiv, measure == "Richness")
-shannon <- filter(otu_alphadiv, measure == "Shannon_Entropy")
+shannon <- filter(otu_alphadiv, measure == "Exponential_Shannon")
 invsimps <- filter(otu_alphadiv, measure == "Inverse_Simpson")
 simpseven <- filter(otu_alphadiv, measure == "Simpsons_Evenness") 
 ```
@@ -372,20 +376,20 @@ row1_plots <- plot_grid(poster_a + theme(legend.position = "none"), poster_b, po
           labels = c("A", "B", "C"),
           ncol = 3, nrow = 1)
 
-#fig_1 <- 
-tiff(file="Cornell_prodcells.tiff", width = 8.5, height = 3.5, units = "in", res = 300)
+fig_1 <- plot_grid(row1_plots, season_legend,
+           ncol = 1, nrow = 2, 
+           rel_heights = c(1, 0.05)); fig_1
 
+## Change the theme to be minimal
 prezzzz <- plot_grid(poster_a + theme_minimal() + theme(legend.position = "none"), 
           poster_b + theme_minimal() + theme(legend.position = "none"),  
           poster_c + theme_minimal() + theme(legend.position = "none"), 
           labels = c("A", "B", "C"),
           ncol = 3, nrow = 1)
 
-plot_grid(prezzzz, season_legend ,
+fig_1_minimal <- plot_grid(prezzzz, season_legend,
            ncol = 1, nrow = 2, 
-           rel_heights = c(1, 0.05))
-dev.off()
-
+           rel_heights = c(1, 0.05)); fig_1_minimal
 ```
 
 
@@ -486,7 +490,7 @@ See supplemental table 1 header for the table output!
 
 #### Cross Validation
 
-Cross validation will provide a better estimate for the adjusted R-squared value of our diversity regressions. 
+Cross validation will provide a better estimate for the adjusted R-squared value of the diversity regressions. 
 ```{r cross-validation}
 #################################### Community-Wide Production #################################### 
 ################### Richness ################### 
@@ -630,7 +634,7 @@ cv_lm_percell_prod_vs_simpseven_PA$results      # Particle Per-Capita CV results
 ```
 
 #### Diversity distributions
-```{r}
+```{r div-distributions, fig.width = 8.5, fig.height = 3.5}
 rich_fraction_wilcox <- wilcox.test(mean ~ fraction, data = richness)
 
 # Make a data frame to draw significance line in boxplot (visually calculated)
@@ -651,6 +655,29 @@ rich_vert_distribution_plot <-
            label= paste("p =", round(rich_fraction_wilcox$p.value, digits = 5))) +
   theme(legend.position = "none", axis.title.x = element_blank()) 
   
+
+
+
+######################################################### EXPONENTIAL SHANNON ######################################################### 
+exp_shannon_fraction_wilcox <- wilcox.test(mean ~ fraction, data = shannon)
+
+# Make a data frame to draw significance line in boxplot (visually calculated)
+exp_shannon_nums <- data.frame(a = c(1.15,1.15,1.85,1.85), b = c(310,315,315,310)) # WholePart vs WholeFree
+
+exp_shannon_vert_distribution_plot <- 
+  ggplot(shannon, aes(y = mean, x = fraction)) +
+  scale_fill_manual(values = fraction_colors) +
+  geom_jitter(size = 3, aes(fill = fraction, shape = season), width = 0.2) + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(fill = fraction)) +
+  scale_y_continuous(limits = c(0,325), breaks = seq(from = 0, to =300, by = 50)) + 
+  ylab("Exp(Shannon)") + xlab("Fraction") + 
+  scale_shape_manual(values = season_shapes) +
+  geom_path(data = exp_shannon_nums, aes(x = a, y = b), linetype = 1, color = "#424645") +
+  annotate("text", x=1.5, y=325, size = 8, color = "#424645", 
+           label= paste("**")) +
+  annotate("text", x=1.5, y=300, size = 4, color = "#424645",
+           label= paste("p =", round(exp_shannon_fraction_wilcox$p.value, digits = 3))) +
+  theme(legend.position = "none", axis.title.x = element_blank()) 
   
 ######################################################### INVERSE SIMPSON ######################################################### 
 invsimps_fraction_wilcox <- wilcox.test(mean ~ fraction, data = invsimps)
@@ -670,16 +697,30 @@ invsimps_vert_distribution_plot <-
   annotate("text", x=1.5, y=80, size = 4, color = "#424645", label= "NS") +
   theme(legend.position = "none", axis.title.x = element_blank()) 
 
-plot_grid(rich_vert_distribution_plot, invsimps_vert_distribution_plot,
-          ncol = 2, nrow = 1, labels = c("A", "B")) 
 
-ggsave("div.png", width = 6, height = 3.5)
-  
+pdiv1 <- plot_grid(rich_vert_distribution_plot, exp_shannon_vert_distribution_plot, invsimps_vert_distribution_plot,
+          ncol = 3, nrow = 1, labels = c("A", "B", "C"))
+
+pdiv1_boxplots <- plot_grid(pdiv1, season_legend,
+           ncol = 1, nrow = 2, 
+           rel_heights = c(1, 0.05)); pdiv1_boxplots
+
+pdiv2 <- plot_grid(rich_vert_distribution_plot + theme_minimal() + 
+                                    theme(legend.position = "none", axis.title.x = element_blank()), 
+                                  exp_shannon_vert_distribution_plot + theme_minimal() + 
+                                    theme(legend.position = "none", axis.title.x = element_blank()), 
+                                  invsimps_vert_distribution_plot + theme_minimal() + 
+                                    theme(legend.position = "none", axis.title.x = element_blank()),
+          ncol = 3, nrow = 1, labels = c("A", "B", "C"));
+
+pdiv2_boxplots <- plot_grid(pdiv2, season_legend,
+           ncol = 1, nrow = 2, 
+           rel_heights = c(1, 0.05)); pdiv2_boxplots
 ```
 
 
-## Figure 2
-```{r Figure_2, fig.width = 7, fig.height = 7, dependson= "calc-div"}
+## Prepare Figure 2
+```{r Figure2-Prep, dependson= "calc-div"}
 ######################################################### OBSERVED RICHNESS ######################################################### 
 rich_fraction_wilcox <- wilcox.test(mean ~ fraction, data = richness)
 rich_fraction_wilcox
@@ -724,10 +765,10 @@ prod_vs_rich_plot <-
   scale_shape_manual(values = season_shapes) +
   ylab("\n Community Production \n (μgC/L/day)") + 
   xlab("Observed Richness") +
-  geom_smooth(data=filter(richness, fraction == "Particle"), method='lm', color = "firebrick", fill = "firebrick") + 
+  geom_smooth(data=filter(richness, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
   scale_x_continuous(limits = c(150,980), breaks = seq(from = 0, to =925, by = 150)) + 
    # Add the R2 and p-value to the plot 
-  annotate("text", x=790, y=45, label=lm_lab_perliter_rich_PA, parse = TRUE, color = "firebrick", size = 4) +
+  annotate("text", x=790, y=45, label=lm_lab_perliter_rich_PA, parse = TRUE, color = "#FF6600", size = 4) +
   theme(legend.position = "none", axis.title.x = element_blank(), axis.text.x = element_blank()) 
 
 
@@ -754,11 +795,11 @@ percell_prod_vs_rich_plot <-
   scale_shape_manual(values = season_shapes) +
   ylab("\n log10(Per-Capita Production)\n (μgC/cell/day)") +
   xlab("Observed Richness") +
-  geom_smooth(data=filter(richness, fraction == "Particle"), method='lm', color = "firebrick", fill = "firebrick") + 
+  geom_smooth(data=filter(richness, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
   scale_x_continuous(limits = c(150,980), breaks = seq(from = 0, to =925, by = 150)) + 
   #scale_y_continuous(limits = c(-8e-7,5e-6), breaks = seq(from = 0, to = 6e-7, by = 3e-7)) + 
   # Add the R2 and p-value to the plot 
-  annotate("text", x=790, y=-7.5, label=lm_lab_percell_rich_PA, parse = TRUE, color = "firebrick", size = 4) +
+  annotate("text", x=790, y=-7.5, label=lm_lab_percell_rich_PA, parse = TRUE, color = "#FF6600", size = 4) +
   theme(legend.title = element_blank(), legend.position ="bottom", 
         legend.text = element_text(size = 14))
 
@@ -768,6 +809,89 @@ summary(lm(log10(fracprod_per_cell_noinf) ~ mean, data = filter(richness, fracti
 # WITHOUT THE TWO HIGH POINTS 
 summary(lm(log10(fracprod_per_cell_noinf) ~ mean, data = filter(richness, fraction == "Particle" & mean < 800)))
 
+
+
+
+
+######################################################### SHANNON ENTROPY ######################################################### 
+shannon_fraction_wilcox <- wilcox.test(mean ~ fraction, data = shannon)
+shannon_fraction_wilcox   
+
+filter(shannon) %>%
+  group_by(fraction) %>%
+  summarize(mean(mean), sd(mean))
+
+# Make a data frame to draw significance line in boxplot (visually calculated)
+shannon_nums <- data.frame(a = c(1.15,1.15,1.85,1.85), b = c(310, 315, 315, 310)) # WholePart vs WholeFree
+
+shannon_distribution_plot <- 
+  ggplot(shannon, aes(y = mean, x = fraction)) +
+  scale_fill_manual(values = fraction_colors) +
+  geom_jitter(size = 3, aes(shape = season, fill = fraction), width = 0.2) + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(fill = fraction)) +
+  scale_y_continuous(limits = c(0,325), breaks = seq(from = 0, to = 300, by = 50)) + 
+  xlab("Exp(Shannon)") +  xlab("Fraction") + 
+  scale_shape_manual(values = season_shapes) +
+    # Add line and pval
+  geom_path(data = shannon_nums, aes(x = a, y = b), linetype = 1, color = "#424645") +
+  annotate("text", x=1.5, y=325, size = 8, color = "#424645", label= paste("**"), angle = 90) +
+  annotate("text", x=1.5, y=270, size = 4, color = "#424645",
+           label= paste("p =", round(shannon_fraction_wilcox$p.value, digits = 3))) +
+  theme(legend.position = "none",# axis.title.y = element_blank(),
+        axis.title.x = element_blank(), axis.text.x = element_blank()) +
+  coord_flip()
+
+################ Shannon vs Community-wide (Per-Liter) Production 
+## 1. Extract the R2 and p-value from the linear model: 
+lm_lab_perliter_shannon_PA <- paste("atop(R^2 ==", round(summary(lm_prod_vs_shannon_PA)$adj.r.squared, digits = 2), ",",
+             "p ==", round(unname(summary(lm_prod_vs_shannon_PA)$coefficients[,4][2]), digits = 3), ")")
+
+## 2. Plot Shannon vs Community-wide (Per-Liter) Production 
+prod_vs_shannon_plot <-  
+  ggplot(shannon, aes(x=mean, y=frac_bacprod)) + 
+  geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd, color = fraction), alpha = 0.7) + # X-axis errorbars
+  geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod, color = fraction)) +  # Y-axis errorbars
+  geom_point(size = 3.5, color = "black", aes(fill = fraction, shape = season)) +
+  scale_color_manual(values = fraction_colors) +
+  scale_shape_manual(values = season_shapes) +
+  scale_fill_manual(values = fraction_colors) +
+  ylab("\n Community Production \n (μgC/L/day)") + 
+  scale_x_continuous(limits = c(0,325), breaks = seq(from = 0, to = 300, by = 50)) + 
+  xlab("Exp(Shannon)") +
+  geom_smooth(data=filter(shannon, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
+  # Add the R2 and p-value to the plot 
+  annotate("text", x=250, y=45, label=lm_lab_perliter_shannon_PA, parse = TRUE, color = "#FF6600", size = 4) +
+  theme(legend.position = "none", axis.title.x = element_blank(), axis.text.x = element_blank()) 
+
+
+################ Shannon vs Per Capitra (Per-Cell) Production 
+## 1. Extract the R2 and p-value from the linear model: 
+lm_lab_percell_shannon_PA <- paste("atop(R^2 ==", round(summary(lm_percell_prod_vs_shannon_PA)$adj.r.squared, digits = 2), ",",
+             "p ==", round(unname(summary(lm_percell_prod_vs_shannon_PA)$coefficients[,4][2]), digits = 3), ")")
+
+## 2. Plot Shannon vs Per Capitra (Per-Cell) Production 
+percell_prod_vs_shannon_plot <- 
+  ggplot(shannon, aes(x=mean, y=log10(fracprod_per_cell_noinf))) + 
+  geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd, color = fraction), alpha = 0.7) + # X-axis errorbars
+  geom_point(size = 3.5, color = "black", aes(fill = fraction, shape = season)) +
+  scale_color_manual(values = fraction_colors) +
+  scale_fill_manual(values = fraction_colors) +
+  scale_shape_manual(values = season_shapes) +
+  ylab("\n log10(Per-Capita Production)\n (μgC/cell/day)") +
+  xlab("Exp(Shannon)") +
+  geom_smooth(data=filter(shannon, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
+  scale_x_continuous(limits = c(0,325), breaks = seq(from = 0, to = 300, by = 50)) + 
+  #scale_y_continuous(limits = c(-8e-7,5e-6), breaks = seq(from = 0, to = 6e-7, by = 3e-7)) + 
+  # Add the R2 and p-value to the plot 
+  annotate("text", x=250, y=-7.5, label=lm_lab_percell_shannon_PA, parse = TRUE, color = "#FF6600", size = 4) +
+  theme(legend.title = element_blank(), legend.position = "none")
+
+
+shannon_plots <- plot_grid(shannon_distribution_plot, prod_vs_shannon_plot, percell_prod_vs_shannon_plot,
+          #labels = c("B", "D", "F"), 
+          ncol = 1, nrow = 3,
+          rel_heights = c(0.5, 0.8, 1.1),
+          align = "v")
 
 
 ######################################################### INVERSE SIMPSON ######################################################### 
@@ -812,10 +936,10 @@ prod_vs_invsimps_plot <-
   scale_shape_manual(values = season_shapes) +
   ylab("Community Production \n (μgC/L/day)") + 
   xlab("Inverse Simpson") +
-  geom_smooth(data=filter(invsimps, fraction == "Particle"), method='lm', color = "firebrick", fill = "firebrick") + 
+  geom_smooth(data=filter(invsimps, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
   scale_x_continuous(limits = c(0,85), breaks = seq(from = 0, to = 85, by = 20)) + 
   # Add the R2 and p-value to the plot 
-  annotate("text", x=70, y=45, label=lm_lab_perliter_invsimps_PA, parse = TRUE, color = "firebrick", size = 4) +
+  annotate("text", x=70, y=45, label=lm_lab_perliter_invsimps_PA, parse = TRUE, color = "#FF6600", size = 4) +
   theme(legend.position = "none", axis.title.x = element_blank(), axis.text.x = element_blank()) 
 
 # Summary stats 
@@ -840,11 +964,11 @@ percell_prod_vs_invsimps_plot <-
   scale_shape_manual(values = season_shapes) +
   ylab("log10(production/cell)\n (μgC/cell/day)") +
   xlab("Inverse Simpson") +
-  geom_smooth(data=filter(invsimps, fraction == "Particle"), method='lm', color = "firebrick", fill = "firebrick") + 
+  geom_smooth(data=filter(invsimps, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
   scale_x_continuous(limits = c(0,85), breaks = seq(from = 0, to = 85, by = 20)) + 
   #scale_y_continuous(limits = c(-8e-7,5e-6), breaks = seq(from = 0, to = 6e-7, by = 3e-7)) + 
   # Add the R2 and p-value to the plot 
-  annotate("text", x=70, y=-7.5, label=lm_lab_percell_invsimps_PA, parse = TRUE, color = "firebrick", size = 4) +
+  annotate("text", x=70, y=-7.5, label=lm_lab_percell_invsimps_PA, parse = TRUE, color = "#FF6600", size = 4) +
   guides(color = guide_legend(override.aes = list(shape = 15))) +
   theme(legend.title = element_blank(), legend.position ="bottom", 
         legend.text = element_text(size = 14))
@@ -862,27 +986,44 @@ invsimps_plots <- plot_grid(invsimps_distribution_plot, prod_vs_invsimps_plot, p
           labels = c("B", "D", "F"), ncol = 1, nrow = 3,
           rel_heights = c(0.5, 0.8, 1.1),
           align = "v")
+```
 
 
-# All 3 richness plots together 
+# Figure 2
+```{r Figure2, fig.width = 10, fig.height = 7, dependson= "calc-div"}
+# All plots together 
 rich_plots <- plot_grid(rich_distribution_plot, prod_vs_rich_plot, 
                         percell_prod_vs_rich_plot + theme(legend.position = "none"),
-          labels = c("A", "C", "E"), ncol = 1, nrow = 3,
+          labels = c("A", "D", "G"), ncol = 1, nrow = 3,
           rel_heights = c(0.5, 0.8, 1),
           align = "v")
 
 
+shannon_plots_noyaxis <- plot_grid(shannon_distribution_plot + 
+                                     theme(axis.title.y = element_blank(), axis.text.y = element_blank(),
+                                           #  specify top, right, bottom, and left margins
+                                           plot.margin = margin(0, 0, 0, 0.6, "cm")), 
+          prod_vs_shannon_plot + theme(axis.title.y = element_blank(), axis.text.y = element_blank()), 
+          percell_prod_vs_shannon_plot + theme(axis.title.y = element_blank(), axis.text.y = element_blank(), legend.position = "none"),
+          labels = c("B", "E", "H"), 
+          ncol = 1, nrow = 3,
+          rel_heights = c(0.5, 0.8, 1),
+          align = "v")
+
 invsimps_plots_noyaxis <- 
-  plot_grid(invsimps_distribution_plot + theme(axis.title.y = element_blank(), axis.text.y = element_blank()), 
-            prod_vs_invsimps_plot + theme(axis.title.y = element_blank()), 
-            percell_prod_vs_invsimps_plot + theme(axis.title.y = element_blank(), legend.position = "none"), 
-          labels = c("B", "D", "F"), ncol = 1, nrow = 3,
+  plot_grid(invsimps_distribution_plot + 
+                                     theme(axis.title.y = element_blank(), axis.text.y = element_blank(),
+                                           #  specify top, right, bottom, and left margins
+                                           plot.margin = margin(0, 0, 0, 0.6, "cm")), 
+            prod_vs_invsimps_plot + theme(axis.title.y = element_blank(),  axis.text.y = element_blank()), 
+            percell_prod_vs_invsimps_plot + theme(axis.title.y = element_blank(), axis.text.y = element_blank(), legend.position = "none"), 
+          labels = c("C", "F", "I"), ncol = 1, nrow = 3,
           rel_heights = c(0.5, 0.8, 1),
           align = "v")
 
 # Extract distribution plots of richness and inverse simpson
-figure2_row1 <- plot_grid(rich_plots, invsimps_plots_noyaxis,
-          ncol = 2, nrow = 1, rel_widths = c(1, 0.75),
+figure2_row1 <- plot_grid(rich_plots, shannon_plots_noyaxis, invsimps_plots_noyaxis,
+          ncol = 3, nrow = 1, rel_widths = c(1, 0.75, 0.75),
           align = "h")
 
 
@@ -891,66 +1032,6 @@ plot_grid(figure2_row1, season_legend,
                    ncol = 1, nrow = 2, 
                    rel_heights = c(1, 0.05))
 ```
-
-
-
-# CORNELL PRES
-
-```{r}
-
-p1 <- 
-  ggplot(richness, aes(x=mean, y=frac_bacprod)) + 
-  geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd, color = fraction), alpha = 0.7) + # X-axis errorbars
-  geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod, color = fraction)) +  # Y-axis errorbars
-  geom_point(size = 3.5, color = "black", aes(fill = fraction, shape = season)) +
-  scale_color_manual(values = fraction_colors) +
-  scale_fill_manual(values = fraction_colors) +
-  scale_shape_manual(values = season_shapes) +
-  ylab("\n Community Production \n (μgC/L/day)") + 
-  xlab("Observed Richness") +
-  theme_minimal() + 
-  geom_smooth(data=filter(richness, fraction == "Particle"), method='lm', color = "firebrick", fill = "firebrick") + 
-  scale_x_continuous(limits = c(150,980), breaks = seq(from = 0, to =925, by = 150)) + 
-   # Add the R2 and p-value to the plot 
-  annotate("text", x=790, y=45, label=lm_lab_perliter_rich_PA, parse = TRUE, color = "firebrick", size = 4) +
-  theme(legend.position = "none") 
-
-
-p2 <-
-  ggplot(invsimps, aes(x=mean, y=frac_bacprod)) + 
-  geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd, color = fraction), alpha = 0.7) + # X-axis errorbars
-  geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod, color = fraction)) +  # Y-axis errorbars
-  geom_point(size = 3.5, color = "black", aes(fill = fraction, shape = season)) +
-  scale_color_manual(values = fraction_colors) +
-  scale_fill_manual(values = fraction_colors) +
-  scale_shape_manual(values = season_shapes) +
-  ylab("Community Production \n (μgC/L/day)") + 
-  xlab("Inverse Simpson") +
-  theme_minimal() +
-  geom_smooth(data=filter(invsimps, fraction == "Particle"), method='lm', color = "firebrick", fill = "firebrick") + 
-  scale_x_continuous(limits = c(0,85), breaks = seq(from = 0, to = 85, by = 20)) + 
-  # Add the R2 and p-value to the plot 
-  annotate("text", x=70, y=45, label=lm_lab_perliter_invsimps_PA, parse = TRUE, color = "firebrick", size = 4) +
-  theme(legend.position = "none") 
-
-
-
-
-tiff(file="Cornell_BEFs.tiff", width = 7, height = 3, units = "in", res = 300)
-plot_grid(p1, p2,
-          ncol = 2, nrow = 1, 
-          labels = c("A", "B"),
-          rel_widths = c(1, 1))
-dev.off()
-
-
-```
-
-
-
-
-
-
 
 
 ## Figure 3
@@ -1114,7 +1195,56 @@ plot_grid(figure3_row1, season_legend,
                    rel_heights = c(1, 0.05))
 ```
 
-### Lasso Regressions
+
+# MPD + Shannon + Inverse Simpson
+```{r}
+
+
+# EXPONENTIAL SHANNON
+## 1. Extract the R2 and p-value from the linear model: 
+lm_lab_perliter_shannon_PA <- paste("atop(R^2 ==", round(summary(lm_prod_vs_shannon_PA)$adj.r.squared, digits = 2), ",",
+             "p ==", round(unname(summary(lm_prod_vs_shannon_PA)$coefficients[,4][2]), digits = 3), ")")
+
+## 2. Plot Exp Shannon vs Community-wide (Per-Liter) Production 
+ggplot(shannon, aes(x=mean, y=frac_bacprod)) + 
+  geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd, color = fraction), alpha = 0.7) + # X-axis errorbars
+  geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod, color = fraction)) +  # Y-axis errorbars
+  geom_point(size = 3.5, color = "black", aes(fill = fraction, shape = season)) +
+  scale_color_manual(values = fraction_colors) +
+  scale_fill_manual(values = fraction_colors) +
+  scale_shape_manual(values = season_shapes) +
+  ylab("Community Production \n (μgC/L/day)") + 
+  xlab("Exponential Shannon") +
+  geom_smooth(data=filter(shannon, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
+  scale_x_continuous(limits = c(0,300), breaks = seq(from = 0, to = 300, by = 50)) + 
+  # Add the R2 and p-value to the plot 
+  annotate("text", x=250, y=45, label=lm_lab_perliter_shannon_PA, parse = TRUE, color = "#FF6600", size = 4) +
+  theme(legend.position = "none") 
+
+
+
+# INVERSE SIMPSON 
+ggplot(invsimps, aes(x=mean, y=frac_bacprod)) + 
+  geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd, color = fraction), alpha = 0.7) + # X-axis errorbars
+  geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod, color = fraction)) +  # Y-axis errorbars
+  geom_point(size = 3.5, color = "black", aes(fill = fraction, shape = season)) +
+  scale_color_manual(values = fraction_colors) +
+  scale_fill_manual(values = fraction_colors) +
+  scale_shape_manual(values = season_shapes) +
+  ylab("Community Production \n (μgC/L/day)") + 
+  xlab("Inverse Simpson") +
+  geom_smooth(data=filter(invsimps, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
+  scale_x_continuous(limits = c(0,85), breaks = seq(from = 0, to = 85, by = 20)) + 
+  # Add the R2 and p-value to the plot 
+  annotate("text", x=70, y=45, label=lm_lab_perliter_invsimps_PA, parse = TRUE, color = "#FF6600", size = 4) +
+  theme(legend.position = "none") 
+```
+
+
+
+
+
+# Lasso Regressions
 
 
 #### Prepare the data for Lasso Regressions
@@ -1242,14 +1372,14 @@ lasso_divs <- glmnet(x, y, alpha = 1, lambda = best_lasso_lambda, standardize = 
 # What are the lasso coefficients? (Anything with a . is not selected by the model)
 predict(lasso_divs, type = "coefficients", s = best_lasso_lambda)
 
-
-## Run lasso on the entire dataset with the best lambda value 
+## Now, run the most simple, parsimonious lasso model within 1 standard error  
+## IMPORTANT NOTE: This is the lasso reported within the manuscript
 lasso_divs_1se <- glmnet(x, y, alpha = 1, lambda = lasso_lambda_1se, standardize = FALSE)
 # What are the lasso coefficients? (Anything with a . is not selected by the model)
 predict(lasso_divs_1se, type = "coefficients", s = lasso_lambda_1se)
 ```
 
-The lasso model uses Inverse Simpson as the **best and only** predictor of production!
+The lasso model uses Inverse Simpson as the **best and only** predictor of particle-associated production!
 
 #### Community-Wide Production: Free
 ```{r comm-free-lasso, dependson = c("calc-div", "prepare-data-lasso"), fig.width=8, fig.height=4, warning = TRUE}
@@ -1297,14 +1427,14 @@ lasso_divs <- glmnet(x, y, alpha = 1, lambda = best_lasso_lambda, standardize = 
 # What are the lasso coefficients? (Anything with a . is not selected by the model)
 predict(lasso_divs, type = "coefficients", s = best_lasso_lambda)
  
-## Run lasso on the entire dataset with the best lambda value 
+## Now, run the most simple, parsimonious lasso model within 1 standard error  
+## IMPORTANT NOTE: This is the lasso reported within the manuscript
 lasso_divs_1se <- glmnet(x, y, alpha = 1, lambda = lasso_lambda_1se, standardize = FALSE)
 # What are the lasso coefficients? (Anything with a . is not selected by the model)
 predict(lasso_divs_1se, type = "coefficients", s = lasso_lambda_1se)
 ```
 
-PC5 and pH are the two best predictors of community-wide heterotrophic bacterial production in the free-living habitat.
-
+The lasso model uses pH as the **best and only** predictor of free-living production!
 
 #### Per-capita Production: Particle
 ```{r percapita-part-lasso, dependson = c("calc-div", "prepare-data-lasso"), fig.width=8, fig.height=4, warning = TRUE}
@@ -1352,7 +1482,7 @@ lasso_divs <- glmnet(x, y, alpha = 1, lambda = best_lasso_lambda, standardize = 
 predict(lasso_divs, type = "coefficients", s = best_lasso_lambda)
 
  
-## Run lasso on the entire dataset with the best lasso 
+## Now, run the most simple, parsimonious lasso model within 1 standard error  
 lasso_divs_1se <- glmnet(x, y, alpha = 1, lambda = lasso_lambda_1se, standardize = FALSE)
 # What are the lasso coefficients?
 predict(lasso_divs_1se, type = "coefficients", s = lasso_lambda_1se)
@@ -1405,7 +1535,7 @@ lasso_divs <- glmnet(x, y, alpha = 1, lambda = best_lasso_lambda, standardize = 
 # What are the lasso coefficients?
 predict(lasso_divs, type = "coefficients", s = best_lasso_lambda)
 
-## Run lasso on the entire dataset 
+## Now, run the most simple, parsimonious lasso model within 1 standard error  
 lasso_divs_1se <- glmnet(x, y, alpha = 1, lambda = lasso_lambda_1se, standardize = FALSE)
 # What are the lasso coefficients?
 predict(lasso_divs_1se, type = "coefficients", s = lasso_lambda_1se) 
