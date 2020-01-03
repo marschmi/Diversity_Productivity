@@ -56,7 +56,6 @@ library(tidyverse)  # Pretty plotting and data manipulation
 library(forcats)    # Recoding factors
 library(cowplot)    # Multiple plotting
 library(picante)    # Will also include ape and vegan  
-library(car)        # Residual analysis 
 library(sandwich)   # vcovHC function in post-hoc test 
 library(MASS)       # studres in plot_residuals function    
 library(caret)      # Cross validation
@@ -142,11 +141,15 @@ metadata_pca <- metadata %>%
 # iNEXT
 
 ```{r iNEXT}
-iNEXT_table <- otu_table(surface_PAFL_otu_pruned_rm2) %>%
+iNEXT_input_table <- otu_table(surface_PAFL_otu_pruned_rm2) %>%
   t() %>%
   data.frame()
 
+set.seed(777)
 # Run iNEXT on the data 
+iNEXT_data <- iNEXT(iNEXT_table, q = c(0,1,2), datatype = "abundance")
+save(list="iNEXT_data", file=paste0("data/iNEXT/iNEXT_data_surface_PAFL_otu_pruned_rm2")) 
+
 #richness_iNEXT <- iNEXT(iNEXT_table, q = 0, datatype = "abundance")
 #shannon_iNEXT <- iNEXT(iNEXT_table, q = 1, datatype = "abundance")
 #simpson_iNEXT <- iNEXT(iNEXT_table, q = 2, datatype = "abundance")
@@ -155,7 +158,8 @@ iNEXT_table <- otu_table(surface_PAFL_otu_pruned_rm2) %>%
 #save(list=c("richness_iNEXT", "shannon_iNEXT", "simpson_iNEXT"),
 #     file=paste0("data/iNEXT/iNEXT_surface_PAFL_otu_pruned_rm2")) 
 
-load("data/iNEXT/iNEXT_surface_PAFL_otu_pruned_rm2")
+load("data/iNEXT/iNEXT_data_surface_PAFL_otu_pruned_rm2")
+iNEXT_data
 ```
 
 ```{r metadata-plot}
@@ -183,6 +187,9 @@ ggiNEXT(richness_iNEXT, type=1, facet.var="order") + facet_wrap(~order, scales="
   scale_fill_manual(values = dat_iNEXT$color) + 
   theme_minimal() + 
   theme(legend.position = "bottom", legend.title = element_blank())
+
+ggiNEXT(iNEXT_data, type=1, facet.var="order") + facet_wrap(~order, scales="free") +
+  theme_minimal()
 
 #ggiNEXT(richness_iNEXT, type=2, facet.var="none", color.var="site")
 #ggiNEXT(richness_iNEXT, type=3, facet.var="order", color.var="site")
