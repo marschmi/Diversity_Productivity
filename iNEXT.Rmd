@@ -1,5 +1,5 @@
 ---
-title: "iNEXT"
+title: "iNEXT Analysis"
 author: "Marian L Schmidt"
 date: "1/2/2020"
 output:
@@ -33,17 +33,15 @@ options(width=250)
 
 knitr::opts_chunk$set(eval = TRUE, 
                       echo = TRUE, 
-                      cache = TRUE,
+                      cache = FALSE,
                       include = TRUE,
                       warning = FALSE,
                       collapse = FALSE,
                       message = FALSE,
                       engine = "R", # Chunks will always have R code, unless noted
                       error = TRUE,
-                      fig.path="Final_Figures/",  # Set the figure options
-                      fig.align = "center", 
-                      fig.width = 7, 
-                      fig.height = 7) 
+                      fig.path="iNEXT_Figures/",  # Set the figure options
+                      fig.align = "center") 
 
 ```
 
@@ -56,6 +54,7 @@ library(tidyverse)  # Pretty plotting and data manipulation
 library(forcats)    # Recoding factors
 library(cowplot)    # Multiple plotting
 library(picante)    # Will also include ape and vegan  
+library(car)        # Residual analysis 
 library(sandwich)   # vcovHC function in post-hoc test 
 library(MASS)       # studres in plot_residuals function    
 library(caret)      # Cross validation
@@ -140,30 +139,23 @@ metadata_pca <- metadata %>%
 
 # iNEXT
 
-```{r iNEXT}
+```{r iNEXT-data}
 iNEXT_input_table <- otu_table(surface_PAFL_otu_pruned_rm2) %>%
   t() %>%
   data.frame()
 
-set.seed(777)
+#set.seed(777)
 # Run iNEXT on the data 
-iNEXT_data <- iNEXT(iNEXT_table, q = c(0,1,2), datatype = "abundance")
-save(list="iNEXT_data", file=paste0("data/iNEXT/iNEXT_data_surface_PAFL_otu_pruned_rm2")) 
+#iNEXT_data <- iNEXT(iNEXT_input_table, q = c(0,1,2), datatype = "abundance")
+#save(list="iNEXT_data", file=paste0("data/iNEXT/iNEXT_data_surface_PAFL_otu_pruned_rm2")) 
 
-#richness_iNEXT <- iNEXT(iNEXT_table, q = 0, datatype = "abundance")
-#shannon_iNEXT <- iNEXT(iNEXT_table, q = 1, datatype = "abundance")
-#simpson_iNEXT <- iNEXT(iNEXT_table, q = 2, datatype = "abundance")
-
-# Create a new file called "Phyloseq.RData" that has the phyloseq object
-#save(list=c("richness_iNEXT", "shannon_iNEXT", "simpson_iNEXT"),
-#     file=paste0("data/iNEXT/iNEXT_surface_PAFL_otu_pruned_rm2")) 
-
+# Load the data
 load("data/iNEXT/iNEXT_data_surface_PAFL_otu_pruned_rm2")
-iNEXT_data
-```
+#str(iNEXT_data)
 
-```{r metadata-plot}
-dat <- colnames(iNEXT_table) %>%
+
+# Reformat metadata
+dat <- colnames(iNEXT_input_table) %>%
   data.frame() 
 colnames(dat)[1] <- "norep_filter_name"  
 
@@ -172,26 +164,65 @@ sub_metadata <- metadata[,1:6] %>%
 
 dat_iNEXT <- dat %>%
   left_join(sub_metadata, by = "norep_filter_name") %>%
-  mutate(color = ifelse(fraction == "Particle", "#FF6600", "skyblue"), 
+  mutate(fraction_color = ifelse(fraction == "Particle", "#FF6600", "skyblue"), 
          shape = ifelse(season == "Spring", 25, 
                         ifelse(season == "Summer", 23, 
-                               21)))
+                               21)),
+         station_color = ifelse(lakesite == "Bear", "black", 
+                                ifelse(lakesite == "Deep", "blue",
+                                       ifelse(lakesite == "Outlet", "skyblue",
+                                              "forestgreen"))),
+         season_color = ifelse(season == "Spring", "skyblue", 
+                               ifelse(season == "Summer", "forestgreen",
+                                      "orange")))
+
+div_iNEXT <- iNEXT_data$AsyEst %>%
+  rename(norep_filter_name = Site) %>%
+  left_join(metadata_pca, by = "norep_filter_name")
 ```
 
 
-```{r plot-iNEXT}
+```{r plot-iNEXT, fig.width = 10, fig.height = 6}
 # Sample‐size‐based R/E curves, separating by "site""
-ggiNEXT(richness_iNEXT, type=1, facet.var="order") + facet_wrap(~order, scales="free") + 
-  scale_shape_manual(values = dat_iNEXT$shape) +
-  scale_color_manual(values = dat_iNEXT$color) +
-  scale_fill_manual(values = dat_iNEXT$color) + 
-  theme_minimal() + 
-  theme(legend.position = "bottom", legend.title = element_blank())
-
 ggiNEXT(iNEXT_data, type=1, facet.var="order") + facet_wrap(~order, scales="free") +
-  theme_minimal()
-
-#ggiNEXT(richness_iNEXT, type=2, facet.var="none", color.var="site")
-#ggiNEXT(richness_iNEXT, type=3, facet.var="order", color.var="site")
-
+  scale_shape_manual(values = dat_iNEXT$shape) +
+  scale_color_manual(values = dat_iNEXT$fraction_color) +
+  scale_fill_manual(values = dat_iNEXT$fraction_color) + 
+  geom_vline(xintercept = 6664, linetype="solid", color = "black", size=0.5) 
 ```
+
+
+```{r plot-BEF, fig.width = 8.5, fig.height = 3.5}
+# linear model for species richness
+summary(lm(frac_bacprod ~ Observed, data = filter(div_iNEXT, fraction == "Particle" & Diversity == "Species richness")))
+summary(lm(frac_bacprod ~ Observed, data = filter(div_iNEXT, fraction == "Free" & Diversity == "Species richness")))
+
+# linear model for exp(H') 
+summary(lm(frac_bacprod ~ Observed, data = filter(div_iNEXT, fraction == "Particle" & Diversity == "Shannon diversity")))
+summary(lm(frac_bacprod ~ Observed, data = filter(div_iNEXT, fraction == "Free" & Diversity == "Shannon diversity")))
+
+# linear model for inverse simpson 
+summary(lm(frac_bacprod ~ Observed, data = filter(div_iNEXT, fraction == "Particle" & Diversity == "Simpson diversity")))
+summary(lm(frac_bacprod ~ Observed, data = filter(div_iNEXT, fraction == "Free" & Diversity == "Simpson diversity")))
+
+
+
+ggplot(div_iNEXT, aes(x=Observed, y=frac_bacprod)) + 
+  # X-axis errorbars
+  geom_errorbarh(aes(xmin = Observed - s.e., xmax = Observed + s.e., color = fraction), alpha = 0.7) + 
+  # Y-axis errorbars
+  geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod, color = fraction)) +  
+  geom_point(size = 3.5, color = "black", aes(fill = fraction, shape = season)) +
+  scale_color_manual(values = fraction_colors) +
+  scale_fill_manual(values = fraction_colors, guide = FALSE) +
+  scale_shape_manual(values = season_shapes) +
+  ylab("\n Community Production \n (μgC/L/day)") + 
+  xlab("Diversity Metric") +
+  geom_smooth(data=filter(div_iNEXT, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
+  facet_wrap(~Diversity, ncol = 3, scales = "free") + 
+  theme(legend.position = "bottom") 
+```
+
+
+
+
