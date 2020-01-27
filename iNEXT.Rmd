@@ -77,9 +77,12 @@ load("data/surface_PAFL_otu_pruned_raw.RData")
 # The name of the phyloseq object is: 
 surface_PAFL_otu_pruned_raw 
 
-# Remove doubletons!
+# Remove doubletons
 surface_PAFL_otu_pruned_rm2 <- prune_taxa(taxa_sums(surface_PAFL_otu_pruned_raw) > 2, surface_PAFL_otu_pruned_raw) 
 surface_PAFL_otu_pruned_rm2
+
+# How many OTUs left for analysis?
+paste("There are", ntaxa(surface_PAFL_otu_pruned_rm2), "OTUs remaining for analysis in the dataset.")
 
 # Remove tree for computational efficiency 
 surface_PAFL_otu_pruned_notree_rm2 <- phyloseq(tax_table(surface_PAFL_otu_pruned_rm2), otu_table(surface_PAFL_otu_pruned_rm2), sample_data(surface_PAFL_otu_pruned_rm2)) 
@@ -109,7 +112,10 @@ environmental_data <- metadata %>%
          TP = TP_ugperL, Alk = Alk_mgperL,
          DO = DO_mgperL) %>%
   as.matrix()
+```
 
+
+```{r pca-environ}
 #### PCA DATA 
 # Scale the data so their variances are the same!
 scaled_enviro <- scale(environmental_data)
@@ -137,15 +143,158 @@ metadata_pca <- metadata %>%
   left_join(pca_scores_df, by = "norep_water_name")
 ```
 
-# iNEXT
+# Main Figures
 
+####  Have a legend for all plots 
+
+Since we have set a parameter in our `set_colors.R` file that we source at the beginning and use this throughout, we can assure that the below legends will represent the legends called afterwards. 
+```{r legends}
+####### Legend for lakesite
+legend_plot <- ggplot(metadata, aes(y = frac_bacprod, x = fraction, fill = fraction, shape = season)) + 
+  geom_jitter(size = 3, width = 0.2) + 
+  scale_fill_manual(values = fraction_colors, guide = guide_legend(override.aes = list(shape = 22, size = 4))) +
+  scale_shape_manual(values = season_shapes, guide = guide_legend(override.aes = list(size = 4))) +
+  theme(legend.position = "bottom", axis.title.x = element_blank(),
+        legend.title = element_blank(), legend.justification="center",
+        plot.margin = unit(c(0.1,0.1,0.1,0.1), "cm")) # top, right, bottom, and left margins
+# Extract the legend
+season_legend <- cowplot::get_legend(legend_plot)
+
+####### Legend for lakesite
+lakesite_legend <- ggplot(metadata, aes(y = frac_bacprod, x = fraction, fill = fraction, shape = lakesite)) + 
+  geom_jitter(size = 3, width = 0.2) + 
+  scale_fill_manual(values = fraction_colors, guide = guide_legend(override.aes = list(shape = 22, size = 4))) +
+  scale_shape_manual(values = lakesite_shapes, guide = guide_legend(override.aes = list(size = 4))) +
+  theme(legend.position = "bottom", axis.title.x = element_blank(),
+        legend.title = element_blank(), legend.justification="center",
+        plot.margin = unit(c(0.1,0.1,0.1,0.1), "cm"))
+# Extract the legend
+lakesite_legend <-  get_legend(lakesite_legend)
+```
+
+
+## Figure 1
+```{r Figure_1, eval = TRUE, fig.width = 8.5, fig.height = 3.5, warning = FALSE, dependson="load-data"}
+######################################################### Fraction ABUNDANCe 
+frac_abund_wilcox <- wilcox.test(log10(as.numeric(fraction_bac_abund)) ~ fraction, data = metadata)
+frac_abund_wilcox
+
+metadata %>%
+  group_by(fraction) %>%
+  summarize(mean(as.numeric(fraction_bac_abund)))
+
+# Make a data frame to draw significance line in boxplot (visually calculated)
+dat1 <- data.frame(a = c(1.1,1.1,1.9,1.9), b = c(6.45,6.5,6.5,6.45)) # WholePart vs WholeFree
+
+poster_a <- 
+  ggplot(filter(metadata, norep_filter_name != "MOTEJ515"), 
+       aes(y = log10(as.numeric(fraction_bac_abund)), x = fraction)) +
+  geom_jitter(size = 3, aes(fill = fraction, shape = season), width = 0.2) + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA, aes( fill = fraction)) +
+  ylab("Log10(Bacterial Counts) \n (cells/mL)") +
+  scale_fill_manual(values = fraction_colors) +
+  scale_shape_manual(values = season_shapes) +
+  ##### Particle vs free cell abundances 
+  geom_path(data = dat1, aes(x = a, y = b), linetype = 1, color = "gray40") +
+  annotate("text", x=1.5, y=6.55, size = 8, color = "gray40", label= paste("***")) +
+  annotate("text", x=1.5, y=6.4, size = 3.5, color = "gray40",
+           label= paste("p =", round(frac_abund_wilcox$p.value, digits = 6))) +
+  theme(legend.position = "bottom",
+        legend.title = element_blank(),
+        axis.title.x = element_blank())
+
+
+
+######################################################### TOTAL PRODUCTION 
+totprod_wilcox <- wilcox.test(frac_bacprod ~ fraction, data = metadata)
+totprod_wilcox
+
+metadata %>%
+  group_by(fraction) %>%
+  summarize(mean(frac_bacprod))
+
+# Make a data frame to draw significance line in boxplot (visually calculated)
+dat2 <- data.frame(a = c(1.1,1.1,1.9,1.9), b = c(71,72,72,71)) # WholePart vs WholeFree
+
+
+poster_b <- ggplot(metadata, aes(y = frac_bacprod, x = fraction)) + 
+  geom_jitter(size = 3, aes(fill = fraction, shape = season), width = 0.2) + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA, aes( fill = fraction)) +
+  scale_fill_manual(values = fraction_colors, guide = FALSE) +
+  scale_shape_manual(values = season_shapes) +
+  scale_y_continuous(limits = c(0, 78), expand = c(0,0), breaks = seq(0, 75, by = 15)) +
+  ylab("Community Production \n (μgC/L/day)") +
+  ##### Particle vs free bulk production  
+  geom_path(data = dat2, aes(x = a, y = b), linetype = 1, color = "gray40") +
+  annotate("text", x=1.5, y=73, size = 8, color = "gray40", label= paste("*")) +
+  annotate("text", x=1.5, y=69, size = 3.5, color = "gray40",
+           label= paste("p =", round(totprod_wilcox$p.value, digits = 3))) +
+  theme(legend.position = "none",
+        axis.title.x = element_blank())
+
+
+######################################################### TOTAL PRODUCTION 
+percellprod_wilcox <- wilcox.test(log10(fracprod_per_cell) ~ fraction, data = filter(metadata, norep_filter_name != "MOTEJ515"))
+percellprod_wilcox
+
+filter(metadata, norep_filter_name != "MOTEJ515") %>%
+  group_by(fraction) %>%
+  summarize(mean(fracprod_per_cell))
+
+
+# Make a data frame to draw significance line in boxplot (visually calculated)
+dat3 <- data.frame(a = c(1.1,1.1,1.9,1.9), b = c(-5.05,-5,-5,-5.05)) # WholePart vs WholeFree
+
+
+poster_c <- ggplot(filter(metadata, norep_filter_name != "MOTEJ515"), 
+       aes(y = log10(fracprod_per_cell), x = fraction)) +
+  geom_jitter(size = 3, aes(fill = fraction, shape = season), width = 0.2) + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA, aes( fill = fraction)) +
+  scale_fill_manual(values = fraction_colors, guide = FALSE) +
+  scale_shape_manual(values = season_shapes) +
+  ylim(c(-8.5, -4.9)) + 
+  ylab("Log10(Per-Capita Production) \n(μgC/cell/day)") +
+  ##### Particle vs free per-cell production 
+  geom_path(data = dat3, aes(x = a, y = b), linetype = 1, color = "gray40") +
+  annotate("text", x=1.5, y=-4.95, size = 8, color = "gray40", label= paste("***")) +
+  annotate("text", x=1.5, y=-5.15,  size = 3.5, color = "gray40",
+           label= paste("p =", round(percellprod_wilcox$p.value, digits = 5))) +
+  theme(legend.position = "none",
+        axis.title.x = element_blank())
+
+
+######## FIGURE 1
+# legend
+legend <- get_legend(poster_a)
+
+row1_plots <- plot_grid(poster_a + theme(legend.position = "none"), poster_b, poster_c,
+          labels = c("A", "B", "C"),
+          ncol = 3, nrow = 1)
+
+fig_1 <- plot_grid(row1_plots, season_legend,
+           ncol = 1, nrow = 2, 
+           rel_heights = c(1, 0.05)); fig_1
+
+# What are the averages? 
+metadata %>%
+  group_by(fraction) %>%
+  dplyr::select(frac_bacprod, fracprod_per_cell_noinf) %>%
+  na.omit() %>%
+  summarize(avg_comm_prod = mean(frac_bacprod),
+            avg_percell_prod = mean(fracprod_per_cell_noinf),
+            log10_avg_percell_prod = log10(avg_percell_prod))
+```
+
+
+
+# Hill Diversity Metrics (iNEXT package)
 ```{r iNEXT-data}
 iNEXT_input_table <- otu_table(surface_PAFL_otu_pruned_rm2) %>%
   t() %>%
   data.frame()
 
 #set.seed(777)
-# Run iNEXT on the data 
+# Run iNEXT on the data - it takes a long time to run! So here we will load in the object that was previously created with the following line of code:
 #iNEXT_data <- iNEXT(iNEXT_input_table, q = c(0,1,2), datatype = "abundance")
 #save(list="iNEXT_data", file=paste0("data/iNEXT/iNEXT_data_surface_PAFL_otu_pruned_rm2")) 
 
@@ -155,9 +304,8 @@ load("data/iNEXT/iNEXT_data_surface_PAFL_otu_pruned_rm2")
 
 
 # Reformat metadata
-dat <- colnames(iNEXT_input_table) %>%
-  data.frame() 
-colnames(dat)[1] <- "norep_filter_name"  
+dat <- colnames(iNEXT_input_table) %>% data.frame() 
+colnames(dat)[1] <- "norep_filter_name"  # Change the column names 
 
 sub_metadata <- metadata[,1:6] %>%
   tibble::rownames_to_column(var = "norep_filter_name")
@@ -179,35 +327,204 @@ dat_iNEXT <- dat %>%
 div_iNEXT <- iNEXT_data$AsyEst %>%
   rename(norep_filter_name = Site) %>%
   left_join(metadata_pca, by = "norep_filter_name")
+
+# Pull out individual metrics
+rich_df <- div_iNEXT %>%
+  filter(Diversity == "Species richness")
+
+shan_df <- div_iNEXT %>%
+  filter(Diversity == "Shannon diversity")
+
+simps_df <- div_iNEXT %>%
+  filter(Diversity == "Simpson diversity")
+```
+
+# iNEXT figures
+```{r plot-iNEXT, fig.width = 10, fig.height = 4.5}
+# h = 0 = richness
+# h = 1 = exp(Shannon)
+# h = 2 = Inverse Simpsons
+
+# Sample‐size‐based R/E curves, separating by "site""
+p_iNEXT <- ggiNEXT(iNEXT_data, type=1, facet.var="order") + facet_wrap(~order, scales="free") +
+  scale_shape_manual(values = dat_iNEXT$shape, guide = FALSE) +
+  scale_color_manual(values = dat_iNEXT$fraction_color,  guide = FALSE) +
+  scale_fill_manual(values = dat_iNEXT$fraction_color, guide = FALSE) +
+  theme(legend.position = "none") +
+  labs(title = "Hill Diversity Metrics") +
+  theme(plot.title = element_text()); p_iNEXT
+
+p_iNEXT_legend <- ggiNEXT(iNEXT_data, type=1, facet.var="order", grey = "true") + 
+  facet_wrap(~order, scales="free") +
+  guides(color = "none", shape = "none", fill = "none") + 
+  theme(legend.text = element_text(size = 13))
+
+# Extract the legend
+iNEXT_legend <- cowplot::get_legend(p_iNEXT_legend)
+
+# plot them together 
+plot_grid(p_iNEXT, iNEXT_legend, season_legend,
+           ncol = 1, nrow = 3, 
+           rel_heights = c(1, 0.05, 0.05)); 
 ```
 
 
-```{r plot-iNEXT, fig.width = 10, fig.height = 6}
-# Sample‐size‐based R/E curves, separating by "site""
-ggiNEXT(iNEXT_data, type=1, facet.var="order") + facet_wrap(~order, scales="free") +
-  scale_shape_manual(values = dat_iNEXT$shape) +
-  scale_color_manual(values = dat_iNEXT$fraction_color) +
-  scale_fill_manual(values = dat_iNEXT$fraction_color) + 
-  geom_vline(xintercept = 6664, linetype="solid", color = "black", size=0.5) 
+```{r richness-plot, fig.width= 6, fig.height= 3.5}
+wilcox_rich_obs <- wilcox.test(Observed ~ fraction, data = rich_df)
+wilcox_rich_est <- wilcox.test(Estimator ~ fraction, data = rich_df)
+
+rich_p1 <- rich_df %>%
+  ggplot(aes(x = fraction, y = Observed)) + 
+  geom_jitter(size = 3, aes(fill = fraction, shape = season), width = 0.2) + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA, aes( fill = fraction)) +
+  scale_fill_manual(values = fraction_colors) +
+  scale_shape_manual(values = season_shapes) + 
+  scale_y_continuous(limits = c(0, 1800), breaks = seq(0, 1800, by = 300),
+                     expand = c(0, 0)) +
+  labs(y = "Observed Richness") +
+  theme(axis.title.x = element_blank(), legend.position = "none") + 
+  annotate("text", x=1.5, y=1500, size = 4, color = "gray40",
+         label= paste("Wilcoxon, p =", round(wilcox_rich_obs$p.value, digits = 3))) 
+
+rich_p2 <- rich_df %>%
+  ggplot(aes(x = fraction, y = Estimator)) + 
+  geom_jitter(size = 3, aes(fill = fraction, shape = season), width = 0.2) + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA, aes( fill = fraction)) +
+  scale_fill_manual(values = fraction_colors) +
+  scale_shape_manual(values = season_shapes) + 
+  scale_y_continuous(limits = c(0, 1800), breaks = seq(0, 1800, by = 300),
+                     expand = c(0, 0))+
+  labs(y = "Richness Estimator") +
+  theme(axis.title.x = element_blank(), legend.position = "none") + 
+  annotate("text", x=1.5, y=1500, size = 4, color = "gray40",
+      label= paste("Wilcoxon, p =", round(wilcox_rich_est$p.value, digits = 3)))
+
+# Put the plots together 
+rich_title <- ggdraw() + 
+  draw_label("iNEXT richness estimates", fontface = 'bold', x = 0, hjust = 0) + 
+   theme(plot.margin = margin(0, 0, 0, 125))
+
+rich_plotz <- plot_grid(rich_p1, rich_p2, 
+          labels = c("A", "B"))
+
+plot_grid(rich_title, rich_plotz, 
+          ncol = 1, nrow = 2, rel_heights = c(0.1, 1))
+```
+
+# Linear Models 
+```{r lm-models-div}
+# Free-Living samples only 
+div_measures_free <- div_iNEXT %>%
+  dplyr::select(fraction, Observed, Diversity, frac_bacprod, fracprod_per_cell_noinf) %>%
+  filter(fraction == "Free") %>%
+  dplyr::select(-fraction)
+# Particle-associated samples only 
+div_measures_part <- div_iNEXT %>%
+  dplyr::select(fraction, Observed, Diversity, frac_bacprod, fracprod_per_cell_noinf) %>%
+  filter(fraction == "Particle") %>%
+  dplyr::select(-fraction)
+
+## All of the samples!
+div_measures_all <- div_iNEXT %>%
+  dplyr::select(Observed, Diversity, frac_bacprod, fracprod_per_cell_noinf)
+
+########################################################
+##############  Particle: Community-wide 
+lm_divs_particle_comm <- div_measures_part %>%
+  dplyr::select(-fracprod_per_cell_noinf) %>%
+  group_by(Diversity) %>% 
+  do(glance(lm(frac_bacprod ~ Observed, data = .))) %>% 
+  mutate(fraction = "Particle", dependent = "Community Production") %>%
+  dplyr::select(fraction, dependent, Diversity, logLik, AIC, adj.r.squared, p.value) %>%
+  ungroup() %>%
+  mutate(FDR.p = p.adjust(p.value, method = "fdr")) 
+
+
+##############  Particle: Community-wide 
+lm_divs_particle_percap <- div_measures_part %>%
+  dplyr::select(-frac_bacprod) %>%
+  group_by(Diversity) %>% 
+  do(glance(lm(log10(fracprod_per_cell_noinf) ~ Observed, data = .))) %>% 
+  mutate(fraction = "Particle", dependent = "Per-Capita Production") %>%
+  dplyr::select(fraction, dependent, Diversity, logLik, AIC, adj.r.squared, p.value) %>%
+  ungroup() %>%
+  mutate(FDR.p = p.adjust(p.value, method = "fdr")) 
+
+########################################################
+##############  Free: Community-wide 
+lm_divs_free_comm <- div_measures_free %>%
+  dplyr::select(-fracprod_per_cell_noinf) %>%
+  group_by(Diversity) %>% 
+  do(glance(lm(frac_bacprod ~ Observed, data = .))) %>% 
+  mutate(fraction = "Free", dependent = "Community Production") %>%
+  dplyr::select(fraction, dependent, Diversity, logLik, AIC, adj.r.squared, p.value) %>%
+  ungroup() %>%
+  mutate(FDR.p = p.adjust(p.value, method = "fdr")) 
+
+##############  Free: Community-wide 
+lm_divs_free_percap <- div_measures_free %>%
+  dplyr::select(-frac_bacprod) %>%
+  group_by(Diversity) %>% 
+  do(glance(lm(log10(fracprod_per_cell_noinf) ~ Observed, data = .))) %>% 
+  mutate(fraction = "Free", dependent = "Per-Capita Production") %>%
+  dplyr::select(fraction, dependent, Diversity, logLik, AIC, adj.r.squared, p.value) %>%
+  ungroup() %>%
+  mutate(FDR.p = p.adjust(p.value, method = "fdr")) 
+
+
+
+
+# Community-Wide Production    
+table_comm_wide <- bind_rows(lm_divs_particle_comm, lm_divs_free_comm) %>%
+  dplyr::select(-dependent) %>%
+  mutate(AIC = round(AIC, digits = 1), 
+         adj.r.squared = round(adj.r.squared, digits = 3), 
+         p.value = round(p.value, digits = 3), 
+         FDR.p = round(FDR.p, digits = 3))
+datatable(table_comm_wide,
+       caption = "Ordinary least squares regression statistics for community-wide heterotrophic production", 
+       options = list(pageLength = 6), rownames = FALSE)   
+
+
+
+# Log10 Per-capita Production    
+table_percap <- bind_rows(lm_divs_particle_percap, lm_divs_free_percap) %>%
+  dplyr::select(-dependent) %>%
+  mutate(AIC = round(AIC, digits = 1), 
+         adj.r.squared = round(adj.r.squared, digits = 3), 
+         p.value = round(p.value, digits = 3), 
+         FDR.p = round(FDR.p, digits = 3))
+datatable(table_percap,
+       caption = "Ordinary least squares regression statistics for log10(per-capita production)", 
+       options = list(pageLength = 6), rownames = FALSE)   
+
 ```
 
 
 ```{r plot-BEF, fig.width = 8.5, fig.height = 3.5}
-# linear model for species richness
+# linear model for community production vs species richness
 summary(lm(frac_bacprod ~ Observed, data = filter(div_iNEXT, fraction == "Particle" & Diversity == "Species richness")))
 summary(lm(frac_bacprod ~ Observed, data = filter(div_iNEXT, fraction == "Free" & Diversity == "Species richness")))
 
-# linear model for exp(H') 
+# linear model for community production vs exp(H') 
 summary(lm(frac_bacprod ~ Observed, data = filter(div_iNEXT, fraction == "Particle" & Diversity == "Shannon diversity")))
 summary(lm(frac_bacprod ~ Observed, data = filter(div_iNEXT, fraction == "Free" & Diversity == "Shannon diversity")))
 
-# linear model for inverse simpson 
+# linear model for community production vs inverse simpson 
 summary(lm(frac_bacprod ~ Observed, data = filter(div_iNEXT, fraction == "Particle" & Diversity == "Simpson diversity")))
 summary(lm(frac_bacprod ~ Observed, data = filter(div_iNEXT, fraction == "Free" & Diversity == "Simpson diversity")))
 
 
+dat_text <- data.frame(
+  label = c("4 cylinders", "6 cylinders", "8 cylinders"),
+  cyl   = c(4, 6, 8),
+  x     = c(20, 27.5, 25),
+  y     = c(4, 4, 4.5)
+)
 
-ggplot(div_iNEXT, aes(x=Observed, y=frac_bacprod)) + 
+
+### Community-wide production
+p_commLMs <- ggplot(div_iNEXT, aes(x=Observed, y=frac_bacprod)) + 
   # X-axis errorbars
   geom_errorbarh(aes(xmin = Observed - s.e., xmax = Observed + s.e., color = fraction), alpha = 0.7) + 
   # Y-axis errorbars
@@ -220,9 +537,111 @@ ggplot(div_iNEXT, aes(x=Observed, y=frac_bacprod)) +
   xlab("Diversity Metric") +
   geom_smooth(data=filter(div_iNEXT, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
   facet_wrap(~Diversity, ncol = 3, scales = "free") + 
-  theme(legend.position = "bottom") 
+  theme(legend.position = "none", axis.title.x = element_blank()) 
+
+
+# linear model for community production vs species richness
+summary(lm(log10(fracprod_per_cell_noinf) ~ Observed, 
+           data = filter(div_iNEXT, fraction == "Particle" & Diversity == "Species richness")))
+summary(lm(log10(fracprod_per_cell_noinf) ~ Observed, 
+           data = filter(div_iNEXT, fraction == "Free" & Diversity == "Species richness")))
+
+# linear model for community production vs exp(H') 
+summary(lm(log10(fracprod_per_cell_noinf) ~ Observed, 
+           data = filter(div_iNEXT, fraction == "Particle" & Diversity == "Shannon diversity")))
+summary(lm(log10(fracprod_per_cell_noinf) ~ Observed, 
+           data = filter(div_iNEXT, fraction == "Free" & Diversity == "Shannon diversity")))
+
+# linear model for community production vs inverse simpson 
+summary(lm(log10(fracprod_per_cell_noinf) ~ Observed, 
+           data = filter(div_iNEXT, fraction == "Particle" & Diversity == "Simpson diversity")))
+summary(lm(log10(fracprod_per_cell_noinf) ~ Observed, 
+           data = filter(div_iNEXT, fraction == "Free" & Diversity == "Simpson diversity")))
+
+
+
+# Per-capita production
+p_percapLMs <- ggplot(div_iNEXT, aes(x=Observed, y=log10(fracprod_per_cell_noinf))) + 
+  # X-axis errorbars
+  geom_errorbarh(aes(xmin = Observed - s.e., xmax = Observed + s.e., color = fraction), alpha = 0.7) + 
+  # Y-axis errorbars
+ # geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod, color = fraction)) +  
+  geom_point(size = 3.5, color = "black", aes(fill = fraction, shape = season)) +
+  scale_color_manual(values = fraction_colors) +
+  scale_fill_manual(values = fraction_colors, guide = FALSE) +
+  scale_shape_manual(values = season_shapes) +
+  ylab("\n log10(Per-Capita Production)\n (μgC/cell/day)") +
+  xlab("Diversity Metric") +
+  geom_smooth(data=filter(div_iNEXT, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
+  facet_wrap(~Diversity, ncol = 3, scales = "free") + 
+  theme(legend.position = "none") 
+
+
+# plot them together 
+plot_grid(p_commLMs, p_percapLMs, season_legend,
+          ncol = 1, nrow = 3, labels = c("A", "B",""),
+          rel_heights = c(1, 1, 0.05)) + 
+  theme(plot.margin = unit(c(0.1,0.1,0.2,0.1), "cm")) # top, right, bottom, and left margins
 ```
 
+# Phylogenetic Diversity
+```{r}
+library(hillR)
+
+otu_mat <- data.frame(otu_table(surface_PAFL_otu_pruned_rm2))
+phy_tree <- phy_tree(surface_PAFL_otu_pruned_rm2)
+
+set.seed(111)
+
+# Calculate the Hill phylogenetic diversity metric from the hillR package
+# The output from this command is a named vector with the sample name and the div value.
+#hill_phy0_df <- hill_phylo(comm = otu_mat, tree = phy_tree, q = 0)
+#hill_phy1_df <- hill_phylo(comm = otu_mat, tree = phy_tree, q = 1)
+#hill_phy2_df <- hill_phylo(comm = otu_mat, tree = phy_tree, q = 2)
+
+# Pull out the sample names
+norep_filter_name <- names(hill_phy0_df) 
+stopifnot(names(hill_phy0_df) == names(hill_phy1_df))
+stopifnot(names(hill_phy1_df) == names(hill_phy2_df))
+# Pull out the hill phylo div values
+
+div_sample_names <- rep(norep_filter_name, times = 3)
+phylo_div_vals <- c(unname(hill_phy0_df), unname(hill_phy1_df), unname(hill_phy2_df)) # rich, shannon, simpson
+phylo_div_types <- c(rep("Species richness", times = 24), rep("Shannon diversity", times = 24), rep("Simpson diversity", times = 24))
+
+# Put it all in a dataframe 
+hillR_output <- data.frame(div_sample_names, phylo_div_vals, phylo_div_types) %>%
+  rename(norep_filter_name = div_sample_names, Diversity = phylo_div_types,
+         hillR_phylo = phylo_div_vals) 
+
+# save to file because iNEXT takes time to calculate 
+#write.csv(x = hillR_output, file = "data/iNEXT/hillR_output.csv", row.names = FALSE, quote = FALSE)
 
 
+# COMBINE iNEXT AND HILLR DATA
+comb_div_df <- div_iNEXT %>%
+  dplyr::select(c("norep_filter_name", "Diversity", "Observed", "Estimator", "s.e.", "season", "fraction", "frac_bacprod", "SD_frac_bacprod", "fracprod_per_cell_noinf")) %>%
+  left_join(hillR_output, by = c("norep_filter_name", "Diversity")) %>%
+  mutate(Diversity = factor(Diversity, levels = c("Species richness", "Shannon diversity", "Simpson diversity")))
+
+
+# And plot it
+ggplot(comb_div_df, aes(x = Observed, y = hillR_phylo)) + 
+  geom_point() + geom_smooth(method = "lm") +
+  facet_wrap(~Diversity, scales = "free")
+# Test it
+summary(lm(hill_phylo~Observed, data = filter(comb_div_df, Diversity == "Species richness")))
+summary(lm(hill_phylo~Observed, data = filter(comb_div_df, Diversity == "Shannon diversity")))
+summary(lm(hill_phylo~Observed, data = filter(comb_div_df, Diversity == "Simpson diversity")))
+
+# Check out Simpsons more 
+comb_div_df %>%
+  filter(Diversity == "Simpson diversity") %>%
+  ggplot(aes(x = fraction, y = hillR_phylo, shape = season, fill = fraction)) + 
+  geom_jitter(size = 3, width = 0.2) + 
+  scale_fill_manual(values = fraction_colors,) +
+  scale_shape_manual(values = season_shapes) 
+
+
+```
 
