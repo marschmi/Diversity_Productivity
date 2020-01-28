@@ -622,26 +622,142 @@ hillR_output <- data.frame(div_sample_names, phylo_div_vals, phylo_div_types) %>
 comb_div_df <- div_iNEXT %>%
   dplyr::select(c("norep_filter_name", "Diversity", "Observed", "Estimator", "s.e.", "season", "fraction", "frac_bacprod", "SD_frac_bacprod", "fracprod_per_cell_noinf")) %>%
   left_join(hillR_output, by = c("norep_filter_name", "Diversity")) %>%
-  mutate(Diversity = factor(Diversity, levels = c("Species richness", "Shannon diversity", "Simpson diversity")))
+  mutate(Diversity = factor(Diversity, levels = c("Species richness", "Shannon diversity", "Simpson diversity"))) %>%
+  rename(se_iNEXT = "s.e.")
 
+# Calculate R2 and pval for  it
+lm_phylo_rich <- summary(lm(hill_phylo~Observed, data = filter(comb_div_df, Diversity == "Species richness")))
+lm_phylo_shan <- summary(lm(hill_phylo~Observed, data = filter(comb_div_df, Diversity == "Shannon diversity")))
+lm_phylo_simps <- summary(lm(hill_phylo~Observed, data = filter(comb_div_df, Diversity == "Simpson diversity")))
 
-# And plot it
-ggplot(comb_div_df, aes(x = Observed, y = hillR_phylo)) + 
+# Make the 3 individual plots and then plot together
+# 1. RICHNESS PLOT 
+# Extract linear model output 
+lab_lm_phylo_rich <- paste("atop(R^2 ==", round(lm_phylo_rich$adj.r.squared, digits = 2), ",",
+             "p ==", round(unname(lm_phylo_rich$coefficients[,4][2]), digits = 15), ")")
+p1_phylo_rich <- 
+  comb_div_df %>%
+  dplyr::filter(Diversity == "Species richness") %>%
+  ggplot(aes(x = Observed, y = hillR_phylo)) + 
   geom_point() + geom_smooth(method = "lm") +
-  facet_wrap(~Diversity, scales = "free")
-# Test it
-summary(lm(hill_phylo~Observed, data = filter(comb_div_df, Diversity == "Species richness")))
-summary(lm(hill_phylo~Observed, data = filter(comb_div_df, Diversity == "Shannon diversity")))
-summary(lm(hill_phylo~Observed, data = filter(comb_div_df, Diversity == "Simpson diversity")))
+  labs(x = "Observed Richness", y = "Phylogenetic diversity") +
+  annotate("text", x=500, y=150, label=lab_lm_phylo_rich, parse = TRUE, color = "blue", size = 4) 
 
-# Check out Simpsons more 
-comb_div_df %>%
-  filter(Diversity == "Simpson diversity") %>%
-  ggplot(aes(x = fraction, y = hillR_phylo, shape = season, fill = fraction)) + 
-  geom_jitter(size = 3, width = 0.2) + 
-  scale_fill_manual(values = fraction_colors,) +
-  scale_shape_manual(values = season_shapes) 
+# 2. SHANNON PLOT 
+# Extract linear model output 
+lab_lm_phylo_shan <- paste("atop(R^2 ==", round(lm_phylo_shan$adj.r.squared, digits = 2), ",",
+             "p ==", round(unname(lm_phylo_shan$coefficients[,4][2]), digits = 7), ")")
+p2_phylo_shan <- 
+  comb_div_df %>%
+  dplyr::filter(Diversity == "Shannon diversity") %>%
+  ggplot(aes(x = Observed, y = hillR_phylo)) + 
+  geom_point() + geom_smooth(method = "lm") +
+  labs(x = "Shannon diversity", y = "Phylogenetic diversity") +
+  annotate("text", x=75, y=15, label=lab_lm_phylo_rich, parse = TRUE, color = "blue", size = 4) 
 
+# 3. SIMPSON PLOT 
+# Extract linear model output 
+lab_lm_phylo_simps <- paste("atop(R^2 ==", round(lm_phylo_simps$adj.r.squared, digits = 2), ",",
+             "p ==", round(unname(lm_phylo_simps$coefficients[,4][2]), digits = 7), ")")
+p3_phylo_simps <- 
+  comb_div_df %>%
+  dplyr::filter(Diversity == "Simpson diversity") %>%
+  ggplot(aes(x = Observed, y = hillR_phylo)) + 
+  geom_point() + geom_smooth(method = "lm") +
+  labs(x = "Simpson diversity", y = "Phylogenetic diversity") +
+  annotate("text", x=20, y=6, label=lab_lm_phylo_rich, parse = TRUE, color = "blue", size = 4) 
+
+
+plot_grid(p1_phylo_rich, p2_phylo_shan, p3_phylo_simps,
+          labels = c("A", "B", "C"),
+          nrow = 1, ncol = 3)
+```
+
+
+
+# Phylo Div vs Productivity
+```{r hillR-vs-prod}
+
+
+# 1. RICHNESS PLOT 
+# Extract linear model output 
+lm_prod_phyrich_PA <- summary(lm(frac_bacprod ~ hillR_phylo, data = filter(comb_div_df, Diversity == "Species richness" & fraction == "Particle")))
+lm_prod_phyrich_PA # Show the stats
+lab_lm_prod_phyrich_PA <- paste("atop(R^2 ==", round(lm_prod_phyrich_PA$adj.r.squared, digits = 2), ",",
+             "p ==", round(unname(lm_prod_phyrich_PA$coefficients[,4][2]), digits = 3), ")")
+lm_prod_phyrich_FL <- summary(lm(frac_bacprod ~ hillR_phylo, data = filter(comb_div_df, Diversity == "Species richness" & fraction == "Free")))
+lm_prod_phyrich_FL # Show the stats
+
+p1_prod_phylorich <- comb_div_df %>%
+  dplyr::filter(Diversity == "Species richness") %>%
+  ggplot(aes(x = hillR_phylo, y=frac_bacprod)) + 
+  geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod, color = fraction)) +  # Y-axis errorbars
+  geom_point(size = 3.5, color = "black", aes(fill = fraction, shape = season)) +
+  scale_color_manual(values = fraction_colors) +
+  scale_fill_manual(values = fraction_colors) +
+  scale_shape_manual(values = season_shapes) +
+  labs(x = "Phylo richness", y = "Community Production \n (μgC/L/day)") + 
+  geom_smooth(data=filter(comb_div_df, fraction == "Particle" & Diversity == "Species richness"), method='lm', color = "#FF6600", fill = "#FF6600") + 
+  annotate("text", x=140, y=50, label=lab_lm_prod_phyrich_PA, parse = TRUE, color = "#FF6600", size = 4)  +
+  theme(legend.position = "none")
+
+
+# 2. SHANNON PLOT 
+# Extract linear model output 
+lm_prod_physhan_PA <- summary(lm(frac_bacprod ~ hillR_phylo, data = filter(comb_div_df, Diversity == "Shannon diversity" & fraction == "Particle")))
+lm_prod_physhan_PA # Show the stats
+lab_lm_prod_physhan_PA <- paste("atop(R^2 ==", round(lm_prod_physhan_PA$adj.r.squared, digits = 2), ",",
+             "p ==", round(unname(lm_prod_physhan_PA$coefficients[,4][2]), digits = 2), ")"); 
+# Without the outlier sample on the x axis in particle - the trend is actually stronger
+wo_MBREJ515 <- summary(lm(frac_bacprod ~ hillR_phylo, 
+           data = filter(comb_div_df, Diversity == "Shannon diversity" & fraction == "Particle" & norep_filter_name != "MBREJ515")))
+lab_wo_MBREJ515 <- paste("atop(R^2 ==", round(wo_MBREJ515$adj.r.squared, digits = 2), ",",
+             "p ==", round(unname(wo_MBREJ515$coefficients[,4][2]), digits = 2), ")"); 
+paste("With all samples:",lab_lm_prod_physhan_PA, "and without the outlier sample (MBREJ515):", lab_wo_MBREJ515)
+
+# Free living
+lm_prod_physhan_FL <- summary(lm(frac_bacprod ~ hillR_phylo, data = filter(comb_div_df, Diversity == "Shannon diversity" & fraction == "Free")))
+lm_prod_physhan_FL # Show the stats
+
+p2_prod_phyloshan <- 
+  comb_div_df %>%
+  dplyr::filter(Diversity == "Shannon diversity") %>%
+  ggplot(aes(x = hillR_phylo, y=frac_bacprod)) + 
+  geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod, color = fraction)) +  # Y-axis errorbars
+  geom_point(size = 3.5, color = "black", aes(fill = fraction, shape = season)) +
+  scale_color_manual(values = fraction_colors) +
+  scale_fill_manual(values = fraction_colors) +
+  scale_shape_manual(values = season_shapes) +
+  labs(x = "Phylo Shannon", y = "Community Production \n (μgC/L/day)") + 
+  geom_smooth(data=filter(comb_div_df, fraction == "Particle" & Diversity == "Shannon diversity"), method='lm', color = "#FF6600", fill = "#FF6600") + 
+  annotate("text", x=12, y=50, label=lab_lm_prod_physhan_PA, parse = TRUE, color = "#FF6600", size = 4)  +
+  theme(legend.position = "none")
+
+
+# 2. SIMPSON PLOT 
+# Extract linear model output 
+lm_prod_physimps_PA <- summary(lm(frac_bacprod ~ hillR_phylo, data = filter(comb_div_df, Diversity == "Simpson diversity" & fraction == "Particle")))
+lm_prod_physimps_PA # Show the stats
+lm_prod_physimps_FL <- summary(lm(frac_bacprod ~ hillR_phylo, data = filter(comb_div_df, Diversity == "Simpson diversity" & fraction == "Free")))
+lm_prod_physimps_FL # Show the stats
+
+p3_prod_phylosimmps <- 
+  comb_div_df %>%
+  dplyr::filter(Diversity == "Simpson diversity") %>%
+  ggplot(aes(x = hillR_phylo, y=frac_bacprod)) + 
+  geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod, color = fraction)) +  # Y-axis errorbars
+  geom_point(size = 3.5, color = "black", aes(fill = fraction, shape = season)) +
+  scale_color_manual(values = fraction_colors) +
+  scale_fill_manual(values = fraction_colors) +
+  scale_shape_manual(values = season_shapes) +
+  labs(x = "Phylo Simpson", y = "Community Production \n (μgC/L/day)") + 
+  theme(legend.position = "none") 
+
+
+plot_grid(p1_prod_phylorich, p2_prod_phyloshan, p3_prod_phylosimmps,
+          labels = c("A", "B", "C"),
+          nrow = 1, ncol = 3)
 
 ```
+
 
