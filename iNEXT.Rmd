@@ -152,6 +152,7 @@ metadata_pca <- metadata %>%
 #### Calculate diversity with the iNEXT package
 
 ```{r iNEXT-data}
+# Prepare the input data for iNEXT
 iNEXT_input_table <- otu_table(surface_PAFL_otu_pruned_rm2) %>%
   t() %>%
   data.frame()
@@ -174,7 +175,7 @@ div_iNEXT <- iNEXT_data$AsyEst %>%
 # Phylogenetic Diversity (PD)
 ## Calculate PD
 
-```{r hillR}
+```{r calc-hillR}
 # Here I will use hillR to calculate the phylogenetic diversity,
 # which uses an extension of the hill numbers 
 #otu_mat <- data.frame(otu_table(surface_PAFL_otu_pruned_rm2))
@@ -209,7 +210,10 @@ hillR_output <- read.csv("data/iNEXT/hillR_output.csv") %>%
                                 "phylo_shannon" = "Shannon diversity", 
                                 "phylo_simpson" = "Simpson diversity")) %>%
   spread(key = Diversity, value = hillR_phylo)
+```
 
+## Put together the diversity dataframes into one
+```{r combine-diversity-dfs}
 # COMBINE iNEXT AND hillR DATA - should now be 144 rows
 div_df <- 
   div_iNEXT %>%
@@ -221,45 +225,31 @@ div_df <-
   left_join(hillR_output)
 #write.csv(div_df, file = "data/iNEXT/diversity_measures.csv", quote = FALSE, row.names = FALSE)
 
-
+# Create the final dataframe!
 comb_div_df <- div_df %>%
   left_join(metadata_pca, by = "norep_filter_name") %>%
   gather(key = "Diversity", value = "Observed", richness:phylo_richness) %>%  
   #mutate(Diversity = factor(Diversity, levels = c("Species richness", "Shannon diversity", "Simpson diversity"))) %>%
   data.frame()
+head(comb_div_df)
+dim(comb_div_df)
+```
 
-
-##### HERE #######
-##### HERE #######
-##### HERE #######
-##### HERE #######
-##### HERE #######
-##### HERE #######
-##### HERE #######
-##### HERE #######
-##### HERE #######
-##### HERE #######
-##### HERE #######
-##### HERE #######
-##### HERE #######
-##### HERE #######
-##### HERE #######
-##### HERE #######
-
+## Correlations between phylogenetic & non-phylo Hill numbers
+```{r corr-hill-phylo}
 # Calculate R2 and pval for  it
-lm_phylo_rich <- summary(lm(hillR_phylo ~ Observed, data = filter(comb_div_df, Diversity == "Species richness")))
-lm_phylo_shan <- summary(lm(hillR_phylo ~ Observed, data = filter(comb_div_df, Diversity == "Shannon diversity")))
-lm_phylo_simps <- summary(lm(hillR_phylo ~ Observed, data = filter(comb_div_df, Diversity == "Simpson diversity")))
+lm_phylo_rich <- summary(lm(phylo_richness ~ richness, data =div_df))
+lm_phylo_shan <- summary(lm(phylo_shannon ~ shannon, data = div_df))
+lm_phylo_simps <- summary(lm(phylo_simpson ~ simpson, data = div_df))
 
 # Make the 3 individual plots and then plot together
 # 1. RICHNESS PLOT 
 # Extract linear model output 
 lab_lm_phylo_rich <- paste("atop(R^2 ==", round(lm_phylo_rich$adj.r.squared, digits = 2), ",",
-             "p ==", round(unname(lm_phylo_rich$coefficients[,4][2]), digits = 15), ")")
+             "p ==", round(unname(lm_phylo_rich$coefficients[,4][2]), digits = 19), ")")
 p1_phylo_rich <- 
-  comb_div_df %>%
-  dplyr::filter(Diversity == "Species richness") %>%
-  ggplot(aes(x = Observed, y = hillR_phylo)) + 
+  div_df %>%
+  ggplot(aes(x = richness, y = phylo_richness)) + 
   geom_point() + geom_smooth(method = "lm") +
   labs(x = expression(textstyle("Observed Richness")~{}^0*italic(D)), 
        y = expression(textstyle("Phylogenetic")~{}^0*italic(D))) +
@@ -268,11 +258,10 @@ p1_phylo_rich <-
 # 2. SHANNON PLOT 
 # Extract linear model output 
 lab_lm_phylo_shan <- paste("atop(R^2 ==", round(lm_phylo_shan$adj.r.squared, digits = 2), ",",
-             "p ==", round(unname(lm_phylo_shan$coefficients[,4][2]), digits = 7), ")")
+             "p ==", round(unname(lm_phylo_shan$coefficients[,4][2]), digits = 10), ")")
 p2_phylo_shan <- 
-  comb_div_df %>%
-  dplyr::filter(Diversity == "Shannon diversity") %>%
-  ggplot(aes(x = Observed, y = hillR_phylo)) + 
+  div_df %>%
+  ggplot(aes(x = shannon, y = phylo_shannon)) + 
   geom_point() + geom_smooth(method = "lm") +
   labs(x = expression(textstyle("Shannon Index")~{}^1*italic(D)), 
        y = expression(textstyle("Phylogenetic")~{}^1*italic(D))) +
@@ -283,9 +272,8 @@ p2_phylo_shan <-
 lab_lm_phylo_simps <- paste("atop(R^2 ==", round(lm_phylo_simps$adj.r.squared, digits = 2), ",",
              "p ==", round(unname(lm_phylo_simps$coefficients[,4][2]), digits = 5), ")")
 p3_phylo_simps <- 
-  comb_div_df %>%
-  dplyr::filter(Diversity == "Simpson diversity") %>%
-  ggplot(aes(x = Observed, y = hillR_phylo)) + 
+  div_df %>%
+  ggplot(aes(x = simpson, y = phylo_simpson)) + 
   geom_point() + geom_smooth(method = "lm") +
   labs(x = expression(textstyle("Simpson Index")~{}^2*italic(D)), 
        y = expression(textstyle("Phylogenetic")~{}^2*italic(D))) +
@@ -299,7 +287,6 @@ coors_doubleton <- plot_grid(p1_phylo_rich, p2_phylo_shan, p3_phylo_simps,
 
 
 # Main Figures
-
 ####  Have a legend for all plots 
 
 Since we have set a parameter in our `set_colors.R` file that we source at the beginning and use this throughout, we can assure that the below legends will represent the legends called afterwards. 
@@ -311,7 +298,7 @@ legend_plot <- ggplot(metadata, aes(y = frac_bacprod, x = fraction, fill = fract
   scale_shape_manual(values = season_shapes, guide = guide_legend(override.aes = list(size = 4))) +
   theme(legend.position = "bottom", axis.title.x = element_blank(),
         legend.title = element_blank(), legend.justification="center",
-        plot.margin = unit(c(0.1,0.1,0.1,0.1), "cm")) # top, right, bottom, and left margins
+        plot.margin = unit(c(0.2,0.2,1,0.2), "cm")) # top, right, bottom, and left margins
 # Extract the legend
 season_legend <- cowplot::get_legend(legend_plot)
 
@@ -322,14 +309,14 @@ lakesite_legend <- ggplot(metadata, aes(y = frac_bacprod, x = fraction, fill = f
   scale_shape_manual(values = lakesite_shapes, guide = guide_legend(override.aes = list(size = 4))) +
   theme(legend.position = "bottom", axis.title.x = element_blank(),
         legend.title = element_blank(), legend.justification="center",
-        plot.margin = unit(c(0.1,0.1,0.1,0.1), "cm"))
+        plot.margin = unit(c(0.2,0.2,1,0.2), "cm")) # top, right, bottom, and left margins
 # Extract the legend
 lakesite_legend <-  get_legend(lakesite_legend)
 ```
 
 
 ## Figure 1
-```{r Figure_1, eval = TRUE, fig.width = 8.5, fig.height = 3.5, warning = FALSE, dependson="load-data"}
+```{r Figure-1, eval = TRUE, fig.width = 8.5, fig.height = 3.5, warning = FALSE, dependson="load-data"}
 ######################################################### Fraction ABUNDANCe 
 frac_abund_wilcox <- wilcox.test(log10(as.numeric(fraction_bac_abund)) ~ fraction, data = metadata)
 frac_abund_wilcox
@@ -419,9 +406,6 @@ poster_c <- ggplot(filter(metadata, norep_filter_name != "MOTEJ515"),
 
 
 ######## FIGURE 1
-# legend
-legend <- get_legend(poster_a)
-
 row1_plots <- plot_grid(poster_a + theme(legend.position = "none"), poster_b, poster_c,
           labels = c("A", "B", "C"),
           ncol = 3, nrow = 1)
@@ -448,6 +432,28 @@ metadata %>%
 # h = 1 = exp(Shannon)
 # h = 2 = Inverse Simpsons
 
+# Prepare data to color the figure for iNEXT
+dat <- colnames(iNEXT_input_table) %>%	
+  data.frame() 	
+colnames(dat)[1] <- "norep_filter_name"  	
+sub_metadata <- metadata[,1:6] %>%	
+  tibble::rownames_to_column(var = "norep_filter_name")
+
+# Combine for plotting below
+dat_iNEXT <- dat %>%	
+  left_join(sub_metadata, by = "norep_filter_name") %>%	 
+  mutate(fraction_color = ifelse(fraction == "Particle", "#FF6600", "skyblue"), 	  
+         shape = ifelse(season == "Spring", 25, 	        
+                        ifelse(season == "Summer", 23, 	                       
+                               21)),	                              
+         station_color = ifelse(lakesite == "Bear", "black", 	         
+                                ifelse(lakesite == "Deep", "blue",	                               
+                                       ifelse(lakesite == "Outlet", "skyblue",	                                       
+                                              "forestgreen"))),	                                             
+         season_color = ifelse(season == "Spring", "skyblue", 	       
+                               ifelse(season == "Summer", "forestgreen",	                               
+                                      "orange")))
+
 # Sample‐size‐based R/E curves, separating by "site""
 p_iNEXT <- ggiNEXT(iNEXT_data, type=1, facet.var="order") + facet_wrap(~order, scales="free") +
   scale_shape_manual(values = dat_iNEXT$shape, guide = FALSE) +
@@ -473,10 +479,16 @@ plot_grid(p_iNEXT, iNEXT_legend, season_legend,
 
 
 ```{r richness-plot, fig.width= 6, fig.height= 3.5}
-wilcox_rich_obs <- wilcox.test(Observed ~ fraction, data = rich_df)
-wilcox_rich_est <- wilcox.test(Estimator ~ fraction, data = rich_df)
+#Prepare dataframe for calculations
+div_df_frac <- comb_div_df %>%
+  dplyr::select(norep_filter_name, fraction, season) %>%
+  right_join(div_iNEXT, by = "norep_filter_name")
 
-rich_p1 <- rich_df %>%
+wilcox_rich_obs <- wilcox.test(Observed ~ fraction, data =dplyr::filter(div_df_frac,Diversity == "Species richness"))
+wilcox_rich_est <- wilcox.test(Estimator ~ fraction, data = dplyr::filter(div_df_frac,Diversity == "Species richness"))
+
+rich_p1 <- div_df_frac %>%
+  dplyr::filter(Diversity == "Species richness") %>%
   ggplot(aes(x = fraction, y = Observed)) + 
   geom_jitter(size = 3, aes(fill = fraction, shape = season), width = 0.2) + 
   geom_boxplot(alpha = 0.5, outlier.shape = NA, aes( fill = fraction)) +
@@ -489,7 +501,8 @@ rich_p1 <- rich_df %>%
   annotate("text", x=1.5, y=1500, size = 4, color = "gray40",
          label= paste("Wilcoxon, p =", round(wilcox_rich_obs$p.value, digits = 3))) 
 
-rich_p2 <- rich_df %>%
+rich_p2 <- div_df_frac %>%
+  dplyr::filter(Diversity == "Species richness") %>%
   ggplot(aes(x = fraction, y = Estimator)) + 
   geom_jitter(size = 3, aes(fill = fraction, shape = season), width = 0.2) + 
   geom_boxplot(alpha = 0.5, outlier.shape = NA, aes( fill = fraction)) +
