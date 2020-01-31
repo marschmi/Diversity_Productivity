@@ -70,6 +70,9 @@ library(hilldiv)    # Calculate hill phylogenetic hill numbers (for comparison)
 library(phytools)   # for force.ultrametric() 
 source("code/Muskegon_functions.R")   # Source custom functions  
 source("code/set_colors.R")           # Set Colors for plotting
+
+# Set the ggplot theme 
+theme_set(theme_cowplot())
 ```
 
 
@@ -221,6 +224,7 @@ div_df <-
   mutate(Diversity = fct_recode(Diversity, "richness" = "Species richness", 
                                 "shannon" = "Shannon diversity", 
                                 "simpson" = "Simpson diversity")) %>%
+  # For this analysis, we will be using the observed values calculated from iNEXT
   spread(key = Diversity, value = Observed) %>%
   left_join(hillR_output)
 #write.csv(div_df, file = "data/iNEXT/diversity_measures.csv", quote = FALSE, row.names = FALSE)
@@ -233,6 +237,17 @@ comb_div_df <- div_df %>%
   data.frame()
 head(comb_div_df)
 dim(comb_div_df)
+
+# #Prepare dataframe for calculations
+div_df_frac <- metadata %>%
+  dplyr::select(norep_filter_name, fraction, season) %>%
+  right_join(div_iNEXT, by = "norep_filter_name")
+
+
+# Wide format dataframe for plotting
+wide_div_meta_df <- div_df %>%
+  left_join(metadata, by = "norep_filter_name")
+
 ```
 
 ## Correlations between phylogenetic & non-phylo Hill numbers
@@ -479,11 +494,6 @@ plot_grid(p_iNEXT, iNEXT_legend, season_legend,
 
 
 ```{r richness-plot, fig.width= 6, fig.height= 3.5}
-#Prepare dataframe for calculations
-div_df_frac <- comb_div_df %>%
-  dplyr::select(norep_filter_name, fraction, season) %>%
-  right_join(div_iNEXT, by = "norep_filter_name")
-
 wilcox_rich_obs <- wilcox.test(Observed ~ fraction, data =dplyr::filter(div_df_frac,Diversity == "Species richness"))
 wilcox_rich_est <- wilcox.test(Estimator ~ fraction, data = dplyr::filter(div_df_frac,Diversity == "Species richness"))
 
@@ -693,25 +703,200 @@ plot_grid(p_commLMs, p_percapLMs, season_legend,
 ```
 
 
+```{r}
+library(wesanderson)
+
+# Question: Is there a temporal effect on diversity differences between particle
+
+
+# MEANS 
+mean_div_df <- wide_div_meta_df %>%
+  dplyr::select(c(norep_filter_name:simpson, lakesite, fraction, season)) %>%
+  gather(key = "Diversity", value = div_val, richness:simpson) %>%
+  mutate(norep_name = paste(substr(norep_filter_name, 1, 4), substr(norep_filter_name, 6, 8), sep = "")) %>%
+  dplyr::select(-norep_filter_name)  %>%
+  tidyr::spread(key = fraction, value = div_val) %>%
+  mutate(frac_difference = Particle-Free) %>%
+  group_by(Diversity, season) %>%
+  summarize(mean_diff = mean(frac_difference), sd_diff = sd(frac_difference))
+
+
+#timeseries_diff_plot1 <- 
+  
+  wide_div_meta_df %>%
+  dplyr::select(c(norep_filter_name:simpson, lakesite, fraction, season)) %>%
+  gather(key = "Diversity", value = div_val, richness:simpson) %>%
+  mutate(norep_name = paste(substr(norep_filter_name, 1, 4), substr(norep_filter_name, 6, 8), sep = "")) %>%
+  dplyr::select(-norep_filter_name)  %>%
+  tidyr::spread(key = fraction, value = div_val) %>%
+  mutate(frac_difference = Particle-Free) %>%
+  ggplot(aes(x = season, y = frac_difference)) + 
+  annotate("rect", xmin=-Inf, xmax=Inf, ymin=0, ymax=Inf,alpha=0.2,fill="#FF6600")+
+  annotate("rect", xmin=-Inf, xmax=Inf, ymin=-Inf, ymax=0,alpha=0.2,fill="skyblue")+
+  geom_hline(yintercept = 0, color = "grey") + 
+  geom_point(aes(shape = lakesite), fill = "grey", size = 3) + 
+  geom_point(data = mean_div_df, aes(x = season, y = mean_diff), shape = 95, size = 20) +
+  geom_line(data = mean_div_df, aes(x = season, y = mean_diff, group = Diversity), size = 1.5, color = "black", alpha = 0.5) + 
+  facet_grid(Diversity~., scales = "free") + 
+  labs(y = "Difference in Diversity (Particle - Free)", title = "Hill Numbers") +
+  scale_color_manual(values = c("#5B1A18",  "#FD6467", "#F1BB7B")) + #"#D67236",
+  scale_shape_manual(values = lakesite_shapes) +
+  theme(axis.title.x = element_blank())
+  
+  
+timeseries_diff_plot2 <- wide_div_meta_df %>%
+  dplyr::select(c(norep_filter_name, phylo_richness, phylo_shannon, phylo_simpson, lakesite, fraction, season)) %>%
+  gather(key = "Diversity", value = div_val, phylo_richness:phylo_simpson) %>%
+  mutate(norep_name = paste(substr(norep_filter_name, 1, 4), substr(norep_filter_name, 6, 8), sep = "")) %>%
+  dplyr::select(-norep_filter_name)  %>%
+  tidyr::spread(key = fraction, value = div_val) %>%
+  mutate(frac_difference = Particle-Free) %>%
+  ggplot(aes(x = season, y = frac_difference)) + 
+  annotate("rect", xmin=-Inf, xmax=Inf, ymin=0, ymax=Inf,alpha=0.2,fill="#FF6600")+
+  annotate("rect", xmin=-Inf, xmax=Inf, ymin=-Inf, ymax=0,alpha=0.2,fill="skyblue")+
+  geom_hline(yintercept = 0, color = "grey") + 
+  # connect paired PA and FL points 
+  geom_line(aes(group = lakesite), size = 1.5, alpha = 0.8) +
+  geom_point(aes(shape = lakesite), fill = "grey", size = 3) + 
+  #geom_rect(aes(xmin = -Inf, xmax = Inf, ymin = 0, ymax = Inf), fill = "pink", alpha = 0.03)) +
+  #geom_boxplot(alpha = 0.5, outlier.shape = NA) + 
+  facet_grid(Diversity~., scales = "free") + 
+  labs(y = "Difference in Diversity (Particle - Free)", title = "Phylogenetic Hill Numbers") +
+ # scale_fill_manual(values = fraction_colors) + 
+  scale_color_manual(values = c("#5B1A18",  "#FD6467", "#F1BB7B")) + #"#D67236",
+  scale_shape_manual(values = lakesite_shapes) +
+  theme(axis.title.x = element_blank())
+
+# TOGETHER 
+plot_grid(timeseries_diff_plot1 + theme(legend.position = "none"), 
+          timeseries_diff_plot2, 
+          rel_widths = c(0.8, 1),
+          nrow = 1, ncol = 2)
+
+
+wc_div_df <- wide_div_meta_df %>%
+  dplyr::select(c(norep_filter_name:simpson, lakesite, fraction, season)) %>%
+  gather(key = "Diversity", value = div_val, richness:simpson) %>%
+  mutate(norep_name = paste(substr(norep_filter_name, 1, 4), substr(norep_filter_name, 6, 8), sep = "")) %>%
+  dplyr::select(-norep_filter_name)  %>%
+  tidyr::spread(key = fraction, value = div_val) %>%
+  mutate(frac_difference = Particle-Free) 
+
+# Richness 
+wilcox.test(frac_difference ~ season, data =dplyr::filter(wc_div_df, Diversity == "richness" & season %in% c("Spring", "Summer")))
+wilcox.test(frac_difference ~ season, data =dplyr::filter(wc_div_df, Diversity == "richness" & season %in% c("Summer", "Fall")))
+wilcox.test(frac_difference ~ season, data =dplyr::filter(wc_div_df, Diversity == "richness" & season %in% c("Spring", "Fall")))
+
+# Shannon 
+wilcox.test(frac_difference ~ season, data =dplyr::filter(wc_div_df, Diversity == "shannon" & season %in% c("Spring", "Summer")))
+wilcox.test(frac_difference ~ season, data =dplyr::filter(wc_div_df, Diversity == "shannon" & season %in% c("Summer", "Fall")))
+wilcox.test(frac_difference ~ season, data =dplyr::filter(wc_div_df, Diversity == "shannon" & season %in% c("Spring", "Fall")))
+
+# Simpson 
+wilcox.test(frac_difference ~ season, data =dplyr::filter(wc_div_df, Diversity == "simpson" & season %in% c("Spring", "Summer")))
+wilcox.test(frac_difference ~ season, data =dplyr::filter(wc_div_df, Diversity == "simpson" & season %in% c("Summer", "Fall")))
+wilcox.test(frac_difference ~ season, data =dplyr::filter(wc_div_df, Diversity == "simpson" & season %in% c("Spring", "Fall")))
+
+
+
+# Plot just the means 
+ggplot(wc_div_df, aes(x = season, y = mean_diff)) + 
+  annotate("rect", xmin=-Inf, xmax=Inf, ymin=0, ymax=Inf,alpha=0.2,fill="#FF6600")+
+  annotate("rect", xmin=-Inf, xmax=Inf, ymin=-Inf, ymax=0,alpha=0.2,fill="skyblue")+
+  geom_hline(yintercept = 0, color = "grey") + 
+  # connect paired PA and FL points 
+  geom_line(aes(group = Diversity), size = 1.5, alpha = 0.8) +
+  geom_point(fill = "grey", size = 3) + 
+  geom_linerange(aes(ymin = mean_diff-sd_diff, ymax = mean_diff+sd_diff),  alpha = 0.7) + 
+  #geom_rect(aes(xmin = -Inf, xmax = Inf, ymin = 0, ymax = Inf), fill = "pink", alpha = 0.03)) +
+  #geom_boxplot(alpha = 0.5, outlier.shape = NA) + 
+  facet_grid(Diversity~., scales = "free") + 
+  labs(y = "Mean Diff in Diversity (Particle - Free)", title = "Hill Numbers") +
+ # scale_fill_manual(values = fraction_colors) + 
+  scale_color_manual(values = c("#5B1A18",  "#FD6467", "#F1BB7B")) + #"#D67236",
+  scale_shape_manual(values = lakesite_shapes) +
+  theme(axis.title.x = element_blank())
+  
+
+## PLOT THE MEANS
+wide_div_meta_df %>%
+  dplyr::select(c(norep_filter_name:simpson, lakesite, fraction, season)) %>%
+  gather(key = "Diversity", value = div_val, richness:simpson) %>%
+  mutate(norep_name = paste(substr(norep_filter_name, 1, 4), substr(norep_filter_name, 6, 8), sep = "")) %>%
+  dplyr::group_by(fraction, Diversity, season) %>%
+  summarize(mean_div = mean(div_val)) %>%
+  mutate(connector = paste(Diversity, season, sep = "")) %>%
+  ggplot(aes(x = fraction, y = mean_div)) + 
+  # connect paired PA and FL points 
+  geom_line(aes(group = connector), size = 1.5, alpha = 0.8) +
+  geom_point(fill = "grey", size = 3) + 
+  #geom_boxplot(alpha = 0.5, outlier.shape = NA) + 
+  facet_grid(Diversity~season, scales = "free") + 
+  labs(y = "Mean Hill Diversity Metric") +
+ # scale_fill_manual(values = fraction_colors) + 
+  scale_color_manual(values = c("#5B1A18",  "#FD6467", "#F1BB7B")) + #"#D67236",
+  theme(axis.title.x = element_blank())
+  
+
+wide_div_meta_df %>%
+  dplyr::select(c(norep_filter_name:simpson, lakesite, fraction, season)) %>%
+  gather(key = "Diversity", value = div_val, richness:simpson) %>%
+  mutate(norep_name = paste(substr(norep_filter_name, 1, 4), substr(norep_filter_name, 6, 8), sep = "")) %>%
+  ggplot(aes(x = fraction, y = div_val)) + 
+  # connect paired PA and FL points 
+  geom_line(aes(group =  norep_name, color = season), size = 1.5, alpha = 0.8) +
+  geom_point(aes(shape = lakesite), fill = "grey", size = 3) + 
+  #geom_boxplot(alpha = 0.5, outlier.shape = NA) + 
+  facet_grid(Diversity~season, scales = "free") + 
+  labs(y = "Hill Diversity Metric") +
+ # scale_fill_manual(values = fraction_colors) + 
+  scale_color_manual(values = c("#5B1A18",  "#FD6467", "#F1BB7B")) + #"#D67236",
+  scale_shape_manual(values = lakesite_shapes) +
+  theme(axis.title.x = element_blank())
+
+
+
+
+
+
+# by season 
+wide_div_meta_df %>%
+  dplyr::select(c(norep_filter_name:simpson, lakesite, fraction, season)) %>%
+  gather(key = "Diversity", value = div_val, richness:simpson) %>%
+  mutate(norep_noseason_name = substr(norep_filter_name, 1, 5)) %>%
+  ggplot(aes(x = season, y = div_val)) + 
+  # connect paired PA and FL points 
+  geom_line(aes(group =  norep_noseason_name, color = fraction), size = 1.5, alpha = 0.8) +
+  geom_point(aes(shape = lakesite, fill = fraction), size = 3) + 
+  #geom_boxplot(alpha = 0.5, outlier.shape = NA) + 
+  facet_grid(Diversity~fraction, scales = "free") + 
+  labs(y = "Hill Diversity Metric") +
+  scale_fill_manual(values = fraction_colors) + 
+  scale_color_manual(values = fraction_colors) + #"#D67236",
+  scale_shape_manual(values = lakesite_shapes) +
+  theme(axis.title.x = element_blank())
+
+
+```
+
+
+
 ## Prepare Figure 2
 ```{r Figure2-Prep, dependson= "calc-div", eval = FALSE}
 ######################################################### OBSERVED RICHNESS ######################################################### 
-rich_fraction_wilcox <- wilcox.test(Observed ~ fraction, data = dplyr::filter(div_iNEXT, Diversity == "Species richness"))
+rich_fraction_wilcox <- wilcox.test(richness ~ fraction, data = wide_div_meta_df)
 rich_fraction_wilcox
 
-div_iNEXT %>%
-  dplyr::filter(Diversity == "Species richness") %>%
+wide_div_meta_df %>%
   group_by(fraction) %>%
-  summarize(mean(Observed), sd(Observed), min(Observed), max(Observed))
-
+  summarize(mean(richness), sd(richness), min(richness), max(richness))
 
 # Make a data frame to draw significance line in boxplot (visually calculated)
 rich_nums <- data.frame(a = c(1.15,1.15,1.85,1.85), b = c(1350, 1400, 1400, 1350)) # WholePart vs WholeFree
 
 rich_distribution_plot <- 
-  div_iNEXT %>%
-  dplyr::filter(Diversity == "Species richness") %>%
-  ggplot(aes(y = Observed, x = fraction)) +
+  wide_div_meta_df %>%
+  ggplot(aes(y = richness, x = fraction)) +
   scale_fill_manual(values = fraction_colors) +
   geom_jitter(size = 3, aes(fill = fraction, shape = season), width = 0.2) + 
   geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(fill = fraction)) +
