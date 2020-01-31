@@ -64,7 +64,10 @@ library(broom)      # Stats from lm regression
 library(purrr)      # Exporting lm results  
 library(DT)         # Fancy HTML table output
 library(lme4)       # linear mixed effects model
-library(iNEXT)
+library(iNEXT)      # Calculate hill diversity with interpolation & extrapolation
+library(hillR)      # Calculate phylogenetic hill numbers
+library(hilldiv)    # Calculate hill phylogenetic hill numbers (for comparison)
+library(phytools)   # for force.ultrametric() 
 source("code/Muskegon_functions.R")   # Source custom functions  
 source("code/set_colors.R")           # Set Colors for plotting
 ```
@@ -142,6 +145,158 @@ metadata_pca <- metadata %>%
   mutate(norep_water_name = paste(substr(norep_filter_name, 1, 4), substr(norep_filter_name, 6, 8), sep = "")) %>%
   left_join(pca_scores_df, by = "norep_water_name")
 ```
+
+
+# Calculate Diversity
+## Hill Diversity Metrics 
+#### Calculate diversity with the iNEXT package
+
+```{r iNEXT-data}
+iNEXT_input_table <- otu_table(surface_PAFL_otu_pruned_rm2) %>%
+  t() %>%
+  data.frame()
+
+#set.seed(777)
+# Run iNEXT on the data - it takes a long time to run! So here we will load in the object that was previously created with the following line of code:
+#iNEXT_data <- iNEXT(iNEXT_input_table, q = c(0,1,2), datatype = "abundance")
+#save(list="iNEXT_data", file=paste0("data/iNEXT/iNEXT_data_surface_PAFL_otu_pruned_rm2")) 
+
+# Load the data
+load("data/iNEXT/iNEXT_data_surface_PAFL_otu_pruned_rm2")
+#str(iNEXT_data)
+
+# Pull out into a dataframe
+div_iNEXT <- iNEXT_data$AsyEst %>%
+  rename(norep_filter_name = Site) 
+```
+
+
+# Phylogenetic Diversity (PD)
+## Calculate PD
+
+```{r hillR}
+# Here I will use hillR to calculate the phylogenetic diversity,
+# which uses an extension of the hill numbers 
+#otu_mat <- data.frame(otu_table(surface_PAFL_otu_pruned_rm2))
+#phy_tree <- phy_tree(surface_PAFL_otu_pruned_rm2)
+
+set.seed(111)
+# Calculate the Hill phylogenetic diversity metric from the hillR package
+# The output from this command is a named vector with the sample name and the div value.
+#hill_phy0_df <- hill_phylo(comm = otu_mat, tree = phy_tree, q = 0)
+#hill_phy1_df <- hill_phylo(comm = otu_mat, tree = phy_tree, q = 1)
+#hill_phy2_df <- hill_phylo(comm = otu_mat, tree = phy_tree, q = 2)
+
+# Pull out the sample names
+#norep_filter_name <- names(hill_phy0_df) 
+#stopifnot(names(hill_phy0_df) == names(hill_phy1_df))
+#stopifnot(names(hill_phy1_df) == names(hill_phy2_df))
+# Pull out the hill phylo div values
+#div_sample_names <- rep(norep_filter_name, times = 3)
+#phylo_div_vals <- c(unname(hill_phy0_df), unname(hill_phy1_df), unname(hill_phy2_df)) # rich, shannon, simpson
+#phylo_div_types <- c(rep("Species richness", times = 24), rep("Shannon diversity", times = 24), rep("Simpson diversity", times = 24))
+
+# Put it all in a dataframe 
+#hillR_output <- data.frame(div_sample_names, phylo_div_vals, phylo_div_types) %>%
+#  rename(norep_filter_name = div_sample_names, Diversity = phylo_div_types,
+#         hillR_phylo = phylo_div_vals) 
+# save to file because hillR is computationally intensive 
+#write.csv(x = hillR_output, file = "data/iNEXT/hillR_output.csv", row.names = FALSE, quote = FALSE)
+
+# Because hillR takes so much time to calculate - I'll load in a previously computed version (from the code above)
+hillR_output <- read.csv("data/iNEXT/hillR_output.csv") %>%
+  mutate(Diversity = fct_recode(Diversity, "phylo_richness" = "Species richness", 
+                                "phylo_shannon" = "Shannon diversity", 
+                                "phylo_simpson" = "Simpson diversity")) %>%
+  spread(key = Diversity, value = hillR_phylo)
+
+# COMBINE iNEXT AND hillR DATA - should now be 144 rows
+div_df <- 
+  div_iNEXT %>%
+  dplyr::select(norep_filter_name, Diversity, Observed) %>%
+  mutate(Diversity = fct_recode(Diversity, "richness" = "Species richness", 
+                                "shannon" = "Shannon diversity", 
+                                "simpson" = "Simpson diversity")) %>%
+  spread(key = Diversity, value = Observed) %>%
+  left_join(hillR_output)
+#write.csv(div_df, file = "data/iNEXT/diversity_measures.csv", quote = FALSE, row.names = FALSE)
+
+
+comb_div_df <- div_df %>%
+  left_join(metadata_pca, by = "norep_filter_name") %>%
+  gather(key = "Diversity", value = "Observed", richness:phylo_richness) %>%  
+  #mutate(Diversity = factor(Diversity, levels = c("Species richness", "Shannon diversity", "Simpson diversity"))) %>%
+  data.frame()
+
+
+##### HERE #######
+##### HERE #######
+##### HERE #######
+##### HERE #######
+##### HERE #######
+##### HERE #######
+##### HERE #######
+##### HERE #######
+##### HERE #######
+##### HERE #######
+##### HERE #######
+##### HERE #######
+##### HERE #######
+##### HERE #######
+##### HERE #######
+##### HERE #######
+
+# Calculate R2 and pval for  it
+lm_phylo_rich <- summary(lm(hillR_phylo ~ Observed, data = filter(comb_div_df, Diversity == "Species richness")))
+lm_phylo_shan <- summary(lm(hillR_phylo ~ Observed, data = filter(comb_div_df, Diversity == "Shannon diversity")))
+lm_phylo_simps <- summary(lm(hillR_phylo ~ Observed, data = filter(comb_div_df, Diversity == "Simpson diversity")))
+
+# Make the 3 individual plots and then plot together
+# 1. RICHNESS PLOT 
+# Extract linear model output 
+lab_lm_phylo_rich <- paste("atop(R^2 ==", round(lm_phylo_rich$adj.r.squared, digits = 2), ",",
+             "p ==", round(unname(lm_phylo_rich$coefficients[,4][2]), digits = 15), ")")
+p1_phylo_rich <- 
+  comb_div_df %>%
+  dplyr::filter(Diversity == "Species richness") %>%
+  ggplot(aes(x = Observed, y = hillR_phylo)) + 
+  geom_point() + geom_smooth(method = "lm") +
+  labs(x = expression(textstyle("Observed Richness")~{}^0*italic(D)), 
+       y = expression(textstyle("Phylogenetic")~{}^0*italic(D))) +
+  annotate("text", x=600, y=150, label=lab_lm_phylo_rich, parse = TRUE, color = "blue", size = 4) 
+
+# 2. SHANNON PLOT 
+# Extract linear model output 
+lab_lm_phylo_shan <- paste("atop(R^2 ==", round(lm_phylo_shan$adj.r.squared, digits = 2), ",",
+             "p ==", round(unname(lm_phylo_shan$coefficients[,4][2]), digits = 7), ")")
+p2_phylo_shan <- 
+  comb_div_df %>%
+  dplyr::filter(Diversity == "Shannon diversity") %>%
+  ggplot(aes(x = Observed, y = hillR_phylo)) + 
+  geom_point() + geom_smooth(method = "lm") +
+  labs(x = expression(textstyle("Shannon Index")~{}^1*italic(D)), 
+       y = expression(textstyle("Phylogenetic")~{}^1*italic(D))) +
+  annotate("text", x=100, y=15, label=lab_lm_phylo_shan, parse = TRUE, color = "blue", size = 4) 
+
+# 3. SIMPSON PLOT 
+# Extract linear model output 
+lab_lm_phylo_simps <- paste("atop(R^2 ==", round(lm_phylo_simps$adj.r.squared, digits = 2), ",",
+             "p ==", round(unname(lm_phylo_simps$coefficients[,4][2]), digits = 5), ")")
+p3_phylo_simps <- 
+  comb_div_df %>%
+  dplyr::filter(Diversity == "Simpson diversity") %>%
+  ggplot(aes(x = Observed, y = hillR_phylo)) + 
+  geom_point() + geom_smooth(method = "lm") +
+  labs(x = expression(textstyle("Simpson Index")~{}^2*italic(D)), 
+       y = expression(textstyle("Phylogenetic")~{}^2*italic(D))) +
+  annotate("text", x=30, y=6, label=lab_lm_phylo_simps, parse = TRUE, color = "blue", size = 4) 
+
+# Put the plots together
+coors_doubleton <- plot_grid(p1_phylo_rich, p2_phylo_shan, p3_phylo_simps,
+          labels = c("A", "B", "C"),
+          nrow = 1, ncol = 3); coors_doubleton
+```
+
 
 # Main Figures
 
@@ -287,58 +442,6 @@ metadata %>%
 
 
 
-# Hill Diversity Metrics (iNEXT package)
-```{r iNEXT-data}
-iNEXT_input_table <- otu_table(surface_PAFL_otu_pruned_rm2) %>%
-  t() %>%
-  data.frame()
-
-#set.seed(777)
-# Run iNEXT on the data - it takes a long time to run! So here we will load in the object that was previously created with the following line of code:
-#iNEXT_data <- iNEXT(iNEXT_input_table, q = c(0,1,2), datatype = "abundance")
-#save(list="iNEXT_data", file=paste0("data/iNEXT/iNEXT_data_surface_PAFL_otu_pruned_rm2")) 
-
-# Load the data
-load("data/iNEXT/iNEXT_data_surface_PAFL_otu_pruned_rm2")
-#str(iNEXT_data)
-
-
-# Reformat metadata
-dat <- colnames(iNEXT_input_table) %>% data.frame() 
-colnames(dat)[1] <- "norep_filter_name"  # Change the column names 
-
-sub_metadata <- metadata[,1:6] %>%
-  tibble::rownames_to_column(var = "norep_filter_name")
-
-dat_iNEXT <- dat %>%
-  left_join(sub_metadata, by = "norep_filter_name") %>%
-  mutate(fraction_color = ifelse(fraction == "Particle", "#FF6600", "skyblue"), 
-         shape = ifelse(season == "Spring", 25, 
-                        ifelse(season == "Summer", 23, 
-                               21)),
-         station_color = ifelse(lakesite == "Bear", "black", 
-                                ifelse(lakesite == "Deep", "blue",
-                                       ifelse(lakesite == "Outlet", "skyblue",
-                                              "forestgreen"))),
-         season_color = ifelse(season == "Spring", "skyblue", 
-                               ifelse(season == "Summer", "forestgreen",
-                                      "orange")))
-
-div_iNEXT <- iNEXT_data$AsyEst %>%
-  rename(norep_filter_name = Site) %>%
-  left_join(metadata_pca, by = "norep_filter_name")
-
-# Pull out individual metrics
-rich_df <- div_iNEXT %>%
-  filter(Diversity == "Species richness")
-
-shan_df <- div_iNEXT %>%
-  filter(Diversity == "Shannon diversity")
-
-simps_df <- div_iNEXT %>%
-  filter(Diversity == "Simpson diversity")
-```
-
 # iNEXT figures
 ```{r plot-iNEXT, fig.width = 10, fig.height = 4.5}
 # h = 0 = richness
@@ -414,19 +517,19 @@ plot_grid(rich_title, rich_plotz,
 # Linear Models 
 ```{r lm-models-div}
 # Free-Living samples only 
-div_measures_free <- div_iNEXT %>%
-  dplyr::select(fraction, Observed, Diversity, frac_bacprod, fracprod_per_cell_noinf) %>%
+div_measures_free <- comb_div_df %>%
+  dplyr::select(fraction, Observed, hillR_phylo, Diversity, frac_bacprod, fracprod_per_cell_noinf) %>%
   filter(fraction == "Free") %>%
   dplyr::select(-fraction)
 # Particle-associated samples only 
-div_measures_part <- div_iNEXT %>%
-  dplyr::select(fraction, Observed, Diversity, frac_bacprod, fracprod_per_cell_noinf) %>%
+div_measures_part <- comb_div_df %>%
+  dplyr::select(fraction, Observed, hillR_phylo, Diversity, frac_bacprod, fracprod_per_cell_noinf) %>%
   filter(fraction == "Particle") %>%
   dplyr::select(-fraction)
 
 ## All of the samples!
-div_measures_all <- div_iNEXT %>%
-  dplyr::select(Observed, Diversity, frac_bacprod, fracprod_per_cell_noinf)
+div_measures_all <- comb_div_df %>%
+  dplyr::select(Observed, Diversity, hillR_phylo, frac_bacprod, fracprod_per_cell_noinf)
 
 ########################################################
 ##############  Particle: Community-wide 
@@ -515,14 +618,6 @@ summary(lm(frac_bacprod ~ Observed, data = filter(div_iNEXT, fraction == "Partic
 summary(lm(frac_bacprod ~ Observed, data = filter(div_iNEXT, fraction == "Free" & Diversity == "Simpson diversity")))
 
 
-dat_text <- data.frame(
-  label = c("4 cylinders", "6 cylinders", "8 cylinders"),
-  cyl   = c(4, 6, 8),
-  x     = c(20, 27.5, 25),
-  y     = c(4, 4, 4.5)
-)
-
-
 ### Community-wide production
 p_commLMs <- ggplot(div_iNEXT, aes(x=Observed, y=frac_bacprod)) + 
   # X-axis errorbars
@@ -584,101 +679,282 @@ plot_grid(p_commLMs, p_percapLMs, season_legend,
   theme(plot.margin = unit(c(0.1,0.1,0.2,0.1), "cm")) # top, right, bottom, and left margins
 ```
 
-# Phylogenetic Diversity
-```{r}
-library(hillR)
 
-otu_mat <- data.frame(otu_table(surface_PAFL_otu_pruned_rm2))
-phy_tree <- phy_tree(surface_PAFL_otu_pruned_rm2)
+## Prepare Figure 2
+```{r Figure2-Prep, dependson= "calc-div", eval = FALSE}
+######################################################### OBSERVED RICHNESS ######################################################### 
+rich_fraction_wilcox <- wilcox.test(Observed ~ fraction, data = dplyr::filter(div_iNEXT, Diversity == "Species richness"))
+rich_fraction_wilcox
 
-set.seed(111)
-
-# Calculate the Hill phylogenetic diversity metric from the hillR package
-# The output from this command is a named vector with the sample name and the div value.
-#hill_phy0_df <- hill_phylo(comm = otu_mat, tree = phy_tree, q = 0)
-#hill_phy1_df <- hill_phylo(comm = otu_mat, tree = phy_tree, q = 1)
-#hill_phy2_df <- hill_phylo(comm = otu_mat, tree = phy_tree, q = 2)
-
-# Pull out the sample names
-norep_filter_name <- names(hill_phy0_df) 
-stopifnot(names(hill_phy0_df) == names(hill_phy1_df))
-stopifnot(names(hill_phy1_df) == names(hill_phy2_df))
-# Pull out the hill phylo div values
-
-div_sample_names <- rep(norep_filter_name, times = 3)
-phylo_div_vals <- c(unname(hill_phy0_df), unname(hill_phy1_df), unname(hill_phy2_df)) # rich, shannon, simpson
-phylo_div_types <- c(rep("Species richness", times = 24), rep("Shannon diversity", times = 24), rep("Simpson diversity", times = 24))
-
-# Put it all in a dataframe 
-hillR_output <- data.frame(div_sample_names, phylo_div_vals, phylo_div_types) %>%
-  rename(norep_filter_name = div_sample_names, Diversity = phylo_div_types,
-         hillR_phylo = phylo_div_vals) 
-
-# save to file because iNEXT takes time to calculate 
-#write.csv(x = hillR_output, file = "data/iNEXT/hillR_output.csv", row.names = FALSE, quote = FALSE)
-
-
-# COMBINE iNEXT AND HILLR DATA
-comb_div_df <- div_iNEXT %>%
-  dplyr::select(c("norep_filter_name", "Diversity", "Observed", "Estimator", "s.e.", "season", "fraction", "frac_bacprod", "SD_frac_bacprod", "fracprod_per_cell_noinf")) %>%
-  left_join(hillR_output, by = c("norep_filter_name", "Diversity")) %>%
-  mutate(Diversity = factor(Diversity, levels = c("Species richness", "Shannon diversity", "Simpson diversity"))) %>%
-  rename(se_iNEXT = "s.e.")
-
-# Calculate R2 and pval for  it
-lm_phylo_rich <- summary(lm(hill_phylo~Observed, data = filter(comb_div_df, Diversity == "Species richness")))
-lm_phylo_shan <- summary(lm(hill_phylo~Observed, data = filter(comb_div_df, Diversity == "Shannon diversity")))
-lm_phylo_simps <- summary(lm(hill_phylo~Observed, data = filter(comb_div_df, Diversity == "Simpson diversity")))
-
-# Make the 3 individual plots and then plot together
-# 1. RICHNESS PLOT 
-# Extract linear model output 
-lab_lm_phylo_rich <- paste("atop(R^2 ==", round(lm_phylo_rich$adj.r.squared, digits = 2), ",",
-             "p ==", round(unname(lm_phylo_rich$coefficients[,4][2]), digits = 15), ")")
-p1_phylo_rich <- 
-  comb_div_df %>%
+div_iNEXT %>%
   dplyr::filter(Diversity == "Species richness") %>%
-  ggplot(aes(x = Observed, y = hillR_phylo)) + 
-  geom_point() + geom_smooth(method = "lm") +
-  labs(x = "Observed Richness", y = "Phylogenetic diversity") +
-  annotate("text", x=500, y=150, label=lab_lm_phylo_rich, parse = TRUE, color = "blue", size = 4) 
-
-# 2. SHANNON PLOT 
-# Extract linear model output 
-lab_lm_phylo_shan <- paste("atop(R^2 ==", round(lm_phylo_shan$adj.r.squared, digits = 2), ",",
-             "p ==", round(unname(lm_phylo_shan$coefficients[,4][2]), digits = 7), ")")
-p2_phylo_shan <- 
-  comb_div_df %>%
-  dplyr::filter(Diversity == "Shannon diversity") %>%
-  ggplot(aes(x = Observed, y = hillR_phylo)) + 
-  geom_point() + geom_smooth(method = "lm") +
-  labs(x = "Shannon diversity", y = "Phylogenetic diversity") +
-  annotate("text", x=75, y=15, label=lab_lm_phylo_rich, parse = TRUE, color = "blue", size = 4) 
-
-# 3. SIMPSON PLOT 
-# Extract linear model output 
-lab_lm_phylo_simps <- paste("atop(R^2 ==", round(lm_phylo_simps$adj.r.squared, digits = 2), ",",
-             "p ==", round(unname(lm_phylo_simps$coefficients[,4][2]), digits = 7), ")")
-p3_phylo_simps <- 
-  comb_div_df %>%
-  dplyr::filter(Diversity == "Simpson diversity") %>%
-  ggplot(aes(x = Observed, y = hillR_phylo)) + 
-  geom_point() + geom_smooth(method = "lm") +
-  labs(x = "Simpson diversity", y = "Phylogenetic diversity") +
-  annotate("text", x=20, y=6, label=lab_lm_phylo_rich, parse = TRUE, color = "blue", size = 4) 
+  group_by(fraction) %>%
+  summarize(mean(Observed), sd(Observed), min(Observed), max(Observed))
 
 
-plot_grid(p1_phylo_rich, p2_phylo_shan, p3_phylo_simps,
-          labels = c("A", "B", "C"),
-          nrow = 1, ncol = 3)
+# Make a data frame to draw significance line in boxplot (visually calculated)
+rich_nums <- data.frame(a = c(1.15,1.15,1.85,1.85), b = c(1350, 1400, 1400, 1350)) # WholePart vs WholeFree
+
+rich_distribution_plot <- 
+  div_iNEXT %>%
+  dplyr::filter(Diversity == "Species richness") %>%
+  ggplot(aes(y = Observed, x = fraction)) +
+  scale_fill_manual(values = fraction_colors) +
+  geom_jitter(size = 3, aes(fill = fraction, shape = season), width = 0.2) + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(fill = fraction)) +
+  scale_y_continuous(limits = c(150,1500), breaks = seq(from = 0, to =1500, by = 300)) + 
+  xlab("Observed Richness") + xlab("Fraction") + 
+  scale_shape_manual(values = season_shapes) +
+  geom_path(data = rich_nums, aes(x = a, y = b), linetype = 1, color = "#424645") +
+  annotate("text", x=1.5, y=1450, size = 8, color = "#424645", label= paste("***"), angle = 90) +
+  annotate("text", x=1.5, y=1200, size = 4, color = "#424645",
+           label= paste("p =", round(rich_fraction_wilcox$p.value, digits = 3))) +
+  theme(legend.position = "none",# axis.title.y = element_blank(),
+        axis.title.x = element_blank(), axis.text.x = element_blank()) +
+  coord_flip()
+
+################ Richness vs Community-wide (Per-Liter) Production 
+## 1. Extract the R2 and p-value from the linear model: 
+lm_lab_perliter_rich_PA <- paste("atop(R^2 ==", round(summary(lm_prod_vs_rich_PA)$adj.r.squared, digits = 2), ",",
+             "p ==", round(unname(summary(lm_prod_vs_rich_PA)$coefficients[,4][2]), digits = 3), ")")
+
+## 2. Plot Richness vs Community-wide (Per-Liter) Production 
+prod_vs_rich_plot <-  
+  ggplot(richness, aes(x=mean, y=frac_bacprod)) + 
+  geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd, color = fraction), alpha = 0.7) + # X-axis errorbars
+  geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod, color = fraction)) +  # Y-axis errorbars
+  geom_point(size = 3.5, color = "black", aes(fill = fraction, shape = season)) +
+  scale_color_manual(values = fraction_colors) +
+  scale_fill_manual(values = fraction_colors) +
+  scale_shape_manual(values = season_shapes) +
+  ylab("\n Community Production \n (μgC/L/day)") + 
+  xlab("Observed Richness") +
+  geom_smooth(data=filter(richness, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
+  scale_x_continuous(limits = c(150,980), breaks = seq(from = 0, to =925, by = 150)) + 
+   # Add the R2 and p-value to the plot 
+  annotate("text", x=790, y=45, label=lm_lab_perliter_rich_PA, parse = TRUE, color = "#FF6600", size = 4) +
+  theme(legend.position = "none", axis.title.x = element_blank(), axis.text.x = element_blank()) 
+
+
+# Summary stats  
+summary(lm(frac_bacprod ~ mean, data = filter(richness, fraction == "Particle")))
+
+# WITHOUT THE TWO HIGH POINTS 
+summary(lm(frac_bacprod ~ mean, data = filter(richness, fraction == "Particle" & mean < 800)))  
+
+
+
+################ Richness vs Per Capita (Per-Cell) Production 
+## 1. Extract the R2 and p-value from the linear model: 
+lm_lab_percell_rich_PA <- paste("atop(R^2 ==", round(summary(lm_percell_prod_vs_rich_PA)$adj.r.squared, digits = 2), ",",
+             "p ==", round(unname(summary(lm_percell_prod_vs_rich_PA)$coefficients[,4][2]), digits = 3), ")")
+
+## 2. Plot Richness vs Per Capita (Per-Cell) Production 
+percell_prod_vs_rich_plot <- 
+  ggplot(richness, aes(x=mean, y=log10(fracprod_per_cell_noinf))) + 
+  geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd, color = fraction), alpha = 0.7) + # X-axis errorbars
+  geom_point(size = 3.5,  color = "black", aes(fill = fraction, shape = season)) +
+  scale_color_manual(values = fraction_colors) +
+  scale_fill_manual(values = fraction_colors) +
+  scale_shape_manual(values = season_shapes) +
+  ylab("\n log10(Per-Capita Production)\n (μgC/cell/day)") +
+  xlab("Observed Richness") +
+  geom_smooth(data=filter(richness, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
+  scale_x_continuous(limits = c(150,980), breaks = seq(from = 0, to =925, by = 150)) + 
+  #scale_y_continuous(limits = c(-8e-7,5e-6), breaks = seq(from = 0, to = 6e-7, by = 3e-7)) + 
+  # Add the R2 and p-value to the plot 
+  annotate("text", x=790, y=-7.5, label=lm_lab_percell_rich_PA, parse = TRUE, color = "#FF6600", size = 4) +
+  theme(legend.title = element_blank(), legend.position ="bottom", 
+        legend.text = element_text(size = 14))
+
+# Summary stats 
+summary(lm(log10(fracprod_per_cell_noinf) ~ mean, data = filter(richness, fraction == "Particle")))
+
+# WITHOUT THE TWO HIGH POINTS 
+summary(lm(log10(fracprod_per_cell_noinf) ~ mean, data = filter(richness, fraction == "Particle" & mean < 800)))
+
+
+
+
+
+######################################################### SHANNON ENTROPY ######################################################### 
+shannon_fraction_wilcox <- wilcox.test(mean ~ fraction, data = shannon)
+shannon_fraction_wilcox   
+
+filter(shannon) %>%
+  group_by(fraction) %>%
+  summarize(mean(mean), sd(mean))
+
+# Make a data frame to draw significance line in boxplot (visually calculated)
+shannon_nums <- data.frame(a = c(1.15,1.15,1.85,1.85), b = c(310, 315, 315, 310)) # WholePart vs WholeFree
+
+shannon_distribution_plot <- 
+  ggplot(shannon, aes(y = mean, x = fraction)) +
+  scale_fill_manual(values = fraction_colors) +
+  geom_jitter(size = 3, aes(shape = season, fill = fraction), width = 0.2) + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(fill = fraction)) +
+  scale_y_continuous(limits = c(0,325), breaks = seq(from = 0, to = 300, by = 50)) + 
+  xlab("Exp(Shannon)") +  xlab("Fraction") + 
+  scale_shape_manual(values = season_shapes) +
+    # Add line and pval
+  geom_path(data = shannon_nums, aes(x = a, y = b), linetype = 1, color = "#424645") +
+  annotate("text", x=1.5, y=325, size = 8, color = "#424645", label= paste("**"), angle = 90) +
+  annotate("text", x=1.5, y=270, size = 4, color = "#424645",
+           label= paste("p =", round(shannon_fraction_wilcox$p.value, digits = 3))) +
+  theme(legend.position = "none",# axis.title.y = element_blank(),
+        axis.title.x = element_blank(), axis.text.x = element_blank()) +
+  coord_flip()
+
+################ Shannon vs Community-wide (Per-Liter) Production 
+## 1. Extract the R2 and p-value from the linear model: 
+lm_lab_perliter_shannon_PA <- paste("atop(R^2 ==", round(summary(lm_prod_vs_shannon_PA)$adj.r.squared, digits = 2), ",",
+             "p ==", round(unname(summary(lm_prod_vs_shannon_PA)$coefficients[,4][2]), digits = 3), ")")
+
+## 2. Plot Shannon vs Community-wide (Per-Liter) Production 
+prod_vs_shannon_plot <-  
+  ggplot(shannon, aes(x=mean, y=frac_bacprod)) + 
+  geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd, color = fraction), alpha = 0.7) + # X-axis errorbars
+  geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod, color = fraction)) +  # Y-axis errorbars
+  geom_point(size = 3.5, color = "black", aes(fill = fraction, shape = season)) +
+  scale_color_manual(values = fraction_colors) +
+  scale_shape_manual(values = season_shapes) +
+  scale_fill_manual(values = fraction_colors) +
+  ylab("\n Community Production \n (μgC/L/day)") + 
+  scale_x_continuous(limits = c(0,325), breaks = seq(from = 0, to = 300, by = 50)) + 
+  xlab("Exp(Shannon)") +
+  geom_smooth(data=filter(shannon, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
+  # Add the R2 and p-value to the plot 
+  annotate("text", x=250, y=45, label=lm_lab_perliter_shannon_PA, parse = TRUE, color = "#FF6600", size = 4) +
+  theme(legend.position = "none", axis.title.x = element_blank(), axis.text.x = element_blank()) 
+
+
+################ Shannon vs Per Capitra (Per-Cell) Production 
+## 1. Extract the R2 and p-value from the linear model: 
+lm_lab_percell_shannon_PA <- paste("atop(R^2 ==", round(summary(lm_percell_prod_vs_shannon_PA)$adj.r.squared, digits = 2), ",",
+             "p ==", round(unname(summary(lm_percell_prod_vs_shannon_PA)$coefficients[,4][2]), digits = 3), ")")
+
+## 2. Plot Shannon vs Per Capitra (Per-Cell) Production 
+percell_prod_vs_shannon_plot <- 
+  ggplot(shannon, aes(x=mean, y=log10(fracprod_per_cell_noinf))) + 
+  geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd, color = fraction), alpha = 0.7) + # X-axis errorbars
+  geom_point(size = 3.5, color = "black", aes(fill = fraction, shape = season)) +
+  scale_color_manual(values = fraction_colors) +
+  scale_fill_manual(values = fraction_colors) +
+  scale_shape_manual(values = season_shapes) +
+  ylab("\n log10(Per-Capita Production)\n (μgC/cell/day)") +
+  xlab("Exp(Shannon)") +
+  geom_smooth(data=filter(shannon, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
+  scale_x_continuous(limits = c(0,325), breaks = seq(from = 0, to = 300, by = 50)) + 
+  #scale_y_continuous(limits = c(-8e-7,5e-6), breaks = seq(from = 0, to = 6e-7, by = 3e-7)) + 
+  # Add the R2 and p-value to the plot 
+  annotate("text", x=250, y=-7.5, label=lm_lab_percell_shannon_PA, parse = TRUE, color = "#FF6600", size = 4) +
+  theme(legend.title = element_blank(), legend.position = "none")
+
+
+shannon_plots <- plot_grid(shannon_distribution_plot, prod_vs_shannon_plot, percell_prod_vs_shannon_plot,
+          #labels = c("B", "D", "F"), 
+          ncol = 1, nrow = 3,
+          rel_heights = c(0.5, 0.8, 1.1),
+          align = "v")
+
+
+######################################################### INVERSE SIMPSON ######################################################### 
+invsimps_fraction_wilcox <- wilcox.test(mean ~ fraction, data = invsimps)
+invsimps_fraction_wilcox
+
+filter(invsimps) %>%
+  group_by(fraction) %>%
+  summarize(mean(mean), sd(mean))
+
+# Make a data frame to draw significance line in boxplot (visually calculated)
+invsimps_nums <- data.frame(a = c(1.15,1.15,1.85,1.85), b = c(83,85,85,83)) # WholePart vs WholeFree
+
+invsimps_distribution_plot <- 
+  ggplot(invsimps, aes(y = mean, x = fraction)) +
+  scale_fill_manual(values = fraction_colors) +
+  scale_shape_manual(values = season_shapes) +
+  geom_jitter(size = 3,  aes(fill = fraction, shape = season), width = 0.2) + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(fill = fraction)) +
+  scale_y_continuous(limits = c(0,85), breaks = seq(from = 0, to = 85, by = 20)) + 
+  ylab("Inverse Simpson") + xlab("Fraction") + 
+  geom_path(data = invsimps_nums, aes(x = a, y = b), linetype = 1, color = "#424645") +
+  annotate("text", x=1.5, y=80, size = 4, color = "#424645", label= "NS") +
+  theme(legend.position = "none", #axis.title.y = element_blank(),
+        axis.title.x = element_blank(), axis.text.x = element_blank()) +
+  coord_flip()
+
+
+################ Inverse Simpson vs Community-wide (Per-Liter) Production 
+## 1. Extract the R2 and p-value from the linear model: 
+lm_lab_perliter_invsimps_PA <- paste("atop(R^2 ==", round(summary(lm_prod_vs_invsimps_PA)$adj.r.squared, digits = 2), ",",
+             "p ==", round(unname(summary(lm_prod_vs_invsimps_PA)$coefficients[,4][2]), digits = 4), ")")
+
+## 2. Plot Inverse Simpson vs Community-wide (Per-Liter) Production 
+prod_vs_invsimps_plot <-  
+  ggplot(invsimps, aes(x=mean, y=frac_bacprod)) + 
+  geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd, color = fraction), alpha = 0.7) + # X-axis errorbars
+  geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod, color = fraction)) +  # Y-axis errorbars
+  geom_point(size = 3.5, color = "black", aes(fill = fraction, shape = season)) +
+  scale_color_manual(values = fraction_colors) +
+  scale_fill_manual(values = fraction_colors) +
+  scale_shape_manual(values = season_shapes) +
+  ylab("Community Production \n (μgC/L/day)") + 
+  xlab("Inverse Simpson") +
+  geom_smooth(data=filter(invsimps, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
+  scale_x_continuous(limits = c(0,85), breaks = seq(from = 0, to = 85, by = 20)) + 
+  # Add the R2 and p-value to the plot 
+  annotate("text", x=70, y=45, label=lm_lab_perliter_invsimps_PA, parse = TRUE, color = "#FF6600", size = 4) +
+  theme(legend.position = "none", axis.title.x = element_blank(), axis.text.x = element_blank()) 
+
+# Summary stats 
+summary(lm(frac_bacprod ~ mean, data = filter(invsimps, fraction == "Particle")))
+
+# WITHOUT THE TWO HIGH POINTS 
+summary(lm(frac_bacprod ~ mean, data = filter(invsimps, fraction == "Particle" & mean < 70)))
+
+
+################ Inverse Simpson vs Per Capitra (Per-Cell) Production 
+## 1. Extract the R2 and p-value from the linear model: 
+lm_lab_percell_invsimps_PA <- paste("atop(R^2 ==", round(summary(lm_percell_prod_vs_invsimps_PA)$adj.r.squared, digits = 2), ",",
+             "p ==", round(unname(summary(lm_percell_prod_vs_invsimps_PA)$coefficients[,4][2]), digits = 4), ")")
+
+## 2. Plot Inverse Simpson vs Per Capitra (Per-Cell) Production 
+percell_prod_vs_invsimps_plot <- 
+  ggplot(invsimps, aes(x=mean, y=log10(fracprod_per_cell_noinf), fill = fraction, color = fraction)) + 
+  geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd, color = fraction), alpha = 0.7) + # X-axis errorbars
+  geom_point(size = 3.5, color = "black", aes(shape = season)) +
+  scale_color_manual(values = fraction_colors, guide = TRUE) +
+  scale_fill_manual(values = fraction_colors, guide = FALSE) +
+  scale_shape_manual(values = season_shapes) +
+  ylab("log10(production/cell)\n (μgC/cell/day)") +
+  xlab("Inverse Simpson") +
+  geom_smooth(data=filter(invsimps, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
+  scale_x_continuous(limits = c(0,85), breaks = seq(from = 0, to = 85, by = 20)) + 
+  #scale_y_continuous(limits = c(-8e-7,5e-6), breaks = seq(from = 0, to = 6e-7, by = 3e-7)) + 
+  # Add the R2 and p-value to the plot 
+  annotate("text", x=70, y=-7.5, label=lm_lab_percell_invsimps_PA, parse = TRUE, color = "#FF6600", size = 4) +
+  guides(color = guide_legend(override.aes = list(shape = 15))) +
+  theme(legend.title = element_blank(), legend.position ="bottom", 
+        legend.text = element_text(size = 14))
+
+# Summary stats 
+summary(lm(log10(fracprod_per_cell_noinf) ~ mean, data = filter(invsimps, fraction == "Particle")))
+
+# WITHOUT THE TWO HIGH POINTS 
+summary(lm(log10(fracprod_per_cell_noinf) ~ mean, data = filter(invsimps, fraction == "Particle" & mean < 70)))
+summary(lm(log10(fracprod_per_cell_noinf) ~ mean, data = filter(invsimps, fraction == "Particle" & mean < 70 & log10(fracprod_per_cell_noinf) < 1e-7)))
+
+
+# Plot Inverse simpson plots altogether
+invsimps_plots <- plot_grid(invsimps_distribution_plot, prod_vs_invsimps_plot, percell_prod_vs_invsimps_plot,
+          labels = c("B", "D", "F"), ncol = 1, nrow = 3,
+          rel_heights = c(0.5, 0.8, 1.1),
+          align = "v")
 ```
 
 
-
-# Phylo Div vs Productivity
+# PD and Productivity
 ```{r hillR-vs-prod}
-
-
 # 1. RICHNESS PLOT 
 # Extract linear model output 
 lm_prod_phyrich_PA <- summary(lm(frac_bacprod ~ hillR_phylo, data = filter(comb_div_df, Diversity == "Species richness" & fraction == "Particle")))
@@ -747,17 +1023,381 @@ p3_prod_phylosimmps <-
   ggplot(aes(x = hillR_phylo, y=frac_bacprod)) + 
   geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod, color = fraction)) +  # Y-axis errorbars
   geom_point(size = 3.5, color = "black", aes(fill = fraction, shape = season)) +
-  scale_color_manual(values = fraction_colors) +
-  scale_fill_manual(values = fraction_colors) +
+  scale_color_manual(values = fraction_colors) + scale_fill_manual(values = fraction_colors) +
   scale_shape_manual(values = season_shapes) +
   labs(x = "Phylo Simpson", y = "Community Production \n (μgC/L/day)") + 
   theme(legend.position = "none") 
 
-
-plot_grid(p1_prod_phylorich, p2_prod_phyloshan, p3_prod_phylosimmps,
+# Put it all together
+BEF_phylo <- plot_grid(p1_prod_phylorich, p2_prod_phyloshan, p3_prod_phylosimmps,
           labels = c("A", "B", "C"),
-          nrow = 1, ncol = 3)
-
+          nrow = 1, ncol = 3); BEF_phylo
 ```
 
 
+
+# Sanity Checks
+
+## Singleton Analysis
+```{r singleton-iNEXT}
+physeq_singleton <- prune_taxa(taxa_sums(surface_PAFL_otu_pruned_raw) > 1, surface_PAFL_otu_pruned_raw) 
+
+iNEXT_singleton_input <- otu_table(physeq_singleton) %>%
+  t() %>%
+  data.frame()
+
+#set.seed(777)
+# Run iNEXT on the data - it takes a long time to run! So here we will load in the object that was previously created with the following line of code:
+#iNEXT_singleton_data <- iNEXT(iNEXT_singleton_input, q = c(0,1,2), datatype = "abundance")
+#save(list="iNEXT_singleton_data", file=paste0("data/iNEXT/iNEXT_singleton")) 
+
+# Load the data
+load("data/iNEXT/iNEXT_singleton")
+#str(iNEXT_singleton_data)
+
+# Reformat metadata
+dat <- colnames(iNEXT_input_table) %>% data.frame() 
+colnames(dat)[1] <- "norep_filter_name"  # Change the column names 
+
+# Pull out into a dataframe
+div_iNEXT_singleton <- iNEXT_singleton_data$AsyEst %>%
+  rename(norep_filter_name = Site) %>%
+  left_join(metadata_pca, by = "norep_filter_name")
+
+# PLOT
+# Sample‐size‐based R/E curves, separating by "site""
+p_iNEXT_singleton <- ggiNEXT(iNEXT_singleton_data, type=1, facet.var="order") + facet_wrap(~order, scales="free") +
+  scale_shape_manual(values = dat_iNEXT$shape, guide = FALSE) +
+  scale_color_manual(values = dat_iNEXT$fraction_color,  guide = FALSE) +
+  scale_fill_manual(values = dat_iNEXT$fraction_color, guide = FALSE) +
+  theme(legend.position = "none") +
+  labs(title = "Hill Diversity Metrics") +
+  theme(plot.title = element_text()); p_iNEXT_singleton
+
+# plot them together 
+plot_grid(p_iNEXT_singleton, iNEXT_legend, season_legend,
+           ncol = 1, nrow = 3, 
+           rel_heights = c(1, 0.05, 0.05)); 
+
+
+# plot them together 
+plot_grid(p_iNEXT, p_iNEXT_singleton,
+           ncol = 1, nrow = 2); 
+
+# linear model for community production vs species richness
+summary(lm(frac_bacprod ~ Observed * fraction, data = filter(div_iNEXT_singleton, Diversity == "Species richness")))
+
+
+
+lm(frac_bacprod ~ Observed, data = filter(div_iNEXT_singleton, fraction == "Particle" & Diversity == "Species richness"))
+
+summary(lm(frac_bacprod ~ Observed, data = filter(div_iNEXT_singleton, fraction == "Particle" & Diversity == "Species richness")))
+summary(lm(frac_bacprod ~ Observed, data = filter(div_iNEXT_singleton, fraction == "Free" & Diversity == "Species richness")))
+
+# linear model for community production vs exp(H') 
+summary(lm(frac_bacprod ~ Observed, data = filter(div_iNEXT_singleton, fraction == "Particle" & Diversity == "Shannon diversity")))
+summary(lm(frac_bacprod ~ Observed, data = filter(div_iNEXT_singleton, fraction == "Free" & Diversity == "Shannon diversity")))
+
+# linear model for community production vs inverse simpson 
+summary(lm(frac_bacprod ~ Observed, data = filter(div_iNEXT_singleton, fraction == "Particle" & Diversity == "Simpson diversity")))
+summary(lm(frac_bacprod ~ Observed, data = filter(div_iNEXT_singleton, fraction == "Free" & Diversity == "Simpson diversity")))
+
+
+
+
+
+```
+
+```{r singleton-hillR}
+# For Sanity, set the seed.
+set.seed(111)
+
+# Prepare input for hillR::hill_phylo() function.
+physeq_singleton
+#otu_mat_singleton <- data.frame(otu_table(physeq_singleton))
+#phy_tree_singleton <- phy_tree(physeq_singleton)
+
+# Calculate the Hill phylogenetic diversity metric from the hillR package
+# The output from this command is a named vector with the sample name and the div value.
+#hill_phy0_df_singleton <- hill_phylo(comm = otu_mat_singleton, tree = phy_tree_singleton, q = 0)
+#hill_phy1_df_singleton <- hill_phylo(comm = otu_mat_singleton, tree = phy_tree_singleton, q = 1)
+#hill_phy2_df_singleton <- hill_phylo(comm = otu_mat_singleton, tree = phy_tree_singleton, q = 2)
+
+
+# Pull out the sample names
+norep_filter_name <- names(hill_phy0_df_singleton) 
+stopifnot(names(hill_phy0_df_singleton) == names(hill_phy1_df_singleton))
+stopifnot(names(hill_phy1_df_singleton) == names(hill_phy2_df_singleton))
+# Pull out the hill phylo div values
+
+div_sample_names <- rep(norep_filter_name, times = 3)
+phylo_div_vals_singleton <- c(unname(hill_phy0_df_singleton), unname(hill_phy1_df_singleton), unname(hill_phy2_df_singleton)) # rich, shannon, simpson
+phylo_div_types_singleton <- c(rep("Species richness", times = 24), rep("Shannon diversity", times = 24), rep("Simpson diversity", times = 24))
+
+# Put it all in a dataframe 
+hillR_output_singleton <- data.frame(div_sample_names, phylo_div_vals_singleton, phylo_div_types_singleton) %>%
+  rename(norep_filter_name = div_sample_names, Diversity = phylo_div_types_singleton,
+         hillR_phylo = phylo_div_vals_singleton) %>%
+    mutate(Diversity = factor(Diversity, levels = c("Species richness", "Shannon diversity", "Simpson diversity"))) 
+# save to file because hillR takes time to calculate!!! 
+#write.csv(x = hillR_output_singleton, file = "data/iNEXT/hillR_output_singleton.csv", row.names = FALSE, quote = FALSE)
+
+test <- read.csv("data/iNEXT/hillR_output_singleton.csv")
+
+# COMBINE iNEXT AND HILLR DATA
+comb_div_singleton <- div_iNEXT_singleton %>%
+  dplyr::select(c("norep_filter_name", "Diversity", "Observed", "Estimator", "s.e.", "season", "fraction", "frac_bacprod", "SD_frac_bacprod", "fracprod_per_cell_noinf")) %>%
+  left_join(hillR_output_singleton, by = c("norep_filter_name", "Diversity")) %>%
+  mutate(Diversity = factor(Diversity, levels = c("Species richness", "Shannon diversity", "Simpson diversity"))) %>%
+  rename(se_iNEXT = "s.e.")
+
+# Calculate R2 and pval for  it
+lm_phylo_rich_singleton <- summary(lm(hillR_phylo~Observed, data = filter(comb_div_singleton, Diversity == "Species richness")))
+lm_phylo_shan_singleton <- summary(lm(hillR_phylo~Observed, data = filter(comb_div_singleton, Diversity == "Shannon diversity")))
+lm_phylo_simps_singleton <- summary(lm(hillR_phylo~Observed, data = filter(comb_div_singleton, Diversity == "Simpson diversity")))
+
+# Make the 3 individual plots and then plot together
+# 1. RICHNESS PLOT 
+# Extract linear model output 
+lab_lm_phylo_rich_singleton <- paste("atop(R^2 ==", round(lm_phylo_rich_singleton$adj.r.squared, digits = 2), ",",
+             "p ==", round(unname(lm_phylo_rich_singleton$coefficients[,4][2]), digits = 18), ")")
+p1_phylo_rich_singleton <- 
+  comb_div_singleton %>%
+  dplyr::filter(Diversity == "Species richness") %>%
+  ggplot(aes(x = Observed, y = hillR_phylo)) + 
+  geom_point() + geom_smooth(method = "lm") +
+  labs(x = "Observed Richness", y = "Phylogenetic diversity") +
+  annotate("text", x=600, y=175, label=lab_lm_phylo_rich_singleton, parse = TRUE, color = "blue", size = 4) 
+
+# 2. SHANNON PLOT 
+# Extract linear model output 
+lab_lm_phylo_shan_singleton <- paste("atop(R^2 ==", round(lm_phylo_shan_singleton$adj.r.squared, digits = 2), ",",
+             "p ==", round(unname(lm_phylo_shan_singleton$coefficients[,4][2]), digits = 10), ")")
+p2_phylo_shan_singleton <- 
+  comb_div_singleton %>%
+  dplyr::filter(Diversity == "Shannon diversity") %>%
+  ggplot(aes(x = Observed, y = hillR_phylo)) + 
+  geom_point() + geom_smooth(method = "lm") +
+  labs(x = "Shannon diversity", y = "Phylogenetic diversity") +
+  annotate("text", x=75, y=15, label=lab_lm_phylo_shan_singleton, parse = TRUE, color = "blue", size = 4) 
+
+# 3. SIMPSON PLOT 
+# Extract linear model output 
+lab_lm_phylo_simps_singleton <- paste("atop(R^2 ==", round(lm_phylo_simps_singleton$adj.r.squared, digits = 2), ",",
+             "p ==", round(unname(lm_phylo_simps_singleton$coefficients[,4][2]), digits = 5), ")")
+p3_phylo_simps_singleton <- 
+  comb_div_singleton %>%
+  dplyr::filter(Diversity == "Simpson diversity") %>%
+  ggplot(aes(x = Observed, y = hillR_phylo)) + 
+  geom_point() + geom_smooth(method = "lm") +
+  labs(x = "Simpson diversity", y = "Phylogenetic diversity") +
+  annotate("text", x=30, y=6, label=lab_lm_phylo_simps_singleton, parse = TRUE, color = "blue", size = 4) 
+
+
+corrs_singleton <- plot_grid(p1_phylo_rich_singleton, p2_phylo_shan_singleton, p3_phylo_simps_singleton,
+          labels = c("A", "B", "C"),
+          nrow = 1, ncol = 3); corrs_singleton
+```
+
+### Compare with doubleton analysis
+```{r compare-coors}
+plot_grid(corrs_singleton, coors_doubleton,
+          nrow = 2, ncol = 1, labels = c("Singleton", "Doubleton"))
+```
+
+
+```{r singleton-richness-plot, fig.width= 6, fig.height= 3.5}
+wilcox_rich_obs_singleton <- wilcox.test(Observed ~ fraction, data = dplyr::filter(comb_div_singleton, Diversity == "Species richness"))
+wilcox_rich_est_singleton <- wilcox.test(Estimator ~ fraction, data = dplyr::filter(comb_div_singleton, Diversity == "Species richness"))
+
+rich_p1 <- comb_div_singleton %>%
+  dplyr::filter(Diversity == "Species richness") %>%
+  ggplot(aes(x = fraction, y = Observed)) + 
+  geom_jitter(size = 3, aes(fill = fraction, shape = season), width = 0.2) + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA, aes( fill = fraction)) +
+  scale_fill_manual(values = fraction_colors) +
+  scale_shape_manual(values = season_shapes) + 
+  scale_y_continuous(limits = c(0, 1800), breaks = seq(0, 1800, by = 300),
+                     expand = c(0, 0)) +
+  labs(y = "Observed Richness") +
+  theme(axis.title.x = element_blank(), legend.position = "none") + 
+  annotate("text", x=1.5, y=1500, size = 4, color = "gray40",
+         label= paste("Wilcoxon, p =", round(wilcox_rich_obs_singleton$p.value, digits = 3))) 
+
+rich_p2 <- comb_div_singleton %>%
+  dplyr::filter(Diversity == "Species richness") %>%
+  ggplot(aes(x = fraction, y = Estimator)) + 
+  geom_jitter(size = 3, aes(fill = fraction, shape = season), width = 0.2) + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA, aes( fill = fraction)) +
+  scale_fill_manual(values = fraction_colors) +
+  scale_shape_manual(values = season_shapes) + 
+  scale_y_continuous(limits = c(0, 1800), breaks = seq(0, 1800, by = 300),
+                     expand = c(0, 0))+
+  labs(y = "Richness Estimator") +
+  theme(axis.title.x = element_blank(), legend.position = "none") + 
+  annotate("text", x=1.5, y=1500, size = 4, color = "gray40",
+      label= paste("Wilcoxon, p =", round(wilcox_rich_est_singleton$p.value, digits = 3)))
+
+# Put the plots together 
+rich_title_singleton <- ggdraw() + 
+  draw_label("iNEXT richness estimates - Singleton", fontface = 'bold', x = 0, hjust = 0) + 
+   theme(plot.margin = margin(0, 0, 0, 150))
+
+rich_plotz_singleton <- plot_grid(rich_p1, rich_p2, 
+          labels = c("A", "B"))
+
+plot_grid(rich_title_singleton, rich_plotz_singleton, 
+          ncol = 1, nrow = 2, rel_heights = c(0.1, 1))
+```
+
+### PD and Productivity
+```{r hillR-vs-prod-singleton}
+# 1. RICHNESS PLOT 
+# Extract linear model output 
+lm_prod_phyrich_PA_singleton <- summary(lm(frac_bacprod ~ hillR_phylo, data = filter(comb_div_singleton, Diversity == "Species richness" & fraction == "Particle")))
+lm_prod_phyrich_PA_singleton # Show the stats
+lab_lm_prod_phyrich_PA_singleton <- paste("atop(R^2 ==", round(lm_prod_phyrich_PA_singleton$adj.r.squared, digits = 2), ",",
+             "p ==", round(unname(lm_prod_phyrich_PA_singleton$coefficients[,4][2]), digits = 3), ")")
+lm_prod_phyrich_FL_singleton <- summary(lm(frac_bacprod ~ hillR_phylo, data = filter(comb_div_singleton, Diversity == "Species richness" & fraction == "Free")))
+lm_prod_phyrich_FL_singleton # Show the stats
+
+p1_prod_phylorich_singleton <- comb_div_singleton %>%
+  dplyr::filter(Diversity == "Species richness") %>%
+  ggplot(aes(x = hillR_phylo, y=frac_bacprod)) + 
+  geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod, color = fraction)) +  # Y-axis errorbars
+  geom_point(size = 3.5, color = "black", aes(fill = fraction, shape = season)) +
+  scale_color_manual(values = fraction_colors) +
+  scale_fill_manual(values = fraction_colors) +
+  scale_shape_manual(values = season_shapes) +
+  labs(x = "Phylo richness", y = "Community Production \n (μgC/L/day)") + 
+  geom_smooth(data=filter(comb_div_singleton, fraction == "Particle" & Diversity == "Species richness"), method='lm', color = "#FF6600", fill = "#FF6600") + 
+  annotate("text", x=140, y=50, label=lab_lm_prod_phyrich_PA_singleton, parse = TRUE, color = "#FF6600", size = 4)  +
+  theme(legend.position = "none")
+
+
+# 2. SHANNON PLOT 
+# Extract linear model output 
+lm_prod_physhan_PA_singleton <- summary(lm(frac_bacprod ~ hillR_phylo, data = filter(comb_div_singleton, Diversity == "Shannon diversity" & fraction == "Particle")))
+lm_prod_physhan_PA_singleton # Show the stats
+lab_lm_prod_physhan_PA_singleton <- paste("atop(R^2 ==", round(lm_prod_physhan_PA_singleton$adj.r.squared, digits = 2), ",",
+             "p ==", round(unname(lm_prod_physhan_PA_singleton$coefficients[,4][2]), digits = 2), ")"); 
+# Without the outlier sample on the x axis in particle - the trend is actually stronger
+wo_MBREJ515_singleton <- summary(lm(frac_bacprod ~ hillR_phylo, 
+           data = filter(comb_div_singleton, Diversity == "Shannon diversity" & fraction == "Particle" & norep_filter_name != "MBREJ515")))
+lab_wo_MBREJ515_singleton <- paste("atop(R^2 ==", round(wo_MBREJ515_singleton$adj.r.squared, digits = 2), ",",
+             "p ==", round(unname(wo_MBREJ515_singleton$coefficients[,4][2]), digits = 2), ")"); 
+paste("With all samples:",lab_lm_prod_physhan_PA_singleton, "and without the outlier sample (MBREJ515):", lab_wo_MBREJ515_singleton)
+
+# Free living
+lm_prod_physhan_FL_singleton <- summary(lm(frac_bacprod ~ hillR_phylo, data = filter(comb_div_singleton, Diversity == "Shannon diversity" & fraction == "Free")))
+lm_prod_physhan_FL_singleton # Show the stats
+
+p2_prod_phyloshan_singleton <- 
+  comb_div_singleton %>%
+  dplyr::filter(Diversity == "Shannon diversity") %>%
+  ggplot(aes(x = hillR_phylo, y=frac_bacprod)) + 
+  geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod, color = fraction)) +  # Y-axis errorbars
+  geom_point(size = 3.5, color = "black", aes(fill = fraction, shape = season)) +
+  scale_color_manual(values = fraction_colors) +
+  scale_fill_manual(values = fraction_colors) +
+  scale_shape_manual(values = season_shapes) +
+  labs(x = "Phylo Shannon", y = "Community Production \n (μgC/L/day)") + 
+  geom_smooth(data=filter(comb_div_singleton, fraction == "Particle" & Diversity == "Shannon diversity"), method='lm', color = "#FF6600", fill = "#FF6600") + 
+  annotate("text", x=12, y=50, label=lab_lm_prod_physhan_PA_singleton, parse = TRUE, color = "#FF6600", size = 4)  +
+  theme(legend.position = "none")
+
+
+# 2. SIMPSON PLOT 
+# Extract linear model output 
+lm_prod_physimps_PA_singleton <- summary(lm(frac_bacprod ~ hillR_phylo, data = filter(comb_div_singleton, Diversity == "Simpson diversity" & fraction == "Particle")))
+lm_prod_physimps_PA_singleton # Show the stats
+lm_prod_physimps_FL_singleton <- summary(lm(frac_bacprod ~ hillR_phylo, data = filter(comb_div_singleton, Diversity == "Simpson diversity" & fraction == "Free")))
+lm_prod_physimps_FL_singleton # Show the stats
+
+p3_prod_phylosimmps_singleton <- 
+  comb_div_singleton %>%
+  dplyr::filter(Diversity == "Simpson diversity") %>%
+  ggplot(aes(x = hillR_phylo, y=frac_bacprod)) + 
+  geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod, color = fraction)) +  # Y-axis errorbars
+  geom_point(size = 3.5, color = "black", aes(fill = fraction, shape = season)) +
+  scale_color_manual(values = fraction_colors) + scale_fill_manual(values = fraction_colors) +
+  scale_shape_manual(values = season_shapes) +
+  labs(x = "Phylo Simpson", y = "Community Production \n (μgC/L/day)") + 
+  theme(legend.position = "none") 
+
+# Put it all together
+BEF_phylo_singleton <- plot_grid(p1_prod_phylorich_singleton, p2_prod_phyloshan_singleton, p3_prod_phylosimmps_singleton,
+          labels = c("A", "B", "C"),
+          nrow = 1, ncol = 3); BEF_phylo_singleton
+```
+
+### Compare with doubleton analysis
+```{r BEF-comparison}
+plot_grid(BEF_phylo_singleton, BEF_phylo, nrow = 2, ncol = 1, labels = c("Singleton", "Doubleton"))
+```
+
+
+
+# Phylogenetic diversity Calculation Exploration
+## hillR & hilldiv packages
+```{r hilldiv}
+# Here I will calculate the hilldiv values (which requires me to force ultrametric) with the values from the hillR package
+raw_otu_rm2 <- surface_PAFL_otu_pruned_rm2 %>%
+  otu_table() %>%
+  data.frame() %>%
+  t()
+
+tree_rm2 <- surface_PAFL_otu_pruned_rm2 %>% 
+  phy_tree()
+
+# To calculate the hill phylodiv, the tree needs to be ultrametric. 
+# Therefore, I use force.ultrametric from phytools to convert the tree.
+# There are 2 methods to converst c("nnls", "extend"), however, based on 
+# this post (http://blog.phytools.org/2017/03/forceultrametric-method-for-ultrametric.html) 
+# and by looking at the tree with both methods, I will use nnls.
+tree_rm2_ultra_nnls <- force.ultrametric(tree_rm2, method = "nnls")
+is.ultrametric(tree_rm2_ultra_nnls)
+
+plot_tree(tree_rm2_ultra_nnls, ladderize = "left", color = "Phylum") 
+
+#Hill numbers
+hill.div.q0 <- hill_div(raw_otu_rm2, qvalue=0)
+hill.div.q1 <- hill_div(raw_otu_rm2, qvalue=1)
+hill.div.q2 <- hill_div(raw_otu_rm2, qvalue=2)
+hill.phylodiv.q0 <- hill_div(raw_otu_rm2, tree=tree_rm2_ultra_nnls, qvalue=0)
+hill.phylodiv.q1 <- hill_div(raw_otu_rm2, tree=tree_rm2_ultra_nnls, qvalue=1)
+hill.phylodiv.q2 <- hill_div(raw_otu_rm2, tree=tree_rm2_ultra_nnls, qvalue=2)
+
+
+comb_div_df
+
+# Make a dataframe with three columns by first creating 3 vectors 
+stopifnot(names(hill.phylodiv.q0) == names(hill.phylodiv.q1))
+stopifnot(names(hill.phylodiv.q1) == names(hill.phylodiv.q2))
+
+norep_filter_name <- rep(names(hill.phylodiv.q0), 3)
+Diversity <- c(rep("Species richness", 24), rep("Shannon diversity", 24), rep("Simpson diversity", 24))
+hilldiv_phylo <- c(unname(hill.phylodiv.q0), unname(hill.phylodiv.q1), unname(hill.phylodiv.q2))
+
+comb_div_hilldiv <- comb_div_df %>%
+  left_join(data.frame(norep_filter_name, Diversity, hilldiv_phylo), by = c("norep_filter_name", "Diversity"))
+
+comb_div_hilldiv %>%
+  ggplot(aes(x = hillR_phylo, y = hilldiv_phylo)) + 
+  geom_point() + 
+  facet_wrap(~Diversity, scales = "free") + 
+  geom_smooth(method = "lm") 
+
+comb_div_hilldiv
+
+summary(lm(hillR_phylo ~ hilldiv_phylo, data = dplyr::filter(comb_div_hilldiv, Diversity == "Species richness")))
+summary(lm(hillR_phylo ~ hilldiv_phylo, data = dplyr::filter(comb_div_hilldiv, Diversity == "Shannon diversity")))
+summary(lm(hillR_phylo ~ hilldiv_phylo, data = dplyr::filter(comb_div_hilldiv, Diversity == "Simpson diversity")))
+
+
+```
+
+# Session Information 
+```{r session-info}
+devtools::session_info() # This will include session info with all R package version information
+```
