@@ -227,27 +227,6 @@ div_df <-
   # For this analysis, we will be using the observed values calculated from iNEXT
   spread(key = Diversity, value = Observed) %>%
   left_join(hillR_output)
-#write.csv(div_df, file = "data/iNEXT/diversity_measures.csv", quote = FALSE, row.names = FALSE)
-
-# Create the final dataframe!
-comb_div_df <- div_df %>%
-  left_join(metadata_pca, by = "norep_filter_name") %>%
-  gather(key = "Diversity", value = "Observed", richness:phylo_richness) %>%  
-  #mutate(Diversity = factor(Diversity, levels = c("Species richness", "Shannon diversity", "Simpson diversity"))) %>%
-  data.frame()
-head(comb_div_df)
-dim(comb_div_df)
-
-# #Prepare dataframe for calculations
-div_df_frac <- metadata %>%
-  dplyr::select(norep_filter_name, fraction, season) %>%
-  right_join(div_iNEXT, by = "norep_filter_name")
-
-
-# Wide format dataframe for plotting
-wide_div_meta_df <- div_df %>%
-  left_join(metadata, by = "norep_filter_name")
-
 ```
 
 ## Correlations between phylogenetic & non-phylo Hill numbers
@@ -299,6 +278,81 @@ coors_doubleton <- plot_grid(p1_phylo_rich, p2_phylo_shan, p3_phylo_simps,
           labels = c("A", "B", "C"),
           nrow = 1, ncol = 3); coors_doubleton
 ```
+
+
+## Mean Phylogenetic Pairwise Distance
+## Calculate the Phylogenetic Diversity
+```{r calc-sesmpd, fig.width = 4, fig.height = 4, dependson = "calc-div"}  
+# Read in the tree 
+RAREFIED_rm2_fasttree <- read.tree(file = "data/PhyloTree/newick_tree_rm2_rmN.tre")
+  
+# Load in data that has doubletons removed 
+load("data/PhyloTree/surface_PAFL_otu_pruned_RAREFIED_rm2.RData")
+surface_PAFL_otu_pruned_RAREFIED_rm2
+
+# Create the OTU table for picante 
+surface_PAFL_RAREFIED_rm2_otu <- matrix(otu_table(surface_PAFL_otu_pruned_RAREFIED_rm2), nrow = nrow(otu_table(surface_PAFL_otu_pruned_RAREFIED_rm2)))
+rownames(surface_PAFL_RAREFIED_rm2_otu) <- sample_names(surface_PAFL_otu_pruned_RAREFIED_rm2)
+colnames(surface_PAFL_RAREFIED_rm2_otu) <- taxa_names(surface_PAFL_otu_pruned_RAREFIED_rm2)
+    
+  ## Calculate input for SES_MPD  
+# Convert the abundance data to standardized abundanced vegan function `decostand' , NOTE: method = "total"
+otu_decostand_total <- decostand(surface_PAFL_RAREFIED_rm2_otu, method = "total")
+# check total abundance in each sample
+apply(otu_decostand_total, 1, sum)
+
+# check for mismatches/missing species between community data and phylo tree
+RAREFIED_rm2_matches <- match.phylo.comm(RAREFIED_rm2_fasttree, otu_decostand_total)
+# the resulting object is a list with $phy and $comm elements.  replace our
+# original data with the sorted/matched data
+phy_RAREFIED_rm2 <- RAREFIED_rm2_matches$phy
+comm_RAREFIED_rm2 <- RAREFIED_rm2_matches$comm
+
+# Calculate the phylogenetic distances
+phy_dist_RAREFIED_rm2 <- cophenetic(phy_RAREFIED_rm2)
+
+## Calculate SES_MPD
+###################################### INDEPENDENT SWAP ############################################
+# calculate standardized effect size mean pairwise distance (ses.mpd)
+unweighted_sesMPD_indepswap_RAREFIED_rm2 <- ses.mpd(comm_RAREFIED_rm2, phy_dist_RAREFIED_rm2, null.model = "independentswap", 
+                                     abundance.weighted = FALSE, runs = 999)
+unweight_sesmpd <- unweighted_sesMPD_indepswap_RAREFIED_rm2 %>% rownames_to_column(var = "norep_filter_name")
+
+WEIGHTED_sesMPD_indepswap_RAREFIED_rm2 <- ses.mpd(comm_RAREFIED_rm2, phy_dist_RAREFIED_rm2, null.model = "independentswap", 
+                                     abundance.weighted = TRUE, runs = 999)
+weight_sesmpd <- WEIGHTED_sesMPD_indepswap_RAREFIED_rm2 %>% rownames_to_column(var = "norep_filter_name")
+
+# Combine them together into a dataframe
+sesmpd_df <- unweight_sesmpd %>%
+  dplyr::select(norep_filter_name, mpd.obs.z) %>%
+  rename(unweighted_sesmpd = mpd.obs.z) %>%
+  left_join(dplyr::select(weight_sesmpd, norep_filter_name, mpd.obs.z), by = "norep_filter_name") %>%
+  rename(weighted_sesmpd = mpd.obs.z)
+
+# Gather ALL div data!
+div_df <- div_df %>%
+  left_join(sesmpd_df, by = "norep_filter_name")
+#write.csv(div_df, file = "data/iNEXT/diversity_measures.csv", quote = FALSE, row.names = FALSE)
+
+# Create the final dataframe!
+comb_div_df <- div_df %>%
+  left_join(metadata_pca, by = "norep_filter_name") %>%
+  gather(key = "Diversity", value = "Observed", richness:phylo_richness) %>%  
+  #mutate(Diversity = factor(Diversity, levels = c("Species richness", "Shannon diversity", "Simpson diversity"))) %>%
+  data.frame()
+head(comb_div_df)
+dim(comb_div_df)
+
+# #Prepare dataframe for calculations
+div_df_frac <- metadata %>%
+  dplyr::select(norep_filter_name, fraction, season) %>%
+  right_join(div_iNEXT, by = "norep_filter_name")
+
+# Wide format dataframe for plotting
+wide_div_meta_df <- div_df %>%
+  left_join(metadata, by = "norep_filter_name")
+```
+
 
 
 # Main Figures
@@ -438,7 +492,6 @@ metadata %>%
             avg_percell_prod = mean(fracprod_per_cell_noinf),
             log10_avg_percell_prod = log10(avg_percell_prod))
 ```
-
 
 
 # iNEXT figures
@@ -627,82 +680,106 @@ datatable(table_percap,
 ```
 
 
-```{r plot-BEF, fig.width = 8.5, fig.height = 3.5}
+```{r lm-model-objects, fig.width = 8.5, fig.height = 3.5}
+# Here I will calculate and show the stats for each linear model, 
+# so later we can simply use these objects for plotting.
+
+######################################################### COMMUNITY WIDE PRODUCTION VS DIVERSITY 
+######################################################### COMMUNITY WIDE PRODUCTION VS DIVERSITY 
 # linear model for community production vs species richness
-summary(lm(frac_bacprod ~ Observed, data = filter(div_iNEXT, fraction == "Particle" & Diversity == "Species richness")))
-summary(lm(frac_bacprod ~ Observed, data = filter(div_iNEXT, fraction == "Free" & Diversity == "Species richness")))
+lm_prod_vs_rich_PA <- lm(frac_bacprod ~ richness, data = filter(wide_div_meta_df, fraction == "Particle"))
+summary(lm_prod_vs_rich_PA)  # show stats for PA richness vs community production
+lm_prod_vs_rich_FL <- lm(frac_bacprod ~ richness, data = filter(wide_div_meta_df, fraction == "Free"))
+summary(lm_prod_vs_rich_FL)  # show stats for FL richness vs community production
 
 # linear model for community production vs exp(H') 
-summary(lm(frac_bacprod ~ Observed, data = filter(div_iNEXT, fraction == "Particle" & Diversity == "Shannon diversity")))
-summary(lm(frac_bacprod ~ Observed, data = filter(div_iNEXT, fraction == "Free" & Diversity == "Shannon diversity")))
+lm_prod_vs_shannon_PA <- lm(frac_bacprod ~ shannon, data = filter(wide_div_meta_df, fraction == "Particle"))
+summary(lm_prod_vs_shannon_PA) # show stats for PA shannon vs community production
+lm_prod_vs_shannon_FL <- lm(frac_bacprod ~ shannon, data = filter(wide_div_meta_df, fraction == "Free"))
+summary(lm_prod_vs_shannon_FL) # show stats for Fl shannon vs community production
 
 # linear model for community production vs inverse simpson 
-summary(lm(frac_bacprod ~ Observed, data = filter(div_iNEXT, fraction == "Particle" & Diversity == "Simpson diversity")))
-summary(lm(frac_bacprod ~ Observed, data = filter(div_iNEXT, fraction == "Free" & Diversity == "Simpson diversity")))
+lm_prod_vs_invsimps_PA <- lm(frac_bacprod ~ simpson, data = filter(wide_div_meta_df, fraction == "Particle"))
+summary(lm_prod_vs_invsimps_PA) # show stats for PA simpson vs community production
+lm_prod_vs_invsimps_FL <- lm(frac_bacprod ~ simpson, data = filter(wide_div_meta_df, fraction == "Free"))
+summary(lm_prod_vs_invsimps_FL) # show stats for FL simpson vs community production
 
 
-### Community-wide production
-p_commLMs <- ggplot(div_iNEXT, aes(x=Observed, y=frac_bacprod)) + 
-  # X-axis errorbars
-  geom_errorbarh(aes(xmin = Observed - s.e., xmax = Observed + s.e., color = fraction), alpha = 0.7) + 
-  # Y-axis errorbars
-  geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod, color = fraction)) +  
-  geom_point(size = 3.5, color = "black", aes(fill = fraction, shape = season)) +
-  scale_color_manual(values = fraction_colors) +
-  scale_fill_manual(values = fraction_colors, guide = FALSE) +
-  scale_shape_manual(values = season_shapes) +
-  ylab("\n Community Production \n (μgC/L/day)") + 
-  xlab("Diversity Metric") +
-  geom_smooth(data=filter(div_iNEXT, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
-  facet_wrap(~Diversity, ncol = 3, scales = "free") + 
-  theme(legend.position = "none", axis.title.x = element_blank()) 
+########################  PHYLOGENETIC HILL DIVERSITY METRICS ################################ 
+# 0D: linear model for community production vs phylogenetic  richness
+lm_prod_vs_phylorich_PA <- lm(frac_bacprod ~ phylo_richness, data = filter(wide_div_meta_df, fraction == "Particle"))
+summary(lm_prod_vs_phylorich_PA)  # show stats for PA phylogenetic richness vs community production
+lm_prod_vs_phylorich_FL <- lm(frac_bacprod ~ phylo_richness, data = filter(wide_div_meta_df, fraction == "Free"))
+summary(lm_prod_vs_phylorich_FL)  # show stats for FL phylogenetic richness vs community production
+
+# 1D: linear model for community production vs phylogenetic exp(H') 
+lm_prod_vs_phyloshan_PA <- lm(frac_bacprod ~ phylo_shannon, data = filter(wide_div_meta_df, fraction == "Particle"))
+summary(lm_prod_vs_phyloshan_PA) # show stats for PA phylogenetic shannon vs community production
+lm_prod_vs_phyloshan_FL <- lm(frac_bacprod ~ phylo_shannon, data = filter(wide_div_meta_df, fraction == "Free"))
+summary(lm_prod_vs_phyloshan_FL) # show stats for Fl phylogenetic shannon vs community production
+
+# 2D: linear model for community production vs phylogenetic  inverse simpson 
+lm_prod_vs_phylosimps_PA <- lm(frac_bacprod ~ phylo_simpson, data = filter(wide_div_meta_df, fraction == "Particle"))
+summary(lm_prod_vs_phylosimps_PA) # show stats for PA phylogeneticsimpson vs community production
+lm_prod_vs_phylosimps_FL <- lm(frac_bacprod ~ phylo_simpson, data = filter(wide_div_meta_df, fraction == "Free"))
+summary(lm_prod_vs_phylosimps_FL) # show stats for FL phylogenetic simpson vs community production
 
 
+######################################################### PER CAPITA PRODUCTION VS DIVERSITY 
+######################################################### PER CAPITA PRODUCTION VS DIVERSITY 
+################
 # linear model for community production vs species richness
-summary(lm(log10(fracprod_per_cell_noinf) ~ Observed, 
-           data = filter(div_iNEXT, fraction == "Particle" & Diversity == "Species richness")))
-summary(lm(log10(fracprod_per_cell_noinf) ~ Observed, 
-           data = filter(div_iNEXT, fraction == "Free" & Diversity == "Species richness")))
+lm_percell_prod_vs_rich_PA <- lm(log10(fracprod_per_cell_noinf) ~ richness, 
+                                 data = filter(wide_div_meta_df, fraction == "Particle")); 
+summary(lm_percell_prod_vs_rich_PA) # show stats for PA richness vs percell production
+lm_percell_prod_vs_rich_FL <- lm(log10(fracprod_per_cell_noinf) ~ richness, 
+                                 data = filter(wide_div_meta_df, fraction == "Free")); 
+summary(lm_percell_prod_vs_rich_FL) # show stats for FL richness vs percell production
 
 # linear model for community production vs exp(H') 
-summary(lm(log10(fracprod_per_cell_noinf) ~ Observed, 
-           data = filter(div_iNEXT, fraction == "Particle" & Diversity == "Shannon diversity")))
-summary(lm(log10(fracprod_per_cell_noinf) ~ Observed, 
-           data = filter(div_iNEXT, fraction == "Free" & Diversity == "Shannon diversity")))
+lm_percell_prod_vs_shannon_PA <- lm(log10(fracprod_per_cell_noinf) ~ shannon, 
+                                    data = filter(wide_div_meta_df, fraction == "Particle"))
+summary(lm_percell_prod_vs_shannon_PA) # show stats for PA shannon vs percell production
+lm_percell_prod_vs_shannon_FL <- lm(log10(fracprod_per_cell_noinf) ~ shannon, 
+                                    data = filter(wide_div_meta_df, fraction == "Free"))
+summary(lm_percell_prod_vs_shannon_FL) # show stats for FL shannon vs percell production
 
 # linear model for community production vs inverse simpson 
-summary(lm(log10(fracprod_per_cell_noinf) ~ Observed, 
-           data = filter(div_iNEXT, fraction == "Particle" & Diversity == "Simpson diversity")))
-summary(lm(log10(fracprod_per_cell_noinf) ~ Observed, 
-           data = filter(div_iNEXT, fraction == "Free" & Diversity == "Simpson diversity")))
+lm_percell_prod_vs_invsimps_PA <- lm(log10(fracprod_per_cell_noinf) ~ simpson, 
+                                     data = filter(wide_div_meta_df, fraction == "Particle"))
+summary(lm_percell_prod_vs_invsimps_PA) # show stats for PA simpson vs percell production
+lm_percell_prod_vs_invsimps_FL <- lm(log10(fracprod_per_cell_noinf) ~ simpson, 
+                                     data = filter(wide_div_meta_df, fraction == "Free"))
+summary(lm_percell_prod_vs_invsimps_FL) # show stats for FL simpson vs percell production
 
 
+########################  PHYLOGENETIC HILL DIVERSITY METRICS ################################ 
+# linear model for community production vs phylogenetic richness
+lm_percell_prod_vs_phylorich_PA <- lm(log10(fracprod_per_cell_noinf) ~ phylo_richness, 
+                                 data = filter(wide_div_meta_df, fraction == "Particle")); 
+summary(lm_percell_prod_vs_phylorich_PA) # show stats for PA phylogeneticrichness vs percell production
+lm_percell_prod_vs_phylorich_FL <- lm(log10(fracprod_per_cell_noinf) ~ phylo_richness, 
+                                 data = filter(wide_div_meta_df, fraction == "Free")); 
+summary(lm_percell_prod_vs_phylorich_FL) # show stats for FL phylogenetic richness vs percell production
 
-# Per-capita production
-p_percapLMs <- ggplot(div_iNEXT, aes(x=Observed, y=log10(fracprod_per_cell_noinf))) + 
-  # X-axis errorbars
-  geom_errorbarh(aes(xmin = Observed - s.e., xmax = Observed + s.e., color = fraction), alpha = 0.7) + 
-  # Y-axis errorbars
- # geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod, color = fraction)) +  
-  geom_point(size = 3.5, color = "black", aes(fill = fraction, shape = season)) +
-  scale_color_manual(values = fraction_colors) +
-  scale_fill_manual(values = fraction_colors, guide = FALSE) +
-  scale_shape_manual(values = season_shapes) +
-  ylab("\n log10(Per-Capita Production)\n (μgC/cell/day)") +
-  xlab("Diversity Metric") +
-  geom_smooth(data=filter(div_iNEXT, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
-  facet_wrap(~Diversity, ncol = 3, scales = "free") + 
-  theme(legend.position = "none") 
+# linear model for community production vs phylogenetic exp(H') 
+lm_percell_prod_vs_phyloshan_PA <- lm(log10(fracprod_per_cell_noinf) ~ phylo_shannon, 
+                                    data = filter(wide_div_meta_df, fraction == "Particle"))
+summary(lm_percell_prod_vs_phyloshan_PA) # show stats for PA phylogeneticshannon vs percell production
+lm_percell_prod_vs_phyloshan_FL <- lm(log10(fracprod_per_cell_noinf) ~ phylo_shannon, 
+                                    data = filter(wide_div_meta_df, fraction == "Free"))
+summary(lm_percell_prod_vs_phyloshan_FL) # show stats for FL phylogenetic shannon vs percell production
 
-
-# plot them together 
-plot_grid(p_commLMs, p_percapLMs, season_legend,
-          ncol = 1, nrow = 3, labels = c("A", "B",""),
-          rel_heights = c(1, 1, 0.05)) + 
-  theme(plot.margin = unit(c(0.1,0.1,0.2,0.1), "cm")) # top, right, bottom, and left margins
+# linear model for community production vs inverse simpson 
+lm_percell_prod_vs_phylosimps_PA <- lm(log10(fracprod_per_cell_noinf) ~ phylo_simpson, 
+                                     data = filter(wide_div_meta_df, fraction == "Particle"))
+summary(lm_percell_prod_vs_phylosimps_PA) # show stats for PA phylogeneticsimpson vs percell production
+lm_percell_prod_vs_phylosimps_FL <- lm(log10(fracprod_per_cell_noinf) ~ phylo_simpson, 
+                                     data = filter(wide_div_meta_df, fraction == "Free"))
+summary(lm_percell_prod_vs_phylosimps_FL) # show stats for FL phylogenetic simpson vs percell production
 ```
 
-
+# Time series
 ```{r timeseries}
 library(wesanderson)
 
@@ -913,7 +990,6 @@ rich_distribution_plot <-
 
 ################ Richness vs Community-wide (Per-Liter) Production 
 ## 1. Extract the R2 and p-value from the linear model: 
-lm_prod_vs_rich_PA <- lm(frac_bacprod ~ richness, data = filter(wide_div_meta_df, fraction == "Particle"))
 lm_lab_perliter_rich_PA <- paste("atop(R^2 ==", round(summary(lm_prod_vs_rich_PA)$adj.r.squared, digits = 2), ",",
              "p ==", round(unname(summary(lm_prod_vs_rich_PA)$coefficients[,4][2]), digits = 3), ")")
 
@@ -950,8 +1026,6 @@ summary(lm(frac_bacprod ~ richness, data = filter(wide_div_meta_df, fraction == 
 
 ################ Richness vs Per Capita (Per-Cell) Production 
 ## 1. Extract the R2 and p-value from the linear model: 
-lm_percell_prod_vs_rich_PA <- lm(log10(fracprod_per_cell_noinf) ~ richness, data = filter(wide_div_meta_df, fraction == "Particle"))
-
 lm_lab_percell_rich_PA <- paste("atop(R^2 ==", round(summary(lm_percell_prod_vs_rich_PA)$adj.r.squared, digits = 2), ",",
              "p ==", round(unname(summary(lm_percell_prod_vs_rich_PA)$coefficients[,4][2]), digits = 3), ")")
 
@@ -1022,7 +1096,6 @@ shannon_distribution_plot <-
 
 ################ Shannon vs Community-wide (Per-Liter) Production 
 ## 1. Extract the R2 and p-value from the linear model: 
-lm_prod_vs_shannon_PA <- lm(frac_bacprod ~ shannon, data = filter(wide_div_meta_df, fraction == "Particle"))
 lm_lab_perliter_shannon_PA <- paste("atop(R^2 ==", round(summary(lm_prod_vs_shannon_PA)$adj.r.squared, digits = 2), ",",
              "p ==", round(unname(summary(lm_prod_vs_shannon_PA)$coefficients[,4][2]), digits = 3), ")")
 
@@ -1051,8 +1124,6 @@ prod_vs_shannon_plot <-
 
 ################ Shannon vs Per Capitra (Per-Cell) Production 
 ## 1. Extract the R2 and p-value from the linear model: 
-lm_percell_prod_vs_shannon_PA <- lm(log10(fracprod_per_cell_noinf) ~ shannon, data = filter(wide_div_meta_df, fraction == "Particle"))
-
 lm_lab_percell_shannon_PA <- paste("atop(R^2 ==", round(summary(lm_percell_prod_vs_shannon_PA)$adj.r.squared, digits = 2), ",",
              "p ==", round(unname(summary(lm_percell_prod_vs_shannon_PA)$coefficients[,4][2]), digits = 3), ")")
 
@@ -1117,7 +1188,6 @@ invsimps_distribution_plot <-
 
 ################ Inverse Simpson vs Community-wide (Per-Liter) Production 
 ## 1. Extract the R2 and p-value from the linear model: 
-lm_prod_vs_invsimps_PA <- lm(frac_bacprod ~ simpson, data = filter(wide_div_meta_df, fraction == "Particle"))
 lm_lab_perliter_invsimps_PA <- paste("atop(R^2 ==", round(summary(lm_prod_vs_invsimps_PA)$adj.r.squared, digits = 2), ",",
              "p ==", round(unname(summary(lm_prod_vs_invsimps_PA)$coefficients[,4][2]), digits = 4), ")")
 
@@ -1152,8 +1222,6 @@ summary(lm(frac_bacprod ~ simpson, data = filter(wide_div_meta_df, fraction == "
 
 ################ Inverse Simpson vs Per Capitra (Per-Cell) Production 
 ## 1. Extract the R2 and p-value from the linear model: 
-lm_percell_prod_vs_invsimps_PA <- lm(log10(fracprod_per_cell_noinf) ~ simpson, data = filter(wide_div_meta_df, fraction == "Particle"))
-
 lm_lab_percell_invsimps_PA <- paste("atop(R^2 ==", round(summary(lm_percell_prod_vs_invsimps_PA)$adj.r.squared, digits = 2), ",",
              "p ==", round(unname(summary(lm_percell_prod_vs_invsimps_PA)$coefficients[,4][2]), digits = 4), ")")
 
@@ -1240,85 +1308,369 @@ plot_grid(figure2_row1, season_legend,
 
 
 # PD and Productivity
-```{r hillR-vs-prod}
-# 1. RICHNESS PLOT 
-# Extract linear model output 
-lm_prod_phyrich_PA <- summary(lm(frac_bacprod ~ hillR_phylo, data = filter(comb_div_df, Diversity == "Species richness" & fraction == "Particle")))
-lm_prod_phyrich_PA # Show the stats
-lab_lm_prod_phyrich_PA <- paste("atop(R^2 ==", round(lm_prod_phyrich_PA$adj.r.squared, digits = 2), ",",
-             "p ==", round(unname(lm_prod_phyrich_PA$coefficients[,4][2]), digits = 3), ")")
-lm_prod_phyrich_FL <- summary(lm(frac_bacprod ~ hillR_phylo, data = filter(comb_div_df, Diversity == "Species richness" & fraction == "Free")))
-lm_prod_phyrich_FL # Show the stats
+```{r BEFs-phylodiv, dependson= "calc-div", eval = FALSE}
+######################################################### PHYLOGENETIC RICHNESS ######################################################### 
+# Set axis scales for phylo_richness
+phylorich_limits <- c(25, 175)
+phylorich_breaks <- seq(from = 25, to =175, by = 50)
 
-p1_prod_phylorich <- comb_div_df %>%
-  dplyr::filter(Diversity == "Species richness") %>%
-  ggplot(aes(x = hillR_phylo, y=frac_bacprod)) + 
+#### Are particles more phylogenetically rich compared to free-living?
+phylorich_fraction_wilcox <- wilcox.test(phylo_richness ~ fraction, data = wide_div_meta_df)
+phylorich_fraction_wilcox
+
+wide_div_meta_df %>%
+  group_by(fraction) %>%
+  summarize(mean(phylo_richness), sd(phylo_richness), min(phylo_richness), max(phylo_richness))
+
+# Make a data frame to draw significance line in boxplot (visually calculated)
+phylorich_nums <- data.frame(a = c(1.15,1.15,1.85,1.85), b = c(155, 160, 160, 155)) # WholePart vs WholeFree
+
+phylorich_distribution_plot <- 
+  wide_div_meta_df %>%
+  ggplot(aes(y = phylo_richness, x = fraction)) +
+  scale_fill_manual(values = fraction_colors) +
+  geom_jitter(size = 3, aes(fill = fraction, shape = season), width = 0.2) + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(fill = fraction)) +
+  scale_y_continuous(limits = phylorich_limits, breaks = phylorich_breaks, expand = c(0, 0)) + 
+  xlab("Phylogenetic Richness") + xlab("Fraction") + 
+  scale_shape_manual(values = season_shapes) +
+  geom_path(data = phylorich_nums, aes(x = a, y = b), linetype = 1, color = "#424645") +
+  annotate("text", x=1.5, y=150, size = 8, color = "#424645", label= paste("**"), angle = 90) +
+  annotate("text", x=1.5, y=150, size = 4, color = "#424645",
+           label= paste("p =", round(phylorich_fraction_wilcox$p.value, digits = 3))) +
+  theme(legend.position = "none",# axis.title.y = element_blank(),
+        axis.title.x = element_blank(), axis.text.x = element_blank()) +
+  coord_flip()
+
+################ Richness vs Community-wide (Per-Liter) Production 
+## 1. Extract the R2 and p-value from the linear model: 
+lm_lab_perliter_phylorich_PA <- paste("atop(R^2 ==", round(summary(lm_prod_vs_phylorich_PA)$adj.r.squared, digits = 2), ",",
+             "p ==", round(unname(summary(lm_prod_vs_phylorich_PA)$coefficients[,4][2]), digits = 3), ")")
+
+## 2. Plot Richness vs Community-wide (Per-Liter) Production 
+prod_vs_phylorich_plot <-  
+  wide_div_meta_df %>%
+  ggplot(aes(x=phylo_richness, y=frac_bacprod)) + 
+  geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod, 
+                    color = fraction)) +  # Y-axis errorbars
+  geom_point(size = 3.5, color = "black", aes(fill = fraction, shape = season)) +
+  scale_color_manual(values = fraction_colors) +
+  scale_fill_manual(values = fraction_colors) +
+  scale_shape_manual(values = season_shapes) +
+  ylab("\n Community Production \n (μgC/L/day)") + 
+  xlab("Phylogenetic Richness") +
+  geom_smooth(data=filter(wide_div_meta_df, fraction == "Particle"), 
+              method='lm', color = "#FF6600", fill = "#FF6600") + 
+  scale_x_continuous(limits = phylorich_limits, breaks = phylorich_breaks, expand = c(0, 0)) + 
+   # Add the R2 and p-value to the plot 
+  annotate("text", x=130, y=50, label=lm_lab_perliter_phylorich_PA, parse = TRUE, color = "#FF6600", size = 4) +
+  theme(legend.position = "none", axis.title.x = element_blank(), axis.text.x = element_blank()) 
+
+# Summary stats 
+summary(lm(frac_bacprod ~ phylo_richness, data = filter(wide_div_meta_df, fraction == "Particle")))
+
+# WITHOUT THE TWO HIGH POINTS 
+summary(lm(frac_bacprod ~ phylo_richness, data = filter(wide_div_meta_df, fraction == "Particle" & richness < 1000)))
+
+
+################ Richness vs Per Capita (Per-Cell) Production 
+## 1. Extract the R2 and p-value from the linear model: 
+lm_lab_percell_phylorich_PA <- paste("atop(R^2 ==", round(summary(lm_percell_prod_vs_phylorich_PA)$adj.r.squared, digits = 2), ",",
+             "p ==", round(unname(summary(lm_percell_prod_vs_phylorich_PA)$coefficients[,4][2]), digits = 3), ")")
+
+## 2. Plot Richness vs Per Capita (Per-Cell) Production 
+percell_prod_vs_phylorich_plot <- 
+  wide_div_meta_df %>%
+  ggplot(aes(x=phylo_richness, y=log10(fracprod_per_cell_noinf))) + 
+  geom_point(size = 3.5,  color = "black", aes(fill = fraction, shape = season)) +
+  scale_color_manual(values = fraction_colors) +
+  scale_fill_manual(values = fraction_colors) +
+  scale_shape_manual(values = season_shapes) +
+  ylab("\n log10(Per-Capita Production)\n (μgC/cell/day)") +
+  xlab("Phylogenetic Richness") +
+  geom_smooth(data=filter(wide_div_meta_df, fraction == "Particle"), 
+              method='lm', color = "#FF6600", fill = "#FF6600") + 
+  scale_x_continuous(limits = phylorich_limits, breaks = phylorich_breaks, expand = c(0, 0)) + 
+  #scale_y_continuous(limits = c(-8e-7,5e-6), breaks = seq(from = 0, to = 6e-7, by = 3e-7)) + 
+  # Add the R2 and p-value to the plot 
+  annotate("text", x=130, y=-7.5, label=lm_lab_percell_phylorich_PA, parse = TRUE, color = "#FF6600", size = 4) +
+  theme(legend.title = element_blank(), legend.position ="bottom", 
+        legend.text = element_text(size = 14))
+
+# Summary stats 
+summary(lm(log10(fracprod_per_cell_noinf) ~ phylo_richness, data = filter(wide_div_meta_df, fraction == "Particle")))
+
+# WITHOUT THE TWO HIGH POINTS 
+summary(lm(log10(fracprod_per_cell_noinf) ~ phylo_richness, data = filter(wide_div_meta_df, fraction == "Particle" & phylo_richness < 130)))
+
+
+
+phylorich_plots <- plot_grid(phylorich_distribution_plot, prod_vs_phylorich_plot, percell_prod_vs_phylorich_plot,
+          #labels = c("B", "D", "F"), 
+          ncol = 1, nrow = 3,
+          rel_heights = c(0.5, 0.8, 1.1),
+          align = "v")
+
+
+
+######################################################### 1D = PHYLOGENETIC SHANNON DIVERSITY (EXP(SHANNON ENTROPY))
+######################################################### 1D = PHYLOGENETIC SHANNON DIVERSITY (EXP(SHANNON ENTROPY))
+# Set axis scales for phylo_richness
+phyloshan_limits <- c(0, 20)
+phyloshan_breaks <- seq(from = 0, to =20, by = 5)
+
+phyloshannon_fraction_wilcox <- wilcox.test(phylo_shannon ~ fraction, data = wide_div_meta_df)
+phyloshannon_fraction_wilcox   
+
+wide_div_meta_df%>%
+  group_by(fraction) %>%
+  summarize(mean(phylo_shannon), sd(phylo_shannon), min(phylo_shannon), max(phylo_shannon))
+
+
+# Make a data frame to draw significance line in boxplot (visually calculated)
+phyloshannon_nums <- data.frame(a = c(1.15,1.15,1.85,1.85), b = c(18.25, 18.5, 18.5, 18.25)) # WholePart vs WholeFree
+
+phyloshan_distribution_plot <- 
+  wide_div_meta_df %>%
+  ggplot(aes(y = phylo_shannon, x = fraction)) +
+  scale_fill_manual(values = fraction_colors) +
+  geom_jitter(size = 3, aes(shape = season, fill = fraction), width = 0.2) + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(fill = fraction)) +
+  scale_y_continuous(limits = phyloshan_limits, breaks = phyloshan_breaks, expand = c(0,0)) + 
+  xlab("Phylogenetic Exp(Shannon)") +  xlab("Fraction") + 
+  scale_shape_manual(values = season_shapes) +
+    # Add line and pval
+  geom_path(data = phyloshannon_nums, aes(x = a, y = b), linetype = 1, color = "#424645") +
+  annotate("text", x=1.5, y=19, size = 8, color = "#424645", label= paste("**"), angle = 90) +
+  annotate("text", x=1.5, y=15, size = 4, color = "#424645",
+           label= paste("p =", round(phyloshannon_fraction_wilcox$p.value, digits = 3))) +
+  theme(legend.position = "none",# axis.title.y = element_blank(),
+        axis.title.x = element_blank(), axis.text.x = element_blank()) +
+  coord_flip()
+
+################ Shannon vs Community-wide (Per-Liter) Production 
+## 1. Extract the R2 and p-value from the linear model: 
+lm_lab_perliter_phyloshan_PA <- paste("atop(R^2 ==", round(summary(lm_prod_vs_phyloshan_PA)$adj.r.squared, digits = 2), ",",
+             "p ==", round(unname(summary(lm_prod_vs_phyloshan_PA)$coefficients[,4][2]), digits = 3), ")")
+
+## 2. Plot Shannon vs Community-wide (Per-Liter) Production 
+prod_vs_phyloshan_plot <-  
+  wide_div_meta_df %>%
+  ggplot(aes(x=phylo_shannon, y=frac_bacprod)) + 
+  geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod, color = fraction)) +  # Y-axis errorbars
+  geom_point(size = 3.5, color = "black", aes(fill = fraction, shape = season)) +
+  scale_color_manual(values = fraction_colors) +
+  scale_shape_manual(values = season_shapes) +
+  scale_fill_manual(values = fraction_colors) +
+  ylab("\n Community Production \n (μgC/L/day)") + 
+  scale_x_continuous(limits = phyloshan_limits, breaks = phyloshan_breaks, expand = c(0,0)) + 
+  xlab("Phylogenetic Exp(Shannon)") +
+  geom_smooth(data=filter(wide_div_meta_df, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
+  # Add the R2 and p-value to the plot 
+  annotate("text", x=15, y=50, label=lm_lab_perliter_phyloshan_PA, parse = TRUE, color = "#FF6600", size = 4) +
+  theme(legend.position = "none", axis.title.x = element_blank(), axis.text.x = element_blank()) 
+
+
+################ Shannon vs Per Capitra (Per-Cell) Production 
+## 1. Extract the R2 and p-value from the linear model: 
+lm_lab_percell_phyloshan_PA <- paste("atop(R^2 ==", round(summary(lm_percell_prod_vs_phyloshan_PA)$adj.r.squared, digits = 2), ",",
+             "p ==", round(unname(summary(lm_percell_prod_vs_phyloshan_PA)$coefficients[,4][2]), digits = 3), ")")
+
+## 2. Plot Shannon vs Per Capitra (Per-Cell) Production 
+percell_prod_vs_phyloshan_plot <-   
+  wide_div_meta_df %>%
+  ggplot(aes(x=phylo_shannon, y=log10(fracprod_per_cell_noinf))) + 
+  geom_point(size = 3.5, color = "black", aes(fill = fraction, shape = season)) +
+  scale_color_manual(values = fraction_colors) +
+  scale_fill_manual(values = fraction_colors) +
+  scale_shape_manual(values = season_shapes) +
+  ylab("\n log10(Per-Capita Production)\n (μgC/cell/day)") +
+  xlab("Phylogenetic Exp(Shannon)") +
+  geom_smooth(data=filter(wide_div_meta_df, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
+  scale_x_continuous(limits = phyloshan_limits, breaks = phyloshan_breaks, expand = c(0,0)) + 
+  #scale_y_continuous(limits = c(-8e-7,5e-6), breaks = seq(from = 0, to = 6e-7, by = 3e-7)) + 
+  # Add the R2 and p-value to the plot 
+  annotate("text", x=15, y=-7.5, label=lm_lab_percell_phyloshan_PA, parse = TRUE, color = "#FF6600", size = 4) +
+  theme(legend.title = element_blank(), legend.position = "none")
+
+
+phyloshan_plots <- plot_grid(phyloshan_distribution_plot, prod_vs_phyloshan_plot, percell_prod_vs_phyloshan_plot,
+          #labels = c("B", "D", "F"), 
+          ncol = 1, nrow = 3,
+          rel_heights = c(0.5, 0.8, 1.1),
+          align = "v")
+
+
+
+######################################################### 2D = SIMPSON DIVERSITY (INVERSE SIMPSON)
+######################################################### 2D = SIMPSON DIVERSITY (INVERSE SIMPSON)
+# Set axis scales for phylo_richness
+phylosimps_limits <- c(1, 7)
+phylosimps_breaks <- seq(from = 1, to = 7, by = 1)
+
+phylosimps_fraction_wilcox <- wilcox.test(phylo_simpson ~ fraction, data = wide_div_meta_df)
+phylosimps_fraction_wilcox
+
+wide_div_meta_df %>%
+  group_by(fraction) %>%
+  summarize(mean(phylo_simpson), sd(phylo_simpson), min(phylo_simpson), max(phylo_simpson))
+
+# Make a data frame to draw significance line in boxplot (visually calculated)
+phylosimps_nums <- data.frame(a = c(1.15,1.15,1.85,1.85), b = c(6.1,6.2,6.2,6.1)) # WholePart vs WholeFree
+
+phylosimps_distribution_plot <- 
+  wide_div_meta_df %>%
+  ggplot(aes(y = phylo_simpson, x = fraction)) +
+  scale_fill_manual(values = fraction_colors) +
+  scale_shape_manual(values = season_shapes) +
+  geom_jitter(size = 3,  aes(fill = fraction, shape = season), width = 0.2) + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(fill = fraction)) +
+  scale_y_continuous(limits = phylosimps_limits, breaks = phylosimps_breaks, expand = c(0,0)) + 
+  labs(y = "Phylogenetic Simpson", x = "Fraction") + 
+  geom_path(data = phylosimps_nums, aes(x = a, y = b), linetype = 1, color = "#424645") +
+  annotate("text", x=1.5, y=6.5, size = 4, color = "#424645", label= "NS") +
+  theme(legend.position = "none", #axis.title.y = element_blank(),
+        axis.title.x = element_blank(), axis.text.x = element_blank()) +
+  coord_flip()
+
+
+################ Inverse Simpson vs Community-wide (Per-Liter) Production 
+## 1. Extract the R2 and p-value from the linear model: 
+lm_lab_perliter_phylosimps_PA <- paste("atop(R^2 ==", round(summary(lm_prod_vs_phylosimps_PA)$adj.r.squared, digits = 2), ",",
+             "p ==", round(unname(summary(lm_prod_vs_phylosimps_PA)$coefficients[,4][2]), digits = 2), ")")
+
+## 2. Plot Inverse Simpson vs Community-wide (Per-Liter) Production 
+prod_vs_phylosimps_plot <-  
+  wide_div_meta_df %>%
+  ggplot(aes(x=phylo_simpson, y=frac_bacprod)) + 
   geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod, color = fraction)) +  # Y-axis errorbars
   geom_point(size = 3.5, color = "black", aes(fill = fraction, shape = season)) +
   scale_color_manual(values = fraction_colors) +
   scale_fill_manual(values = fraction_colors) +
   scale_shape_manual(values = season_shapes) +
-  labs(x = "Phylo richness", y = "Community Production \n (μgC/L/day)") + 
-  geom_smooth(data=filter(comb_div_df, fraction == "Particle" & Diversity == "Species richness"), method='lm', color = "#FF6600", fill = "#FF6600") + 
-  annotate("text", x=140, y=50, label=lab_lm_prod_phyrich_PA, parse = TRUE, color = "#FF6600", size = 4)  +
-  theme(legend.position = "none")
+  ylab("Community Production \n (μgC/L/day)") + 
+  xlab("Phylogenetic Simpson") +
+  scale_x_continuous(limits = phylosimps_limits, breaks = phylosimps_breaks, expand = c(0,0)) + 
+  theme(legend.position = "none", axis.title.x = element_blank(), axis.text.x = element_blank()) 
+
+# Summary stats 
+summary(lm(frac_bacprod ~ phylo_simpson, data = filter(wide_div_meta_df, fraction == "Particle")))
+# WITHOUT THE TWO HIGH POINTS 
+summary(lm(frac_bacprod ~ phylo_simpson, data = filter(wide_div_meta_df, fraction == "Particle" & simpson < 70)))
 
 
-# 2. SHANNON PLOT 
-# Extract linear model output 
-lm_prod_physhan_PA <- summary(lm(frac_bacprod ~ hillR_phylo, data = filter(comb_div_df, Diversity == "Shannon diversity" & fraction == "Particle")))
-lm_prod_physhan_PA # Show the stats
-lab_lm_prod_physhan_PA <- paste("atop(R^2 ==", round(lm_prod_physhan_PA$adj.r.squared, digits = 2), ",",
-             "p ==", round(unname(lm_prod_physhan_PA$coefficients[,4][2]), digits = 2), ")"); 
-# Without the outlier sample on the x axis in particle - the trend is actually stronger
-wo_MBREJ515 <- summary(lm(frac_bacprod ~ hillR_phylo, 
-           data = filter(comb_div_df, Diversity == "Shannon diversity" & fraction == "Particle" & norep_filter_name != "MBREJ515")))
-lab_wo_MBREJ515 <- paste("atop(R^2 ==", round(wo_MBREJ515$adj.r.squared, digits = 2), ",",
-             "p ==", round(unname(wo_MBREJ515$coefficients[,4][2]), digits = 2), ")"); 
-paste("With all samples:",lab_lm_prod_physhan_PA, "and without the outlier sample (MBREJ515):", lab_wo_MBREJ515)
+################ Inverse Simpson vs Per Capitra (Per-Cell) Production 
+## 1. Extract the R2 and p-value from the linear model: 
+lm_lab_percell_phylosimps_PA <- paste("atop(R^2 ==", round(summary(lm_percell_prod_vs_phylosimps_PA)$adj.r.squared, digits = 2), ",",
+             "p ==", round(unname(summary(lm_percell_prod_vs_phylosimps_PA)$coefficients[,4][2]), digits = 2), ")")
 
-# Free living
-lm_prod_physhan_FL <- summary(lm(frac_bacprod ~ hillR_phylo, data = filter(comb_div_df, Diversity == "Shannon diversity" & fraction == "Free")))
-lm_prod_physhan_FL # Show the stats
-
-p2_prod_phyloshan <- 
-  comb_div_df %>%
-  dplyr::filter(Diversity == "Shannon diversity") %>%
-  ggplot(aes(x = hillR_phylo, y=frac_bacprod)) + 
-  geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod, color = fraction)) +  # Y-axis errorbars
-  geom_point(size = 3.5, color = "black", aes(fill = fraction, shape = season)) +
-  scale_color_manual(values = fraction_colors) +
-  scale_fill_manual(values = fraction_colors) +
+## 2. Plot Inverse Simpson vs Per Capitra (Per-Cell) Production 
+percell_prod_vs_phylosimps_plot <- 
+  wide_div_meta_df %>%
+  ggplot(aes(x=phylo_simpson, y=log10(fracprod_per_cell_noinf))) + 
+  geom_point(size = 3.5, color = "black", aes(shape = season, fill = fraction)) +
+  scale_color_manual(values = fraction_colors, guide = TRUE) +
+  scale_fill_manual(values = fraction_colors, guide = FALSE) +
   scale_shape_manual(values = season_shapes) +
-  labs(x = "Phylo Shannon", y = "Community Production \n (μgC/L/day)") + 
-  geom_smooth(data=filter(comb_div_df, fraction == "Particle" & Diversity == "Shannon diversity"), method='lm', color = "#FF6600", fill = "#FF6600") + 
-  annotate("text", x=12, y=50, label=lab_lm_prod_physhan_PA, parse = TRUE, color = "#FF6600", size = 4)  +
-  theme(legend.position = "none")
+  ylab("log10(production/cell)\n (μgC/cell/day)") +
+  xlab("Phylogenetic Simpson") +
+  scale_x_continuous(limits = phylosimps_limits, breaks = phylosimps_breaks, expand = c(0,0)) + 
+  geom_smooth(data=filter(wide_div_meta_df, fraction == "Particle"), method='lm', color = "#FF6600", fill = NA, linetype = "dotted") + 
+  # Add the R2 and p-value to the plot 
+  annotate("text", x=5.5, y=-7.5, label=lm_lab_percell_phylosimps_PA, parse = TRUE, color = "#FF6600", size = 4) +
+  guides(color = guide_legend(override.aes = list(shape = 15))) +
+  theme(legend.title = element_blank(), legend.position ="bottom", 
+        legend.text = element_text(size = 14))
 
+# Summary stats 
+summary(lm(log10(fracprod_per_cell_noinf) ~ phylo_simpson, data = filter(wide_div_meta_df, fraction == "Particle")))
 
-# 2. SIMPSON PLOT 
-# Extract linear model output 
-lm_prod_physimps_PA <- summary(lm(frac_bacprod ~ hillR_phylo, data = filter(comb_div_df, Diversity == "Simpson diversity" & fraction == "Particle")))
-lm_prod_physimps_PA # Show the stats
-lm_prod_physimps_FL <- summary(lm(frac_bacprod ~ hillR_phylo, data = filter(comb_div_df, Diversity == "Simpson diversity" & fraction == "Free")))
-lm_prod_physimps_FL # Show the stats
+# WITHOUT THE TWO HIGH POINTS 
+summary(lm(log10(fracprod_per_cell_noinf) ~ phylo_simpson, data = filter(wide_div_meta_df, fraction == "Particle" & simpson < 70)))
 
-p3_prod_phylosimmps <- 
-  comb_div_df %>%
-  dplyr::filter(Diversity == "Simpson diversity") %>%
-  ggplot(aes(x = hillR_phylo, y=frac_bacprod)) + 
-  geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod, color = fraction)) +  # Y-axis errorbars
-  geom_point(size = 3.5, color = "black", aes(fill = fraction, shape = season)) +
-  scale_color_manual(values = fraction_colors) + scale_fill_manual(values = fraction_colors) +
-  scale_shape_manual(values = season_shapes) +
-  labs(x = "Phylo Simpson", y = "Community Production \n (μgC/L/day)") + 
-  theme(legend.position = "none") 
-
-# Put it all together
-BEF_phylo <- plot_grid(p1_prod_phylorich, p2_prod_phyloshan, p3_prod_phylosimmps,
-          labels = c("A", "B", "C"),
-          nrow = 1, ncol = 3); BEF_phylo
+# Plot Inverse simpson plots altogether
+phylosimps_plots <- plot_grid(phylosimps_distribution_plot, prod_vs_phylosimps_plot, percell_prod_vs_phylosimps_plot,
+          labels = c("B", "D", "F"), ncol = 1, nrow = 3,
+          rel_heights = c(0.5, 0.8, 1.1),
+          align = "v")
 ```
+
+
+# Plot Phylodiv
+```{r plot-BEFs-phylodiv, fig.width = 10, fig.height = 7, dependson= "calc-div"}
+# All plots together 
+phylorich_plots <- plot_grid(phylorich_distribution_plot, prod_vs_phylorich_plot, 
+                        percell_prod_vs_phylorich_plot + theme(legend.position = "none"),
+          labels = c("A", "D", "G"), ncol = 1, nrow = 3,
+          rel_heights = c(0.5, 0.8, 1),
+          align = "v")
+
+
+phyloshan_plots_noyaxis <- plot_grid(phyloshan_distribution_plot + 
+                                     theme(axis.title.y = element_blank(), axis.text.y = element_blank(),
+                                           #  specify top, right, bottom, and left margins
+                                           plot.margin = margin(0, 0, 0, 0.6, "cm")), 
+          prod_vs_phyloshan_plot + theme(axis.title.y = element_blank(), axis.text.y = element_blank()), 
+          percell_prod_vs_phyloshan_plot + theme(axis.title.y = element_blank(), axis.text.y = element_blank(), legend.position = "none"),
+          labels = c("B", "E", "H"), 
+          ncol = 1, nrow = 3,
+          rel_heights = c(0.5, 0.8, 1),
+          align = "v")
+
+phylosimps_plots_noyaxis <- 
+  plot_grid(phylosimps_distribution_plot + 
+                                     theme(axis.title.y = element_blank(), axis.text.y = element_blank(),
+                                           #  specify top, right, bottom, and left margins
+                                           plot.margin = margin(0, 0, 0, 0.6, "cm")), 
+            prod_vs_phylosimps_plot + theme(axis.title.y = element_blank(),  axis.text.y = element_blank()), 
+            percell_prod_vs_phylosimps_plot + theme(axis.title.y = element_blank(), axis.text.y = element_blank(), legend.position = "none"), 
+          labels = c("C", "F", "I"), ncol = 1, nrow = 3,
+          rel_heights = c(0.5, 0.8, 1),
+          align = "v")
+
+# Extract distribution plots of richness and inverse simpson
+BEFs_phylodiv <- plot_grid(phylorich_plots, phyloshan_plots_noyaxis, phylosimps_plots_noyaxis,
+          ncol = 3, nrow = 1, rel_widths = c(1, 0.75, 0.75),
+          align = "h")
+
+
+######## PLOT FIGURE 2
+plot_grid(BEFs_phylodiv, season_legend,
+                   ncol = 1, nrow = 2, 
+                   rel_heights = c(1, 0.05))
+```
+
+
+
+# Phylodiv vs ses.MPD
+```{r phylodiv-sesMPD}
+# Is there a relationship between phylogenetic richness (0D) and the unweighted mean pairwise distance?
+# Since it's a general correlation - the linear model will be for 
+summary(lm(unweighted_sesmpd ~ phylo_richness, data = wide_div_meta_df))
+
+wide_div_meta_df %>%
+  ggplot(aes(x = phylo_richness, y = unweighted_sesmpd, fill = fraction)) +
+  geom_point(aes(shape = season)) + 
+  scale_fill_manual(values = fraction_colors) + 
+  scale_shape_manual(values = season_shapes)
+
+summary(lm(weighted_sesmpd ~ phylo_shannon, data = wide_div_meta_df))
+wide_div_meta_df %>%
+  ggplot(aes(x = phylo_shannon, y = weighted_sesmpd, fill = fraction)) +
+  geom_point(aes(shape = season)) + 
+  scale_fill_manual(values = fraction_colors) + 
+  scale_shape_manual(values = season_shapes)
+
+
+summary(lm(weighted_sesmpd ~ phylo_simpson, data = wide_div_meta_df))
+wide_div_meta_df %>%
+  ggplot(aes(x = phylo_simpson, y = weighted_sesmpd, fill = fraction)) +
+  geom_point(aes(shape = season)) + 
+  scale_fill_manual(values = fraction_colors) + 
+  scale_shape_manual(values = season_shapes)
+```
+
+
 
 
 
