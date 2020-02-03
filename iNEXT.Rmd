@@ -541,18 +541,18 @@ plot_grid(rich_title, rich_plotz,
 ```{r lm-models-div}
 # Free-Living samples only 
 div_measures_free <- comb_div_df %>%
-  dplyr::select(fraction, Observed, hillR_phylo, Diversity, frac_bacprod, fracprod_per_cell_noinf) %>%
+  dplyr::select(fraction, Observed, Diversity, frac_bacprod, fracprod_per_cell_noinf) %>%
   filter(fraction == "Free") %>%
   dplyr::select(-fraction)
 # Particle-associated samples only 
 div_measures_part <- comb_div_df %>%
-  dplyr::select(fraction, Observed, hillR_phylo, Diversity, frac_bacprod, fracprod_per_cell_noinf) %>%
+  dplyr::select(fraction, Observed, Diversity, frac_bacprod, fracprod_per_cell_noinf) %>%
   filter(fraction == "Particle") %>%
   dplyr::select(-fraction)
 
 ## All of the samples!
 div_measures_all <- comb_div_df %>%
-  dplyr::select(Observed, Diversity, hillR_phylo, frac_bacprod, fracprod_per_cell_noinf)
+  dplyr::select(Observed, Diversity, frac_bacprod, fracprod_per_cell_noinf)
 
 ########################################################
 ##############  Particle: Community-wide 
@@ -703,7 +703,7 @@ plot_grid(p_commLMs, p_percapLMs, season_legend,
 ```
 
 
-```{r}
+```{r timeseries}
 library(wesanderson)
 
 # Question: Is there a temporal effect on diversity differences between particle
@@ -734,7 +734,7 @@ mean_div_df <- wide_div_meta_df %>%
   annotate("rect", xmin=-Inf, xmax=Inf, ymin=0, ymax=Inf,alpha=0.2,fill="#FF6600")+
   annotate("rect", xmin=-Inf, xmax=Inf, ymin=-Inf, ymax=0,alpha=0.2,fill="skyblue")+
   geom_hline(yintercept = 0, color = "grey") + 
-  geom_point(aes(shape = lakesite), fill = "grey", size = 3) + 
+  geom_jitter(aes(shape = lakesite), fill = "grey", size = 3, width = 0.1) + 
   geom_point(data = mean_div_df, aes(x = season, y = mean_diff), shape = 95, size = 20) +
   geom_line(data = mean_div_df, aes(x = season, y = mean_diff, group = Diversity), size = 1.5, color = "black", alpha = 0.5) + 
   facet_grid(Diversity~., scales = "free") + 
@@ -913,81 +913,98 @@ rich_distribution_plot <-
 
 ################ Richness vs Community-wide (Per-Liter) Production 
 ## 1. Extract the R2 and p-value from the linear model: 
+lm_prod_vs_rich_PA <- lm(frac_bacprod ~ richness, data = filter(wide_div_meta_df, fraction == "Particle"))
 lm_lab_perliter_rich_PA <- paste("atop(R^2 ==", round(summary(lm_prod_vs_rich_PA)$adj.r.squared, digits = 2), ",",
              "p ==", round(unname(summary(lm_prod_vs_rich_PA)$coefficients[,4][2]), digits = 3), ")")
 
 ## 2. Plot Richness vs Community-wide (Per-Liter) Production 
 prod_vs_rich_plot <-  
-  ggplot(richness, aes(x=mean, y=frac_bacprod)) + 
-  geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd, color = fraction), alpha = 0.7) + # X-axis errorbars
-  geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod, color = fraction)) +  # Y-axis errorbars
+  wide_div_meta_df %>%
+  # Fetch the standard error from diversity measure to plot error bars 
+  left_join(filter(div_iNEXT, Diversity == "Species richness"), by = "norep_filter_name") %>%
+  rename(se_iNEXT ="s.e.") %>%
+  ggplot(aes(x=richness, y=frac_bacprod)) + 
+  geom_errorbarh(aes(xmin = richness - se_iNEXT, xmax = richness + se_iNEXT, 
+                     color = fraction), alpha = 0.7) + # X-axis errorbars
+  geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod, 
+                    color = fraction)) +  # Y-axis errorbars
   geom_point(size = 3.5, color = "black", aes(fill = fraction, shape = season)) +
   scale_color_manual(values = fraction_colors) +
   scale_fill_manual(values = fraction_colors) +
   scale_shape_manual(values = season_shapes) +
   ylab("\n Community Production \n (μgC/L/day)") + 
   xlab("Observed Richness") +
-  geom_smooth(data=filter(richness, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
-  scale_x_continuous(limits = c(150,980), breaks = seq(from = 0, to =925, by = 150)) + 
+  geom_smooth(data=filter(wide_div_meta_df, fraction == "Particle"), 
+              method='lm', color = "#FF6600", fill = "#FF6600") + 
+  scale_x_continuous(limits = c(150,1500), breaks = seq(from = 0, to =1500, by = 300)) + 
    # Add the R2 and p-value to the plot 
-  annotate("text", x=790, y=45, label=lm_lab_perliter_rich_PA, parse = TRUE, color = "#FF6600", size = 4) +
+  annotate("text", x=1200, y=50, label=lm_lab_perliter_rich_PA, parse = TRUE, color = "#FF6600", size = 4) +
   theme(legend.position = "none", axis.title.x = element_blank(), axis.text.x = element_blank()) 
 
-
-# Summary stats  
-summary(lm(frac_bacprod ~ mean, data = filter(richness, fraction == "Particle")))
+# Summary stats 
+summary(lm(frac_bacprod ~ richness, data = filter(wide_div_meta_df, fraction == "Particle")))
 
 # WITHOUT THE TWO HIGH POINTS 
-summary(lm(frac_bacprod ~ mean, data = filter(richness, fraction == "Particle" & mean < 800)))  
-
+summary(lm(frac_bacprod ~ richness, data = filter(wide_div_meta_df, fraction == "Particle" & richness < 1000)))
 
 
 ################ Richness vs Per Capita (Per-Cell) Production 
 ## 1. Extract the R2 and p-value from the linear model: 
+lm_percell_prod_vs_rich_PA <- lm(log10(fracprod_per_cell_noinf) ~ richness, data = filter(wide_div_meta_df, fraction == "Particle"))
+
 lm_lab_percell_rich_PA <- paste("atop(R^2 ==", round(summary(lm_percell_prod_vs_rich_PA)$adj.r.squared, digits = 2), ",",
              "p ==", round(unname(summary(lm_percell_prod_vs_rich_PA)$coefficients[,4][2]), digits = 3), ")")
 
 ## 2. Plot Richness vs Per Capita (Per-Cell) Production 
 percell_prod_vs_rich_plot <- 
-  ggplot(richness, aes(x=mean, y=log10(fracprod_per_cell_noinf))) + 
-  geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd, color = fraction), alpha = 0.7) + # X-axis errorbars
+  wide_div_meta_df %>%
+  # Fetch the standard error from diversity measure to plot error bars 
+  left_join(filter(div_iNEXT, Diversity == "Species richness"), by = "norep_filter_name") %>%
+  rename(se_iNEXT ="s.e.") %>%
+  ggplot(aes(x=richness, y=log10(fracprod_per_cell_noinf))) + 
+  geom_errorbarh(aes(xmin = richness - se_iNEXT, xmax = richness + se_iNEXT, 
+                     color = fraction), alpha = 0.7) + # X-axis errorbars
   geom_point(size = 3.5,  color = "black", aes(fill = fraction, shape = season)) +
   scale_color_manual(values = fraction_colors) +
   scale_fill_manual(values = fraction_colors) +
   scale_shape_manual(values = season_shapes) +
   ylab("\n log10(Per-Capita Production)\n (μgC/cell/day)") +
   xlab("Observed Richness") +
-  geom_smooth(data=filter(richness, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
-  scale_x_continuous(limits = c(150,980), breaks = seq(from = 0, to =925, by = 150)) + 
+  geom_smooth(data=filter(wide_div_meta_df, fraction == "Particle"), 
+              method='lm', color = "#FF6600", fill = "#FF6600") + 
+  scale_x_continuous(limits = c(150,1500), breaks = seq(from = 0, to =1500, by = 300)) + 
   #scale_y_continuous(limits = c(-8e-7,5e-6), breaks = seq(from = 0, to = 6e-7, by = 3e-7)) + 
   # Add the R2 and p-value to the plot 
-  annotate("text", x=790, y=-7.5, label=lm_lab_percell_rich_PA, parse = TRUE, color = "#FF6600", size = 4) +
+  annotate("text", x=500, y=-5.75, label=lm_lab_percell_rich_PA, parse = TRUE, color = "#FF6600", size = 4) +
   theme(legend.title = element_blank(), legend.position ="bottom", 
         legend.text = element_text(size = 14))
 
 # Summary stats 
-summary(lm(log10(fracprod_per_cell_noinf) ~ mean, data = filter(richness, fraction == "Particle")))
+summary(lm(log10(fracprod_per_cell_noinf) ~ richness, data = filter(wide_div_meta_df, fraction == "Particle")))
 
 # WITHOUT THE TWO HIGH POINTS 
-summary(lm(log10(fracprod_per_cell_noinf) ~ mean, data = filter(richness, fraction == "Particle" & mean < 800)))
+summary(lm(log10(fracprod_per_cell_noinf) ~ richness, data = filter(wide_div_meta_df, fraction == "Particle" & richness < 1000)))
 
 
 
 
 
-######################################################### SHANNON ENTROPY ######################################################### 
-shannon_fraction_wilcox <- wilcox.test(mean ~ fraction, data = shannon)
+######################################################### 1D = SHANNON DIVERSITY (EXP(SHANNON ENTROPY))
+######################################################### 1D = SHANNON DIVERSITY (EXP(SHANNON ENTROPY))
+shannon_fraction_wilcox <- wilcox.test(shannon ~ fraction, data = wide_div_meta_df)
 shannon_fraction_wilcox   
 
-filter(shannon) %>%
+wide_div_meta_df%>%
   group_by(fraction) %>%
-  summarize(mean(mean), sd(mean))
+  summarize(mean(shannon), sd(shannon), min(shannon), max(shannon))
+
 
 # Make a data frame to draw significance line in boxplot (visually calculated)
 shannon_nums <- data.frame(a = c(1.15,1.15,1.85,1.85), b = c(310, 315, 315, 310)) # WholePart vs WholeFree
 
 shannon_distribution_plot <- 
-  ggplot(shannon, aes(y = mean, x = fraction)) +
+  wide_div_meta_df %>%
+  ggplot(aes(y = shannon, x = fraction)) +
   scale_fill_manual(values = fraction_colors) +
   geom_jitter(size = 3, aes(shape = season, fill = fraction), width = 0.2) + 
   geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(fill = fraction)) +
@@ -1005,13 +1022,19 @@ shannon_distribution_plot <-
 
 ################ Shannon vs Community-wide (Per-Liter) Production 
 ## 1. Extract the R2 and p-value from the linear model: 
+lm_prod_vs_shannon_PA <- lm(frac_bacprod ~ shannon, data = filter(wide_div_meta_df, fraction == "Particle"))
 lm_lab_perliter_shannon_PA <- paste("atop(R^2 ==", round(summary(lm_prod_vs_shannon_PA)$adj.r.squared, digits = 2), ",",
              "p ==", round(unname(summary(lm_prod_vs_shannon_PA)$coefficients[,4][2]), digits = 3), ")")
 
 ## 2. Plot Shannon vs Community-wide (Per-Liter) Production 
 prod_vs_shannon_plot <-  
-  ggplot(shannon, aes(x=mean, y=frac_bacprod)) + 
-  geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd, color = fraction), alpha = 0.7) + # X-axis errorbars
+  wide_div_meta_df %>%
+  # Fetch the standard error from diversity measure to plot error bars 
+  left_join(filter(div_iNEXT, Diversity == "Shannon diversity"), by = "norep_filter_name") %>%
+  rename(se_iNEXT ="s.e.") %>%
+  ggplot(aes(x=shannon, y=frac_bacprod)) + 
+  geom_errorbarh(aes(xmin = shannon - se_iNEXT, xmax = shannon + se_iNEXT, 
+                     color = fraction), alpha = 0.7) + # X-axis errorbars
   geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod, color = fraction)) +  # Y-axis errorbars
   geom_point(size = 3.5, color = "black", aes(fill = fraction, shape = season)) +
   scale_color_manual(values = fraction_colors) +
@@ -1020,7 +1043,7 @@ prod_vs_shannon_plot <-
   ylab("\n Community Production \n (μgC/L/day)") + 
   scale_x_continuous(limits = c(0,325), breaks = seq(from = 0, to = 300, by = 50)) + 
   xlab("Exp(Shannon)") +
-  geom_smooth(data=filter(shannon, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
+  geom_smooth(data=filter(wide_div_meta_df, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
   # Add the R2 and p-value to the plot 
   annotate("text", x=250, y=45, label=lm_lab_perliter_shannon_PA, parse = TRUE, color = "#FF6600", size = 4) +
   theme(legend.position = "none", axis.title.x = element_blank(), axis.text.x = element_blank()) 
@@ -1028,20 +1051,27 @@ prod_vs_shannon_plot <-
 
 ################ Shannon vs Per Capitra (Per-Cell) Production 
 ## 1. Extract the R2 and p-value from the linear model: 
+lm_percell_prod_vs_shannon_PA <- lm(log10(fracprod_per_cell_noinf) ~ shannon, data = filter(wide_div_meta_df, fraction == "Particle"))
+
 lm_lab_percell_shannon_PA <- paste("atop(R^2 ==", round(summary(lm_percell_prod_vs_shannon_PA)$adj.r.squared, digits = 2), ",",
              "p ==", round(unname(summary(lm_percell_prod_vs_shannon_PA)$coefficients[,4][2]), digits = 3), ")")
 
 ## 2. Plot Shannon vs Per Capitra (Per-Cell) Production 
-percell_prod_vs_shannon_plot <- 
-  ggplot(shannon, aes(x=mean, y=log10(fracprod_per_cell_noinf))) + 
-  geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd, color = fraction), alpha = 0.7) + # X-axis errorbars
+percell_prod_vs_shannon_plot <-   
+  wide_div_meta_df %>%
+  # Fetch the standard error from diversity measure to plot error bars 
+  left_join(filter(div_iNEXT, Diversity == "Shannon diversity"), by = "norep_filter_name") %>%
+  rename(se_iNEXT ="s.e.") %>%
+  ggplot(aes(x=shannon, y=log10(fracprod_per_cell_noinf))) + 
+  geom_errorbarh(aes(xmin = shannon - se_iNEXT, xmax = shannon + se_iNEXT, 
+                     color = fraction), alpha = 0.7) +
   geom_point(size = 3.5, color = "black", aes(fill = fraction, shape = season)) +
   scale_color_manual(values = fraction_colors) +
   scale_fill_manual(values = fraction_colors) +
   scale_shape_manual(values = season_shapes) +
   ylab("\n log10(Per-Capita Production)\n (μgC/cell/day)") +
   xlab("Exp(Shannon)") +
-  geom_smooth(data=filter(shannon, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
+  geom_smooth(data=filter(wide_div_meta_df, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
   scale_x_continuous(limits = c(0,325), breaks = seq(from = 0, to = 300, by = 50)) + 
   #scale_y_continuous(limits = c(-8e-7,5e-6), breaks = seq(from = 0, to = 6e-7, by = 3e-7)) + 
   # Add the R2 and p-value to the plot 
@@ -1056,19 +1086,22 @@ shannon_plots <- plot_grid(shannon_distribution_plot, prod_vs_shannon_plot, perc
           align = "v")
 
 
-######################################################### INVERSE SIMPSON ######################################################### 
-invsimps_fraction_wilcox <- wilcox.test(mean ~ fraction, data = invsimps)
+
+######################################################### 2D = SIMPSON DIVERSITY (INVERSE SIMPSON)
+######################################################### 2D = SIMPSON DIVERSITY (INVERSE SIMPSON)
+invsimps_fraction_wilcox <- wilcox.test(simpson ~ fraction, data = wide_div_meta_df)
 invsimps_fraction_wilcox
 
-filter(invsimps) %>%
+wide_div_meta_df %>%
   group_by(fraction) %>%
-  summarize(mean(mean), sd(mean))
+  summarize(mean(simpson), sd(simpson), min(simpson), max(simpson))
 
 # Make a data frame to draw significance line in boxplot (visually calculated)
 invsimps_nums <- data.frame(a = c(1.15,1.15,1.85,1.85), b = c(83,85,85,83)) # WholePart vs WholeFree
 
 invsimps_distribution_plot <- 
-  ggplot(invsimps, aes(y = mean, x = fraction)) +
+  wide_div_meta_df %>%
+  ggplot(aes(y = simpson, x = fraction)) +
   scale_fill_manual(values = fraction_colors) +
   scale_shape_manual(values = season_shapes) +
   geom_jitter(size = 3,  aes(fill = fraction, shape = season), width = 0.2) + 
@@ -1084,13 +1117,19 @@ invsimps_distribution_plot <-
 
 ################ Inverse Simpson vs Community-wide (Per-Liter) Production 
 ## 1. Extract the R2 and p-value from the linear model: 
+lm_prod_vs_invsimps_PA <- lm(frac_bacprod ~ simpson, data = filter(wide_div_meta_df, fraction == "Particle"))
 lm_lab_perliter_invsimps_PA <- paste("atop(R^2 ==", round(summary(lm_prod_vs_invsimps_PA)$adj.r.squared, digits = 2), ",",
              "p ==", round(unname(summary(lm_prod_vs_invsimps_PA)$coefficients[,4][2]), digits = 4), ")")
 
 ## 2. Plot Inverse Simpson vs Community-wide (Per-Liter) Production 
 prod_vs_invsimps_plot <-  
-  ggplot(invsimps, aes(x=mean, y=frac_bacprod)) + 
-  geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd, color = fraction), alpha = 0.7) + # X-axis errorbars
+   wide_div_meta_df %>%
+  # Fetch the standard error from diversity measure to plot error bars 
+  left_join(filter(div_iNEXT, Diversity == "Simpson diversity"), by = "norep_filter_name") %>%
+  rename(se_iNEXT ="s.e.") %>%
+  ggplot(aes(x=simpson, y=frac_bacprod)) + 
+  geom_errorbarh(aes(xmin = simpson - se_iNEXT, xmax = simpson + se_iNEXT, 
+                     color = fraction), alpha = 0.7) + # X-axis errorbars
   geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod, color = fraction)) +  # Y-axis errorbars
   geom_point(size = 3.5, color = "black", aes(fill = fraction, shape = season)) +
   scale_color_manual(values = fraction_colors) +
@@ -1098,35 +1137,42 @@ prod_vs_invsimps_plot <-
   scale_shape_manual(values = season_shapes) +
   ylab("Community Production \n (μgC/L/day)") + 
   xlab("Inverse Simpson") +
-  geom_smooth(data=filter(invsimps, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
+  geom_smooth(data=filter(wide_div_meta_df, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
   scale_x_continuous(limits = c(0,85), breaks = seq(from = 0, to = 85, by = 20)) + 
   # Add the R2 and p-value to the plot 
   annotate("text", x=70, y=45, label=lm_lab_perliter_invsimps_PA, parse = TRUE, color = "#FF6600", size = 4) +
   theme(legend.position = "none", axis.title.x = element_blank(), axis.text.x = element_blank()) 
 
 # Summary stats 
-summary(lm(frac_bacprod ~ mean, data = filter(invsimps, fraction == "Particle")))
+summary(lm(frac_bacprod ~ simpson, data = filter(wide_div_meta_df, fraction == "Particle")))
 
 # WITHOUT THE TWO HIGH POINTS 
-summary(lm(frac_bacprod ~ mean, data = filter(invsimps, fraction == "Particle" & mean < 70)))
+summary(lm(frac_bacprod ~ simpson, data = filter(wide_div_meta_df, fraction == "Particle" & simpson < 70)))
 
 
 ################ Inverse Simpson vs Per Capitra (Per-Cell) Production 
 ## 1. Extract the R2 and p-value from the linear model: 
+lm_percell_prod_vs_invsimps_PA <- lm(log10(fracprod_per_cell_noinf) ~ simpson, data = filter(wide_div_meta_df, fraction == "Particle"))
+
 lm_lab_percell_invsimps_PA <- paste("atop(R^2 ==", round(summary(lm_percell_prod_vs_invsimps_PA)$adj.r.squared, digits = 2), ",",
              "p ==", round(unname(summary(lm_percell_prod_vs_invsimps_PA)$coefficients[,4][2]), digits = 4), ")")
 
 ## 2. Plot Inverse Simpson vs Per Capitra (Per-Cell) Production 
 percell_prod_vs_invsimps_plot <- 
-  ggplot(invsimps, aes(x=mean, y=log10(fracprod_per_cell_noinf), fill = fraction, color = fraction)) + 
-  geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd, color = fraction), alpha = 0.7) + # X-axis errorbars
-  geom_point(size = 3.5, color = "black", aes(shape = season)) +
+  wide_div_meta_df %>%
+  # Fetch the standard error from diversity measure to plot error bars 
+  left_join(filter(div_iNEXT, Diversity == "Simpson diversity"), by = "norep_filter_name") %>%
+  rename(se_iNEXT ="s.e.") %>%
+  ggplot(aes(x=simpson, y=log10(fracprod_per_cell_noinf))) + 
+  geom_errorbarh(aes(xmin = simpson - se_iNEXT, xmax = simpson + se_iNEXT, 
+                     color = fraction), alpha = 0.7) + # X-axis errorbars
+  geom_point(size = 3.5, color = "black", aes(shape = season, fill = fraction)) +
   scale_color_manual(values = fraction_colors, guide = TRUE) +
   scale_fill_manual(values = fraction_colors, guide = FALSE) +
   scale_shape_manual(values = season_shapes) +
   ylab("log10(production/cell)\n (μgC/cell/day)") +
   xlab("Inverse Simpson") +
-  geom_smooth(data=filter(invsimps, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
+  geom_smooth(data=filter(wide_div_meta_df, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
   scale_x_continuous(limits = c(0,85), breaks = seq(from = 0, to = 85, by = 20)) + 
   #scale_y_continuous(limits = c(-8e-7,5e-6), breaks = seq(from = 0, to = 6e-7, by = 3e-7)) + 
   # Add the R2 and p-value to the plot 
@@ -1136,18 +1182,60 @@ percell_prod_vs_invsimps_plot <-
         legend.text = element_text(size = 14))
 
 # Summary stats 
-summary(lm(log10(fracprod_per_cell_noinf) ~ mean, data = filter(invsimps, fraction == "Particle")))
+summary(lm(log10(fracprod_per_cell_noinf) ~ simpson, data = filter(wide_div_meta_df, fraction == "Particle")))
 
 # WITHOUT THE TWO HIGH POINTS 
-summary(lm(log10(fracprod_per_cell_noinf) ~ mean, data = filter(invsimps, fraction == "Particle" & mean < 70)))
-summary(lm(log10(fracprod_per_cell_noinf) ~ mean, data = filter(invsimps, fraction == "Particle" & mean < 70 & log10(fracprod_per_cell_noinf) < 1e-7)))
-
+summary(lm(log10(fracprod_per_cell_noinf) ~ simpson, data = filter(wide_div_meta_df, fraction == "Particle" & simpson < 70)))
 
 # Plot Inverse simpson plots altogether
 invsimps_plots <- plot_grid(invsimps_distribution_plot, prod_vs_invsimps_plot, percell_prod_vs_invsimps_plot,
           labels = c("B", "D", "F"), ncol = 1, nrow = 3,
           rel_heights = c(0.5, 0.8, 1.1),
           align = "v")
+```
+
+# Figure 2
+```{r Figure2, fig.width = 10, fig.height = 7, dependson= "calc-div"}
+# All plots together 
+rich_plots <- plot_grid(rich_distribution_plot, prod_vs_rich_plot, 
+                        percell_prod_vs_rich_plot + theme(legend.position = "none"),
+          labels = c("A", "D", "G"), ncol = 1, nrow = 3,
+          rel_heights = c(0.5, 0.8, 1),
+          align = "v")
+
+
+shannon_plots_noyaxis <- plot_grid(shannon_distribution_plot + 
+                                     theme(axis.title.y = element_blank(), axis.text.y = element_blank(),
+                                           #  specify top, right, bottom, and left margins
+                                           plot.margin = margin(0, 0, 0, 0.6, "cm")), 
+          prod_vs_shannon_plot + theme(axis.title.y = element_blank(), axis.text.y = element_blank()), 
+          percell_prod_vs_shannon_plot + theme(axis.title.y = element_blank(), axis.text.y = element_blank(), legend.position = "none"),
+          labels = c("B", "E", "H"), 
+          ncol = 1, nrow = 3,
+          rel_heights = c(0.5, 0.8, 1),
+          align = "v")
+
+invsimps_plots_noyaxis <- 
+  plot_grid(invsimps_distribution_plot + 
+                                     theme(axis.title.y = element_blank(), axis.text.y = element_blank(),
+                                           #  specify top, right, bottom, and left margins
+                                           plot.margin = margin(0, 0, 0, 0.6, "cm")), 
+            prod_vs_invsimps_plot + theme(axis.title.y = element_blank(),  axis.text.y = element_blank()), 
+            percell_prod_vs_invsimps_plot + theme(axis.title.y = element_blank(), axis.text.y = element_blank(), legend.position = "none"), 
+          labels = c("C", "F", "I"), ncol = 1, nrow = 3,
+          rel_heights = c(0.5, 0.8, 1),
+          align = "v")
+
+# Extract distribution plots of richness and inverse simpson
+figure2_row1 <- plot_grid(rich_plots, shannon_plots_noyaxis, invsimps_plots_noyaxis,
+          ncol = 3, nrow = 1, rel_widths = c(1, 0.75, 0.75),
+          align = "h")
+
+
+######## PLOT FIGURE 2
+plot_grid(figure2_row1, season_legend,
+                   ncol = 1, nrow = 2, 
+                   rel_heights = c(1, 0.05))
 ```
 
 
