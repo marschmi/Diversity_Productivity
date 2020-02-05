@@ -522,7 +522,7 @@ calc_mean_alphadiv <- function(physeq, richness_df, simpson_df, exp_shannon_df){
   mean <- apply(simpson_df, 1, mean)
   sd <- apply(simpson_df, 1, sd)
   measure <- rep("Inverse_Simpson", nsamp)
-  otu_even_stats <- data.frame(norep_filter_name, mean, sd, measure)
+  otu_simps_stats <- data.frame(norep_filter_name, mean, sd, measure)
   
   # Create a new dataframe to hold the means and standard deviations of shannon entropy estimates
   mean <- apply(exp_shannon_df, 1, mean)
@@ -530,21 +530,8 @@ calc_mean_alphadiv <- function(physeq, richness_df, simpson_df, exp_shannon_df){
   measure <- rep("Exponential_Shannon", nsamp)
   otu_shan_stats <- data.frame(norep_filter_name, mean, sd, measure)
   
-  # Create a new dataframe to hold the means and standard deviations of simpsons evenness estimates
-  mean <- apply(simpson_df, 1, mean)
-  sd <- apply(simpson_df, 1, sd)
-  measure <- rep("Inverse_Simpson", nsamp)
-  otu_simpseven_stats <- data.frame(norep_filter_name, mean, sd, measure)
-  
-  # Calculate Simpson's Evenness into new df called "simps_evenness"
-  otu_simps_evenness <- inner_join(otu_rich_stats, otu_even_stats, by = "norep_filter_name") %>%
-    mutate(mean = mean.y/mean.x,
-           sd = sd(mean),
-           measure = "Simpsons_Evenness") %>%
-    dplyr::select(norep_filter_name, mean, sd, measure)
-  
   # Combine alpha diversity into one dataframe 
-  otu_alpha <- rbind(otu_rich_stats, otu_even_stats, otu_simps_evenness, otu_shan_stats)
+  otu_alpha <- rbind(otu_rich_stats, otu_simps_stats, otu_shan_stats)
   s <- data.frame(sample_data(physeq))
   otu_alphadiv <- merge(otu_alpha, s, by = "norep_filter_name")
   
@@ -573,7 +560,7 @@ calc_mean_alphadiv <- function(physeq, richness_df, simpson_df, exp_shannon_df){
     # A named list of three matrices where:
           # Matrix 1  = Richness
           # Matrix 2  = Inverse Simpson
-          # Matrix 3  = Shannon Entropy
+          # Matrix 3  = Exp(Shannon Entropy)
 
 calc_alpha_diversity <- function(physeq, iters = 100){
 

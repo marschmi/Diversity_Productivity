@@ -130,7 +130,7 @@ scaled_enviro <- scale(environmental_data)
 apply(scaled_enviro, 2, mean)
 apply(scaled_enviro, 2, sd)
 
-# Run a principal component analysis via the vegan package
+# Run a redundnacy analysis (RDA) to extract the variation in the set of response variables 
 pca_environ <- rda(scaled_enviro) 
 
 # What is the proportion explained by each of the PCA axes? 
@@ -150,10 +150,8 @@ metadata_pca <- metadata %>%
 ```
 
 
-# Calculate Diversity
-## Hill Diversity Metrics 
-#### Calculate diversity with the iNEXT package
-
+## Calculate Hill Diversity
+#### Hill diversity with the iNEXT package
 ```{r iNEXT-data}
 # Prepare the input data for iNEXT
 iNEXT_input_table <- otu_table(surface_PAFL_otu_pruned_rm2) %>%
@@ -175,9 +173,8 @@ div_iNEXT <- iNEXT_data$AsyEst %>%
 ```
 
 
-# Phylogenetic Diversity (PD)
-## Calculate PD
-
+## Calculate Phylo Hill Diversity
+#### Phylogenetic Hill diversity with the hillR package
 ```{r calc-hillR}
 # Here I will use hillR to calculate the phylogenetic diversity,
 # which uses an extension of the hill numbers 
@@ -215,7 +212,7 @@ hillR_output <- read.csv("data/iNEXT/hillR_output.csv") %>%
   spread(key = Diversity, value = hillR_phylo)
 ```
 
-## Put together the diversity dataframes into one
+#### Put together the diversity dataframes into one
 ```{r combine-diversity-dfs-prep}
 # COMBINE iNEXT AND hillR DATA - should now be 144 rows
 div_df <- 
@@ -229,8 +226,8 @@ div_df <-
   left_join(hillR_output)
 ```
 
-## Correlations between phylogenetic & non-phylo Hill numbers
-```{r corr-hill-phylo, fig.width=8, fig.height = 3.5}
+#### Correlations between phylogenetic & non-phylo Hill numbers
+```{r corr-hill-phylo, fig.width=8, fig.height = 3}
 # Calculate R2 and pval for  it
 lm_phylo_rich <- summary(lm(phylo_richness ~ richness, data =div_df))
 lm_phylo_shan <- summary(lm(phylo_shannon ~ shannon, data = div_df))
@@ -245,8 +242,8 @@ p1_phylo_rich <-
   div_df %>%
   ggplot(aes(x = richness, y = phylo_richness)) + 
   geom_point() + geom_smooth(method = "lm") +
-  labs(x = expression(textstyle("Observed Richness")~{}^0*italic(D)), 
-       y = expression(textstyle("Phylogenetic")~{}^0*italic(D))) +
+  labs(x = expression({}^0*italic(D)), 
+       y = expression(~{}^0*italic(PD))) +
   annotate("text", x=600, y=150, label=lab_lm_phylo_rich, parse = TRUE, color = "blue", size = 4) 
 
 # 2. SHANNON PLOT 
@@ -257,8 +254,8 @@ p2_phylo_shan <-
   div_df %>%
   ggplot(aes(x = shannon, y = phylo_shannon)) + 
   geom_point() + geom_smooth(method = "lm") +
-  labs(x = expression(textstyle("Shannon Index")~{}^1*italic(D)), 
-       y = expression(textstyle("Phylogenetic")~{}^1*italic(D))) +
+  labs(x = expression(~{}^1*italic(D)), 
+       y = expression(~{}^1*italic(PD))) +
   annotate("text", x=100, y=15, label=lab_lm_phylo_shan, parse = TRUE, color = "blue", size = 4) 
 
 # 3. SIMPSON PLOT 
@@ -269,8 +266,8 @@ p3_phylo_simps <-
   div_df %>%
   ggplot(aes(x = simpson, y = phylo_simpson)) + 
   geom_point() + geom_smooth(method = "lm") +
-  labs(x = expression(textstyle("Simpson Index")~{}^2*italic(D)), 
-       y = expression(textstyle("Phylogenetic")~{}^2*italic(D))) +
+  labs(x = expression(~{}^2*italic(D)), 
+       y = expression(~{}^2*italic(PD))) +
   annotate("text", x=30, y=6, label=lab_lm_phylo_simps, parse = TRUE, color = "blue", size = 4) 
 
 # Put the plots together
@@ -279,9 +276,7 @@ coors_doubleton <- plot_grid(p1_phylo_rich, p2_phylo_shan, p3_phylo_simps,
           nrow = 1, ncol = 3); coors_doubleton
 ```
 
-
-## Mean Phylogenetic Pairwise Distance (ses.MPD)
-## Calculate the Phylogenetic Diversity
+## Mean Pairwise Distance 
 ```{r calc-sesmpd, fig.width = 4, fig.height = 4}  
 # Read in the tree 
 #RAREFIED_rm2_fasttree <- read.tree(file = "data/PhyloTree/newick_tree_rm2_rmN.tre")
@@ -335,8 +330,7 @@ coors_doubleton <- plot_grid(p1_phylo_rich, p2_phylo_shan, p3_phylo_simps,
 #write.csv(div_df, file = "data/iNEXT/diversity_measures.csv", quote = FALSE, row.names = FALSE)
 ```
 
-
-# Combine dataframes
+#### Final dataframe
 ```{r combine-diversity-dfs-final}
 div_df <- read.csv(file = "data/iNEXT/diversity_measures.csv")
 
@@ -354,156 +348,36 @@ div_df_frac <- metadata %>%
   dplyr::select(norep_filter_name, fraction, season) %>%
   right_join(div_iNEXT, by = "norep_filter_name")
 
+## The following data will the be primary dataframe used in this analysis
 # Wide format dataframe for plotting
 wide_div_meta_df <- div_df %>%
   left_join(metadata_pca, by = "norep_filter_name")
+
+
+### BASIC STATS OF PRODUCTION AND # OF CELL
+std <- function(x) sd(x)/sqrt(length(x))
+# For the beginning of the results section 
+wide_div_meta_df %>%
+  group_by(fraction) %>%
+  summarize(avg_cells_per_mL = mean(fraction_bac_abund), 
+            se_cells_per_mL = std(fraction_bac_abund), 
+            avg_community_prod = mean(frac_bacprod),
+            se_community_prod = std(frac_bacprod))
+
+wide_div_meta_df %>%
+  dplyr::filter(norep_filter_name != "MOTEJ515") %>%
+  group_by(fraction) %>%
+  summarize(avg_log10_percap_prod = mean(log10(fracprod_per_cell)),
+            se_log10_percap_prod = std(log10(fracprod_per_cell)))
 ```
 
-# Lasso Regressions
-#### Prepare data for lasso 
-```{r prep-lasso}
-# The lasso regression needs datasets that are wide formatted
-lasso_cols_remove <- c("project", "year", "Date", "limnion", "dnaconcrep1", "perc_attached_bacprod",
-                       "SD_perc_attached_bacprod", "SE_total_bac_abund", "SE_perc_attached_abund", "SE_attached_bac",
-                       "tot_bacprod", "SD_tot_bacprod","SD_frac_bacprod", "BGA_cellspermL", "Turb_NTU", 
-                       "lakesite", "season", "station")
-
-### PARTICLE DATA = 12 samples 
-# Note: Even though in the inclusion of MOTEJ515 doesn't have the bacterial counts, 
-# the results from this lasso regression does not change. 
-lasso_data_df_particle <- wide_div_meta_df %>%
-  filter(fraction == "Particle" ) %>%
-  dplyr::select(-c(fraction, lasso_cols_remove)) 
-
-lasso_data_df_particle_noprod <- lasso_data_df_particle %>%
-  dplyr::select(-c(fracprod_per_cell, fracprod_per_cell_noinf, norep_filter_name, norep_water_name)) 
-  
-### FREE DATA 
-# Note: Even though in the inclusion of MOTEJ515 doesn't have the bacterial counts, 
-# the results from this lasso regression does not change. 
-lasso_data_df_free <- wide_div_meta_df %>%
-  filter(fraction == "Free" ) %>%
-  dplyr::select(-c(fraction, lasso_cols_remove)) 
-
-lasso_data_df_free_noprod <- lasso_data_df_free %>%
-  dplyr::select(-c(fracprod_per_cell, fracprod_per_cell_noinf, norep_filter_name, norep_water_name)) 
-```
-
-
-## Run Lasso regression
-#### Community Production: Particle 
-```{r comm-part-lasso,fig.width=8, fig.height=4, warning = TRUE}
-# Set the seed for reproducibility of the grid values 
-set.seed(777) 
-
-################ PREPARE DATA ################ 
-# Subset data needed and scale all o
-scaled_comm_data <- 
-  lasso_data_df_particle_noprod %>%    # Use data only for the particle samples  
-  scale() %>%                          # Scale all of the variables to have mean =0 and sd = 1
-  as.data.frame()                      # Make it a dataframe so that model.matrix function works (does not take a matrix)
-
-# Set model parameters for community level data
-## NOTE: there cannot be any data with NA
-x = model.matrix(frac_bacprod ~ ., scaled_comm_data)[,-1]
-y = scaled_comm_data$frac_bacprod
-grid = 10^seq(10,-2,length = 100)
-
-################ PREPARE TRAINING & TESTING DATA FOR CROSS VALIDATION ################ 
-# Pull out test and training sets for cross validation
-# We will use half the set to train the model and the 2nd half of the dataset to test the model 
-train <- sample(1:nrow(x), nrow(x)/2)
-test <- -train
-y_test <- y[test]
-
-################ LASSO ################ 
-# Run lasso regression with alpha = 1
-lasso_divs_train <- glmnet(x[train,], y[train], alpha = 1, lambda = grid, standardize = FALSE)
-par(mfrow = c(1,2))
-plot(lasso_divs_train)
-
-# Cross validation
-cv_lasso_divs <- cv.glmnet(x[train,], y[train], alpha = 1)
-plot(cv_lasso_divs)
-best_lasso_lambda <- cv_lasso_divs$lambda.min # Minimum lambda
-# https://stats.stackexchange.com/questions/138569/why-is-lambda-plus-1-standard-error-a-recommended-value-for-lambda-in-an-elastic
-lasso_lambda_1se <- cv_lasso_divs$lambda.1se # simplest model whose accuracy is comparable with the best model
-best_lasso_lambda == lasso_lambda_1se
-
-lasso_divs_pred <- predict(lasso_divs_train, s = best_lasso_lambda, newx = x[test,])
-mean((lasso_divs_pred - y_test)^2) # Test
-
-## Run lasso on the entire dataset with the best lambda value 
-lasso_divs <- glmnet(x, y, alpha = 1, lambda = best_lasso_lambda, standardize = FALSE)
-# What are the lasso coefficients? (Anything with a . is not selected by the model)
-predict(lasso_divs, type = "coefficients", s = best_lasso_lambda)
-
-## Now, run the most simple, parsimonious lasso model within 1 standard error  
-## IMPORTANT NOTE: This is the lasso reported within the manuscript
-lasso_divs_1se <- glmnet(x, y, alpha = 1, lambda = lasso_lambda_1se, standardize = FALSE)
-# What are the lasso coefficients? (Anything with a . is not selected by the model)
-predict(lasso_divs_1se, type = "coefficients", s = lasso_lambda_1se)
-```
-
-#### Community-Wide Production: Free
-```{r comm-free-lasso, fig.width=8, fig.height=4, warning = TRUE}
-# Set the seed for reproducibility of the grid values 
-set.seed(777) 
-     
-################ PREPARE DATA ################ 
-# Subset data needed and scale all o
-scaled_comm_data_free <- 
-  lasso_data_df_free_noprod %>%        # Use data only for the free-living samples  
-  scale() %>%                          # Scale all of the variables to have mean = 0 and sd = 1
-  as.data.frame()                      # Make it a dataframe so that model.matrix function works (does not take a matrix)
-
-# Set model parameters for community level data
-## NOTE: there cannot be any data with NA
-free_x <- model.matrix(frac_bacprod ~ ., scaled_comm_data_free)[,-1]
-free_y <- scaled_comm_data_free$frac_bacprod
-free_grid <- 10^seq(10,-2,length = 100)
-
-################ PREPARE TRAINING & TESTING DATA FOR CROSS VALIDATION ################ 
-# Pull out test and training sets for cross validation
-# We will use half the set to train the model and the 2nd half of the dataset to test the model 
-free_train <- sample(1:nrow(free_x), nrow(free_x)/2)
-free_test <- -free_train
-free_y_test <- free_y[free_test]
-
-################ LASSO ################ 
-# Run lasso regression with alpha = 1
-lasso_divs_train_free_comm <- glmnet(free_x[free_train,], free_y[free_train], alpha = 1, lambda = free_grid, standardize = FALSE)
-par(mfrow = c(1,2))
-plot(lasso_divs_train_free_comm)
-
-# Cross validation
-free_cv_lasso_divs <- cv.glmnet(free_x[free_train,], free_y[free_train], alpha = 1)
-plot(free_cv_lasso_divs)
-free_best_lasso_lambda <- free_cv_lasso_divs$lambda.min
-# https://stats.stackexchange.com/questions/138569/why-is-lambda-plus-1-standard-error-a-recommended-value-for-lambda-in-an-elastic
-free_lasso_lambda_1se <- free_cv_lasso_divs$lambda.1se # simplest model whose accuracy is comparable with the best model
-free_best_lasso_lambda == free_lasso_lambda_1se
-free_lasso_divs_pred <- predict(lasso_divs_train_free_comm, s = free_best_lasso_lambda, newx = free_x[free_test,])
-mean((free_lasso_divs_pred - y_test)^2) # Test
-
-## Run lasso on the entire dataset with the best lambda value 
-free_lasso_divs <- glmnet(free_x, free_y, alpha = 1, lambda = free_best_lasso_lambda, standardize = FALSE)
-# What are the lasso coefficients? (Anything with a . is not selected by the model)
-predict(free_lasso_divs, type = "coefficients", s = free_best_lasso_lambda)
- 
-## Now, run the most simple, parsimonious lasso model within 1 standard error  
-## IMPORTANT NOTE: This is the lasso reported within the manuscript
-free_lasso_divs_1se <- glmnet(free_x, free_y, alpha = 1, lambda = free_lasso_lambda_1se, standardize = FALSE)
-# What are the lasso coefficients? (Anything with a . is not selected by the model)
-predict(free_lasso_divs_1se, type = "coefficients", s = free_lasso_lambda_1se)
-```
 
 # Main Figures
 ####  Have a legend for all plots 
 
 Since there's a set parameter in  `set_colors.R` file that was sourced at the beginning, we can use this throughout to can assure that the below legends will represent the legends called afterwards. 
 ```{r legends}
-####### Legend for lakesite
+####### Legend for season
 legend_plot <- ggplot(metadata, aes(y = frac_bacprod, x = fraction, fill = fraction, shape = season)) + 
   geom_jitter(size = 3, width = 0.2) + 
   scale_fill_manual(values = fraction_colors, guide = guide_legend(override.aes = list(shape = 22, size = 4))) +
@@ -512,7 +386,8 @@ legend_plot <- ggplot(metadata, aes(y = frac_bacprod, x = fraction, fill = fract
         legend.title = element_blank(), legend.justification="center",
         plot.margin = unit(c(0.2,0.2,1,0.2), "cm")) # top, right, bottom, and left margins
 # Extract the legend
-season_legend <- cowplot::get_legend(legend_plot)
+season_legend <- cowplot::get_legend(legend_plot + theme(legend.direction = "horizontal",legend.justification="center" ,legend.box.just = "bottom"))
+
 
 ####### Legend for lakesite
 lakesite_legend <- ggplot(metadata, aes(y = frac_bacprod, x = fraction, fill = fraction, shape = lakesite)) + 
@@ -636,104 +511,7 @@ metadata %>%
             log10_avg_percell_prod = log10(avg_percell_prod))
 ```
 
-
-# iNEXT figures
-```{r plot-iNEXT, fig.width = 10, fig.height = 4.5}
-# h = 0 = richness
-# h = 1 = exp(Shannon)
-# h = 2 = Inverse Simpsons
-
-# Prepare data to color the figure for iNEXT
-dat <- colnames(iNEXT_input_table) %>%	
-  data.frame() 	
-colnames(dat)[1] <- "norep_filter_name"  	
-sub_metadata <- metadata[,1:6] %>%	
-  tibble::rownames_to_column(var = "norep_filter_name")
-
-# Combine for plotting below
-dat_iNEXT <- dat %>%	
-  left_join(sub_metadata, by = "norep_filter_name") %>%	 
-  mutate(fraction_color = ifelse(fraction == "Particle", "#FF6600", "skyblue"), 	  
-         shape = ifelse(season == "Spring", 25, 	        
-                        ifelse(season == "Summer", 23, 	                       
-                               21)),	                              
-         station_color = ifelse(lakesite == "Bear", "black", 	         
-                                ifelse(lakesite == "Deep", "blue",	                               
-                                       ifelse(lakesite == "Outlet", "skyblue",	                                       
-                                              "forestgreen"))),	                                             
-         season_color = ifelse(season == "Spring", "skyblue", 	       
-                               ifelse(season == "Summer", "forestgreen",	                               
-                                      "orange")))
-
-# Sample‐size‐based R/E curves, separating by "site""
-p_iNEXT <- ggiNEXT(iNEXT_data, type=1, facet.var="order") + facet_wrap(~order, scales="free") +
-  scale_shape_manual(values = dat_iNEXT$shape, guide = FALSE) +
-  scale_color_manual(values = dat_iNEXT$fraction_color,  guide = FALSE) +
-  scale_fill_manual(values = dat_iNEXT$fraction_color, guide = FALSE) +
-  theme(legend.position = "none") +
-  labs(title = "Hill Diversity Metrics") +
-  theme(plot.title = element_text()); 
-
-p_iNEXT_legend <- ggiNEXT(iNEXT_data, type=1, facet.var="order", grey = "true") + 
-  facet_wrap(~order, scales="free") +
-  guides(color = "none", shape = "none", fill = "none") + 
-  theme(legend.text = element_text(size = 13))
-
-# Extract the legend
-iNEXT_legend <- cowplot::get_legend(p_iNEXT_legend)
-
-# plot them together 
-plot_grid(p_iNEXT, iNEXT_legend, season_legend,
-           ncol = 1, nrow = 3, 
-           rel_heights = c(1, 0.05, 0.05)); 
-```
-
-
-```{r richness-plot, fig.width= 6, fig.height= 3.5}
-wilcox_rich_obs <- wilcox.test(Observed ~ fraction, data =dplyr::filter(div_df_frac,Diversity == "Species richness"))
-wilcox_rich_est <- wilcox.test(Estimator ~ fraction, data = dplyr::filter(div_df_frac,Diversity == "Species richness"))
-
-rich_p1 <- div_df_frac %>%
-  dplyr::filter(Diversity == "Species richness") %>%
-  ggplot(aes(x = fraction, y = Observed)) + 
-  geom_jitter(size = 3, aes(fill = fraction, shape = season), width = 0.2) + 
-  geom_boxplot(alpha = 0.5, outlier.shape = NA, aes( fill = fraction)) +
-  scale_fill_manual(values = fraction_colors) +
-  scale_shape_manual(values = season_shapes) + 
-  scale_y_continuous(limits = c(0, 1800), breaks = seq(0, 1800, by = 300),
-                     expand = c(0, 0)) +
-  labs(y = "Observed Richness") +
-  theme(axis.title.x = element_blank(), legend.position = "none") + 
-  annotate("text", x=1.5, y=1500, size = 4, color = "gray40",
-         label= paste("Wilcoxon, p =", round(wilcox_rich_obs$p.value, digits = 3))) 
-
-rich_p2 <- div_df_frac %>%
-  dplyr::filter(Diversity == "Species richness") %>%
-  ggplot(aes(x = fraction, y = Estimator)) + 
-  geom_jitter(size = 3, aes(fill = fraction, shape = season), width = 0.2) + 
-  geom_boxplot(alpha = 0.5, outlier.shape = NA, aes( fill = fraction)) +
-  scale_fill_manual(values = fraction_colors) +
-  scale_shape_manual(values = season_shapes) + 
-  scale_y_continuous(limits = c(0, 1800), breaks = seq(0, 1800, by = 300),
-                     expand = c(0, 0))+
-  labs(y = "Richness Estimator") +
-  theme(axis.title.x = element_blank(), legend.position = "none") + 
-  annotate("text", x=1.5, y=1500, size = 4, color = "gray40",
-      label= paste("Wilcoxon, p =", round(wilcox_rich_est$p.value, digits = 3)))
-
-# Put the plots together 
-rich_title <- ggdraw() + 
-  draw_label("iNEXT richness estimates", fontface = 'bold', x = 0, hjust = 0) + 
-   theme(plot.margin = margin(0, 0, 0, 125))
-
-rich_plotz <- plot_grid(rich_p1, rich_p2, 
-          labels = c("A", "B"))
-
-plot_grid(rich_title, rich_plotz, 
-          ncol = 1, nrow = 2, rel_heights = c(0.1, 1))
-```
-
-# Linear Models 
+#### Linear Models 
 ```{r lm-models-div}
 # Free-Living samples only 
 div_measures_free <- comb_div_df %>%
@@ -794,6 +572,22 @@ lm_divs_free_percap <- div_measures_free %>%
   mutate(FDR.p = p.adjust(p.value, method = "fdr")) 
 
 
+## Filtered PCA Linear Model Results
+# Put all of the PCA and environmental  linear model results together into one dataframe 
+all_pca_environ_lm_results <- 
+  bind_rows(lm_summary_particle_comm, lm_summary_particle_percap,
+          lm_summary_free_comm, lm_summary_free_percap,
+          lm_summary_all_comm, lm_summary_all_percap) %>%
+  dplyr::rename(independent_var = independent,
+                dependent_var = dependent) 
+
+## Combine the results with the diversity linear models 
+individual_lm_results <- bind_rows(lm_div_results, all_pca_environ_lm_results) %>%
+  mutate(AIC = round(AIC, digits = 2),  
+         adj.r.squared = round(adj.r.squared, digits = 2),
+         p.value = round(p.value, digits = 4),
+         FDR.p = round(FDR.p, digits = 4)) %>%
+  rename(FDR.p.value = FDR.p)
 
 
 # Community-Wide Production    
@@ -922,224 +716,8 @@ lm_percell_prod_vs_phylosimps_FL <- lm(log10(fracprod_per_cell_noinf) ~ phylo_si
 summary(lm_percell_prod_vs_phylosimps_FL) # show stats for FL phylogenetic simpson vs percell production
 ```
 
-# Time series
-```{r timeseries}
-# Question: Is there a temporal effect on diversity differences between particle
-# Calculate the means for plotting
-mean_div_df <- wide_div_meta_df %>%
-  dplyr::select(c(norep_filter_name:phylo_richness, lakesite, fraction, season)) %>%
-  gather(key = "Diversity", value = div_val, richness:phylo_richness) %>%
-  mutate(norep_name = paste(substr(norep_filter_name, 1, 4), substr(norep_filter_name, 6, 8), sep = "")) %>%
-  dplyr::select(-norep_filter_name)  %>%
-  tidyr::spread(key = fraction, value = div_val) %>%
-  mutate(frac_difference = Particle-Free) %>%
-  group_by(Diversity, season) %>%
-  summarize(mean_diff = mean(frac_difference), sd_diff = sd(frac_difference))
 
-hill_labels <- c(
-  `expression({}^0*italic(D))` = "richness",
-  `expression({}^1*italic(D))` = "shannon",
-  `expression({}^2*italic(D))` = "simpson")
-
-#timeseries_diff_plot1 <-
-  wide_div_meta_df %>%
-  dplyr::select(c(norep_filter_name:simpson, lakesite, fraction, season)) %>%
-  gather(key = "Diversity", value = div_val, richness:simpson) %>%
-  mutate(norep_name = paste(substr(norep_filter_name, 1, 4), substr(norep_filter_name, 6, 8), sep = "")) %>%
-  dplyr::select(-norep_filter_name)  %>%
-  tidyr::spread(key = fraction, value = div_val) %>%
-  mutate(frac_difference = Particle-Free,
-         hill_labels = factor(Diversity, labels = c("{}^0*italic(D)", "{}^1*italic(D)", "{}^2*italic(D)"))) %>%
-  ggplot(aes(x = season, y = frac_difference)) + 
-  annotate("rect", xmin=-Inf, xmax=Inf, ymin=0, ymax=Inf,alpha=0.2,fill="#FF6600")+
-  annotate("rect", xmin=-Inf, xmax=Inf, ymin=-Inf, ymax=0,alpha=0.2,fill="skyblue")+
-  geom_hline(yintercept = 0, color = "grey") + 
-  geom_jitter(aes(shape = lakesite), fill = "grey", size = 3, width = 0.1) + 
-  geom_point(data = dplyr::filter(mean_div_df, Diversity %in% c("richness", "shannon", "simpson")),
-             aes(x = season, y = mean_diff), shape = 95, size = 20) +
-  geom_line(data = dplyr::filter(mean_div_df, Diversity %in% c("richness", "shannon", "simpson")), 
-            aes(x = season, y = mean_diff, group = Diversity), size = 1.5, color = "black", alpha = 0.5) + 
-  facet_grid(hill_labels~., scales = "free", labeller = label_parsed) + 
-  labs(y = "Difference in Diversity (Particle - Free)", 
-       title = expression({}^q*italic(D))) +
-  scale_color_manual(values = c("#5B1A18",  "#FD6467", "#F1BB7B")) + #"#D67236",
-  scale_shape_manual(values = lakesite_shapes) +
-  theme(axis.title.x = element_blank())
-  
-  
-timeseries_diff_plot2 <- 
-  wide_div_meta_df %>%
-  dplyr::select(c(norep_filter_name, phylo_richness, phylo_shannon, phylo_simpson, lakesite, fraction, season)) %>%
-  gather(key = "Diversity", value = div_val, phylo_richness:phylo_simpson) %>%
-  mutate(norep_name = paste(substr(norep_filter_name, 1, 4), substr(norep_filter_name, 6, 8), sep = "")) %>%
-  dplyr::select(-norep_filter_name)  %>%
-  tidyr::spread(key = fraction, value = div_val) %>%
-  mutate(frac_difference = Particle-Free) %>%
-  ggplot(aes(x = season, y = frac_difference)) + 
-  annotate("rect", xmin=-Inf, xmax=Inf, ymin=0, ymax=Inf,alpha=0.2,fill="#FF6600")+
-  annotate("rect", xmin=-Inf, xmax=Inf, ymin=-Inf, ymax=0,alpha=0.2,fill="skyblue")+
-  geom_hline(yintercept = 0, color = "grey") + 
-  geom_jitter(aes(shape = lakesite), fill = "grey", size = 3, width = 0.1) + 
-  geom_point(data = dplyr::filter(mean_div_df, Diversity %in% c("phylo_richness", "phylo_shannon", "phylo_simpson")),
-             aes(x = season, y = mean_diff), shape = 95, size = 20) +
-  geom_line(data = dplyr::filter(mean_div_df, Diversity %in% c("phylo_richness", "phylo_shannon", "phylo_simpson")), 
-            aes(x = season, y = mean_diff, group = Diversity), size = 1.5, color = "black", alpha = 0.5) + 
-  facet_grid(Diversity~., scales = "free") + 
-  labs(y = "Difference in Diversity (Particle - Free)", 
-       title = expression(textstyle("Phylogenetic")~{}^q*italic(D))) +
-  scale_color_manual(values = c("#5B1A18",  "#FD6467", "#F1BB7B")) + #"#D67236",
-  scale_shape_manual(values = lakesite_shapes) +
-  theme(axis.title.x = element_blank())
-
-  
-
-# TOGETHER 
-plot_grid(timeseries_diff_plot1 + theme(legend.position = "none"), 
-          timeseries_diff_plot2, 
-          rel_widths = c(0.75, 1),
-          nrow = 1, ncol = 2)
-
-
-wc_div_df <- wide_div_meta_df %>%
-  dplyr::select(c(norep_filter_name:phylo_richness, lakesite, fraction, season)) %>%
-  gather(key = "Diversity", value = div_val, richness:phylo_richness) %>%
-  mutate(norep_name = paste(substr(norep_filter_name, 1, 4), substr(norep_filter_name, 6, 8), sep = "")) %>%
-  dplyr::select(-norep_filter_name)  %>%
-  tidyr::spread(key = fraction, value = div_val) %>%
-  mutate(frac_difference = Particle-Free) 
-
-
-# Are there significant differences in the fraction diversity over the three seasons? 
-# Richness 
-wilcox.test(frac_difference ~ season, 
-            data = dplyr::filter(wc_div_df, Diversity == "richness" & 
-                                  season %in% c("Spring", "Summer")))
-wilcox.test(frac_difference ~ season, 
-            data = dplyr::filter(wc_div_df, Diversity == "richness" & 
-                                  season %in% c("Summer", "Fall")))
-wilcox.test(frac_difference ~ season, 
-            data = dplyr::filter(wc_div_df, Diversity == "richness" & 
-                                  season %in% c("Spring", "Fall"))) # Significant!
-
-# Shannon 
-wilcox.test(frac_difference ~ season, 
-            data =dplyr::filter(wc_div_df, Diversity == "shannon" &
-                                  season %in% c("Spring", "Summer")))
-wilcox.test(frac_difference ~ season, 
-            data =dplyr::filter(wc_div_df, Diversity == "shannon" & 
-                                  season %in% c("Summer", "Fall")))
-wilcox.test(frac_difference ~ season, 
-            data =dplyr::filter(wc_div_df, Diversity == "shannon" & 
-                                  season %in% c("Spring", "Fall"))) # Significant!
-
-# Simpson 
-wilcox.test(frac_difference ~ season, 
-            data =dplyr::filter(wc_div_df, Diversity == "simpson" & 
-                                  season %in% c("Spring", "Summer")))
-wilcox.test(frac_difference ~ season, 
-            data =dplyr::filter(wc_div_df, Diversity == "simpson" & 
-                                  season %in% c("Summer", "Fall")))
-wilcox.test(frac_difference ~ season, 
-            data =dplyr::filter(wc_div_df, Diversity == "simpson" & 
-                                  season %in% c("Spring", "Fall"))) # Marginal significance = 0.06
-
-# Are there significant differences in the fraction diversity over the three seasons? 
-# Phylogenetic Richness 
-wilcox.test(frac_difference ~ season, 
-            data = dplyr::filter(wc_div_df, Diversity == "phylo_richness" & 
-                                  season %in% c("Spring", "Summer"))) # NS
-wilcox.test(frac_difference ~ season, 
-            data = dplyr::filter(wc_div_df, Diversity == "phylo_richness" & 
-                                  season %in% c("Summer", "Fall"))) # Significant!
-wilcox.test(frac_difference ~ season, 
-            data = dplyr::filter(wc_div_df, Diversity == "phylo_richness" & 
-                                  season %in% c("Spring", "Fall"))) # Marginal significance = 0.06
-
-# Phylogenetic Shannon 
-wilcox.test(frac_difference ~ season, 
-            data =dplyr::filter(wc_div_df, Diversity == "phylo_shannon" &
-                                  season %in% c("Spring", "Summer"))) # NS
-wilcox.test(frac_difference ~ season, 
-            data =dplyr::filter(wc_div_df, Diversity == "phylo_shannon" & 
-                                  season %in% c("Summer", "Fall"))) # NS
-wilcox.test(frac_difference ~ season, 
-            data =dplyr::filter(wc_div_df, Diversity == "phylo_shannon" & 
-                                  season %in% c("Spring", "Fall"))) # Significant!
-
-# Phylogenetic Simpson 
-wilcox.test(frac_difference ~ season, 
-            data =dplyr::filter(wc_div_df, Diversity == "phylo_simpson" & 
-                                  season %in% c("Spring", "Summer"))) # NS
-wilcox.test(frac_difference ~ season, 
-            data =dplyr::filter(wc_div_df, Diversity == "phylo_simpson" & 
-                                  season %in% c("Summer", "Fall"))) # NS
-wilcox.test(frac_difference ~ season, 
-            data =dplyr::filter(wc_div_df, Diversity == "phylo_simpson" & 
-                                  season %in% c("Spring", "Fall"))) # NS
-
-
-
-
-
-
-## PLOT THE MEANS
-wide_div_meta_df %>%
-  dplyr::select(c(norep_filter_name:simpson, lakesite, fraction, season)) %>%
-  gather(key = "Diversity", value = div_val, richness:simpson) %>%
-  mutate(norep_name = paste(substr(norep_filter_name, 1, 4), substr(norep_filter_name, 6, 8), sep = "")) %>%
-  dplyr::group_by(fraction, Diversity, season) %>%
-  summarize(mean_div = mean(div_val)) %>%
-  mutate(connector = paste(Diversity, season, sep = "")) %>%
-  ggplot(aes(x = fraction, y = mean_div)) + 
-  # connect paired PA and FL points 
-  geom_line(aes(group = connector), size = 1.5, alpha = 0.8) +
-  geom_point(fill = "grey", size = 3) + 
-  #geom_boxplot(alpha = 0.5, outlier.shape = NA) + 
-  facet_grid(Diversity~season, scales = "free") + 
-  labs(y = "Mean Hill Diversity Metric") +
- # scale_fill_manual(values = fraction_colors) + 
-  scale_color_manual(values = c("#5B1A18",  "#FD6467", "#F1BB7B")) + #"#D67236",
-  theme(axis.title.x = element_blank())
-  
-
-wide_div_meta_df %>%
-  dplyr::select(c(norep_filter_name:simpson, lakesite, fraction, season)) %>%
-  gather(key = "Diversity", value = div_val, richness:simpson) %>%
-  mutate(norep_name = paste(substr(norep_filter_name, 1, 4), substr(norep_filter_name, 6, 8), sep = "")) %>%
-  ggplot(aes(x = fraction, y = div_val)) + 
-  # connect paired PA and FL points 
-  geom_line(aes(group =  norep_name, color = season), size = 1.5, alpha = 0.8) +
-  geom_point(aes(shape = lakesite), fill = "grey", size = 3) + 
-  #geom_boxplot(alpha = 0.5, outlier.shape = NA) + 
-  facet_grid(Diversity~season, scales = "free") + 
-  labs(y = "Hill Diversity Metric") +
- # scale_fill_manual(values = fraction_colors) + 
-  scale_color_manual(values = c("#5B1A18",  "#FD6467", "#F1BB7B")) + #"#D67236",
-  scale_shape_manual(values = lakesite_shapes) +
-  theme(axis.title.x = element_blank())
-
-
-# by season 
-wide_div_meta_df %>%
-  dplyr::select(c(norep_filter_name:simpson, lakesite, fraction, season)) %>%
-  gather(key = "Diversity", value = div_val, richness:simpson) %>%
-  mutate(norep_noseason_name = substr(norep_filter_name, 1, 5)) %>%
-  ggplot(aes(x = season, y = div_val)) + 
-  # connect paired PA and FL points 
-  geom_line(aes(group =  norep_noseason_name, color = fraction), size = 1.5, alpha = 0.8) +
-  geom_point(aes(shape = lakesite, fill = fraction), size = 3) + 
-  #geom_boxplot(alpha = 0.5, outlier.shape = NA) + 
-  facet_grid(Diversity~fraction, scales = "free") + 
-  labs(y = "Hill Diversity Metric") +
-  scale_fill_manual(values = fraction_colors) + 
-  scale_color_manual(values = fraction_colors) + #"#D67236",
-  scale_shape_manual(values = lakesite_shapes) +
-  theme(axis.title.x = element_blank())
-```
-
-
-
-## Prepare Figure 2
+#### Prepare Figure 2
 ```{r Figure2-Prep}
 ######################################################### OBSERVED RICHNESS ######################################################### 
 rich_fraction_wilcox <- wilcox.test(richness ~ fraction, data = wide_div_meta_df)
@@ -1447,24 +1025,12 @@ invsimps_plots <- plot_grid(invsimps_distribution_plot, prod_vs_invsimps_plot, p
           align = "v")
 ```
 
-# Figure 2
-```{r Figure2, fig.width = 10, fig.height = 7}
+## Figure 2
+```{r Figure2, fig.width = 6.5, fig.height = 7}
 # All plots together 
 rich_plots <- plot_grid(rich_distribution_plot, prod_vs_rich_plot, 
                         percell_prod_vs_rich_plot + theme(legend.position = "none"),
-          labels = c("A", "D", "G"), ncol = 1, nrow = 3,
-          rel_heights = c(0.5, 0.8, 1),
-          align = "v")
-
-
-shannon_plots_noyaxis <- plot_grid(shannon_distribution_plot + 
-                                     theme(axis.title.y = element_blank(), axis.text.y = element_blank(),
-                                           #  specify top, right, bottom, and left margins
-                                           plot.margin = margin(0, 0, 0, 0.6, "cm")), 
-          prod_vs_shannon_plot + theme(axis.title.y = element_blank(), axis.text.y = element_blank()), 
-          percell_prod_vs_shannon_plot + theme(axis.title.y = element_blank(), axis.text.y = element_blank(), legend.position = "none"),
-          labels = c("B", "E", "H"), 
-          ncol = 1, nrow = 3,
+          labels = c("A", "C", "E"), ncol = 1, nrow = 3,
           rel_heights = c(0.5, 0.8, 1),
           align = "v")
 
@@ -1472,16 +1038,16 @@ invsimps_plots_noyaxis <-
   plot_grid(invsimps_distribution_plot + 
                                      theme(axis.title.y = element_blank(), axis.text.y = element_blank(),
                                            #  specify top, right, bottom, and left margins
-                                           plot.margin = margin(0, 0, 0, 0.6, "cm")), 
+                                           plot.margin = margin(0.2, 0, 0.2, 0.6, "cm")), 
             prod_vs_invsimps_plot + theme(axis.title.y = element_blank(),  axis.text.y = element_blank()), 
             percell_prod_vs_invsimps_plot + theme(axis.title.y = element_blank(), axis.text.y = element_blank(), legend.position = "none"), 
-          labels = c("C", "F", "I"), ncol = 1, nrow = 3,
+          labels = c("B", "D", "F"), ncol = 1, nrow = 3,
           rel_heights = c(0.5, 0.8, 1),
           align = "v")
 
 # Extract distribution plots of richness and inverse simpson
-figure2_row1 <- plot_grid(rich_plots, shannon_plots_noyaxis, invsimps_plots_noyaxis,
-          ncol = 3, nrow = 1, rel_widths = c(1, 0.75, 0.75),
+figure2_row1 <- plot_grid(rich_plots, invsimps_plots_noyaxis,
+          ncol = 2, nrow = 1, rel_widths = c(1, 0.75),
           align = "h")
 
 
@@ -1489,6 +1055,453 @@ figure2_row1 <- plot_grid(rich_plots, shannon_plots_noyaxis, invsimps_plots_noya
 plot_grid(figure2_row1, season_legend,
                    ncol = 1, nrow = 2, 
                    rel_heights = c(1, 0.05))
+
+```
+
+
+
+
+## Lasso Regressions
+#### Prepare data for lasso 
+```{r prep-lasso}
+# The lasso regression needs datasets that are wide formatted
+lasso_cols_remove <- c("project", "year", "Date", "limnion", "dnaconcrep1", "perc_attached_bacprod",
+                       "SD_perc_attached_bacprod", "SE_total_bac_abund", "SE_perc_attached_abund", "SE_attached_bac",
+                       "tot_bacprod", "SD_tot_bacprod","SD_frac_bacprod", "BGA_cellspermL", "Turb_NTU", 
+                       "lakesite", "season", "station")
+
+### PARTICLE DATA = 12 samples 
+# Note: Even though in the inclusion of MOTEJ515 doesn't have the bacterial counts, 
+# the results from this lasso regression does not change. 
+lasso_data_df_particle <- wide_div_meta_df %>%
+  filter(fraction == "Particle" ) %>%
+  dplyr::select(-c(fraction, lasso_cols_remove)) 
+
+lasso_data_df_particle_noprod <- lasso_data_df_particle %>%
+  dplyr::select(-c(fracprod_per_cell, fracprod_per_cell_noinf, norep_filter_name, norep_water_name)) 
+  
+### FREE DATA 
+# Note: Even though in the inclusion of MOTEJ515 doesn't have the bacterial counts, 
+# the results from this lasso regression does not change. 
+lasso_data_df_free <- wide_div_meta_df %>%
+  filter(fraction == "Free" ) %>%
+  dplyr::select(-c(fraction, lasso_cols_remove)) 
+
+lasso_data_df_free_noprod <- lasso_data_df_free %>%
+  dplyr::select(-c(fracprod_per_cell, fracprod_per_cell_noinf, norep_filter_name, norep_water_name)) 
+```
+
+
+#### Run Lasso regression
+#### Lasso - Community Production: Particle 
+```{r comm-part-lasso,fig.width=8, fig.height=4, warning = TRUE}
+# Set the seed for reproducibility of the grid values 
+set.seed(777) 
+
+################ PREPARE DATA ################ 
+# Subset data needed and scale all o
+scaled_comm_data <- 
+  lasso_data_df_particle_noprod %>%    # Use data only for the particle samples  
+  scale() %>%                          # Scale all of the variables to have mean =0 and sd = 1
+  as.data.frame()                      # Make it a dataframe so that model.matrix function works (does not take a matrix)
+
+# Set model parameters for community level data
+## NOTE: there cannot be any data with NA
+x = model.matrix(frac_bacprod ~ ., scaled_comm_data)[,-1]
+y = scaled_comm_data$frac_bacprod
+grid = 10^seq(10,-2,length = 100)
+
+################ PREPARE TRAINING & TESTING DATA FOR CROSS VALIDATION ################ 
+# Pull out test and training sets for cross validation
+# We will use half the set to train the model and the 2nd half of the dataset to test the model 
+train <- sample(1:nrow(x), nrow(x)/2)
+test <- -train
+y_test <- y[test]
+
+################ LASSO ################ 
+# Run lasso regression with alpha = 1
+lasso_divs_train <- glmnet(x[train,], y[train], alpha = 1, lambda = grid, standardize = FALSE)
+par(mfrow = c(1,2))
+plot(lasso_divs_train)
+
+# Cross validation
+cv_lasso_divs <- cv.glmnet(x[train,], y[train], alpha = 1)
+plot(cv_lasso_divs)
+best_lasso_lambda <- cv_lasso_divs$lambda.min # Minimum lambda
+# https://stats.stackexchange.com/questions/138569/why-is-lambda-plus-1-standard-error-a-recommended-value-for-lambda-in-an-elastic
+lasso_lambda_1se <- cv_lasso_divs$lambda.1se # simplest model whose accuracy is comparable with the best model
+best_lasso_lambda == lasso_lambda_1se
+
+lasso_divs_pred <- predict(lasso_divs_train, s = best_lasso_lambda, newx = x[test,])
+mean((lasso_divs_pred - y_test)^2) # Test
+
+## Run lasso on the entire dataset with the best lambda value 
+lasso_divs <- glmnet(x, y, alpha = 1, lambda = best_lasso_lambda, standardize = FALSE)
+# What are the lasso coefficients? (Anything with a . is not selected by the model)
+predict(lasso_divs, type = "coefficients", s = best_lasso_lambda)
+
+## Now, run the most simple, parsimonious lasso model within 1 standard error  
+## IMPORTANT NOTE: This is the lasso reported within the manuscript
+lasso_divs_1se <- glmnet(x, y, alpha = 1, lambda = lasso_lambda_1se, standardize = FALSE)
+# What are the lasso coefficients? (Anything with a . is not selected by the model)
+predict(lasso_divs_1se, type = "coefficients", s = lasso_lambda_1se)
+```
+
+#### Lasso - Community Production: Free
+```{r comm-free-lasso, fig.width=8, fig.height=4, warning = TRUE}
+# Set the seed for reproducibility of the grid values 
+set.seed(777) 
+     
+################ PREPARE DATA ################ 
+# Subset data needed and scale all o
+scaled_comm_data_free <- 
+  lasso_data_df_free_noprod %>%        # Use data only for the free-living samples  
+  scale() %>%                          # Scale all of the variables to have mean = 0 and sd = 1
+  as.data.frame()                      # Make it a dataframe so that model.matrix function works (does not take a matrix)
+
+# Set model parameters for community level data
+## NOTE: there cannot be any data with NA
+free_x <- model.matrix(frac_bacprod ~ ., scaled_comm_data_free)[,-1]
+free_y <- scaled_comm_data_free$frac_bacprod
+free_grid <- 10^seq(10,-2,length = 100)
+
+################ PREPARE TRAINING & TESTING DATA FOR CROSS VALIDATION ################ 
+# Pull out test and training sets for cross validation
+# We will use half the set to train the model and the 2nd half of the dataset to test the model 
+free_train <- sample(1:nrow(free_x), nrow(free_x)/2)
+free_test <- -free_train
+free_y_test <- free_y[free_test]
+
+################ LASSO ################ 
+# Run lasso regression with alpha = 1
+lasso_divs_train_free_comm <- glmnet(free_x[free_train,], free_y[free_train], alpha = 1, lambda = free_grid, standardize = FALSE)
+par(mfrow = c(1,2))
+plot(lasso_divs_train_free_comm)
+
+# Cross validation
+free_cv_lasso_divs <- cv.glmnet(free_x[free_train,], free_y[free_train], alpha = 1)
+plot(free_cv_lasso_divs)
+free_best_lasso_lambda <- free_cv_lasso_divs$lambda.min
+# https://stats.stackexchange.com/questions/138569/why-is-lambda-plus-1-standard-error-a-recommended-value-for-lambda-in-an-elastic
+free_lasso_lambda_1se <- free_cv_lasso_divs$lambda.1se # simplest model whose accuracy is comparable with the best model
+free_best_lasso_lambda == free_lasso_lambda_1se
+free_lasso_divs_pred <- predict(lasso_divs_train_free_comm, s = free_best_lasso_lambda, newx = free_x[free_test,])
+mean((free_lasso_divs_pred - y_test)^2) # Test
+
+## Run lasso on the entire dataset with the best lambda value 
+free_lasso_divs <- glmnet(free_x, free_y, alpha = 1, lambda = free_best_lasso_lambda, standardize = FALSE)
+# What are the lasso coefficients? (Anything with a . is not selected by the model)
+predict(free_lasso_divs, type = "coefficients", s = free_best_lasso_lambda)
+ 
+## Now, run the most simple, parsimonious lasso model within 1 standard error  
+## IMPORTANT NOTE: This is the lasso reported within the manuscript
+free_lasso_divs_1se <- glmnet(free_x, free_y, alpha = 1, lambda = free_lasso_lambda_1se, standardize = FALSE)
+# What are the lasso coefficients? (Anything with a . is not selected by the model)
+predict(free_lasso_divs_1se, type = "coefficients", s = free_lasso_lambda_1se)
+```
+
+
+# Time series
+```{r timeseries, fig.width=6, fig.height=7}
+# Question: Is there a temporal effect on diversity differences between particle
+# Calculate the means for plotting
+italics_labeller <- c("{}^0*italic(D)", "{}^0*italic(PD)",
+                      "{}^1*italic(D)", "{}^1*italic(PD)",
+                      "{}^2*italic(D)","{}^2*italic(PD)")
+div_order <- c("richness", "phylo_richness",
+               "shannon", "phylo_shannon",
+               "simpson", "phylo_simpson")
+
+mean_div_df <- wide_div_meta_df %>%
+  dplyr::select(c(norep_filter_name:phylo_richness, lakesite, fraction, season)) %>%
+  gather(key = "Diversity", value = div_val, richness:phylo_richness) %>%
+  mutate(norep_name = paste(substr(norep_filter_name, 1, 4), substr(norep_filter_name, 6, 8), sep = "")) %>%
+  dplyr::select(-norep_filter_name)  %>%
+  tidyr::spread(key = fraction, value = div_val) %>%
+  mutate(frac_difference = Particle-Free,
+         Diversity = fct_relevel(Diversity, levels = div_order),
+         hill_labels = factor(Diversity, labels = italics_labeller)) %>%
+  group_by(Diversity, hill_labels, season) %>%
+  summarize(mean_diff = mean(frac_difference), sd_diff = sd(frac_difference)) 
+
+timeseries_df <- wide_div_meta_df %>%
+  dplyr::select(c(norep_filter_name:phylo_richness, lakesite, fraction, season)) %>%
+  gather(key = "Diversity", value = div_val, richness:phylo_richness) %>%
+  mutate(norep_name = paste(substr(norep_filter_name, 1, 4), substr(norep_filter_name, 6, 8), sep = "")) %>%
+  dplyr::select(-norep_filter_name)  %>%
+  tidyr::spread(key = fraction, value = div_val) %>%
+  mutate(frac_difference = Particle-Free,
+          Diversity = fct_relevel(Diversity, levels = div_order),
+         hill_labels = factor(Diversity, labels = italics_labeller))
+
+
+
+
+
+##### Prepare stats
+# Reorder the data frame for calculating the stats 
+wc_div_df <- wide_div_meta_df %>%
+  dplyr::select(c(norep_filter_name:phylo_richness, lakesite, fraction, season)) %>%
+  gather(key = "Diversity", value = div_val, richness:phylo_richness) %>%
+  mutate(norep_name = paste(substr(norep_filter_name, 1, 4), substr(norep_filter_name, 6, 8), sep = "")) %>%
+  dplyr::select(-norep_filter_name)  %>%
+  tidyr::spread(key = fraction, value = div_val) %>%
+  mutate(frac_difference = Particle-Free) 
+
+#  Plot all of the metrics together 
+ggplot(timeseries_df, aes(x = season, y = frac_difference)) + 
+  annotate("rect", xmin=-Inf, xmax=Inf, ymin=0, ymax=Inf,alpha=0.2,fill="#FF6600")+
+  annotate("rect", xmin=-Inf, xmax=Inf, ymin=-Inf, ymax=0,alpha=0.2,fill="skyblue")+
+  facet_wrap(hill_labels~., scales = "free", labeller = label_parsed, nrow = 3, ncol = 2) + 
+  geom_hline(yintercept = 0, color = "grey") + 
+  geom_jitter(aes(shape = lakesite), fill = "grey", size = 3, width = 0.1) + 
+  geom_point(data = mean_div_df, aes(x = season, y = mean_diff), shape = 95, size = 20) +
+  geom_line(data = mean_div_df, aes(x = season, y = mean_diff, group = Diversity), size = 1.5, color = "black", alpha = 0.5) + 
+  scale_shape_manual(values = lakesite_shapes) +
+  theme(axis.title = element_blank(), #legend.title = element_blank(), 
+        legend.position = "bottom", 
+        strip.background = element_rect(colour = "grey", fill = "white"),
+        strip.text = element_text(face = "bold"))  
+```
+
+```{r timeseries-plot, fig.width=3.5, fig.height=8}
+# Subset dataframes for mean plotting
+mean_div_df_rich <- dplyr::filter(mean_div_df, Diversity == "richness")
+mean_div_df_shan <- dplyr::filter(mean_div_df, Diversity == "shannon")
+mean_div_df_simps <- dplyr::filter(mean_div_df, Diversity == "simpson")
+
+# To calculate the significance between seasons - I'll use a pairwise wilcoxon test below 
+# Are there significant differences in the fraction diversity over the three seasons? 
+# Richness 
+wilcox.test(frac_difference ~ season, 
+            data = dplyr::filter(wc_div_df, Diversity == "richness" &
+                                  season %in% c("Spring", "Summer")))  # NS 
+wilcox.test(frac_difference ~ season, 
+            data = dplyr::filter(wc_div_df, Diversity == "richness" &  
+                                  season %in% c("Summer", "Fall"))) # Marginal, p = 0.06 
+wx_0D_SpFa <- wilcox.test(frac_difference ~ season, 
+            data = dplyr::filter(wc_div_df, Diversity == "richness" & 
+                                  season %in% c("Spring", "Fall"))) # Significant!
+
+dat_0D_SpFa <- data.frame(a = c(1.15,1.15,2.85,2.85), b = c(730, 750, 750, 730)) # WholePart vs WholeFree
+
+timeseries_0D <-  
+  timeseries_df %>%
+  dplyr::filter(Diversity == "richness") %>%
+  ggplot(aes(x = season, y = frac_difference)) + 
+  annotate("rect", xmin=-Inf, xmax=Inf, ymin=0, ymax=Inf,alpha=0.2,fill="#FF6600") +
+  annotate("rect", xmin=-Inf, xmax=Inf, ymin=-Inf, ymax=0,alpha=0.2,fill="skyblue") +
+  geom_hline(yintercept = 0, color = "grey") + 
+  geom_jitter(aes(shape = lakesite), fill = "grey", size = 3, width = 0.1) + 
+  geom_point(data = mean_div_df_rich, aes(x = season, y = mean_diff), shape = 95, size = 20) +
+  geom_line(data = mean_div_df_rich, aes(x = season, y = mean_diff, group = Diversity), size = 1.5, color = "black", alpha = 0.5) + 
+  labs(y = expression("Particle"~{}^0*italic(D)~"– Free"~{}^0*italic(D))) +
+  scale_shape_manual(values = lakesite_shapes) +
+  geom_path(data = dat_0D_SpFa, aes(x = a, y = b), linetype = 1, color = "#424645") +
+  annotate("text", x=2, y=790, size = 8, color = "#424645", label= paste("*"), angle = 90) +
+  annotate("text", x=2, y=700, size = 4, color = "#424645",
+           label= paste("p =", round(wx_0D_SpFa$p.value, digits = 2))) +
+  theme(legend.position = "none", 
+        axis.title.x = element_blank(), axis.text.x = element_blank(),
+        #  specify top, right, bottom, and left margins
+        plot.margin = margin(0, 0, 0, 0.6, "cm"))
+
+# Shannon 
+wilcox.test(frac_difference ~ season, 
+            data =dplyr::filter(wc_div_df, Diversity == "shannon" &
+                                  season %in% c("Spring", "Summer")))  # NS 
+wilcox.test(frac_difference ~ season, 
+            data =dplyr::filter(wc_div_df, Diversity == "shannon" & 
+                                  season %in% c("Summer", "Fall")))  # NS 
+wx_1D_SpFa <- wilcox.test(frac_difference ~ season, 
+            data =dplyr::filter(wc_div_df, Diversity == "shannon" & 
+                                  season %in% c("Spring", "Fall"))) # Significant!
+dat_1D_SpFa <- data.frame(a = c(1.15,1.15,2.85,2.85), b = c(280, 290, 290, 280)) # WholePart vs WholeFree
+
+timeseries_1D <-  timeseries_df %>%
+  dplyr::filter(Diversity == "shannon") %>%
+  ggplot(aes(x = season, y = frac_difference)) + 
+  annotate("rect", xmin=-Inf, xmax=Inf, ymin=0, ymax=Inf,alpha=0.2,fill="#FF6600") +
+  annotate("rect", xmin=-Inf, xmax=Inf, ymin=-Inf, ymax=0,alpha=0.2,fill="skyblue") +
+  geom_hline(yintercept = 0, color = "grey") + 
+  geom_jitter(aes(shape = lakesite), fill = "grey", size = 3, width = 0.1) + 
+  geom_point(data = mean_div_df_shan, aes(x = season, y = mean_diff), shape = 95, size = 20) +
+  geom_line(data = mean_div_df_shan, aes(x = season, y = mean_diff, group = Diversity), size = 1.5, color = "black", alpha = 0.5) + 
+  labs(y = expression("Particle"~{}^1*italic(D)~"– Free"~{}^1*italic(D))) +
+  scale_shape_manual(values = lakesite_shapes) +
+  geom_path(data = dat_1D_SpFa, aes(x = a, y = b), linetype = 1, color = "#424645") +
+  annotate("text", x=2, y=310, size = 8, color = "#424645", label= paste("*"), angle = 90) +
+  annotate("text", x=2, y=270, size = 4, color = "#424645",
+           label= paste("p =", round(wx_1D_SpFa$p.value, digits = 2))) +
+  theme(legend.position = "none", 
+        axis.title.x = element_blank(), axis.text.x = element_blank(),
+        #  specify top, right, bottom, and left margins
+        plot.margin = margin(0, 0, 0, 0.6, "cm"))
+
+# Simpson 
+wilcox.test(frac_difference ~ season, 
+            data =dplyr::filter(wc_div_df, Diversity == "simpson" & 
+                                  season %in% c("Spring", "Summer"))) # NS 
+wilcox.test(frac_difference ~ season, 
+            data =dplyr::filter(wc_div_df, Diversity == "simpson" & 
+                                  season %in% c("Summer", "Fall")))  # NS 
+wilcox.test(frac_difference ~ season, 
+            data =dplyr::filter(wc_div_df, Diversity == "simpson" & 
+                                  season %in% c("Spring", "Fall"))) # Marginal significance = 0.06
+timeseries_2D <-  timeseries_df %>%
+  dplyr::filter(Diversity == "simpson") %>%
+  ggplot(aes(x = season, y = frac_difference)) + 
+  annotate("rect", xmin=-Inf, xmax=Inf, ymin=0, ymax=Inf,alpha=0.2,fill="#FF6600") +
+  annotate("rect", xmin=-Inf, xmax=Inf, ymin=-Inf, ymax=0,alpha=0.2,fill="skyblue") +
+  geom_hline(yintercept = 0, color = "grey") + 
+  geom_jitter(aes(shape = lakesite), fill = "grey", size = 3, width = 0.1) + 
+  geom_point(data = mean_div_df_simps, aes(x = season, y = mean_diff), shape = 95, size = 20) +
+  geom_line(data = mean_div_df_simps, aes(x = season, y = mean_diff, group = Diversity), size = 1.5, color = "black", alpha = 0.5) + 
+  labs(y = expression("Particle"~{}^2*italic(D)~"– Free"~{}^2*italic(D))) +
+  scale_shape_manual(values = lakesite_shapes) +
+  theme(legend.position = "bottom", legend.title = element_blank(), 
+        axis.title.x = element_blank(),
+        #  specify top, right, bottom, and left margins
+        plot.margin = margin(0, 0, 0, 0.6, "cm"))  
+
+# PUT THEM TOGETHER 
+ts_legend <- get_legend(timeseries_2D + theme(legend.direction = "horizontal",legend.justification="center" ,legend.box.just = "bottom"))
+
+ts_p1 <- plot_grid(timeseries_0D, timeseries_1D, 
+          timeseries_2D + theme(legend.position = "none"),
+          nrow = 3, ncol = 1, labels = c("A","B", "C"),
+          align = "hv")
+
+plot_grid(ts_p1, ts_legend, ncol = 1, nrow= 2,
+          rel_heights = c(1, 0.05))
+
+
+# Are there significant differences in the fraction diversity over the three seasons? 
+# Phylogenetic Richness 
+wilcox.test(frac_difference ~ season, 
+            data = dplyr::filter(wc_div_df, Diversity == "phylo_richness" & 
+                                  season %in% c("Spring", "Summer"))) # NS  
+wilcox.test(frac_difference ~ season, 
+            data = dplyr::filter(wc_div_df, Diversity == "phylo_richness" & 
+                                  season %in% c("Summer", "Fall"))) # Significant!
+wilcox.test(frac_difference ~ season, 
+            data = dplyr::filter(wc_div_df, Diversity == "phylo_richness" & 
+                                  season %in% c("Spring", "Fall"))) # Marginal significance = 0.06
+
+# Phylogenetic Shannon 
+wilcox.test(frac_difference ~ season, 
+            data =dplyr::filter(wc_div_df, Diversity == "phylo_shannon" &
+                                  season %in% c("Spring", "Summer"))) # NS
+wilcox.test(frac_difference ~ season, 
+            data =dplyr::filter(wc_div_df, Diversity == "phylo_shannon" & 
+                                  season %in% c("Summer", "Fall"))) # NS
+wilcox.test(frac_difference ~ season, 
+            data =dplyr::filter(wc_div_df, Diversity == "phylo_shannon" & 
+                                  season %in% c("Spring", "Fall"))) # Significant!
+
+# Phylogenetic Simpson 
+wilcox.test(frac_difference ~ season, 
+            data =dplyr::filter(wc_div_df, Diversity == "phylo_simpson" & 
+                                  season %in% c("Spring", "Summer"))) # NS
+wilcox.test(frac_difference ~ season, 
+            data =dplyr::filter(wc_div_df, Diversity == "phylo_simpson" & 
+                                  season %in% c("Summer", "Fall"))) # NS
+wilcox.test(frac_difference ~ season, 
+            data =dplyr::filter(wc_div_df, Diversity == "phylo_simpson" & 
+                                  season %in% c("Spring", "Fall"))) # NS
+
+```
+
+
+```{r timeseries-means, fig.width=6, fig.height=7}
+## PLOT THE MEANS
+wide_div_meta_df %>%
+  dplyr::select(c(norep_filter_name:simpson, lakesite, fraction, season)) %>%
+  gather(key = "Diversity", value = div_val, richness:simpson) %>%
+  mutate(norep_name = paste(substr(norep_filter_name, 1, 4), substr(norep_filter_name, 6, 8), sep = "")) %>%
+  dplyr::group_by(fraction, Diversity, season) %>%
+  summarize(mean_div = mean(div_val)) %>%
+  mutate(connector = paste(Diversity, season, sep = "")) %>%
+  ggplot(aes(x = fraction, y = mean_div)) + 
+  # connect paired PA and FL points 
+  geom_line(aes(group = connector), size = 1.5, alpha = 0.8) +
+  geom_point(fill = "grey", size = 3) + 
+  #geom_boxplot(alpha = 0.5, outlier.shape = NA) + 
+  facet_grid(Diversity~season, scales = "free") + 
+  labs(y = "Mean Hill Diversity Metric") +
+ # scale_fill_manual(values = fraction_colors) + 
+  scale_color_manual(values = c("#5B1A18",  "#FD6467", "#F1BB7B")) + #"#D67236",
+  theme(axis.title.x = element_blank())
+  
+
+lines_frac_p <- wide_div_meta_df %>%
+  dplyr::select(c(norep_filter_name:simpson, lakesite, fraction, season)) %>%
+  gather(key = "Diversity", value = div_val, richness:simpson) %>%
+  mutate(norep_name = paste(substr(norep_filter_name, 1, 4), substr(norep_filter_name, 6, 8), sep = "")) %>%
+  ggplot(aes(x = fraction, y = div_val)) + 
+  # connect paired PA and FL points 
+  geom_line(aes(group =  norep_name, color = season), size = 1.5, alpha = 0.8) +
+  geom_point(aes(shape = lakesite), fill = "grey", size = 3) + 
+  #geom_boxplot(alpha = 0.5, outlier.shape = NA) + 
+  facet_grid(Diversity~season, scales = "free") + 
+  labs(y = "Hill Diversity Metric") +
+ # scale_fill_manual(values = fraction_colors) + 
+  scale_color_manual(values = c("#5B1A18",  "#FD6467", "#F1BB7B")) + #"#D67236",
+  scale_shape_manual(values = lakesite_shapes) +
+  theme(axis.title.x = element_blank(), legend.position = "bottom",
+        legend.title = element_blank(), legend.box = "vertical",
+        legend.spacing.y = unit(0.1, 'cm'))
+
+# center the legend over the plot 
+lines_frac_legend <- get_legend(lines_frac_p + theme(legend.direction = "horizontal",legend.justification="center" ,legend.box.just = "bottom"))
+plot_grid(lines_frac_p + theme(legend.position = "none"),
+          lines_frac_legend, ncol = 1, nrow = 2, 
+          rel_heights = c(1, 0.08))
+
+# by season 
+wide_div_meta_df %>%
+  dplyr::select(c(norep_filter_name:simpson, lakesite, fraction, season)) %>%
+  gather(key = "Diversity", value = div_val, richness:simpson) %>%
+  mutate(norep_noseason_name = substr(norep_filter_name, 1, 5)) %>%
+  ggplot(aes(x = season, y = div_val)) + 
+  # connect paired PA and FL points 
+  geom_line(aes(group =  norep_noseason_name, color = fraction), size = 1.5, alpha = 0.8) +
+  geom_point(aes(shape = lakesite, fill = fraction), size = 3) + 
+  #geom_boxplot(alpha = 0.5, outlier.shape = NA) + 
+  facet_grid(Diversity~fraction, scales = "free") + 
+  labs(y = "Hill Diversity Metric") +
+  scale_fill_manual(values = fraction_colors) + 
+  scale_color_manual(values = fraction_colors) + #"#D67236",
+  scale_shape_manual(values = lakesite_shapes) +
+  theme(axis.title.x = element_blank(), legend.position = "none")
+```
+
+# Plot hill divs by q
+```{r hill-div-plots, fig.width=3.5, fig.height=3.5}
+hill_nums <-  c(0,0,1,1,2,2)
+div_orderr <- c("richness", "phylo_richness",
+                "shannon", "phylo_shannon",
+                "simpson", "phylo_simpson")
+
+hill_nums_p <- wide_div_meta_df %>%
+  dplyr::select(c(norep_filter_name:phylo_richness, lakesite, fraction, season)) %>%
+  gather(key = Diversity, value = div_val, richness:phylo_richness) %>%
+  mutate(Diversity = fct_relevel(Diversity, levels = div_orderr),
+         hill_nums = factor(Diversity, labels = hill_nums),
+         norep_water_name = paste(substr(norep_filter_name, 1,3), substr(norep_filter_name, 6,8), sep = "")) %>% 
+  dplyr::filter(Diversity %in% c("richness", "shannon", "simpson")) %>%
+  ggplot(aes(x = hill_nums, y = div_val, fill = fraction, shape = season, group = norep_filter_name)) +
+  geom_point(size = 3, alpha = 0.8) +  
+  labs(x = "q", y = "Diversity Value") + 
+  #facet_grid(.~fraction)+
+  geom_line(size = 1.5, aes(color = fraction), alpha = 0.5) +
+  scale_y_continuous(limits = c(0, 1500), breaks = seq(0, 1500, by = 250), expand = c(0,0)) +
+  scale_fill_manual(values = fraction_colors) + 
+  scale_shape_manual(values = season_shapes) +
+  scale_color_manual(values = fraction_colors) +
+  theme(legend.position = "none")
+
+plot_grid(hill_nums_p, season_legend, nrow = 2, ncol = 1, rel_heights = c(1, 0.05))
 ```
 
 
@@ -1517,7 +1530,7 @@ phylorich_distribution_plot <-
   geom_jitter(size = 3, aes(fill = fraction, shape = season), width = 0.2) + 
   geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(fill = fraction)) +
   scale_y_continuous(limits = phylorich_limits, breaks = phylorich_breaks, expand = c(0, 0)) + 
-  labs(y = expression(textstyle("Phylogenetic")~{}^0*italic(D)),
+  labs(y = expression({}^0*italic(PD)),
        x = "Fraction") +
   scale_shape_manual(values = season_shapes) +
   geom_path(data = phylorich_nums, aes(x = a, y = b), linetype = 1, color = "#424645") +
@@ -1543,7 +1556,7 @@ prod_vs_phylorich_plot <-
   scale_color_manual(values = fraction_colors) +
   scale_fill_manual(values = fraction_colors) +
   scale_shape_manual(values = season_shapes) +
-  labs(x = expression(textstyle("Phylogenetic")~{}^0*italic(D)),
+  labs(x = expression({}^0*italic(PD)),
        y = "\n Community Production \n (μgC/L/day)") +
   geom_smooth(data=filter(wide_div_meta_df, fraction == "Particle"), 
               method='lm', color = "#FF6600", fill = "#FF6600") + 
@@ -1572,7 +1585,7 @@ percell_prod_vs_phylorich_plot <-
   scale_color_manual(values = fraction_colors) +
   scale_fill_manual(values = fraction_colors) +
   scale_shape_manual(values = season_shapes) +
-  labs(x = expression(textstyle("Phylogenetic")~{}^0*italic(D)),
+  labs(x = expression({}^0*italic(PD)),
        y = "\n log10(Per-Capita Production)\n (μgC/cell/day)") +
   geom_smooth(data=filter(wide_div_meta_df, fraction == "Particle"), 
               method='lm', color = "#FF6600", fill = "#FF6600") + 
@@ -1623,7 +1636,7 @@ phyloshan_distribution_plot <-
   geom_jitter(size = 3, aes(shape = season, fill = fraction), width = 0.2) + 
   geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(fill = fraction)) +
   scale_y_continuous(limits = phyloshan_limits, breaks = phyloshan_breaks, expand = c(0,0)) + 
-   labs(y = expression(textstyle("Phylogenetic")~{}^1*italic(D)),
+   labs(y = expression({}^1*italic(PD)),
        x = "Fraction") +
   scale_shape_manual(values = season_shapes) +
     # Add line and pval
@@ -1649,7 +1662,7 @@ prod_vs_phyloshan_plot <-
   scale_color_manual(values = fraction_colors) +
   scale_shape_manual(values = season_shapes) +
   scale_fill_manual(values = fraction_colors) +
-  labs(x = expression(textstyle("Phylogenetic")~{}^1*italic(D)),
+  labs(x = expression({}^1*italic(PD)),
        y = "\n Community Production \n (μgC/L/day)") +
   scale_x_continuous(limits = phyloshan_limits, breaks = phyloshan_breaks, expand = c(0,0)) + 
   geom_smooth(data=filter(wide_div_meta_df, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
@@ -1671,7 +1684,7 @@ percell_prod_vs_phyloshan_plot <-
   scale_color_manual(values = fraction_colors) +
   scale_fill_manual(values = fraction_colors) +
   scale_shape_manual(values = season_shapes) +
-  labs(x = expression(textstyle("Phylogenetic")~{}^1*italic(D)),
+  labs(x = expression({}^1*italic(PD)),
        y = "\n log10(Per-Capita Production)\n (μgC/cell/day)") +
   geom_smooth(data=filter(wide_div_meta_df, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
   scale_x_continuous(limits = phyloshan_limits, breaks = phyloshan_breaks, expand = c(0,0)) + 
@@ -1713,7 +1726,7 @@ phylosimps_distribution_plot <-
   geom_jitter(size = 3,  aes(fill = fraction, shape = season), width = 0.2) + 
   geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(fill = fraction)) +
   scale_y_continuous(limits = phylosimps_limits, breaks = phylosimps_breaks, expand = c(0,0)) + 
-  labs(y = expression(textstyle("Phylogenetic")~{}^2*italic(D)),
+  labs(y = expression({}^2*italic(PD)),
        x = "Fraction") +
   geom_path(data = phylosimps_nums, aes(x = a, y = b), linetype = 1, color = "#424645") +
   annotate("text", x=1.5, y=6.5, size = 4, color = "#424645", label= "NS") +
@@ -1736,7 +1749,7 @@ prod_vs_phylosimps_plot <-
   scale_color_manual(values = fraction_colors) +
   scale_fill_manual(values = fraction_colors) +
   scale_shape_manual(values = season_shapes) +
-  labs(x = expression(textstyle("Phylogenetic")~{}^2*italic(D)),
+  labs(x = expression({}^2*italic(PD)),
        y = "Community Production \n (μgC/L/day)") +
   scale_x_continuous(limits = phylosimps_limits, breaks = phylosimps_breaks, expand = c(0,0)) + 
   theme(legend.position = "none", axis.title.x = element_blank(), axis.text.x = element_blank()) 
@@ -1760,7 +1773,7 @@ percell_prod_vs_phylosimps_plot <-
   scale_color_manual(values = fraction_colors, guide = TRUE) +
   scale_fill_manual(values = fraction_colors, guide = FALSE) +
   scale_shape_manual(values = season_shapes) +
-  labs(x = expression(textstyle("Phylogenetic")~{}^2*italic(D)),
+  labs(x = expression({}^2*italic(PD)),
        y = "log10(production/cell)\n (μgC/cell/day)") +
   scale_x_continuous(limits = phylosimps_limits, breaks = phylosimps_breaks, expand = c(0,0)) + 
   geom_smooth(data=filter(wide_div_meta_df, fraction == "Particle"), method='lm', color = "#FF6600", fill = NA, linetype = "dotted") + 
@@ -1876,9 +1889,433 @@ wide_div_meta_df %>%
 ```
 
 
+# Supplement: Figures & Tables
+
+## Figure S1
+#### Map of Muskegon Lake
+```{r Figure_S1}
+# Load the ggmap package for plotting of Muskegon Lake
+library(ggmap)
+
+# Extract the coordinates for Muskegon Lake 
+lakesite_coordinates <- read.csv("data/metadata/ML_GPS_Coordinates.csv") %>%
+  dplyr::select(lakesite, Latitude, Longitude) %>%
+  dplyr::rename(Lat = Latitude, Long = Longitude)
+
+# Set the boundaries for the map 
+map <- get_map(c(-86.35, 43.21, -86.235, 43.265),  #left/bottom/right/top
+                 zoom = 13, maptype = "toner-background")
+
+# Plot the Muskegon Lake Map 
+ggmap(map) + xlab("Longitude") + ylab("Latitude") +
+  theme(axis.text = element_text(size = 10, color = "black"),
+        axis.title = element_text(size = 12, color = "black", face = "bold")) +
+    geom_point(data = lakesite_coordinates, 
+               aes(x=Long, y=Lat), color="black", fill = "yellow", size=4, shape = 21) +
+    geom_text(data = lakesite_coordinates,
+              aes(x=Long, y=Lat, label=lakesite), col="black", cex=4, vjust = 0.5,hjust = -0.25) 
+```
+
+
+## Figure S2
+```{r figure_S2, fig.width = 10, fig.height = 4.5}
+# h = 0 = richness
+# h = 1 = exp(Shannon)
+# h = 2 = Inverse Simpsons
+
+# Prepare data to color the figure for iNEXT
+dat <- colnames(iNEXT_input_table) %>%	
+  data.frame() 	
+colnames(dat)[1] <- "norep_filter_name"  	
+sub_metadata <- metadata[,1:6] %>%	
+  tibble::rownames_to_column(var = "norep_filter_name")
+
+# Combine for plotting below
+dat_iNEXT <- dat %>%	
+  left_join(sub_metadata, by = "norep_filter_name") %>%	 
+  mutate(fraction_color = ifelse(fraction == "Particle", "#FF6600", "skyblue"), 	  
+         shape = ifelse(season == "Spring", 25, 	        
+                        ifelse(season == "Summer", 23, 	                       
+                               21)),	                              
+         station_color = ifelse(lakesite == "Bear", "black", 	         
+                                ifelse(lakesite == "Deep", "blue",	                               
+                                       ifelse(lakesite == "Outlet", "skyblue",	                                       
+                                              "forestgreen"))),	                                             
+         season_color = ifelse(season == "Spring", "skyblue", 	       
+                               ifelse(season == "Summer", "forestgreen",	                               
+                                      "orange")))
+
+# Sample‐size‐based R/E curves, separating by "site""
+p_iNEXT <- ggiNEXT(iNEXT_data, type=1, facet.var="order") + facet_wrap(~order, scales="free") +
+  scale_shape_manual(values = dat_iNEXT$shape, guide = FALSE) +
+  scale_color_manual(values = dat_iNEXT$fraction_color,  guide = FALSE) +
+  scale_fill_manual(values = dat_iNEXT$fraction_color, guide = FALSE) +
+  theme(legend.position = "none") +
+  labs(title = "Hill Diversity Metrics") +
+  theme(plot.title = element_text()); 
+
+p_iNEXT_legend <- ggiNEXT(iNEXT_data, type=1, facet.var="order", grey = "true") + 
+  facet_wrap(~order, scales="free") +
+  guides(color = "none", shape = "none", fill = "none") + 
+  theme(legend.text = element_text(size = 13))
+
+# Extract the legend
+iNEXT_legend <- cowplot::get_legend(p_iNEXT_legend)
+
+# plot them together 
+plot_grid(p_iNEXT, iNEXT_legend, season_legend,
+           ncol = 1, nrow = 3, 
+           rel_heights = c(1, 0.05, 0.05)); 
+```
+
+
+```{r iNEXT-richness-plot, fig.width= 6, fig.height= 3.5}
+wilcox_rich_obs <- wilcox.test(Observed ~ fraction, data =dplyr::filter(div_df_frac,Diversity == "Species richness"))
+wilcox_rich_est <- wilcox.test(Estimator ~ fraction, data = dplyr::filter(div_df_frac,Diversity == "Species richness"))
+
+rich_p1 <- div_df_frac %>%
+  dplyr::filter(Diversity == "Species richness") %>%
+  ggplot(aes(x = fraction, y = Observed)) + 
+  geom_jitter(size = 3, aes(fill = fraction, shape = season), width = 0.2) + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA, aes( fill = fraction)) +
+  scale_fill_manual(values = fraction_colors) +
+  scale_shape_manual(values = season_shapes) + 
+  scale_y_continuous(limits = c(0, 1800), breaks = seq(0, 1800, by = 300),
+                     expand = c(0, 0)) +
+  labs(y = "Observed Richness") +
+  theme(axis.title.x = element_blank(), legend.position = "none") + 
+  annotate("text", x=1.5, y=1500, size = 4, color = "gray40",
+         label= paste("Wilcoxon, p =", round(wilcox_rich_obs$p.value, digits = 3))) 
+
+rich_p2 <- div_df_frac %>%
+  dplyr::filter(Diversity == "Species richness") %>%
+  ggplot(aes(x = fraction, y = Estimator)) + 
+  geom_jitter(size = 3, aes(fill = fraction, shape = season), width = 0.2) + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA, aes( fill = fraction)) +
+  scale_fill_manual(values = fraction_colors) +
+  scale_shape_manual(values = season_shapes) + 
+  scale_y_continuous(limits = c(0, 1800), breaks = seq(0, 1800, by = 300),
+                     expand = c(0, 0))+
+  labs(y = "Richness Estimator") +
+  theme(axis.title.x = element_blank(), legend.position = "none") + 
+  annotate("text", x=1.5, y=1500, size = 4, color = "gray40",
+      label= paste("Wilcoxon, p =", round(wilcox_rich_est$p.value, digits = 3)))
+
+# Put the plots together 
+rich_title <- ggdraw() + 
+  draw_label("iNEXT richness estimates", fontface = 'bold', x = 0, hjust = 0) + 
+   theme(plot.margin = margin(0, 0, 0, 125))
+
+rich_plotz <- plot_grid(rich_p1, rich_p2, 
+          labels = c("A", "B"))
+
+plot_grid(rich_title, rich_plotz, 
+          ncol = 1, nrow = 2, rel_heights = c(0.1, 1))
+```
+
+
+## Figure S3 
+#### Correlations between Particle and Free of values in Figure 1
+```{r Figure_S3, fig.width = 12, fig.height = 4, dependson="load-data"}
+work_df <- metadata %>%
+  dplyr::select(norep_filter_name, fraction, fraction_bac_abund, frac_bacprod, fracprod_per_cell_noinf) %>%
+  mutate(norep_water_name = paste(substr(norep_filter_name, 1,4), substr(norep_filter_name, 6,9), sep = "")) %>%
+  dplyr::select(-norep_filter_name)
+
+part_work_df <- work_df %>%
+  filter(fraction == "Particle") %>%
+  rename(part_bacabund = fraction_bac_abund,
+         part_prod = frac_bacprod, 
+         part_percell_prod = fracprod_per_cell_noinf) %>%
+  dplyr::select(-fraction)
+
+free_work_df <- work_df %>%
+  filter(fraction == "Free") %>%
+  rename(free_bacabund = fraction_bac_abund,
+         free_prod = frac_bacprod, 
+         free_percell_prod = fracprod_per_cell_noinf) %>%
+  dplyr::select(-fraction)
+
+byfrac_df <- part_work_df %>%
+  left_join(free_work_df, by = "norep_water_name")
+
+byfrac_df$season <- substr(byfrac_df$norep_water_name, 5,5) # 7th letter = month sampled
+byfrac_df$season <- as.character(byfrac_df$season)
+byfrac_df$season <- ifelse(byfrac_df$season == "5", "Spring", 
+                             ifelse(byfrac_df$season == "7", "Summer", 
+                                    ifelse(byfrac_df$season == "9", "Fall",
+                                           "NA")))
+byfrac_df$season <- factor(byfrac_df$season, levels = c("Spring", "Summer", "Fall"))
+
+summary(lm(log10(part_bacabund) ~ log10(free_bacabund), data = filter(byfrac_df, norep_water_name != "MOTE515")))
+
+plot1 <- ggplot(filter(byfrac_df, norep_water_name != "MOTE515"), 
+       aes(x = log10(free_bacabund), y = log10(part_bacabund))) +
+  xlab("Free") +  ylab("Particle") + 
+  ggtitle("Log10(Bacterial Counts) \n (cells/mL)") +
+  geom_point(size = 3, fill = "grey", aes(shape = season), width = 0.2) + 
+  scale_shape_manual(values = season_shapes) +
+  theme(legend.position = "bottom",
+        legend.title = element_blank())
 
 
 
+
+################ Community-Wide production correlation between particle and free
+## 1. Run the linear regression 
+lm_prod_corr <- lm(part_prod ~ free_prod, data = byfrac_df)
+
+# 2. Extract the R2 and p-value from the linear model: 
+lm_lab_perliter_PAvsFL <- paste("atop(R^2 ==", round(summary(lm_prod_corr)$adj.r.squared, digits = 2), ",",
+            "p ==", round(unname(summary(lm_prod_corr)$coefficients[,4][2]), digits = 3), ")")
+
+## 3. Plot Community production correlation between particle and free
+plot2 <- ggplot(byfrac_df, aes(x = free_prod, y = part_prod)) +
+  xlab("Free") +  ylab("Particle") + 
+  ggtitle("Community Production \n(μgC/L/day)") +
+  geom_point(size = 3, fill = "grey", aes(shape = season), width = 0.2) + 
+  scale_shape_manual(values = season_shapes) +
+  geom_smooth(method = "lm", color = "black")  + 
+  # Add the R2 and p-value to the plot 
+  annotate("text", x=20, y=30, label=lm_lab_perliter_PAvsFL, parse = TRUE, color = "black", size = 4) +
+  theme(legend.position = "none")
+
+
+################ Per-Capita production correlation between particle and free
+## 1. Run the linear regression 
+lm_percell_corr <- lm(log10(part_percell_prod) ~ log10(free_percell_prod), data = byfrac_df)
+
+# 2. Extract the R2 and p-value from the linear model: 
+lm_lab_percell_PAvsFL <- paste("atop(R^2 ==", round(summary(lm_percell_corr)$adj.r.squared, digits = 2), ",",
+            "p ==", round(unname(summary(lm_percell_corr)$coefficients[,4][2]), digits = 3), ")")
+
+## 3. Plot Per-Capita production correlation between particle and free
+plot3 <- ggplot(byfrac_df,
+       aes(x = log10(free_percell_prod), y = log10(part_percell_prod))) +  
+  xlab("Free") +  ylab("Particle") + 
+  ggtitle("log10(Per-Capita Production)\n (μgC/cell/day)") +
+  geom_point(size = 3, fill = "grey", aes(shape = season), width = 0.2) + 
+  scale_shape_manual(values = season_shapes) +
+  geom_smooth(method = "lm", color = "black") + 
+  # Add the R2 and p-value to the plot 
+  annotate("text", y = -5.8, x=-7.9, label=lm_lab_percell_PAvsFL, parse = TRUE, color = "black", size = 4) +
+  theme(legend.position = "none")
+
+
+# Make the final multi-paneled Plot
+# Extract the legend
+legend_s1 <- get_legend(plot1 + theme(legend.direction = "horizontal",legend.justification="center" ,legend.box.just = "bottom"))
+
+# Make the 3 plots
+top_row_S1 <- plot_grid(plot1 +theme(legend.position = "none"), plot2, plot3, 
+          nrow = 1, ncol = 3, 
+          labels = c("A", "B", "C"), 
+          align = "h")
+
+# Put the legend and 3 plots together
+plot_grid(top_row_S1, legend_s1,
+          rel_heights = c(1, 0.05),
+          nrow = 2, ncol = 1)
+```
+
+## Figure S4
+```{r Figure_S4, fig.width = 4, fig.height = 7.2}
+shannon_plots_noyaxis <- plot_grid(shannon_distribution_plot + 
+                                     theme(#  specify top, right, bottom, and left margins
+                                           plot.margin = margin(0.2, 0, 0, 0.6, "cm")), 
+          prod_vs_shannon_plot, 
+          percell_prod_vs_shannon_plot + theme(legend.position = "none"),
+          labels = c("A", "B", "C"), 
+          ncol = 1, nrow = 3,
+          rel_heights = c(0.5, 0.8, 1),
+          align = "v")
+
+####### Legend for season
+leg_plot <- ggplot(metadata, aes(y = frac_bacprod, x = fraction, fill = fraction, shape = season)) + 
+  geom_jitter(size = 3, width = 0.2) + 
+  scale_fill_manual(values = fraction_colors, guide = guide_legend(override.aes = list(shape = 22, size = 4))) +
+  scale_shape_manual(values = season_shapes, guide = guide_legend(override.aes = list(size = 4))) +
+  theme(legend.position = "bottom",  legend.justification="center",
+        axis.title.x = element_blank(),
+        legend.title = element_blank(), legend.box = "vertical",
+        legend.spacing.y = unit(0.1, 'cm'),
+        plot.margin = unit(c(0.2,0.2,1,0.2), "cm")) # top, right, bottom, and left margins
+# Extract the legend
+s_leg <- cowplot::get_legend(leg_plot + theme(legend.direction = "horizontal",legend.justification="center" ,legend.box.just = "bottom"))
+
+######## PLOT FIGURE S4
+plot_grid(shannon_plots_noyaxis, s_leg,
+                   ncol = 1, nrow = 2, 
+                   rel_heights = c(1, 0.08))
+```
+
+
+
+
+#### Prepare data frames for table S1 and S2
+```{r lm-models-df, dependson = c("calc-div", "calc-sesmpd","euclidian-pcoa-varexplained")}
+## Prepare the dataframes for Free and Particle data
+metadata_pca_PD_free <- dplyr::filter(wide_div_meta_df, fraction == "Free")
+metadata_pca_PD_part <-  dplyr::filter(wide_div_meta_df, fraction == "Particle")  
+
+# List of environmental variables to run linear models on 
+        # BGA_cellspermL and Turb_NTU do not have enough data points for regression
+lm_variables <- c("frac_bacprod", "fracprod_per_cell_noinf", "Temp_C", "SpCond_uSpercm", "TDS_mgperL", 
+                  "pH", "ORP_mV", "Chl_Lab_ugperL", "Cl_mgperL", "SO4_mgperL", "NO3_mgperL", 
+                  "NH3_mgperL", "TKN_mgperL", "SRP_ugperL", "TP_ugperL", "Alk_mgperL", "DO_mgperL", 
+                  "total_bac_abund","attached_bac", "dnaconcrep1", 
+                  "PC1", "PC2", 
+                  "richness", "shannon", "simpson", "phylo_richness", "phylo_shannon", "phylo_simpson",
+                  "unweighted_sesmpd", "weighted_sesmpd") 
+
+########################################################
+##############  Particle: Community-wide 
+lm_summary_particle_comm <- metadata_pca_PD_part %>%
+  dplyr::select(one_of(lm_variables), -fracprod_per_cell_noinf) %>%
+  gather(key = independent, value = measurement, -frac_bacprod) %>%
+  mutate(measurement = as.numeric(measurement)) %>%
+  group_by(independent) %>% 
+  do(glance(lm(frac_bacprod ~ measurement, data = .))) %>% 
+  mutate(fraction = "Particle", dependent = "Community Production") %>%
+  dplyr::select(fraction, dependent, independent, logLik, AIC, adj.r.squared, p.value) %>%
+  ungroup() %>%
+  mutate(FDR.p = p.adjust(p.value, method = "fdr")) 
+
+##############  Particle: Per-capita  
+lm_summary_particle_percap <- metadata_pca_PD_part %>%
+  dplyr::select(one_of(lm_variables), -frac_bacprod) %>%
+  filter(!is.na(fracprod_per_cell_noinf)) %>%   # Remove samples that are not NA
+  gather(key = independent, value = measurement, -fracprod_per_cell_noinf) %>%
+  mutate(measurement = as.numeric(measurement)) %>%
+  group_by(independent) %>% 
+  do(glance(lm(log10(fracprod_per_cell_noinf) ~ measurement, data = .))) %>% 
+  mutate(fraction = "Particle", dependent = "Per-Capita Production") %>%
+  dplyr::select(fraction, dependent, independent, logLik, AIC, adj.r.squared, p.value) %>%
+  ungroup() %>%
+  mutate(FDR.p = p.adjust(p.value, method = "fdr")) 
+
+
+########################################################
+##############  Free: Community-wide 
+lm_summary_free_comm <- metadata_pca_PD_free %>%
+  dplyr::select(one_of(lm_variables), -fracprod_per_cell_noinf) %>%
+  gather(key = independent, value = measurement, -frac_bacprod) %>%
+  mutate(measurement = as.numeric(measurement)) %>%
+  group_by(independent) %>% 
+  do(glance(lm(frac_bacprod ~ measurement, data = .))) %>% 
+  mutate(fraction = "Free", dependent = "Community Production") %>%
+  dplyr::select(fraction, dependent, independent, logLik, AIC, adj.r.squared, p.value) %>%
+  ungroup() %>%
+  mutate(FDR.p = p.adjust(p.value, method = "fdr")) 
+
+##############  Free: Per-capita  
+lm_summary_free_percap <- metadata_pca_PD_free %>%
+  dplyr::select(one_of(lm_variables), -frac_bacprod) %>%
+  filter(!is.na(fracprod_per_cell_noinf)) %>%   # Remove samples that are not NA
+  gather(key = independent, value = measurement, -fracprod_per_cell_noinf) %>%
+  mutate(measurement = as.numeric(measurement)) %>%
+  group_by(independent) %>% 
+  do(glance(lm(log10(fracprod_per_cell_noinf) ~ measurement, data = .))) %>% 
+  mutate(fraction = "Free", dependent = "Per-Capita Production") %>%
+  dplyr::select(fraction, dependent, independent, logLik, AIC, adj.r.squared, p.value) %>%
+  ungroup() %>%
+  mutate(FDR.p = p.adjust(p.value, method = "fdr")) 
+
+
+## Filtered PCA Linear Model Results
+# Put all of the PCA and environmental  linear model results together into one dataframe 
+all_pca_div_environ_lm_results <- 
+  bind_rows(lm_summary_particle_comm, lm_summary_particle_percap,
+          lm_summary_free_comm, lm_summary_free_percap) %>%
+  dplyr::rename(independent_var = independent,
+                dependent_var = dependent) 
+
+## Combine the results with the diversity linear models 
+individual_lm_results <- all_pca_div_environ_lm_results %>%
+  mutate(AIC = round(AIC, digits = 2),  
+         adj.r.squared = round(adj.r.squared, digits = 2),
+         p.value = round(p.value, digits = 4),
+         FDR.p = round(FDR.p, digits = 4)) %>%
+  rename(FDR.p.value = FDR.p)
+``` 
+
+## Table S1
+```{r Table_S1, dependson="lm-models-df"}
+tableS1 <- individual_lm_results %>%
+  dplyr::filter(dependent_var == "Community Production" & FDR.p.value < 0.05) %>%  
+  dplyr::select(-c(dependent_var, p.value)) %>%
+  arrange(-logLik)
+#write.csv(tableS1, file = "tables/Table_S1.csv", quote = FALSE, row.names = FALSE) 
+
+#### Community-Wide Production    
+datatable(tableS1,
+       caption = "Table S1: Ordinary least squares regression statistics for community-wide heterotrophic production with a FDR-corrected p-value of less than 0.05.", 
+       options = list(pageLength = 50), rownames = FALSE)   
+```
+
+
+## Table S2
+```{r Table_S2, dependson="lm-models-df"}
+tableS2 <- individual_lm_results %>%  
+  dplyr::filter(dependent_var == "Per-Capita Production" & FDR.p.value < 0.05) %>%
+  dplyr::select(-c(dependent_var, p.value))  %>%
+  arrange(-logLik)
+#write.csv(tableS2, file = "tables/Table_S2.csv", quote = FALSE, row.names = FALSE) 
+ 
+### Per-Capita Production   
+datatable(tableS2,
+       caption = "Table S2: Ordinary least squares regression statistics for per-capita heterotrophic production with a FDR-corrected p-value of less than 0.05.", 
+       options = list(pageLength = 50), rownames = FALSE)    
+```
+
+
+### All Regression Results
+```{r all-lm-results, dependson = "lm-models-df"}
+### Per-Capita Production     
+datatable(individual_lm_results, 
+       options = list(pageLength = 20), rownames = FALSE)    
+```
+
+
+
+## Figure S10
+#### PCA with Euclidian Distances  
+```{r Figure_S10, fig.height=4, fig.width=5}
+# Make the Supplemental Figure
+par(mar = c(4.5, 4.5, 1, 1), mfrow = c(1,1))
+biplot(pca_environ,
+     xlab = paste("PC1", paste(round(summary(pca_environ)$cont$importance[2,1]*100, digits = 2), "%", sep = ""), sep = ": "),
+     ylab = paste("PC2", paste(round(summary(pca_environ)$cont$importance[2,2]*100, digits = 2), "%", sep = ""), sep = ": "))
+
+# Plot the amount of variation explained by each of the axes.
+par(mar = c(5,5,2,5))
+plot(summary(pca_environ)$cont$importance[2,]*100, 
+     xlab = "PCA Axis", 
+     ylab = "Variation Explained Per Axis",
+     ylim = c(0, 105),
+     col = "cornflowerblue",
+     cex =2,
+     pch = 16)
+par(new = T)
+plot(summary(pca_environ)$cont$importance[3,]*100,
+       cex = 2,
+       pch = 17,
+       ylim = c(0, 105),
+       col = "firebrick3",
+       axes=F, 
+       xlab=NA, 
+       ylab=NA)
+axis(side = 4)
+mtext(side = 4, line = 3, "Total Accumulated Variation")
+legend("right",
+       legend=c("Per Axis", "Total"),
+       pch=c(16, 17), col=c("cornflowerblue", "firebrick3"))
+
+# Amount of variation explained by the first two axes
+summary(pca_environ)$cont$importance[3, 2]*100
+```
+
+The first two axes of the PCA explain ~70% of the variation in the environmental data!
 
 
 

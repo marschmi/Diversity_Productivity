@@ -1,7 +1,7 @@
 ---
 title: "OTU Removal Analysis: Figure S6"
 author: "Marian L. Schmidt, marschmi@umich.edu, @micro_marian"
-date: "December 7th, 2017"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
   html_document:
     code_folding: show
@@ -71,6 +71,9 @@ library(boot)       # For cross validation
 library(DT)         # Pretty HTML Table Output
 source("../code/Muskegon_functions.R")
 source("../code/set_colors.R")
+
+# Set the ggplot theme 
+theme_set(theme_cowplot())
 ```
 
 # Prepare the data 
@@ -155,11 +158,11 @@ alpha_rm1 <- calc_alpha_diversity(physeq = notree_musk_surface_pruned_rm1)
 
 otu_alphadiv_rm1 <- calc_mean_alphadiv(physeq = notree_musk_surface_pruned_rm1,
                            richness_df = alpha_rm1$Richness, 
-                           evenness_df = alpha_rm1$Inverse_Simpson, 
-                           shannon_df = alpha_rm1$Shannon) %>%
+                           simpson_df = alpha_rm1$Inverse_Simpson, 
+                           exp_shannon_df = alpha_rm1$Shannon) %>%
     mutate(fraction = factor(fraction, levels = c("WholePart", "Particle", "WholeFree", "Free")),
          lakesite = factor(lakesite,  levels = c("MOT", "MDP", "MBR", "MIN")),
-         measure = factor(measure, levels = c("Richness", "Simpsons_Evenness", "Shannon_Entropy", "Inverse_Simpson")),
+         measure = factor(measure, levels = c("Richness", "Exponential_Shannon", "Inverse_Simpson")),
          Removed = "1-tons")  
 
 ################## Remove 5-tons 
@@ -167,11 +170,11 @@ alpha_rm5 <- calc_alpha_diversity(physeq = notree_musk_surface_pruned_rm5)
 
 otu_alphadiv_rm5 <- calc_mean_alphadiv(physeq = notree_musk_surface_pruned_rm5,
                            richness_df = alpha_rm5$Richness, 
-                           evenness_df = alpha_rm5$Inverse_Simpson, 
-                           shannon_df = alpha_rm5$Shannon) %>%
+                           simpson_df = alpha_rm5$Inverse_Simpson, 
+                           exp_shannon_df = alpha_rm5$Shannon) %>%
     mutate(fraction = factor(fraction, levels = c("WholePart", "Particle", "WholeFree", "Free")),
          lakesite = factor(lakesite,  levels = c("MOT", "MDP", "MBR", "MIN")),
-         measure = factor(measure, levels = c("Richness", "Simpsons_Evenness", "Shannon_Entropy", "Inverse_Simpson")),
+         measure = factor(measure, levels = c("Richness", "Exponential_Shannon", "Inverse_Simpson")),
          Removed = "5-tons")  
 
 
@@ -180,11 +183,11 @@ alpha_rm10 <- calc_alpha_diversity(physeq = notree_musk_surface_pruned_rm10)
 
 otu_alphadiv_rm10 <- calc_mean_alphadiv(physeq = notree_musk_surface_pruned_rm10,
                            richness_df = alpha_rm10$Richness, 
-                           evenness_df = alpha_rm10$Inverse_Simpson, 
-                           shannon_df = alpha_rm10$Shannon) %>%
+                           simpson_df = alpha_rm10$Inverse_Simpson, 
+                           exp_shannon_df = alpha_rm10$Shannon) %>%
     mutate(fraction = factor(fraction, levels = c("WholePart", "Particle", "WholeFree", "Free")),
          lakesite = factor(lakesite,  levels = c("MOT", "MDP", "MBR", "MIN")),
-         measure = factor(measure, levels = c("Richness", "Simpsons_Evenness", "Shannon_Entropy", "Inverse_Simpson")),
+         measure = factor(measure, levels = c("Richness", "Exponential_Shannon", "Inverse_Simpson")),
          Removed = "10-tons") 
 
 
@@ -193,11 +196,11 @@ alpha_rm20 <- calc_alpha_diversity(physeq = notree_musk_surface_pruned_rm20)
 
 otu_alphadiv_rm20 <- calc_mean_alphadiv(physeq = notree_musk_surface_pruned_rm20,
                            richness_df = alpha_rm20$Richness, 
-                           evenness_df = alpha_rm20$Inverse_Simpson, 
-                           shannon_df = alpha_rm20$Shannon) %>%
+                           simpson_df = alpha_rm20$Inverse_Simpson, 
+                           exp_shannon_df = alpha_rm20$Shannon) %>%
     mutate(fraction = factor(fraction, levels = c("WholePart", "Particle", "WholeFree", "Free")),
          lakesite = factor(lakesite,  levels = c("MOT", "MDP", "MBR", "MIN")),
-         measure = factor(measure, levels = c("Richness", "Simpsons_Evenness", "Shannon_Entropy", "Inverse_Simpson")),
+         measure = factor(measure, levels = c("Richness", "Exponential_Shannon", "Inverse_Simpson")),
          Removed = "20-tons")  
 
 
@@ -208,11 +211,11 @@ alpha_rm30 <- calc_alpha_diversity(physeq = notree_musk_surface_pruned_rm30)
 
 otu_alphadiv_rm30 <- calc_mean_alphadiv(physeq = notree_musk_surface_pruned_rm30,
                            richness_df = alpha_rm30$Richness, 
-                           evenness_df = alpha_rm30$Inverse_Simpson, 
-                           shannon_df = alpha_rm30$Shannon) %>%
+                           simpson_df = alpha_rm30$Inverse_Simpson, 
+                           exp_shannon_df = alpha_rm30$Shannon) %>%
     mutate(fraction = factor(fraction, levels = c("WholePart", "Particle", "WholeFree", "Free")),
          lakesite = factor(lakesite,  levels = c("MOT", "MDP", "MBR", "MIN")),
-         measure = factor(measure, levels = c("Richness", "Simpsons_Evenness", "Shannon_Entropy", "Inverse_Simpson")),
+         measure = factor(measure, levels = c("Richness", "Exponential_Shannon", "Inverse_Simpson")),
          Removed = "30-tons")  
 
 
@@ -222,11 +225,11 @@ alpha_rm60 <- calc_alpha_diversity(physeq = notree_musk_surface_pruned_rm60)
 
 otu_alphadiv_rm60 <- calc_mean_alphadiv(physeq = notree_musk_surface_pruned_rm60,
                            richness_df = alpha_rm60$Richness, 
-                           evenness_df = alpha_rm60$Inverse_Simpson, 
-                           shannon_df = alpha_rm60$Shannon) %>%
+                           simpson_df = alpha_rm60$Inverse_Simpson, 
+                           exp_shannon_df = alpha_rm60$Shannon) %>%
     mutate(fraction = factor(fraction, levels = c("WholePart", "Particle", "WholeFree", "Free")),
          lakesite = factor(lakesite,  levels = c("MOT", "MDP", "MBR", "MIN")),
-         measure = factor(measure, levels = c("Richness", "Simpsons_Evenness", "Shannon_Entropy", "Inverse_Simpson")),
+         measure = factor(measure, levels = c("Richness", "Exponential_Shannon", "Inverse_Simpson")),
          Removed = "60-tons")  
 
 
@@ -235,11 +238,11 @@ alpha_rm90 <- calc_alpha_diversity(physeq = notree_musk_surface_pruned_rm90)
 
 otu_alphadiv_rm90 <- calc_mean_alphadiv(physeq = notree_musk_surface_pruned_rm90,
                            richness_df = alpha_rm90$Richness, 
-                           evenness_df = alpha_rm90$Inverse_Simpson, 
-                           shannon_df = alpha_rm90$Shannon) %>%
+                           simpson_df = alpha_rm90$Inverse_Simpson, 
+                           exp_shannon_df = alpha_rm90$Shannon) %>%
     mutate(fraction = factor(fraction, levels = c("WholePart", "Particle", "WholeFree", "Free")),
          lakesite = factor(lakesite,  levels = c("MOT", "MDP", "MBR", "MIN")),
-         measure = factor(measure, levels = c("Richness", "Simpsons_Evenness", "Shannon_Entropy", "Inverse_Simpson")),
+         measure = factor(measure, levels = c("Richness", "Exponential_Shannon", "Inverse_Simpson")),
          Removed = "90-tons")  
 
 
@@ -248,11 +251,11 @@ alpha_rm150 <- calc_alpha_diversity(physeq = notree_musk_surface_pruned_rm150)
 
 otu_alphadiv_rm150 <- calc_mean_alphadiv(physeq = notree_musk_surface_pruned_rm150,
                            richness_df = alpha_rm150$Richness, 
-                           evenness_df = alpha_rm150$Inverse_Simpson, 
-                           shannon_df = alpha_rm150$Shannon) %>%
+                           simpson_df = alpha_rm150$Inverse_Simpson, 
+                           exp_shannon_df = alpha_rm150$Shannon) %>%
     mutate(fraction = factor(fraction, levels = c("WholePart", "Particle", "WholeFree", "Free")),
          lakesite = factor(lakesite,  levels = c("MOT", "MDP", "MBR", "MIN")),
-         measure = factor(measure, levels = c("Richness", "Simpsons_Evenness", "Shannon_Entropy", "Inverse_Simpson")),
+         measure = factor(measure, levels = c("Richness", "Exponential_Shannon", "Inverse_Simpson")),
          Removed = "150-tons")  
 
 ################## Remove 300-tons 
@@ -260,11 +263,11 @@ alpha_rm225 <- calc_alpha_diversity(physeq = notree_musk_surface_pruned_rm225)
 
 otu_alphadiv_rm225 <- calc_mean_alphadiv(physeq = notree_musk_surface_pruned_rm225,
                            richness_df = alpha_rm225$Richness, 
-                           evenness_df = alpha_rm225$Inverse_Simpson, 
-                           shannon_df = alpha_rm225$Shannon) %>%
+                           simpson_df = alpha_rm225$Inverse_Simpson, 
+                           exp_shannon_df = alpha_rm225$Shannon) %>%
     mutate(fraction = factor(fraction, levels = c("WholePart", "Particle", "WholeFree", "Free")),
          lakesite = factor(lakesite,  levels = c("MOT", "MDP", "MBR", "MIN")),
-         measure = factor(measure, levels = c("Richness", "Simpsons_Evenness", "Shannon_Entropy", "Inverse_Simpson")),
+         measure = factor(measure, levels = c("Richness", "Exponential_Shannon", "Inverse_Simpson")),
          Removed = "225-tons")  
 
 
@@ -273,11 +276,11 @@ alpha_rm300 <- calc_alpha_diversity(physeq = notree_musk_surface_pruned_rm300)
 
 otu_alphadiv_rm300 <- calc_mean_alphadiv(physeq = notree_musk_surface_pruned_rm300,
                            richness_df = alpha_rm300$Richness, 
-                           evenness_df = alpha_rm300$Inverse_Simpson, 
-                           shannon_df = alpha_rm300$Shannon) %>%
+                           simpson_df = alpha_rm300$Inverse_Simpson, 
+                           exp_shannon_df = alpha_rm300$Shannon) %>%
     mutate(fraction = factor(fraction, levels = c("WholePart", "Particle", "WholeFree", "Free")),
          lakesite = factor(lakesite,  levels = c("MOT", "MDP", "MBR", "MIN")),
-         measure = factor(measure, levels = c("Richness", "Simpsons_Evenness", "Shannon_Entropy", "Inverse_Simpson")),
+         measure = factor(measure, levels = c("Richness", "Exponential_Shannon", "Inverse_Simpson")),
          Removed = "300-tons")  
 ```
 
@@ -334,11 +337,11 @@ alpha_rm15 <- calc_alpha_diversity(physeq = notree_musk_surface_pruned_rm15)
 
 otu_alphadiv_rm15 <- calc_mean_alphadiv(physeq = notree_musk_surface_pruned_rm15,
                             richness_df = alpha_rm15$Richness, 
-                            evenness_df = alpha_rm15$Inverse_Simpson, 
-                            shannon_df = alpha_rm15$Shannon) %>%
+                            simpson_df = alpha_rm15$Inverse_Simpson, 
+                            exp_shannon_df = alpha_rm15$Shannon) %>%
      mutate(fraction = factor(fraction, levels = c("WholePart", "Particle", "WholeFree", "Free")),
           lakesite = factor(lakesite,  levels = c("MOT", "MDP", "MBR", "MIN")),
-          measure = factor(measure, levels = c("Richness", "Simpsons_Evenness", "Shannon_Entropy", "Inverse_Simpson")),
+         measure = factor(measure, levels = c("Richness", "Exponential_Shannon", "Inverse_Simpson")),
           Removed = "15-tons")  
 
 ### To test for per-capita production
@@ -353,11 +356,11 @@ alpha_rm25 <- calc_alpha_diversity(physeq = notree_musk_surface_pruned_rm25)
 
 otu_alphadiv_rm25 <- calc_mean_alphadiv(physeq = notree_musk_surface_pruned_rm25,
                             richness_df = alpha_rm25$Richness, 
-                            evenness_df = alpha_rm25$Inverse_Simpson, 
-                            shannon_df = alpha_rm25$Shannon) %>%
+                            simpson_df = alpha_rm25$Inverse_Simpson, 
+                            exp_shannon_df = alpha_rm25$Shannon) %>%
      mutate(fraction = factor(fraction, levels = c("WholePart", "Particle", "WholeFree", "Free")),
           lakesite = factor(lakesite,  levels = c("MOT", "MDP", "MBR", "MIN")),
-          measure = factor(measure, levels = c("Richness", "Simpsons_Evenness", "Shannon_Entropy", "Inverse_Simpson")),
+         measure = factor(measure, levels = c("Richness", "Exponential_Shannon", "Inverse_Simpson")),
           Removed = "25-tons")  
 
 summary(lm(frac_bacprod ~ mean, data = filter(otu_alphadiv_rm25, measure == "Richness" & fraction == "WholePart")))
@@ -455,27 +458,27 @@ ggplot(dplyr::filter(all_divs, measure == "Richness"),
 ```
 
 
-# Shannon Entropy
+# Exp(Shannon Entropy)
 ```{r shannon-plots1, fig.width=9, fig.height=4, dependson="all_divs"}
 ### PLOT
-ggplot(dplyr::filter(all_divs, measure == "Shannon_Entropy"), 
+ggplot(dplyr::filter(all_divs, measure == "Exponential_Shannon"), 
        aes(y = mean, x = Removed, color = Removed, fill = Removed)) +
   geom_boxplot(alpha = 0.3, outlier.shape = NA) + geom_point(size = 3, position = position_jitter(w = 0.1)) + 
   scale_color_manual(values = tons_colors) +
   scale_fill_manual(values = tons_colors) +  
   facet_grid(.~fraction) +
-  ylab("Mean Shannon_Entropy") +
+  ylab("Mean Exp(Shannon Entropy)") +
   theme(legend.position = "bottom", legend.title = element_blank(),
         axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
         axis.title.x = element_blank())
 
-ggplot(dplyr::filter(all_divs, measure == "Shannon_Entropy"), 
+ggplot(dplyr::filter(all_divs, measure == "Exponential_Shannon"), 
        aes(y = mean, x = fraction, color = Removed, fill = Removed)) +
   geom_boxplot(alpha = 0.3, outlier.shape = NA) + geom_point(size = 3, position = position_jitter(w = 0.1)) + 
   scale_color_manual(values = tons_colors) +
   scale_fill_manual(values = tons_colors) +  
   facet_grid(.~Removed) +
-  ylab("Mean Shannon_Entropy") +
+  ylab("Mean Exp(Shannon Entropy)") +
   theme(legend.position = "bottom", legend.title = element_blank(),
         axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
         axis.title.x = element_blank())
@@ -484,11 +487,11 @@ ggplot(dplyr::filter(all_divs, measure == "Shannon_Entropy"),
 
 ```{r shannon-plots, fig.width=10, fig.height=5, dependson="all_divs"}
 # Linear Model output
-shannon_lm_results <- lm_fraction_output(dataframe = dplyr::filter(all_divs,  measure == "Shannon_Entropy"))
+shannon_lm_results <- lm_fraction_output(dataframe = dplyr::filter(all_divs,  measure == "Exponential_Shannon"))
 
 sig_shannon_lms_df <- shannon_lm_results %>%
   bind_rows() %>%
-  mutate(diversity_metric = "Shannon_Entropy") %>%
+  mutate(diversity_metric = "Exponential_Shannon") %>%
   filter(pval < 0.05)
 
 # Display significant models in a table
@@ -501,13 +504,13 @@ sig_shannon_lms_comm <- sig_shannon_lms_df %>%
   .$Removed
 
 ### Community-Wide production vs Shannon Entropy
-ggplot(dplyr::filter(all_divs, measure == "Shannon_Entropy"), 
+ggplot(dplyr::filter(all_divs, measure == "Exponential_Shannon"), 
        aes(y = frac_bacprod, x = mean, color = Removed, fill = Removed)) +
   geom_point(size = 3) + 
   xlab("Shannon Entropy") +
   ylab("Bacterial Production by Fraction") +
   geom_smooth(method = "lm", 
-              data = filter(all_divs, measure == "Shannon_Entropy" & fraction == "Particle" & Removed %in% sig_shannon_lms_comm)) + 
+              data = filter(all_divs, measure == "Exponential_Shannon" & fraction == "Particle" & Removed %in% sig_shannon_lms_comm)) + 
   scale_color_manual(values = tons_colors) +
   scale_fill_manual(values = tons_colors) +  
   facet_grid(fraction~Removed, scales = "free") +
@@ -521,12 +524,12 @@ sig_shannon_lms_percap <- sig_shannon_lms_df %>%
   .$Removed
 
 ### Per-capita production vs Shannon Entropy
-ggplot(dplyr::filter(all_divs, measure == "Shannon_Entropy"), 
+ggplot(dplyr::filter(all_divs, measure == "Exponential_Shannon"), 
        aes(y = log10(fracprod_per_cell_noinf), x = mean, color = Removed, fill = Removed)) +
   geom_point(size = 3) + xlab("Shannon Entropy") +
   ylab("log10(Per-Capita Production)") +
   geom_smooth(method = "lm", 
-              data = filter(all_divs, measure == "Shannon_Entropy" & fraction == "Particle" & Removed %in% sig_shannon_lms_percap)) + 
+              data = filter(all_divs, measure == "Exponential_Shannon" & fraction == "Particle" & Removed %in% sig_shannon_lms_percap)) + 
   scale_color_manual(values = tons_colors) + scale_fill_manual(values = tons_colors) +  
   facet_grid(fraction~Removed, scales = "free") +
   theme(legend.position = "bottom", legend.title = element_blank(),
@@ -612,85 +615,9 @@ ggplot(dplyr::filter(all_divs, measure == "Inverse_Simpson"),
 ```
 
 
-# Simpson's Evenness
-```{r simpseven-plots1, fig.width=9, fig.height=4, dependson="all_divs"}
-### PLOT
-ggplot(dplyr::filter(all_divs, measure == "Simpsons_Evenness"), 
-       aes(y = mean, x = Removed, color = Removed, fill = Removed)) +
-  geom_boxplot(alpha = 0.3, outlier.shape = NA) + geom_point(size = 3, position = position_jitter(w = 0.1)) + 
-  scale_color_manual(values = tons_colors) +
-  scale_fill_manual(values = tons_colors) +  
-  facet_grid(.~fraction) +
-  ylab("Mean Simpsons_Evenness") +
-  theme(legend.position = "bottom", legend.title = element_blank(),
-        axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
-        axis.title.x = element_blank())
-
-ggplot(dplyr::filter(all_divs, measure == "Simpsons_Evenness"), 
-       aes(y = mean, x = fraction, color = Removed, fill = Removed)) +
-  geom_boxplot(alpha = 0.3, outlier.shape = NA) + geom_point(size = 3, position = position_jitter(w = 0.1)) + 
-  scale_color_manual(values = tons_colors) +
-  scale_fill_manual(values = tons_colors) +  
-  facet_grid(.~Removed) +
-  ylab("Mean Simpsons_Evenness") +
-  theme(legend.position = "bottom", legend.title = element_blank(),
-        axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1),
-        axis.title.x = element_blank())
-```
-
-```{r simps-evenness-plots, fig.width=10, fig.height=5, dependson="all_divs"}
-# Linear Model output
-sig_simpseven_lms_df <- lm_fraction_output(dataframe = dplyr::filter(all_divs,  measure == "Simpsons_Evenness")) %>%
-  bind_rows() %>%
-  mutate(diversity_metric = "Simpsons_Evenness") %>%
-  filter(pval < 0.05)
-
-# Display significant models in a dataframe
-datatable(sig_simpseven_lms_df, options = list(pageLength = 40))
-
-
-### Community-Wide Production vs Simpson's Evenness
-sig_simpseven_lms_comm <- sig_simpseven_lms_df %>%
-  filter(test == "Community-Wide Production" & fraction == "Particle") %>%
-  dplyr::select(Removed) %>%
-  .$Removed
-
-### Community Wide Prodcution vs Simpson's Evenness
-ggplot(dplyr::filter(all_divs, measure == "Simpsons_Evenness"), 
-       aes(y = frac_bacprod, x = mean, color = Removed, fill = Removed)) +
-  geom_point(size = 3) + xlab("Simpsons Evenness") + ylab("Bacterial Production by Fraction") +
-  geom_smooth(method = "lm", 
-              data = filter(all_divs, measure == "Simpsons_Evenness" & fraction == "Particle" & Removed %in% sig_invsimps_lms_comm)) + 
-  scale_color_manual(values = tons_colors) +
-  scale_fill_manual(values = tons_colors) +  
-  facet_grid(fraction~Removed, scales = "free") +
-  theme(legend.position = "bottom", legend.title = element_blank(),
-        axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
-
-
-### Per-Capita Production vs Simpson's Evenness
-sig_simpseven_lms_percap <- sig_simpseven_lms_df %>%
-  filter(test == "Per-Capita Production" & fraction == "Particle") %>%
-  dplyr::select(Removed) %>%
-  .$Removed
-
-### Per-capita production vs Simpson's Evenness
-ggplot(dplyr::filter(all_divs, measure == "Simpsons_Evenness"), 
-       aes(y = log10(fracprod_per_cell_noinf), x = mean, color = Removed, fill = Removed)) +
-  geom_point(size = 3) + xlab("Simpsons Evenness") +
-  ylab("log10(Per-Capita Production)") +
-  geom_smooth(method = "lm", 
-              data = filter(all_divs, measure == "Simpsons_Evenness" & fraction == "Particle" & Removed %in% sig_simpseven_lms_percap)) + 
-  scale_color_manual(values = tons_colors) + scale_fill_manual(values = tons_colors) +  
-  facet_grid(fraction~Removed, scales = "free") +
-  theme(legend.position = "bottom", legend.title = element_blank(),
-        axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
-```
-
 
 # Figure S6
-```{r figS6, fig.height=10, fig.width=10}
-
+```{r figS6, fig.height=14, fig.width=12}
 p1 <- ggplot(dplyr::filter(all_divs, measure == "Richness"  & fraction == "Particle"), 
        aes(y = frac_bacprod, x = mean, color = Removed, fill = Removed)) +
   geom_point(size = 3) + xlab("Richness") +
@@ -711,7 +638,8 @@ p2 <- ggplot(dplyr::filter(all_divs, measure == "Richness" & fraction == "Partic
   scale_color_manual(values = tons_colors) + scale_fill_manual(values = tons_colors) +  
   facet_grid(~Removed, scales = "free") +
   theme(legend.position = "none", legend.title = element_blank(),
-        axis.text.x = element_text(angle = 60, hjust = 1, vjust = 1, size = 10))
+        axis.text.x = element_text(angle = 60, hjust = 1, vjust = 1, size = 10),
+        axis.title.x = element_text(face = "bold"))
 
 p3 <- ggplot(dplyr::filter(all_divs, measure == "Inverse_Simpson" & fraction == "Particle"), 
        aes(y = frac_bacprod, x = mean, color = Removed, fill = Removed)) +
@@ -733,13 +661,39 @@ p4 <- ggplot(dplyr::filter(all_divs, measure == "Inverse_Simpson"  & fraction ==
               data = filter(all_divs, measure == "Inverse_Simpson" & fraction == "Particle" & Removed %in% sig_invsimps_lms_percap)) + 
   scale_color_manual(values = tons_colors) + scale_fill_manual(values = tons_colors) +  
   facet_grid(~Removed, scales = "free") +
-  theme(legend.position = "bottom", legend.title = element_blank(),
-        axis.text.x = element_text(angle = 60, hjust = 1, vjust = 1, size = 10))
+  theme(legend.position = "none", legend.title = element_blank(),
+        axis.text.x = element_text(angle = 60, hjust = 1, vjust = 1, size = 10),
+        axis.title.x = element_text(face = "bold"))
 
-plot_grid(p1, p2, p3, p4, 
-          nrow = 4, ncol = 1,
-          rel_heights = c(0.9, 1, 0.9, 1.2),
-          labels = c("A", "B", "C", "D"),
+p5 <- ggplot(dplyr::filter(all_divs, measure == "Exponential_Shannon" & fraction == "Particle"), 
+       aes(y = frac_bacprod, x = mean, color = Removed, fill = Removed)) +
+  geom_point(size = 3) +  xlab("Exponential Shannon") +
+  ylab("Community-Wide \nProduction") +
+  geom_smooth(method = "lm", 
+              data = filter(all_divs, measure == "Exponential_Shannon" & fraction == "Particle" & Removed %in% sig_shannon_lms_comm)) + 
+  scale_color_manual(values = tons_colors) +
+  scale_fill_manual(values = tons_colors) +  
+  facet_grid(~Removed, scales = "free") +
+  theme(legend.position = "none", legend.title = element_blank(),
+        axis.text.x = element_blank(),axis.title.x = element_blank())
+  
+
+p6 <- ggplot(dplyr::filter(all_divs, measure == "Exponential_Shannon"  & fraction == "Particle"), 
+       aes(y = log10(fracprod_per_cell_noinf), x = mean, color = Removed, fill = Removed)) +
+  geom_point(size = 3) + xlab("Exponential Shannon") +
+  ylab("log10(Per-Capita \nProduction)") +
+  geom_smooth(method = "lm", 
+              data = filter(all_divs, measure == "Exponential_Shannon" & fraction == "Particle" & Removed %in% sig_shannon_lms_percap)) + 
+  scale_color_manual(values = tons_colors) + scale_fill_manual(values = tons_colors) +  
+  facet_grid(~Removed, scales = "free") +
+  theme(legend.position = "none", legend.title = element_blank(),
+        axis.text.x = element_text(angle = 60, hjust = 1, vjust = 1, size = 10),
+        axis.title.x = element_text(face = "bold"))
+
+plot_grid(p1, p2, p5,  p6, p3, p4, 
+          nrow = 6, ncol = 1,
+          rel_heights = c(0.9, 1, 0.9, 1.2, 0.9, 1.2),
+          labels = c("A", "B", "C", "D", "E", "F"),
           align = "v")
 ```
 
