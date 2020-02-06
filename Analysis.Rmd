@@ -948,8 +948,7 @@ summary(lm(log10(fracprod_per_cell_noinf) ~ simpson, data = filter(wide_div_meta
 summary(lm(log10(fracprod_per_cell_noinf) ~ simpson, data = filter(wide_div_meta_df, fraction == "Particle" & simpson < 70)))
 ```
 
-
-
+**Plot figure 3**
 ```{r Figure-3, fig.width=7, fig.height=7}
 # All plots together 
 fig3_top <- plot_grid(prod_vs_rich_plot, 
@@ -969,8 +968,173 @@ plot_grid(fig3_top, season_legend,
 
 
 ## Figure 4
+**Phylodiv vs ses.MPD**
+```{r Figure-4, fig.width=3.5, fig.height=4.5}
+# Is there a relationship between phylogenetic richness (0D) and the unweighted mean pairwise distance?
+# 1. Since it's a general correlation - the linear model will be for 
+lm_unweightMPD_phylorich <- lm(unweighted_sesmpd ~ phylo_richness, data = wide_div_meta_df)
+## 2. Extract the R2 and p-value from the linear model: 
+lm_lab_unweightMPD_phylorich <- paste("atop(R^2 ==", round(summary(lm_unweightMPD_phylorich)$adj.r.squared, digits = 2), ",",
+             "p ==", round(unname(summary(lm_unweightMPD_phylorich)$coefficients[,4][2]), digits = 3), ")")
+## 3. Plot 
+phy_MPD_p0 <- wide_div_meta_df %>%
+  ggplot(aes(x = phylo_richness, y = unweighted_sesmpd, fill = fraction)) +
+  geom_point(aes(shape = season), size = 3) + 
+  scale_fill_manual(values = fraction_colors) + 
+  scale_shape_manual(values = season_shapes) +
+  labs(x = expression({}^0*italic(PD)),
+       y = "Unweighted MPD") +
+  geom_smooth(method='lm', color = "black", fill = "grey") +   
+  # Add the R2 and p-value to the plot 
+  annotate("text", x=140, y=1, label=lm_lab_unweightMPD_phylorich, parse = TRUE, color = "black", size = 4) + 
+  theme(legend.position = "none")
+
+plot_grid(phy_MPD_p0, season_2row_legend, rel_heights = c(1, 0.08),
+          nrow = 2, ncol = 1)
+
+```
 
 ## Lasso Regressions
+```{r prep-data-lasso}
+# The lasso regression needs datasets that are wide formatted
+lasso_cols_remove <- c("project", "year", "Date", "limnion", "dnaconcrep1", "perc_attached_bacprod",
+                       "SD_perc_attached_bacprod", "SE_total_bac_abund", "SE_perc_attached_abund", "SE_attached_bac",
+                       "tot_bacprod", "SD_tot_bacprod","SD_frac_bacprod", "BGA_cellspermL", "Turb_NTU", 
+                       "lakesite", "season", "station")
+
+### PARTICLE DATA = 12 samples 
+# Note: Even though in the inclusion of MOTEJ515 doesn't have the bacterial counts, 
+# the results from this lasso regression does not change. 
+lasso_data_df_particle <- wide_div_meta_df %>%
+  filter(fraction == "Particle" ) %>%
+  dplyr::select(-c(fraction, lasso_cols_remove)) 
+
+lasso_data_df_particle_noprod <- lasso_data_df_particle %>%
+  dplyr::select(-c(fracprod_per_cell, fracprod_per_cell_noinf, norep_filter_name, norep_water_name)) 
+  
+### FREE DATA 
+# Note: Even though in the inclusion of MOTEJ515 doesn't have the bacterial counts, 
+# the results from this lasso regression does not change. 
+lasso_data_df_free <- wide_div_meta_df %>%
+  filter(fraction == "Free" ) %>%
+  dplyr::select(-c(fraction, lasso_cols_remove)) 
+
+lasso_data_df_free_noprod <- lasso_data_df_free %>%
+  dplyr::select(-c(fracprod_per_cell, fracprod_per_cell_noinf, norep_filter_name, norep_water_name)) 
+
+```
+
+####Run lasso regression
+**Lasso - Community Production: Particle**
+```{r lasso-comm-part}
+# Set the seed for reproducibility of the grid values 
+set.seed(777) 
+
+################ PREPARE DATA ################ 
+# Subset data needed and scale all o
+scaled_comm_data <- 
+  lasso_data_df_particle_noprod %>%    # Use data only for the particle samples  
+  scale() %>%                          # Scale all of the variables to have mean =0 and sd = 1
+  as.data.frame()                      # Make it a dataframe so that model.matrix function works (does not take a matrix)
+
+# Set model parameters for community level data
+## NOTE: there cannot be any data with NA
+x = model.matrix(frac_bacprod ~ ., scaled_comm_data)[,-1]
+y = scaled_comm_data$frac_bacprod
+grid = 10^seq(10,-2,length = 100)
+
+################ PREPARE TRAINING & TESTING DATA FOR CROSS VALIDATION ################ 
+# Pull out test and training sets for cross validation
+# We will use half the set to train the model and the 2nd half of the dataset to test the model 
+train <- sample(1:nrow(x), nrow(x)/2)
+test <- -train
+y_test <- y[test]
+
+################ LASSO ################ 
+# Run lasso regression with alpha = 1
+lasso_divs_train <- glmnet(x[train,], y[train], alpha = 1, lambda = grid, standardize = FALSE)
+par(mfrow = c(1,2))
+plot(lasso_divs_train)
+
+# Cross validation
+cv_lasso_divs <- cv.glmnet(x[train,], y[train], alpha = 1)
+plot(cv_lasso_divs)
+
+best_lasso_lambda <- cv_lasso_divs$lambda.min # Minimum lambda
+# https://stats.stackexchange.com/questions/138569/why-is-lambda-plus-1-standard-error-a-recommended-value-for-lambda-in-an-elastic
+lasso_lambda_1se <- cv_lasso_divs$lambda.1se # simplest model whose accuracy is comparable with the best model
+best_lasso_lambda == lasso_lambda_1se
+
+lasso_divs_pred <- predict(lasso_divs_train, s = best_lasso_lambda, newx = x[test,])
+mean((lasso_divs_pred - y_test)^2) # Test
+
+## Run lasso on the entire dataset with the best lambda value 
+lasso_divs <- glmnet(x, y, alpha = 1, lambda = best_lasso_lambda, standardize = FALSE)
+# What are the lasso coefficients? (Anything with a . is not selected by the model)
+predict(lasso_divs, type = "coefficients", s = best_lasso_lambda)
+
+## Now, run the most simple, parsimonious lasso model within 1 standard error  
+## IMPORTANT NOTE: This is the lasso reported within the manuscript
+lasso_divs_1se <- glmnet(x, y, alpha = 1, lambda = lasso_lambda_1se, standardize = FALSE)
+# What are the lasso coefficients? (Anything with a . is not selected by the model)
+predict(lasso_divs_1se, type = "coefficients", s = lasso_lambda_1se)
+```
+
+
+**Lasso - Community Production: Free**
+```{r lasso-comm-free}
+# Set the seed for reproducibility of the grid values 
+set.seed(777) 
+     
+################ PREPARE DATA ################ 
+# Subset data needed and scale all o
+scaled_comm_data_free <- 
+  lasso_data_df_free_noprod %>%        # Use data only for the free-living samples  
+  scale() %>%                          # Scale all of the variables to have mean = 0 and sd = 1
+  as.data.frame()                      # Make it a dataframe so that model.matrix function works (does not take a matrix)
+
+# Set model parameters for community level data
+## NOTE: there cannot be any data with NA
+free_x <- model.matrix(frac_bacprod ~ ., scaled_comm_data_free)[,-1]
+free_y <- scaled_comm_data_free$frac_bacprod
+free_grid <- 10^seq(10,-2,length = 100)
+
+################ PREPARE TRAINING & TESTING DATA FOR CROSS VALIDATION ################ 
+# Pull out test and training sets for cross validation
+# We will use half the set to train the model and the 2nd half of the dataset to test the model 
+free_train <- sample(1:nrow(free_x), nrow(free_x)/2)
+free_test <- -free_train
+free_y_test <- free_y[free_test]
+
+################ LASSO ################ 
+# Run lasso regression with alpha = 1
+lasso_divs_train_free_comm <- glmnet(free_x[free_train,], free_y[free_train], alpha = 1, lambda = free_grid, standardize = FALSE)
+par(mfrow = c(1,2))
+plot(lasso_divs_train_free_comm)
+
+# Cross validation
+free_cv_lasso_divs <- cv.glmnet(free_x[free_train,], free_y[free_train], alpha = 1)
+plot(free_cv_lasso_divs)
+
+free_best_lasso_lambda <- free_cv_lasso_divs$lambda.min
+# https://stats.stackexchange.com/questions/138569/why-is-lambda-plus-1-standard-error-a-recommended-value-for-lambda-in-an-elastic
+free_lasso_lambda_1se <- free_cv_lasso_divs$lambda.1se # simplest model whose accuracy is comparable with the best model
+free_best_lasso_lambda == free_lasso_lambda_1se
+
+free_lasso_divs_pred <- predict(lasso_divs_train_free_comm, s = free_best_lasso_lambda, newx = free_x[free_test,])
+mean((free_lasso_divs_pred - y_test)^2) # Test
+
+## Run lasso on the entire dataset with the best lambda value 
+free_lasso_divs <- glmnet(free_x, free_y, alpha = 1, lambda = free_best_lasso_lambda, standardize = FALSE)
+# What are the lasso coefficients? (Anything with a . is not selected by the model)
+predict(free_lasso_divs, type = "coefficients", s = free_best_lasso_lambda)
+
+## Now, run the most simple, parsimonious lasso model within 1 standard error  
+## IMPORTANT NOTE: This is the lasso reported within the manuscript
+free_lasso_divs_1se <- glmnet(free_x, free_y, alpha = 1, lambda = free_lasso_lambda_1se, standardize = FALSE)
+# What are the lasso coefficients? (Anything with a . is not selected by the model)
+predict(free_lasso_divs_1se, type = "coefficients", s = free_lasso_lambda_1se)
+```
 
 # Supplemental
 
