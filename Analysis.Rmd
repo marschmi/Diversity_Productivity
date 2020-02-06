@@ -451,7 +451,7 @@ metadata %>%
 ```
 
 ## Figure 2
-```{r Figure-2, fig.width=9, fig.height=6}
+```{r Figure-2, fig.width=9, fig.height=6.2}
 site_div_order <- c("richness","shannon","simpson","unweighted_sesmpd",
                     "phylo_richness", "phylo_shannon","phylo_simpson", "weighted_sesmpd") 
 
@@ -499,18 +499,20 @@ wide_div_meta_df %>%
 maxes <- c(1350, 299, 78, 1.35, 150, 15.2, 5.8, 0.1)
 df_temp <- data.frame(hill_labels = site_div_labs, wc_pafl_pvals, fraction, maxes) 
 
-long_div_meta_df %>% 
+fig2 <- long_div_meta_df %>% 
  # left_join(df_temp, by = "Diversity") %>%
   ggplot(aes(y = div_val, x = fraction, fill = fraction)) +
   ylab("Diversity Value By Fraction") +
   facet_wrap(hill_labels~., scales = "free", labeller = label_parsed, nrow = 2, ncol = 4) + 
-  geom_point(size = 3, position = position_jitterdodge(), aes(shape = lakesite)) +
+  geom_point(size = 3, position = position_jitterdodge(), aes(shape = season)) +
   geom_boxplot(alpha = 0.5, outlier.shape = NA, color = "black") +
   scale_fill_manual(values = fraction_colors) + 
-  scale_shape_manual(values = lakesite_shapes) + 
+  scale_shape_manual(values = season_shapes) + 
   scale_color_manual(values = fraction_colors) + 
   theme(legend.position = "none", axis.title.x = element_blank()) +
   geom_text(data = df_temp, aes(x = fraction, y = maxes, label = wc_pafl_pvals), size = 4.5, hjust = 0.5,color = "grey40") 
+
+plot_grid(fig2, season_legend, nrow =2, ncol =1, rel_heights = c(1, 0.05))
 ```
 
 ### Linear Models 
@@ -1024,6 +1026,11 @@ lasso_data_df_particle <- wide_div_meta_df %>%
 lasso_data_df_particle_noprod <- lasso_data_df_particle %>%
   dplyr::select(-c(fracprod_per_cell, fracprod_per_cell_noinf, norep_filter_name, norep_water_name)) 
   
+percell_lasso_data_df_particle_noprod <- lasso_data_df_particle %>%
+  dplyr::select(-c(fracprod_per_cell, frac_bacprod)) %>%
+  dplyr::filter(norep_filter_name != "MOTEJ515") %>% # Remove the missing row of data :( )
+  dplyr::select(-c(norep_filter_name, norep_water_name))
+
 ### FREE DATA 
 # Note: Even though in the inclusion of MOTEJ515 doesn't have the bacterial counts, 
 # the results from this lasso regression does not change. 
@@ -1034,6 +1041,10 @@ lasso_data_df_free <- wide_div_meta_df %>%
 lasso_data_df_free_noprod <- lasso_data_df_free %>%
   dplyr::select(-c(fracprod_per_cell, fracprod_per_cell_noinf, norep_filter_name, norep_water_name)) 
 
+percell_lasso_data_df_free_noprod <- lasso_data_df_free %>%
+  dplyr::select(-c(fracprod_per_cell, frac_bacprod)) %>%
+  dplyr::filter(norep_filter_name != "MOTEJ515") %>% # Remove the missing row of data :( )
+  dplyr::select(-c(norep_filter_name, norep_water_name))
 ```
 
 ####Run lasso regression  
@@ -1092,7 +1103,6 @@ lasso_divs_1se <- glmnet(x, y, alpha = 1, lambda = lasso_lambda_1se, standardize
 predict(lasso_divs_1se, type = "coefficients", s = lasso_lambda_1se)
 ```
 
-
 **Lasso - Community Production: Free**
 ```{r lasso-comm-free, fig.width=8, fig.height=4}
 # Set the seed for reproducibility of the grid values 
@@ -1147,6 +1157,124 @@ free_lasso_divs_1se <- glmnet(free_x, free_y, alpha = 1, lambda = free_lasso_lam
 # What are the lasso coefficients? (Anything with a . is not selected by the model)
 predict(free_lasso_divs_1se, type = "coefficients", s = free_lasso_lambda_1se)
 ```
+
+**Lasso - Per Capita Production: Particle**
+```{r lasso-perfacp-part, fig.width=8, fig.height=4}
+# Set the seed for reproducibility of the grid values 
+set.seed(777) 
+
+################ PREPARE DATA ################ 
+# Subset data needed and scale all o
+scaled_percapita_pa_data <- 
+  percell_lasso_data_df_particle_noprod %>%   
+  dplyr::filter(!is.na(fracprod_per_cell_noinf)) %>%
+  mutate(log10_percell = log10(fracprod_per_cell_noinf)) %>%
+  dplyr::select(-c(fracprod_per_cell_noinf)) %>%
+  scale() %>%
+  as.data.frame()                         # Make it a dataframe so that model.matrix function works (does not take a matrix)
+
+# Set model parameters for community level data
+## NOTE: there cannot be any data with NA
+percap_pa_x = model.matrix(log10_percell ~ ., scaled_percapita_pa_data)[,-1]
+percap_pa_y = scaled_percapita_pa_data$log10_percell
+percap_pa_grid = 10^seq(10,-2,length = 100)
+
+################ PREPARE TRAINING & TESTING DATA FOR CROSS VALIDATION ################ 
+# Pull out test and training sets for cross validation
+# We will use half the set to train the model and the 2nd half of the dataset to test the model 
+percap_pa_train <- sample(1:nrow(percap_pa_x), nrow(percap_pa_x)/2)
+percap_pa_test <- -percap_pa_train
+percap_pa_y_test <- percap_pa_y[percap_pa_test]
+
+################ LASSO ################ 
+# Run lasso regression with alpha = 1
+percap_pa_lasso_divs_train <- glmnet(percap_pa_x[percap_pa_train,], percap_pa_y[percap_pa_train], alpha = 1, lambda = percap_pa_grid, standardize = FALSE)
+par(mfrow = c(1,2))
+plot(percap_pa_lasso_divs_train)
+
+# Cross validation
+percap_pa_cv_lasso_divs <- cv.glmnet(percap_pa_x[percap_pa_train,], percap_pa_y[percap_pa_train], alpha = 1)
+plot(percap_pa_cv_lasso_divs)
+
+percap_pa_best_lasso_lambda <- percap_pa_cv_lasso_divs$lambda.min # Minimum lambda
+# https://stats.stackexchange.com/questions/138569/why-is-lambda-plus-1-standard-error-a-recommended-value-for-lambda-in-an-elastic
+percap_pa_lasso_lambda_1se <- percap_pa_cv_lasso_divs$lambda.1se # simplest model whose accuracy is comparable with the best model
+percap_pa_best_lasso_lambda == percap_pa_lasso_lambda_1se
+
+percap_pa_lasso_divs_pred <- predict(percap_pa_lasso_divs_train, s = percap_pa_best_lasso_lambda, newx = percap_pa_x[percap_pa_test,])
+mean((percap_pa_lasso_divs_pred - percap_pa_y_test)^2) # Test
+
+## Run lasso on the entire dataset with the best lambda value 
+percap_pa_lasso_divs <- glmnet(percap_pa_x, percap_pa_y, alpha = 1, lambda = percap_pa_best_lasso_lambda, standardize = FALSE)
+# What are the lasso coefficients? (Anything with a . is not selected by the model)
+predict(percap_pa_lasso_divs, type = "coefficients", s = percap_pa_best_lasso_lambda)
+
+## Now, run the most simple, parsimonious lasso model within 1 standard error  
+## IMPORTANT NOTE: This is the lasso reported within the manuscript
+percap_pa_lasso_divs_1se <- glmnet(percap_pa_x, percap_pa_y, alpha = 1, lambda = percap_pa_lasso_lambda_1se, standardize = FALSE)
+# What are the lasso coefficients? (Anything with a . is not selected by the model)
+predict(percap_pa_lasso_divs_1se, type = "coefficients", s = percap_pa_lasso_lambda_1se)
+```
+
+**Lasso - Per Capita Production: Free**
+```{r lasso-perfacp-free, fig.width=8, fig.height=4}
+# Set the seed for reproducibility of the grid values 
+set.seed(777) 
+
+################ PREPARE DATA ################ 
+# Subset data needed and scale all o
+scaled_percapita_fl_data <- 
+  percell_lasso_data_df_free_noprod %>%   
+  dplyr::filter(!is.na(fracprod_per_cell_noinf)) %>%
+  mutate(log10_percell = log10(fracprod_per_cell_noinf)) %>%
+  dplyr::select(-c(fracprod_per_cell_noinf)) %>%
+  scale() %>%
+  as.data.frame()                         # Make it a dataframe so that model.matrix function works (does not take a matrix)
+
+# Set model parameters for community level data
+## NOTE: there cannot be any data with NA
+percap_fl_x = model.matrix(log10_percell ~ ., scaled_percapita_fl_data)[,-1]
+percap_fl_y = scaled_percapita_fl_data$log10_percell
+percap_fl_grid = 10^seq(10,-2,length = 100)
+
+################ PREPARE TRAINING & TESTING DATA FOR CROSS VALIDATION ################ 
+# Pull out test and training sets for cross validation
+# We will use half the set to train the model and the 2nd half of the dataset to test the model 
+percap_fl_train <- sample(1:nrow(percap_fl_x), nrow(percap_fl_x)/2)
+percap_fl_test <- -percap_fl_train
+percap_fl_y_test <- percap_fl_y[percap_fl_test]
+
+################ LASSO ################ 
+# Run lasso regression with alpha = 1
+percap_fl_lasso_divs_train <- glmnet(percap_fl_x[percap_fl_train,], percap_fl_y[percap_fl_train], alpha = 1, lambda = percap_fl_grid, standardize = FALSE)
+par(mfrow = c(1,2))
+plot(percap_fl_lasso_divs_train)
+
+# Cross validation
+percap_fl_cv_lasso_divs <- cv.glmnet(percap_fl_x[percap_fl_train,], percap_fl_y[percap_fl_train], alpha = 1)
+plot(percap_fl_cv_lasso_divs)
+
+percap_fl_best_lasso_lambda <- percap_fl_cv_lasso_divs$lambda.min # Minimum lambda
+# https://stats.stackexchange.com/questions/138569/why-is-lambda-plus-1-standard-error-a-recommended-value-for-lambda-in-an-elastic
+percap_fl_lasso_lambda_1se <- percap_fl_cv_lasso_divs$lambda.1se # simplest model whose accuracy is comparable with the best model
+percap_fl_best_lasso_lambda == percap_fl_lasso_lambda_1se
+
+percap_fl_lasso_divs_pred <- predict(percap_fl_lasso_divs_train, s = percap_fl_best_lasso_lambda, newx = percap_fl_x[percap_fl_test,])
+mean((percap_fl_lasso_divs_pred - percap_fl_y_test)^2) # Test
+
+## Run lasso on the entire dataset with the best lambda value 
+percap_fl_lasso_divs <- glmnet(percap_fl_x, percap_fl_y, alpha = 1, lambda = percap_fl_best_lasso_lambda, standardize = FALSE)
+# What are the lasso coefficients? (Anything with a . is not selected by the model)
+predict(percap_fl_lasso_divs, type = "coefficients", s = percap_fl_best_lasso_lambda)
+
+## Now, run the most simple, parsimonious lasso model within 1 standard error  
+## IMPORTANT NOTE: This is the lasso reported within the manuscript
+percap_fl_lasso_divs_1se <- glmnet(percap_fl_x, percap_fl_y, alpha = 1, lambda = percap_fl_lasso_lambda_1se, standardize = FALSE)
+# What are the lasso coefficients? (Anything with a . is not selected by the model)
+predict(percap_fl_lasso_divs_1se, type = "coefficients", s = percap_fl_lasso_lambda_1se)
+```
+
+
 
 # Supplemental
 
