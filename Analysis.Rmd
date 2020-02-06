@@ -757,6 +757,7 @@ lm_percell_prod_vs_phylosimps_FL <- lm(log10(fracprod_per_cell_noinf) ~ phylo_si
 
 
 ## Figure 3
+**Prepare Figure 3**
 ```{r prep-Figure-3}
 ######################################################### OBSERVED RICHNESS ######################################################### 
 rich_fraction_wilcox <- wilcox.test(richness ~ fraction, data = wide_div_meta_df)
@@ -959,7 +960,7 @@ summary(lm(log10(fracprod_per_cell_noinf) ~ simpson, data = filter(wide_div_meta
 ```
 
 **Plot figure 3**
-```{r Figure-3, fig.width=7, fig.height=7}
+```{r Figure-3, fig.width=7, fig.height=6}
 # All plots together 
 fig3_top <- plot_grid(prod_vs_rich_plot, 
            prod_vs_invsimps_plot, 
@@ -999,12 +1000,13 @@ phy_MPD_p0 <- wide_div_meta_df %>%
   annotate("text", x=140, y=1, label=lm_lab_unweightMPD_phylorich, parse = TRUE, color = "black", size = 4) + 
   theme(legend.position = "none")
 
-plot_grid(phy_MPD_p0, season_2row_legend, rel_heights = c(1, 0.08),
+plot_grid(phy_MPD_p0, season_2row_legend, rel_heights = c(1, 0.1),
           nrow = 2, ncol = 1)
 
 ```
 
 ## Lasso Regressions
+**Prepare data for lasso**
 ```{r prep-data-lasso}
 # The lasso regression needs datasets that are wide formatted
 lasso_cols_remove <- c("project", "year", "Date", "limnion", "dnaconcrep1", "perc_attached_bacprod",
@@ -1034,9 +1036,9 @@ lasso_data_df_free_noprod <- lasso_data_df_free %>%
 
 ```
 
-####Run lasso regression
+####Run lasso regression  
 **Lasso - Community Production: Particle**
-```{r lasso-comm-part}
+```{r lasso-comm-part, fig.width=8, fig.height=4}
 # Set the seed for reproducibility of the grid values 
 set.seed(777) 
 
@@ -1092,7 +1094,7 @@ predict(lasso_divs_1se, type = "coefficients", s = lasso_lambda_1se)
 
 
 **Lasso - Community Production: Free**
-```{r lasso-comm-free}
+```{r lasso-comm-free, fig.width=8, fig.height=4}
 # Set the seed for reproducibility of the grid values 
 set.seed(777) 
      
@@ -1175,7 +1177,7 @@ ggmap(map) + xlab("Longitude") + ylab("Latitude") +
 
 
 ## Figure S2
-```{r Figure-S2, fig.width=10, fig.height=9}
+```{r Figure-S2, fig.width=10, fig.height=7}
 # h = 0 = richness
 # h = 1 = exp(Shannon)
 # h = 2 = Inverse Simpsons
@@ -1427,7 +1429,7 @@ plot_grid(top_row_S1, legend_s1,
 ```
 
 ## Figure S4
-```{r prep1-Figure-S4}
+```{r prep1-Figure-S4, fig.width=6, fig.height=8}
 #### Time series of PA vs FL diversity 
 
 # Question: Is there a temporal effect on diversity differences between particle and Free?
@@ -1671,7 +1673,7 @@ hill_nums_p <- wide_div_meta_df %>%
 
 
 ## 
-hill_nums_p2 <- plot_grid(hill_nums_p, season_2row_legend, nrow = 2, ncol = 1, rel_heights = c(1, 0.08)); hill_nums_p2
+hill_nums_p2 <- plot_grid(hill_nums_p, season_2row_legend, nrow = 2, ncol = 1, rel_heights = c(1, 0.1)); hill_nums_p2
 ```
 
 ```{r Figure-S4, fig.width=7, fig.height=8}
@@ -1685,7 +1687,7 @@ plot_grid(ts_pp, tessst, ncol = 2)
 
 ## Figure S5
 **Compare Diversity Estimates across Station and Season**
-```{r Figure-S5, fig.width=12, fig.height=14}
+```{r Figure-S5, fig.width=12, fig.height=10}
 ########## PLOT 
 divs_PAFLA_plot_lakesite <- 
   long_div_meta_df %>%
@@ -1728,7 +1730,7 @@ plot_grid(plot_A, plot_B,
 ```
 
 ## Figure S6
-```{r Figure-S6, fig.width=3.5, fig.height=7}
+```{r Figure-S6, fig.width=4, fig.height=7}
 ######################################################### 1D = SHANNON DIVERSITY (EXP(SHANNON ENTROPY))
 ######################################################### 1D = SHANNON DIVERSITY (EXP(SHANNON ENTROPY))
 shannon_fraction_wilcox <- wilcox.test(shannon ~ fraction, data = wide_div_meta_df)
@@ -2104,7 +2106,7 @@ summary(lm(log10(fracprod_per_cell_noinf) ~ phylo_simpson, data = filter(wide_di
 summary(lm(log10(fracprod_per_cell_noinf) ~ phylo_simpson, data = filter(wide_div_meta_df, fraction == "Particle" & simpson < 70)))
 ```
 
-```{r Figure-S8, fig.width=12, fig.height=7}
+```{r Figure-S8, fig.width=10, fig.height=6.5}
 # All plots together 
 phydiv_BEF <- plot_grid(prod_vs_phylorich_plot, prod_vs_phyloshan_plot, prod_vs_phylosimps_plot,
           percell_prod_vs_phylorich_plot + theme(legend.position = "none"),
@@ -2118,7 +2120,7 @@ plot_grid(phydiv_BEF, season_legend, rel_heights = c(1, 0.05), nrow = 2, ncol = 
 
 
 ## Figure S9
-```{r Figure-S9, fig.width=6, fig.height=3.5}
+```{r Figure-S9, fig.width=6, fig.height=3}
 # What about weighted MPD and phylogenetic shannon?
 summary(lm(weighted_sesmpd ~ phylo_shannon, data = wide_div_meta_df))
 
