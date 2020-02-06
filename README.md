@@ -3,8 +3,10 @@
 ###  **Authors:** Marian L. Schmidt, Bopaiah A. Biddanda, Anthony D. Weinke, Edna Chiang, Fallon Januska, Ruben Props, & Vincent J. Denef
 
 ## [Link to the Main Analysis](Analysis.html)
+Link to [.Rmd of Analysis here](Analysis.Rmd)
 
 ## [Link to the Supplemental Analysis](analysis/OTU_Removal_Analysis.html)
+Link to [.Rmd of Supplemental Analysis here](analysis/OTU_Removal_Analysis.Rmd)
 
 ## Preprint is available on BioRxiv at: [https://t.co/X4mQS5f669](https://t.co/X4mQS5f669)
 
