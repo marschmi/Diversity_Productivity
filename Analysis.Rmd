@@ -511,10 +511,462 @@ long_div_meta_df %>%
   scale_color_manual(values = fraction_colors) + 
   theme(legend.position = "none", axis.title.x = element_blank()) +
   geom_text(data = df_temp, aes(x = fraction, y = maxes, label = wc_pafl_pvals), size = 4.5, hjust = 0.5,color = "grey40") 
+```
+
+### Linear Models 
+**Prepare data frames for table S1 and S2**
+```{r prep-Table-S1-S2}
+## Prepare the dataframes for Free and Particle data
+metadata_pca_PD_free <- dplyr::filter(wide_div_meta_df, fraction == "Free")
+metadata_pca_PD_part <-  dplyr::filter(wide_div_meta_df, fraction == "Particle")  
+
+# List of environmental variables to run linear models on 
+        # BGA_cellspermL and Turb_NTU do not have enough data points for regression
+lm_variables <- c("frac_bacprod", "fracprod_per_cell_noinf", "Temp_C", "SpCond_uSpercm", "TDS_mgperL", 
+                  "pH", "ORP_mV", "Chl_Lab_ugperL", "Cl_mgperL", "SO4_mgperL", "NO3_mgperL", 
+                  "NH3_mgperL", "TKN_mgperL", "SRP_ugperL", "TP_ugperL", "Alk_mgperL", "DO_mgperL", 
+                  "total_bac_abund","attached_bac", "dnaconcrep1", 
+                  "PC1", "PC2", 
+                  "richness", "shannon", "simpson", "phylo_richness", "phylo_shannon", "phylo_simpson",
+                  "unweighted_sesmpd", "weighted_sesmpd") 
+
+########################################################
+##############  Particle: Community-wide 
+lm_summary_particle_comm <- metadata_pca_PD_part %>%
+  dplyr::select(one_of(lm_variables), -fracprod_per_cell_noinf) %>%
+  gather(key = independent, value = measurement, -frac_bacprod) %>%
+  mutate(measurement = as.numeric(measurement)) %>%
+  group_by(independent) %>% 
+  do(glance(lm(frac_bacprod ~ measurement, data = .))) %>% 
+  mutate(fraction = "Particle", dependent = "Community Production") %>%
+  dplyr::select(fraction, dependent, independent, logLik, AIC, adj.r.squared, p.value) %>%
+  ungroup() %>%
+  mutate(FDR.p = p.adjust(p.value, method = "fdr")) 
+
+##############  Particle: Per-capita  
+lm_summary_particle_percap <- metadata_pca_PD_part %>%
+  dplyr::select(one_of(lm_variables), -frac_bacprod) %>%
+  filter(!is.na(fracprod_per_cell_noinf)) %>%   # Remove samples that are not NA
+  gather(key = independent, value = measurement, -fracprod_per_cell_noinf) %>%
+  mutate(measurement = as.numeric(measurement)) %>%
+  group_by(independent) %>% 
+  do(glance(lm(log10(fracprod_per_cell_noinf) ~ measurement, data = .))) %>% 
+  mutate(fraction = "Particle", dependent = "Per-Capita Production") %>%
+  dplyr::select(fraction, dependent, independent, logLik, AIC, adj.r.squared, p.value) %>%
+  ungroup() %>%
+  mutate(FDR.p = p.adjust(p.value, method = "fdr")) 
+
+
+########################################################
+##############  Free: Community-wide 
+lm_summary_free_comm <- metadata_pca_PD_free %>%
+  dplyr::select(one_of(lm_variables), -fracprod_per_cell_noinf) %>%
+  gather(key = independent, value = measurement, -frac_bacprod) %>%
+  mutate(measurement = as.numeric(measurement)) %>%
+  group_by(independent) %>% 
+  do(glance(lm(frac_bacprod ~ measurement, data = .))) %>% 
+  mutate(fraction = "Free", dependent = "Community Production") %>%
+  dplyr::select(fraction, dependent, independent, logLik, AIC, adj.r.squared, p.value) %>%
+  ungroup() %>%
+  mutate(FDR.p = p.adjust(p.value, method = "fdr")) 
+
+##############  Free: Per-capita  
+lm_summary_free_percap <- metadata_pca_PD_free %>%
+  dplyr::select(one_of(lm_variables), -frac_bacprod) %>%
+  filter(!is.na(fracprod_per_cell_noinf)) %>%   # Remove samples that are not NA
+  gather(key = independent, value = measurement, -fracprod_per_cell_noinf) %>%
+  mutate(measurement = as.numeric(measurement)) %>%
+  group_by(independent) %>% 
+  do(glance(lm(log10(fracprod_per_cell_noinf) ~ measurement, data = .))) %>% 
+  mutate(fraction = "Free", dependent = "Per-Capita Production") %>%
+  dplyr::select(fraction, dependent, independent, logLik, AIC, adj.r.squared, p.value) %>%
+  ungroup() %>%
+  mutate(FDR.p = p.adjust(p.value, method = "fdr")) 
+
+
+## Filtered PCA Linear Model Results
+# Put all of the PCA and environmental  linear model results together into one dataframe 
+all_pca_div_environ_lm_results <- 
+  bind_rows(lm_summary_particle_comm, lm_summary_particle_percap,
+          lm_summary_free_comm, lm_summary_free_percap) %>%
+  dplyr::rename(independent_var = independent,
+                dependent_var = dependent) 
+
+## Combine the results with the diversity linear models 
+individual_lm_results <- all_pca_div_environ_lm_results %>%
+  mutate(AIC = round(AIC, digits = 2),  
+         adj.r.squared = round(adj.r.squared, digits = 2),
+         p.value = round(p.value, digits = 4),
+         FDR.p = round(FDR.p, digits = 4)) %>%
+  rename(FDR.p.value = FDR.p)
+```
+
+```{r linear-models}
+# Free-Living samples only 
+div_measures_free <- comb_div_df %>%
+  dplyr::select(fraction, Observed, Diversity, frac_bacprod, fracprod_per_cell_noinf) %>%
+  filter(fraction == "Free") %>%
+  dplyr::select(-fraction)
+# Particle-associated samples only 
+div_measures_part <- comb_div_df %>%
+  dplyr::select(fraction, Observed, Diversity, frac_bacprod, fracprod_per_cell_noinf) %>%
+  filter(fraction == "Particle") %>%
+  dplyr::select(-fraction)
+
+## All of the samples!
+div_measures_all <- comb_div_df %>%
+  dplyr::select(Observed, Diversity, frac_bacprod, fracprod_per_cell_noinf)
+
+########################################################
+##############  Particle: Community-wide 
+lm_divs_particle_comm <- div_measures_part %>%
+  dplyr::select(-fracprod_per_cell_noinf) %>%
+  group_by(Diversity) %>% 
+  do(glance(lm(frac_bacprod ~ Observed, data = .))) %>% 
+  mutate(fraction = "Particle", dependent = "Community Production") %>%
+  dplyr::select(fraction, dependent, Diversity, logLik, AIC, adj.r.squared, p.value) %>%
+  ungroup() %>%
+  mutate(FDR.p = p.adjust(p.value, method = "fdr")) 
+
+
+##############  Particle: Community-wide 
+lm_divs_particle_percap <- div_measures_part %>%
+  dplyr::select(-frac_bacprod) %>%
+  group_by(Diversity) %>% 
+  do(glance(lm(log10(fracprod_per_cell_noinf) ~ Observed, data = .))) %>% 
+  mutate(fraction = "Particle", dependent = "Per-Capita Production") %>%
+  dplyr::select(fraction, dependent, Diversity, logLik, AIC, adj.r.squared, p.value) %>%
+  ungroup() %>%
+  mutate(FDR.p = p.adjust(p.value, method = "fdr")) 
+
+########################################################
+##############  Free: Community-wide 
+lm_divs_free_comm <- div_measures_free %>%
+  dplyr::select(-fracprod_per_cell_noinf) %>%
+  group_by(Diversity) %>% 
+  do(glance(lm(frac_bacprod ~ Observed, data = .))) %>% 
+  mutate(fraction = "Free", dependent = "Community Production") %>%
+  dplyr::select(fraction, dependent, Diversity, logLik, AIC, adj.r.squared, p.value) %>%
+  ungroup() %>%
+  mutate(FDR.p = p.adjust(p.value, method = "fdr")) 
+
+##############  Free: Community-wide 
+lm_divs_free_percap <- div_measures_free %>%
+  dplyr::select(-frac_bacprod) %>%
+  group_by(Diversity) %>% 
+  do(glance(lm(log10(fracprod_per_cell_noinf) ~ Observed, data = .))) %>% 
+  mutate(fraction = "Free", dependent = "Per-Capita Production") %>%
+  dplyr::select(fraction, dependent, Diversity, logLik, AIC, adj.r.squared, p.value) %>%
+  ungroup() %>%
+  mutate(FDR.p = p.adjust(p.value, method = "fdr")) 
+
+# Community-Wide Production    
+table_comm_wide <- bind_rows(lm_divs_particle_comm, lm_divs_free_comm) %>%
+  dplyr::select(-dependent) %>%
+  mutate(AIC = round(AIC, digits = 1), 
+         adj.r.squared = round(adj.r.squared, digits = 3), 
+         p.value = round(p.value, digits = 3), 
+         FDR.p = round(FDR.p, digits = 3))
+datatable(table_comm_wide,
+       caption = "Ordinary least squares regression statistics for community-wide heterotrophic production", 
+       options = list(pageLength = 12), rownames = FALSE)   
+
+
+
+# Here I will calculate and show the stats for each linear model, 
+# so later we can simply use these objects for plotting.
+
+######################################################### COMMUNITY WIDE PRODUCTION VS DIVERSITY 
+######################################################### COMMUNITY WIDE PRODUCTION VS DIVERSITY 
+# linear model for community production vs species richness
+lm_prod_vs_rich_PA <- lm(frac_bacprod ~ richness, data = filter(wide_div_meta_df, fraction == "Particle"))
+lm_prod_vs_rich_FL <- lm(frac_bacprod ~ richness, data = filter(wide_div_meta_df, fraction == "Free"))
+
+# linear model for community production vs exp(H') 
+lm_prod_vs_shannon_PA <- lm(frac_bacprod ~ shannon, data = filter(wide_div_meta_df, fraction == "Particle"))
+lm_prod_vs_shannon_FL <- lm(frac_bacprod ~ shannon, data = filter(wide_div_meta_df, fraction == "Free"))
+
+# linear model for community production vs inverse simpson 
+lm_prod_vs_invsimps_PA <- lm(frac_bacprod ~ simpson, data = filter(wide_div_meta_df, fraction == "Particle"))
+lm_prod_vs_invsimps_FL <- lm(frac_bacprod ~ simpson, data = filter(wide_div_meta_df, fraction == "Free"))
+
+
+########################  PHYLOGENETIC HILL DIVERSITY METRICS ################################ 
+# 0D: linear model for community production vs phylogenetic  richness
+lm_prod_vs_phylorich_PA <- lm(frac_bacprod ~ phylo_richness, data = filter(wide_div_meta_df, fraction == "Particle"))
+lm_prod_vs_phylorich_FL <- lm(frac_bacprod ~ phylo_richness, data = filter(wide_div_meta_df, fraction == "Free"))
+
+# 1D: linear model for community production vs phylogenetic exp(H') 
+lm_prod_vs_phyloshan_PA <- lm(frac_bacprod ~ phylo_shannon, data = filter(wide_div_meta_df, fraction == "Particle"))
+lm_prod_vs_phyloshan_FL <- lm(frac_bacprod ~ phylo_shannon, data = filter(wide_div_meta_df, fraction == "Free"))
+
+# 2D: linear model for community production vs phylogenetic  inverse simpson 
+lm_prod_vs_phylosimps_PA <- lm(frac_bacprod ~ phylo_simpson, data = filter(wide_div_meta_df, fraction == "Particle"))
+lm_prod_vs_phylosimps_FL <- lm(frac_bacprod ~ phylo_simpson, data = filter(wide_div_meta_df, fraction == "Free"))
+
+######################################################### PER CAPITA PRODUCTION VS DIVERSITY 
+######################################################### PER CAPITA PRODUCTION VS DIVERSITY 
+################
+# linear model for community production vs species richness
+lm_percell_prod_vs_rich_PA <- lm(log10(fracprod_per_cell_noinf) ~ richness, 
+                                 data = filter(wide_div_meta_df, fraction == "Particle")); 
+lm_percell_prod_vs_rich_FL <- lm(log10(fracprod_per_cell_noinf) ~ richness, 
+                                 data = filter(wide_div_meta_df, fraction == "Free")); 
+
+# linear model for community production vs exp(H') 
+lm_percell_prod_vs_shannon_PA <- lm(log10(fracprod_per_cell_noinf) ~ shannon, 
+                                    data = filter(wide_div_meta_df, fraction == "Particle"))
+lm_percell_prod_vs_shannon_FL <- lm(log10(fracprod_per_cell_noinf) ~ shannon, 
+                                    data = filter(wide_div_meta_df, fraction == "Free"))
+
+# linear model for community production vs inverse simpson 
+lm_percell_prod_vs_invsimps_PA <- lm(log10(fracprod_per_cell_noinf) ~ simpson, 
+                                     data = filter(wide_div_meta_df, fraction == "Particle"))
+lm_percell_prod_vs_invsimps_FL <- lm(log10(fracprod_per_cell_noinf) ~ simpson, 
+                                     data = filter(wide_div_meta_df, fraction == "Free"))
+
+########################  PHYLOGENETIC HILL DIVERSITY METRICS ################################ 
+# linear model for community production vs phylogenetic richness
+lm_percell_prod_vs_phylorich_PA <- lm(log10(fracprod_per_cell_noinf) ~ phylo_richness, 
+                                 data = filter(wide_div_meta_df, fraction == "Particle")); 
+lm_percell_prod_vs_phylorich_FL <- lm(log10(fracprod_per_cell_noinf) ~ phylo_richness, 
+                                 data = filter(wide_div_meta_df, fraction == "Free")); 
+
+# linear model for community production vs phylogenetic exp(H') 
+lm_percell_prod_vs_phyloshan_PA <- lm(log10(fracprod_per_cell_noinf) ~ phylo_shannon, 
+                                    data = filter(wide_div_meta_df, fraction == "Particle"))
+lm_percell_prod_vs_phyloshan_FL <- lm(log10(fracprod_per_cell_noinf) ~ phylo_shannon, 
+                                    data = filter(wide_div_meta_df, fraction == "Free"))
+
+# linear model for community production vs inverse simpson 
+lm_percell_prod_vs_phylosimps_PA <- lm(log10(fracprod_per_cell_noinf) ~ phylo_simpson, 
+                                     data = filter(wide_div_meta_df, fraction == "Particle"))
+lm_percell_prod_vs_phylosimps_FL <- lm(log10(fracprod_per_cell_noinf) ~ phylo_simpson, 
+                                     data = filter(wide_div_meta_df, fraction == "Free"))
+```
+
+
+## Figure 3
+```{r prep-Figure-3}
+######################################################### OBSERVED RICHNESS ######################################################### 
+rich_fraction_wilcox <- wilcox.test(richness ~ fraction, data = wide_div_meta_df)
+rich_fraction_wilcox
+
+wide_div_meta_df %>%
+  group_by(fraction) %>%
+  summarize(mean(richness), sd(richness), min(richness), max(richness))
+
+# Make a data frame to draw significance line in boxplot (visually calculated)
+rich_nums <- data.frame(a = c(1.15,1.15,1.85,1.85), b = c(1350, 1400, 1400, 1350)) # WholePart vs WholeFree
+
+rich_distribution_plot <- 
+  wide_div_meta_df %>%
+  ggplot(aes(y = richness, x = fraction)) +
+  scale_fill_manual(values = fraction_colors) +
+  geom_jitter(size = 3, aes(fill = fraction, shape = season), width = 0.2) + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(fill = fraction)) +
+  scale_y_continuous(limits = c(150,1500), breaks = seq(from = 0, to =1500, by = 300)) + 
+  labs(y = expression({}^0*italic(D)),
+       x = "Fraction") +
+  scale_shape_manual(values = season_shapes) +
+  geom_path(data = rich_nums, aes(x = a, y = b), linetype = 1, color = "#424645") +
+  annotate("text", x=1.5, y=1500, size = 8, color = "#424645", label= paste("***"), angle = 90) +
+  annotate("text", x=1.5, y=1150, size = 4, color = "#424645",
+           label= paste("p =", round(rich_fraction_wilcox$p.value, digits = 3))) +
+  theme(legend.position = "none",# axis.title.y = element_blank(),
+        axis.title.x = element_blank(), axis.text.x = element_blank()) +
+  coord_flip()
+
+################ Richness vs Community-wide (Per-Liter) Production 
+## 1. Extract the R2 and p-value from the linear model: 
+lm_lab_perliter_rich_PA <- paste("atop(R^2 ==", round(summary(lm_prod_vs_rich_PA)$adj.r.squared, digits = 2), ",",
+             "p ==", round(unname(summary(lm_prod_vs_rich_PA)$coefficients[,4][2]), digits = 3), ")")
+
+## 2. Plot Richness vs Community-wide (Per-Liter) Production 
+prod_vs_rich_plot <-  
+  wide_div_meta_df %>%
+  # Fetch the standard error from diversity measure to plot error bars 
+  left_join(filter(div_iNEXT, Diversity == "Species richness"), by = "norep_filter_name") %>%
+  rename(se_iNEXT ="s.e.") %>%
+  ggplot(aes(x=richness, y=frac_bacprod)) + 
+  geom_errorbarh(aes(xmin = richness - se_iNEXT, xmax = richness + se_iNEXT, 
+                     color = fraction), alpha = 0.7) + # X-axis errorbars
+  geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod, 
+                    color = fraction)) +  # Y-axis errorbars
+  geom_point(size = 3.5, color = "black", aes(fill = fraction, shape = season)) +
+  scale_color_manual(values = fraction_colors) +
+  scale_fill_manual(values = fraction_colors) +
+  scale_shape_manual(values = season_shapes) +
+  labs(x = expression({}^0*italic(D)),
+       y = "\n Community Production \n (μgC/L/day)") +
+  geom_smooth(data=filter(wide_div_meta_df, fraction == "Particle"), 
+              method='lm', color = "#FF6600", fill = "#FF6600") + 
+  scale_x_continuous(limits = c(150,1500), breaks = seq(from = 0, to =1500, by = 300)) + 
+  scale_y_continuous(limits = c(-5, 75), breaks = seq(0, 75, by = 15)) +
+   # Add the R2 and p-value to the plot 
+  annotate("text", x=1200, y=50, label=lm_lab_perliter_rich_PA, parse = TRUE, color = "#FF6600", size = 4) +
+  theme(legend.position = "none") # axis.title.x = element_blank(), axis.text.x = element_blank() 
+
+# Summary stats 
+summary(lm(frac_bacprod ~ richness, data = filter(wide_div_meta_df, fraction == "Particle")))
+# WITHOUT THE TWO HIGH POINTS 
+summary(lm(frac_bacprod ~ richness, data = filter(wide_div_meta_df, fraction == "Particle" & richness < 1000)))
+
+################ Richness vs Per Capita (Per-Cell) Production 
+## 1. Extract the R2 and p-value from the linear model: 
+lm_lab_percell_rich_PA <- paste("atop(R^2 ==", round(summary(lm_percell_prod_vs_rich_PA)$adj.r.squared, digits = 2), ",",
+             "p ==", round(unname(summary(lm_percell_prod_vs_rich_PA)$coefficients[,4][2]), digits = 3), ")")
+
+## 2. Plot Richness vs Per Capita (Per-Cell) Production 
+percell_prod_vs_rich_plot <- 
+  wide_div_meta_df %>%
+  # Fetch the standard error from diversity measure to plot error bars 
+  left_join(filter(div_iNEXT, Diversity == "Species richness"), by = "norep_filter_name") %>%
+  rename(se_iNEXT ="s.e.") %>%
+  ggplot(aes(x=richness, y=log10(fracprod_per_cell_noinf))) + 
+  geom_errorbarh(aes(xmin = richness - se_iNEXT, xmax = richness + se_iNEXT, 
+                     color = fraction), alpha = 0.7) + # X-axis errorbars
+  geom_point(size = 3.5,  color = "black", aes(fill = fraction, shape = season)) +
+  scale_color_manual(values = fraction_colors) +
+  scale_fill_manual(values = fraction_colors) +
+  scale_shape_manual(values = season_shapes) +
+  labs(x = expression({}^0*italic(D)),
+       y = "\n log10(Per-Capita Production)\n (μgC/cell/day)") +
+  geom_smooth(data=filter(wide_div_meta_df, fraction == "Particle"), 
+              method='lm', color = "#FF6600", fill = "#FF6600") + 
+  scale_x_continuous(limits = c(150,1500), breaks = seq(from = 0, to =1500, by = 300)) + 
+  scale_y_continuous(limits = c(-8.5,-5), breaks = seq(from = -8, to =-5, by = 1)) + 
+  #scale_y_continuous(limits = c(-8e-7,5e-6), breaks = seq(from = 0, to = 6e-7, by = 3e-7)) + 
+  # Add the R2 and p-value to the plot 
+  annotate("text", x=1200, y=-7.5, label=lm_lab_percell_rich_PA, parse = TRUE, color = "#FF6600", size = 4) +
+  theme(legend.title = element_blank(), legend.position ="bottom", 
+        legend.text = element_text(size = 14))
+
+# Summary stats 
+summary(lm(log10(fracprod_per_cell_noinf) ~ richness, data = filter(wide_div_meta_df, fraction == "Particle")))
+# WITHOUT THE TWO HIGH POINTS 
+summary(lm(log10(fracprod_per_cell_noinf) ~ richness, data = filter(wide_div_meta_df, fraction == "Particle" & richness < 1000)))
+
+
+
+######################################################### 2D = SIMPSON DIVERSITY (INVERSE SIMPSON)
+######################################################### 2D = SIMPSON DIVERSITY (INVERSE SIMPSON)
+invsimps_fraction_wilcox <- wilcox.test(simpson ~ fraction, data = wide_div_meta_df)
+invsimps_fraction_wilcox
+
+wide_div_meta_df %>%
+  group_by(fraction) %>%
+  summarize(mean(simpson), sd(simpson), min(simpson), max(simpson))
+
+# Make a data frame to draw significance line in boxplot (visually calculated)
+invsimps_nums <- data.frame(a = c(1.15,1.15,1.85,1.85), b = c(83,85,85,83)) # WholePart vs WholeFree
+
+invsimps_distribution_plot <- 
+  wide_div_meta_df %>%
+  ggplot(aes(y = simpson, x = fraction)) +
+  scale_fill_manual(values = fraction_colors) +
+  scale_shape_manual(values = season_shapes) +
+  geom_jitter(size = 3,  aes(fill = fraction, shape = season), width = 0.2) + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA, aes(fill = fraction)) +
+  scale_y_continuous(limits = c(0,85), breaks = seq(from = 0, to = 85, by = 20)) + 
+  labs(y = expression({}^2*italic(D)),
+       x = "Fraction") +
+  geom_path(data = invsimps_nums, aes(x = a, y = b), linetype = 1, color = "#424645") +
+  annotate("text", x=1.5, y=80, size = 4, color = "#424645", label= "NS") +
+  theme(legend.position = "none", #axis.title.y = element_blank(),
+        axis.title.x = element_blank(), axis.text.x = element_blank()) +
+  coord_flip()
+
+
+################ Inverse Simpson vs Community-wide (Per-Liter) Production 
+## 1. Extract the R2 and p-value from the linear model: 
+lm_lab_perliter_invsimps_PA <- paste("atop(R^2 ==", round(summary(lm_prod_vs_invsimps_PA)$adj.r.squared, digits = 2), ",",
+             "p ==", round(unname(summary(lm_prod_vs_invsimps_PA)$coefficients[,4][2]), digits = 4), ")")
+
+## 2. Plot Inverse Simpson vs Community-wide (Per-Liter) Production 
+prod_vs_invsimps_plot <-  
+   wide_div_meta_df %>%
+  # Fetch the standard error from diversity measure to plot error bars 
+  left_join(filter(div_iNEXT, Diversity == "Simpson diversity"), by = "norep_filter_name") %>%
+  rename(se_iNEXT ="s.e.") %>%
+  ggplot(aes(x=simpson, y=frac_bacprod)) + 
+  geom_errorbarh(aes(xmin = simpson - se_iNEXT, xmax = simpson + se_iNEXT, 
+                     color = fraction), alpha = 0.7) + # X-axis errorbars
+  geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod, color = fraction)) +  # Y-axis errorbars
+  geom_point(size = 3.5, color = "black", aes(fill = fraction, shape = season)) +
+  scale_color_manual(values = fraction_colors) +
+  scale_fill_manual(values = fraction_colors) +
+  scale_shape_manual(values = season_shapes) +
+  labs(x = expression({}^2*italic(D)),
+       y = "Community Production \n (μgC/L/day)") + 
+  geom_smooth(data=filter(wide_div_meta_df, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
+  scale_x_continuous(limits = c(0,85), breaks = seq(from = 0, to = 85, by = 20)) + 
+  scale_y_continuous(limits = c(-5, 75), breaks = seq(0, 75, by = 15)) +
+  # Add the R2 and p-value to the plot 
+  annotate("text", x=70, y=45, label=lm_lab_perliter_invsimps_PA, parse = TRUE, color = "#FF6600", size = 4) +
+  theme(legend.position = "none") #axis.title.x = element_blank(), axis.text.x = element_blank() 
+
+# Summary stats 
+summary(lm(frac_bacprod ~ simpson, data = filter(wide_div_meta_df, fraction == "Particle")))
+# WITHOUT THE TWO HIGH POINTS 
+summary(lm(frac_bacprod ~ simpson, data = filter(wide_div_meta_df, fraction == "Particle" & simpson < 70)))
+
+
+
+################ Inverse Simpson vs Per Capitra (Per-Cell) Production 
+## 1. Extract the R2 and p-value from the linear model: 
+lm_lab_percell_invsimps_PA <- paste("atop(R^2 ==", round(summary(lm_percell_prod_vs_invsimps_PA)$adj.r.squared, digits = 2), ",",
+             "p ==", round(unname(summary(lm_percell_prod_vs_invsimps_PA)$coefficients[,4][2]), digits = 4), ")")
+
+## 2. Plot Inverse Simpson vs Per Capitra (Per-Cell) Production 
+percell_prod_vs_invsimps_plot <- 
+  wide_div_meta_df %>%
+  # Fetch the standard error from diversity measure to plot error bars 
+  left_join(filter(div_iNEXT, Diversity == "Simpson diversity"), by = "norep_filter_name") %>%
+  rename(se_iNEXT ="s.e.") %>%
+  ggplot(aes(x=simpson, y=log10(fracprod_per_cell_noinf))) + 
+  geom_errorbarh(aes(xmin = simpson - se_iNEXT, xmax = simpson + se_iNEXT, 
+                     color = fraction), alpha = 0.7) + # X-axis errorbars
+  geom_point(size = 3.5, color = "black", aes(shape = season, fill = fraction)) +
+  scale_color_manual(values = fraction_colors, guide = TRUE) +
+  scale_fill_manual(values = fraction_colors, guide = FALSE) +
+  scale_shape_manual(values = season_shapes) +
+  labs(x = expression({}^2*italic(D)),
+       y = "log10(production/cell)\n (μgC/cell/day)") +
+  geom_smooth(data=filter(wide_div_meta_df, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
+  scale_x_continuous(limits = c(0,85), breaks = seq(from = 0, to = 85, by = 20)) + 
+  scale_y_continuous(limits = c(-8.5,-5), breaks = seq(from = -8, to =-5, by = 1)) + 
+  # Add the R2 and p-value to the plot 
+  annotate("text", x=70, y=-7.5, label=lm_lab_percell_invsimps_PA, parse = TRUE, color = "#FF6600", size = 4) +
+  guides(color = guide_legend(override.aes = list(shape = 15))) +
+  theme(legend.title = element_blank(), legend.position ="bottom", 
+        legend.text = element_text(size = 14))
+
+# Summary stats 
+summary(lm(log10(fracprod_per_cell_noinf) ~ simpson, data = filter(wide_div_meta_df, fraction == "Particle")))
+# WITHOUT THE TWO HIGH POINTS 
+summary(lm(log10(fracprod_per_cell_noinf) ~ simpson, data = filter(wide_div_meta_df, fraction == "Particle" & simpson < 70)))
+```
+
+
+
+```{r Figure-3, fig.width=7, fig.height=7}
+# All plots together 
+fig3_top <- plot_grid(prod_vs_rich_plot, 
+           prod_vs_invsimps_plot, 
+           percell_prod_vs_rich_plot + theme(legend.position = "none"),
+           percell_prod_vs_invsimps_plot + theme(legend.position = "none"), 
+           labels = c("A", "B", "C", "D"), ncol = 2, nrow = 2,
+           rel_heights = c(1, 1), rel_widths = c(1,1),
+           align = "hv")
+
+# add legend 
+plot_grid(fig3_top, season_legend,
+                   ncol = 1, nrow = 2, 
+                   rel_heights = c(1, 0.05))
 
 ```
 
-## Figure 3
 
 ## Figure 4
 
