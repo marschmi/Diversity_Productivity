@@ -1,0 +1,555 @@
+---
+title: "Analysis: Microhabitats shape diversity-productivity" 
+author: "Marian L. Schmidt, marschmi@umich.edu, @micro_marian"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    code_folding: show
+    highlight: default
+    keep_md: no
+    theme: journal
+    toc: yes
+    toc_float:
+      collapsed: no
+      smooth_scroll: yes
+      toc_depth: 3
+editor_options: 
+  chunk_output_type: console
+---
+<style>
+pre code, pre, code {
+  white-space: pre !important;
+  overflow-x: scroll !important;
+  word-break: keep-all !important;
+  word-wrap: initial !important;
+}
+</style>
+
+
+#### Purpose of this file  
+
+This file has all of the code for the the main analysis to reproduce all figures except Figure S6 in the Schmidt et al. manuscript entitled **"Microhabitats shape diversity-productivity relationships in freshwater bacterial communities"**. To see how to reproduce figure S6 please see the github for this project and go to [analysis/OTU_Removal_Analysis.html](https://deneflab.github.io/Diversity_Productivity/analysis/OTU_Removal_Analysis.html)  on the github page.
+
+##### If you have any questions, please be welcome to email the corresponding author at marschmi@umich.edu or tweet her at [micro_marian](https://twitter.com/micro_marian?lang=en).
+
+```{r setup, include=FALSE}
+# For width of code chunks and scroll bar 
+options(width=250)
+
+knitr::opts_chunk$set(eval = TRUE, 
+                      echo = TRUE, 
+                      include = TRUE,
+                      warning = FALSE,
+                      collapse = FALSE,
+                      message = FALSE,
+                      engine = "R", # Chunks will always have R code, unless noted
+                      error = TRUE,
+                      fig.path="Figures/",  # Set the figure options
+                      fig.align = "center") 
+
+```
+
+# Load Libraries
+```{r load-libraries}
+library(devtools)   # Reproducibility (see end of file)
+library(phyloseq)   # Easier data manipulation  
+library(picante)    # Phylogenetic Tree Analysis   
+library(tidyverse)  # Pretty plotting and data manipulation 
+library(forcats)    # Recoding factors
+library(cowplot)    # Multiple plotting
+library(picante)    # Will also include ape and vegan  
+library(car)        # Residual analysis 
+library(sandwich)   # vcovHC function in post-hoc test 
+library(MASS)       # studres in plot_residuals function    
+library(caret)      # Cross validation
+library(pander)     # Pretty tables      
+library(glmnet)     # Lasso regressions 
+library(broom)      # Stats from lm regression 
+library(purrr)      # Exporting lm results  
+library(DT)         # Fancy HTML table output
+library(lme4)       # linear mixed effects model
+library(iNEXT)      # Calculate hill diversity with interpolation & extrapolation
+library(hillR)      # Calculate phylogenetic hill numbers
+library(hilldiv)    # Calculate hill phylogenetic hill numbers (for comparison)
+library(phytools)   # for force.ultrametric() 
+source("code/Muskegon_functions.R")   # Source custom functions  
+source("code/set_colors.R")           # Set Colors for plotting
+
+# Set the ggplot theme 
+theme_set(theme_cowplot())
+```
+
+
+# Load data
+```{r load-data}
+# Loads a phyloseq object named otu_merged_musk_pruned)
+load("data/surface_PAFL_otu_pruned_raw.RData") 
+# The name of the phyloseq object is: 
+surface_PAFL_otu_pruned_raw 
+
+# Remove doubletons
+surface_PAFL_otu_pruned_rm2 <- prune_taxa(taxa_sums(surface_PAFL_otu_pruned_raw) > 2, surface_PAFL_otu_pruned_raw) 
+surface_PAFL_otu_pruned_rm2
+
+# How many OTUs left for analysis?
+paste("There are", ntaxa(surface_PAFL_otu_pruned_rm2), "OTUs remaining for analysis in the dataset.")
+
+# Remove tree for computational efficiency 
+surface_PAFL_otu_pruned_notree_rm2 <- phyloseq(tax_table(surface_PAFL_otu_pruned_rm2), otu_table(surface_PAFL_otu_pruned_rm2), sample_data(surface_PAFL_otu_pruned_rm2)) 
+
+# Gather the metadata in a dataframe
+metadata <- data.frame(sample_data(surface_PAFL_otu_pruned_notree_rm2)) %>%
+      mutate(fraction = factor(fraction, levels = c("WholePart","WholeFree")),
+         lakesite = factor(lakesite,  levels = c("MOT", "MDP", "MBR", "MIN")),
+         fraction = fct_recode(fraction, Particle = "WholePart", Free = "WholeFree"),
+         lakesite = fct_recode(lakesite, Outlet = "MOT", Deep = "MDP", Bear = "MBR", River = "MIN"))
+row.names(metadata) <- metadata$norep_filter_name
+
+# Replace the sample data 
+sample_data(surface_PAFL_otu_pruned_notree_rm2) <- metadata
+
+# Create a dataframe for environmental data only
+environmental_data <- metadata %>%
+  dplyr::select(Temp_C:DO_percent, -BGA_cellspermL, -SRP_ugperL, fraction, norep_filter_name, -DO_percent) %>%
+  dplyr::filter(fraction == "Free") %>%
+  dplyr::select(-fraction) %>%
+  tibble::column_to_rownames(var = "norep_filter_name") %>%
+  dplyr::rename(Temp = Temp_C, SPC = SpCond_uSpercm,
+         TDS = TDS_mgperL, ORP = ORP_mV,
+         Chla = Chl_Lab_ugperL, Cl = Cl_mgperL,
+         SO4 = SO4_mgperL, NO3 = NO3_mgperL,
+         NH3 = NH3_mgperL, TKN = TKN_mgperL,
+         TP = TP_ugperL, Alk = Alk_mgperL,
+         DO = DO_mgperL) %>%
+  as.matrix()
+```
+
+```{r pca-environ}
+#### PCA DATA 
+# Scale the data so their variances are the same!
+scaled_enviro <- scale(environmental_data)
+# Sanity Checks: check that we get mean of 0 and sd of 1
+apply(scaled_enviro, 2, mean)
+apply(scaled_enviro, 2, sd)
+# Run a redundnacy analysis (RDA) to extract the variation in the set of response variables 
+pca_environ <- rda(scaled_enviro) 
+# What is the proportion explained by each of the PCA axes? 
+summary(pca_environ)$cont$importance
+# Pull out all of the PCA scores into a dataframe
+pca_scores_df <- summary(pca_environ)$sites %>%
+  as.data.frame() %>%
+  tibble::rownames_to_column(var = "norep_filter_name") %>%
+  mutate(norep_water_name = paste(substr(norep_filter_name, 1, 4), substr(norep_filter_name, 6, 8), sep = "")) %>%
+  dplyr::select(-c(norep_filter_name, PC3, PC4, PC5, PC6))
+# Combine the above dataframe with the rest of the metadata
+metadata_pca <- metadata %>%
+  mutate(norep_water_name = paste(substr(norep_filter_name, 1, 4), substr(norep_filter_name, 6, 8), sep = "")) %>%
+  left_join(pca_scores_df, by = "norep_water_name")
+```
+
+
+# Calculate Diversity
+
+## Hill Diversity
+**Hill diversity with the iNEXT package**
+```{r iNEXT-data}
+# Prepare the input data for iNEXT
+iNEXT_input_table <- otu_table(surface_PAFL_otu_pruned_rm2) %>%
+  t() %>%
+  data.frame()
+#set.seed(777)
+# Run iNEXT on the data - it takes a long time to run! So here we will load in the object that was previously created with the following line of code:
+#iNEXT_data <- iNEXT(iNEXT_input_table, q = c(0,1,2), datatype = "abundance")
+#save(list="iNEXT_data", file=paste0("data/iNEXT/iNEXT_data_surface_PAFL_otu_pruned_rm2")) 
+# Load the data
+load("data/iNEXT/iNEXT_data_surface_PAFL_otu_pruned_rm2")
+#str(iNEXT_data)
+# Pull out into a dataframe
+div_iNEXT <- iNEXT_data$AsyEst %>%
+  rename(norep_filter_name = Site) 
+```
+
+
+## Phylo Hill Diversity
+**Phylogenetic Hill diversity with the hillR package**
+```{r calc-hillR}
+# Here I will use hillR to calculate the phylogenetic diversity,
+# which uses an extension of the hill numbers 
+#otu_mat <- data.frame(otu_table(surface_PAFL_otu_pruned_rm2))
+#phy_tree <- phy_tree(surface_PAFL_otu_pruned_rm2)
+set.seed(111)
+# Calculate the Hill phylogenetic diversity metric from the hillR package
+# The output from this command is a named vector with the sample name and the div value.
+#hill_phy0_df <- hill_phylo(comm = otu_mat, tree = phy_tree, q = 0)
+#hill_phy1_df <- hill_phylo(comm = otu_mat, tree = phy_tree, q = 1)
+#hill_phy2_df <- hill_phylo(comm = otu_mat, tree = phy_tree, q = 2)
+# Pull out the sample names
+#norep_filter_name <- names(hill_phy0_df) 
+#stopifnot(names(hill_phy0_df) == names(hill_phy1_df))
+#stopifnot(names(hill_phy1_df) == names(hill_phy2_df))
+# Pull out the hill phylo div values
+#div_sample_names <- rep(norep_filter_name, times = 3)
+#phylo_div_vals <- c(unname(hill_phy0_df), unname(hill_phy1_df), unname(hill_phy2_df)) # rich, shannon, simpson
+#phylo_div_types <- c(rep("Species richness", times = 24), rep("Shannon diversity", times = 24), rep("Simpson diversity", times = 24))
+# Put it all in a dataframe 
+#hillR_output <- data.frame(div_sample_names, phylo_div_vals, phylo_div_types) %>%
+#  rename(norep_filter_name = div_sample_names, Diversity = phylo_div_types,
+#         hillR_phylo = phylo_div_vals) 
+# save to file because hillR is computationally intensive 
+#write.csv(x = hillR_output, file = "data/iNEXT/hillR_output.csv", row.names = FALSE, quote = FALSE)
+# Because hillR takes so much time to calculate - I'll load in a previously computed version (from the code above)
+hillR_output <- read.csv("data/iNEXT/hillR_output.csv") %>%
+  mutate(Diversity = fct_recode(Diversity, "phylo_richness" = "Species richness", 
+                                "phylo_shannon" = "Shannon diversity", 
+                                "phylo_simpson" = "Simpson diversity")) %>%
+  spread(key = Diversity, value = hillR_phylo)
+```
+
+**Put together the diversity dataframes into one**
+```{r combine-diversity-dfs-prep}
+# COMBINE iNEXT AND hillR DATA - should now be 144 rows
+div_df <- 
+  div_iNEXT %>%
+  dplyr::select(norep_filter_name, Diversity, Observed) %>%
+  mutate(Diversity = fct_recode(Diversity, "richness" = "Species richness", 
+                                "shannon" = "Shannon diversity", 
+                                "simpson" = "Simpson diversity")) %>%
+  # For this analysis, we will be using the observed values calculated from iNEXT
+  spread(key = Diversity, value = Observed) %>%
+  left_join(hillR_output)
+```
+
+## Mean Pairwise Distance
+```{r calc-sesmpd, fig.width = 4, fig.height = 4}  
+# Read in the tree 
+#RAREFIED_rm2_fasttree <- read.tree(file = "data/PhyloTree/newick_tree_rm2_rmN.tre")
+  
+# Load in data that has doubletons removed 
+#load("data/PhyloTree/surface_PAFL_otu_pruned_RAREFIED_rm2.RData")
+#surface_PAFL_otu_pruned_RAREFIED_rm2
+# Create the OTU table for picante 
+#surface_PAFL_RAREFIED_rm2_otu <- matrix(otu_table(surface_PAFL_otu_pruned_RAREFIED_rm2), nrow = nrow(otu_table(surface_PAFL_otu_pruned_RAREFIED_rm2)))
+#rownames(surface_PAFL_RAREFIED_rm2_otu) <- sample_names(surface_PAFL_otu_pruned_RAREFIED_rm2)
+#colnames(surface_PAFL_RAREFIED_rm2_otu) <- taxa_names(surface_PAFL_otu_pruned_RAREFIED_rm2)
+    
+  ## Calculate input for SES_MPD  
+# Convert the abundance data to standardized abundanced vegan function `decostand' , NOTE: method = "total"
+#otu_decostand_total <- decostand(surface_PAFL_RAREFIED_rm2_otu, method = "total")
+# check total abundance in each sample
+#apply(otu_decostand_total, 1, sum)
+# check for mismatches/missing species between community data and phylo tree
+#RAREFIED_rm2_matches <- match.phylo.comm(RAREFIED_rm2_fasttree, otu_decostand_total)
+# the resulting object is a list with $phy and $comm elements.  replace our
+# original data with the sorted/matched data
+#phy_RAREFIED_rm2 <- RAREFIED_rm2_matches$phy
+#comm_RAREFIED_rm2 <- RAREFIED_rm2_matches$comm
+# Calculate the phylogenetic distances
+#phy_dist_RAREFIED_rm2 <- cophenetic(phy_RAREFIED_rm2)
+## Calculate SES_MPD
+###################################### INDEPENDENT SWAP ############################################
+# calculate standardized effect size mean pairwise distance (ses.mpd)
+#unweighted_sesMPD_indepswap_RAREFIED_rm2 <- ses.mpd(comm_RAREFIED_rm2, phy_dist_RAREFIED_rm2, null.model = "independentswap", 
+#                                     abundance.weighted = FALSE, runs = 999)
+#unweight_sesmpd <- unweighted_sesMPD_indepswap_RAREFIED_rm2 %>% rownames_to_column(var = "norep_filter_name")
+#WEIGHTED_sesMPD_indepswap_RAREFIED_rm2 <- ses.mpd(comm_RAREFIED_rm2, phy_dist_RAREFIED_rm2, null.model = "independentswap", 
+#                                     abundance.weighted = TRUE, runs = 999)
+#weight_sesmpd <- WEIGHTED_sesMPD_indepswap_RAREFIED_rm2 %>% rownames_to_column(var = "norep_filter_name")
+# Combine them together into a dataframe
+#sesmpd_df <- unweight_sesmpd %>%
+#  dplyr::select(norep_filter_name, mpd.obs.z) %>%
+#  rename(unweighted_sesmpd = mpd.obs.z) %>%
+#  left_join(dplyr::select(weight_sesmpd, norep_filter_name, mpd.obs.z), by = "norep_filter_name") %>%
+#  rename(weighted_sesmpd = mpd.obs.z)
+# Gather ALL div data!
+#div_df <- div_df %>%
+#  left_join(sesmpd_df, by = "norep_filter_name")
+#write.csv(div_df, file = "data/iNEXT/diversity_measures.csv", quote = FALSE, row.names = FALSE)
+```
+
+#### Final dataframe
+```{r combine-diversity-dfs-final}
+div_df <- read.csv(file = "data/iNEXT/diversity_measures.csv")
+
+# Create the final dataframe!
+comb_div_df <- div_df %>%
+  left_join(metadata_pca, by = "norep_filter_name") %>%
+  gather(key = "Diversity", value = "Observed", richness:phylo_richness) %>%  
+  data.frame()
+head(comb_div_df)
+dim(comb_div_df)
+
+# #Prepare dataframe for calculations
+div_df_frac <- metadata %>%
+  dplyr::select(norep_filter_name, fraction, season) %>%
+  right_join(div_iNEXT, by = "norep_filter_name")
+## The following data will the be primary dataframe used in this analysis
+
+# Wide format dataframe for plotting
+wide_div_meta_df <- div_df %>%
+  left_join(metadata_pca, by = "norep_filter_name")
+
+### BASIC STATS OF PRODUCTION AND # OF CELL
+std <- function(x) sd(x)/sqrt(length(x))
+
+# For the beginning of the results section 
+wide_div_meta_df %>%
+  group_by(fraction) %>%
+  summarize(avg_cells_per_mL = mean(fraction_bac_abund), 
+            se_cells_per_mL = std(fraction_bac_abund), 
+            avg_community_prod = mean(frac_bacprod),
+            se_community_prod = std(frac_bacprod))
+wide_div_meta_df %>%
+  dplyr::filter(norep_filter_name != "MOTEJ515") %>%
+  group_by(fraction) %>%
+  summarize(avg_log10_percap_prod = mean(log10(fracprod_per_cell)),
+            se_log10_percap_prod = std(log10(fracprod_per_cell)))
+```
+
+
+# Main Figures
+**Have a legend for all plots**  
+Since there's a set parameter in  `set_colors.R` file that was sourced at the beginning, we can use this throughout to can assure that the below legends will represent the legends called afterwards. 
+```{r legends}
+####### Legend for season
+legend_plot <- ggplot(metadata, aes(y = frac_bacprod, x = fraction, fill = fraction, shape = season)) + 
+  geom_jitter(size = 3, width = 0.2) + 
+  scale_fill_manual(values = fraction_colors, guide = guide_legend(override.aes = list(shape = 22, size = 4))) +
+  scale_shape_manual(values = season_shapes, guide = guide_legend(override.aes = list(size = 4))) +
+  theme(legend.position = "bottom", axis.title.x = element_blank(),
+        legend.title = element_blank(), legend.justification="center",
+        plot.margin = unit(c(0.2,0.2,1,0.2), "cm")) # top, right, bottom, and left margins
+# Extract the legend
+season_legend <- cowplot::get_legend(legend_plot + theme(legend.direction = "horizontal",legend.justification="center" ,legend.box.just = "bottom"))
+
+
+### Make it 2 rows for plots that are skinnier
+####### Legend for season 
+season_2row_plot <- ggplot(metadata, aes(y = frac_bacprod, x = fraction, fill = fraction, shape = season)) + 
+  geom_jitter(size = 3, width = 0.2) + 
+  scale_fill_manual(values = fraction_colors, guide = guide_legend(override.aes = list(shape = 22, size = 4))) +
+  scale_shape_manual(values = season_shapes, guide = guide_legend(override.aes = list(size = 4))) +
+  theme(legend.position = "bottom",  legend.justification="center",
+        axis.title.x = element_blank(),
+        legend.title = element_blank(), legend.box = "vertical",
+        legend.spacing.y = unit(0.1, 'cm'),
+        plot.margin = unit(c(0.2,0.2,1,0.2), "cm")) # top, right, bottom, and left margins
+# Extract the legend
+season_2row_legend <- cowplot::get_legend(season_2row_plot + theme(legend.direction = "horizontal",legend.justification="center" ,legend.box.just = "bottom"))
+
+####### Legend for lakesite
+lakesite_legend <- ggplot(metadata, aes(y = frac_bacprod, x = fraction, fill = fraction, shape = lakesite)) + 
+  geom_jitter(size = 3, width = 0.2) + 
+  scale_fill_manual(values = fraction_colors, guide = guide_legend(override.aes = list(shape = 22, size = 4))) +
+  scale_shape_manual(values = lakesite_shapes, guide = guide_legend(override.aes = list(size = 4))) +
+  theme(legend.position = "bottom", axis.title.x = element_blank(),
+        legend.title = element_blank(), legend.justification="center",
+        plot.margin = unit(c(0.2,0.2,1,0.2), "cm")) # top, right, bottom, and left margins
+# Extract the legend
+lakesite_legend <-  cowplot::get_legend(lakesite_legend + theme(legend.direction = "horizontal",legend.justification="center" ,legend.box.just = "bottom"))
+```
+
+
+## Figure 1
+```{r Figure-1, fig.width = 8.5, fig.height = 3.5}
+######################################################### Fraction ABUNDANCe 
+frac_abund_wilcox <- wilcox.test(log10(as.numeric(fraction_bac_abund)) ~ fraction, data = metadata)
+frac_abund_wilcox
+
+metadata %>%
+  group_by(fraction) %>%
+  summarize(mean(as.numeric(fraction_bac_abund)))
+
+# Make a data frame to draw significance line in boxplot (visually calculated)
+dat1 <- data.frame(a = c(1.1,1.1,1.9,1.9), b = c(6.45,6.5,6.5,6.45)) # WholePart vs WholeFree
+
+poster_a <- 
+  ggplot(filter(metadata, norep_filter_name != "MOTEJ515"), 
+       aes(y = log10(as.numeric(fraction_bac_abund)), x = fraction)) +
+  geom_jitter(size = 3, aes(fill = fraction, shape = season), width = 0.2) + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA, aes( fill = fraction)) +
+  ylab("Log10(Bacterial Counts) \n (cells/mL)") +
+  scale_fill_manual(values = fraction_colors) +
+  scale_shape_manual(values = season_shapes) +
+  ##### Particle vs free cell abundances 
+  geom_path(data = dat1, aes(x = a, y = b), linetype = 1, color = "gray40") +
+  annotate("text", x=1.5, y=6.55, size = 8, color = "gray40", label= paste("***")) +
+  annotate("text", x=1.5, y=6.4, size = 3.5, color = "gray40",
+           label= paste("p =", round(frac_abund_wilcox$p.value, digits = 6))) +
+  theme(legend.position = "bottom",
+        legend.title = element_blank(),
+        axis.title.x = element_blank())
+
+######################################################### TOTAL PRODUCTION 
+totprod_wilcox <- wilcox.test(frac_bacprod ~ fraction, data = metadata)
+totprod_wilcox
+
+metadata %>%
+  group_by(fraction) %>%
+  summarize(mean(frac_bacprod))
+
+# Make a data frame to draw significance line in boxplot (visually calculated)
+dat2 <- data.frame(a = c(1.1,1.1,1.9,1.9), b = c(71,72,72,71)) # WholePart vs WholeFree
+
+poster_b <- ggplot(metadata, aes(y = frac_bacprod, x = fraction)) + 
+  geom_jitter(size = 3, aes(fill = fraction, shape = season), width = 0.2) + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA, aes( fill = fraction)) +
+  scale_fill_manual(values = fraction_colors, guide = FALSE) +
+  scale_shape_manual(values = season_shapes) +
+  scale_y_continuous(limits = c(0, 78), expand = c(0,0), breaks = seq(0, 75, by = 15)) +
+  ylab("Community Production \n (μgC/L/day)") +
+  ##### Particle vs free bulk production  
+  geom_path(data = dat2, aes(x = a, y = b), linetype = 1, color = "gray40") +
+  annotate("text", x=1.5, y=73, size = 8, color = "gray40", label= paste("*")) +
+  annotate("text", x=1.5, y=69, size = 3.5, color = "gray40",
+           label= paste("p =", round(totprod_wilcox$p.value, digits = 3))) +
+  theme(legend.position = "none",
+        axis.title.x = element_blank())
+
+######################################################### TOTAL PRODUCTION 
+percellprod_wilcox <- wilcox.test(log10(fracprod_per_cell) ~ fraction, data = filter(metadata, norep_filter_name != "MOTEJ515"))
+percellprod_wilcox
+
+filter(metadata, norep_filter_name != "MOTEJ515") %>%
+  group_by(fraction) %>%
+  summarize(mean(fracprod_per_cell))
+
+# Make a data frame to draw significance line in boxplot (visually calculated)
+dat3 <- data.frame(a = c(1.1,1.1,1.9,1.9), b = c(-5.05,-5,-5,-5.05)) # WholePart vs WholeFree
+
+poster_c <- ggplot(filter(metadata, norep_filter_name != "MOTEJ515"), 
+       aes(y = log10(fracprod_per_cell), x = fraction)) +
+  geom_jitter(size = 3, aes(fill = fraction, shape = season), width = 0.2) + 
+  geom_boxplot(alpha = 0.5, outlier.shape = NA, aes( fill = fraction)) +
+  scale_fill_manual(values = fraction_colors, guide = FALSE) +
+  scale_shape_manual(values = season_shapes) +
+  ylim(c(-8.5, -4.9)) + 
+  ylab("Log10(Per-Capita Production) \n(μgC/cell/day)") +
+  ##### Particle vs free per-cell production 
+  geom_path(data = dat3, aes(x = a, y = b), linetype = 1, color = "gray40") +
+  annotate("text", x=1.5, y=-4.95, size = 8, color = "gray40", label= paste("***")) +
+  annotate("text", x=1.5, y=-5.15,  size = 3.5, color = "gray40",
+           label= paste("p =", round(percellprod_wilcox$p.value, digits = 5))) +
+  theme(legend.position = "none",
+        axis.title.x = element_blank())
+
+######## FIGURE 1
+row1_plots <- plot_grid(poster_a + theme(legend.position = "none"), poster_b, poster_c,
+          labels = c("A", "B", "C"),
+          ncol = 3, nrow = 1)
+fig_1 <- plot_grid(row1_plots, season_legend,
+           ncol = 1, nrow = 2, 
+           rel_heights = c(1, 0.05)); fig_1
+
+# What are the averages? 
+metadata %>%
+  group_by(fraction) %>%
+  dplyr::select(frac_bacprod, fracprod_per_cell_noinf) %>%
+  na.omit() %>%
+  summarize(avg_comm_prod = mean(frac_bacprod),
+            avg_percell_prod = mean(fracprod_per_cell_noinf),
+            log10_avg_percell_prod = log10(avg_percell_prod))
+```
+
+## Figure 2
+```{r Figure-2, fig.width=9, fig.height=6}
+site_div_order <- c("richness","shannon","simpson","unweighted_sesmpd",
+                    "phylo_richness", "phylo_shannon","phylo_simpson", "weighted_sesmpd") 
+
+site_div_labs <- c("{}^0*italic(D)", "{}^1*italic(D)","{}^2*italic(D)", "italic(Unweighted_MPD)",
+                   "{}^0*italic(PD)", "{}^1*italic(PD)","{}^2*italic(PD)", "italic(Weighted_MPD)")
+
+long_div_meta_df <- 
+  wide_div_meta_df %>%
+  dplyr::select(c(norep_filter_name, richness:weighted_sesmpd, fraction, lakesite, season)) %>%
+  gather(key = Diversity, value = div_val, richness:weighted_sesmpd) %>%
+  mutate(Diversity = fct_relevel(Diversity, levels = site_div_order),
+         hill_labels = factor(Diversity, labels = site_div_labs))
+
+
+wc_pafl_pvals1 <-  c(wilcox.test(richness ~ fraction, data = wide_div_meta_df)$p.value,
+                    wilcox.test(shannon ~ fraction, data = wide_div_meta_df)$p.value, 
+                    wilcox.test(simpson ~ fraction, data = wide_div_meta_df)$p.value, 
+                    wilcox.test(unweighted_sesmpd ~ fraction, data = wide_div_meta_df)$p.value,
+                    # Row 2 
+                    wilcox.test(phylo_richness ~ fraction, data = wide_div_meta_df)$p.value, 
+                    wilcox.test(phylo_shannon ~ fraction, data = wide_div_meta_df)$p.value,
+                    wilcox.test(phylo_simpson ~ fraction, data = wide_div_meta_df)$p.value, 
+                    wilcox.test(weighted_sesmpd ~ fraction, data = wide_div_meta_df)$p.value)
+
+pafl_pvals_adjusted <- p.adjust(wc_pafl_pvals1, method = "fdr")
+
+wc_pafl_pvals <-  c(paste("p=", round(pafl_pvals_adjusted[1], digits = 3), sep = ""),
+                    paste("p=", round(pafl_pvals_adjusted[2], digits = 3), sep = ""),
+                    paste("N", "S", sep = ""),
+                    paste("p=", round(pafl_pvals_adjusted[4], digits = 2), sep = ""),
+                    # Row 2 
+                    paste("p=", round(pafl_pvals_adjusted[5], digits = 3),sep = ""),
+                    paste("p=", round(pafl_pvals_adjusted[6], digits = 3), sep = ""),
+                    paste("p=", round(pafl_pvals_adjusted[7], digits = 3), sep = ""),
+                    paste("N", "S", sep = ""))
+
+fraction <- as.character(rep("Free", 8))
+wide_div_meta_df %>%
+  filter(fraction == "Free") %>%
+  summarize(max_rich = max(richness), max_shan = max(shannon), max_simps = max(simpson), max_umpd = max(unweighted_sesmpd), 
+            # row 2
+            max_phyrich = max(phylo_richness), max_physhan = max(phylo_shannon), max_physimps = max(phylo_simpson), max_wmpd = max(weighted_sesmpd))
+
+# Locations of labels 
+maxes <- c(1350, 299, 78, 1.35, 150, 15.2, 5.8, 0.1)
+df_temp <- data.frame(hill_labels = site_div_labs, wc_pafl_pvals, fraction, maxes) 
+
+long_div_meta_df %>% 
+ # left_join(df_temp, by = "Diversity") %>%
+  ggplot(aes(y = div_val, x = fraction, fill = fraction)) +
+  ylab("Diversity Value By Fraction") +
+  facet_wrap(hill_labels~., scales = "free", labeller = label_parsed, nrow = 2, ncol = 4) + 
+  geom_point(size = 3, position = position_jitterdodge(), aes(shape = lakesite)) +
+  geom_boxplot(alpha = 0.5, outlier.shape = NA, color = "black") +
+  scale_fill_manual(values = fraction_colors) + 
+  scale_shape_manual(values = lakesite_shapes) + 
+  scale_color_manual(values = fraction_colors) + 
+  theme(legend.position = "none", axis.title.x = element_blank()) +
+  geom_text(data = df_temp, aes(x = fraction, y = maxes, label = wc_pafl_pvals), size = 4.5, hjust = 0.5,color = "grey40") 
+
+```
+
+## Figure 3
+
+## Figure 4
+
+## Lasso Regressions
+
+# Supplemental
+
+## Figure S1
+
+
+## Figure S2
+
+
+## Figure S3
+
+## Figure S4
+
+## Figure S5
+
+## Figure S6
+
+## Figure S7
+
+## Figure S8
+
+## Figure S9
+
+## Figure S10
+
+## Table S1
+
+## Table S2
+
+
+
+
+
+
