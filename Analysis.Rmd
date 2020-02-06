@@ -943,7 +943,7 @@ percell_prod_vs_invsimps_plot <-
   scale_fill_manual(values = fraction_colors, guide = FALSE) +
   scale_shape_manual(values = season_shapes) +
   labs(x = expression({}^2*italic(D)),
-       y = "log10(production/cell)\n (μgC/cell/day)") +
+       y = "\n log10(Per-Capita Production)\n (μgC/cell/day)") +
   geom_smooth(data=filter(wide_div_meta_df, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
   scale_x_continuous(limits = c(0,85), breaks = seq(from = 0, to = 85, by = 20)) + 
   scale_y_continuous(limits = c(-8.5,-5), breaks = seq(from = -8, to =-5, by = 1)) + 
@@ -980,7 +980,7 @@ plot_grid(fig3_top, season_legend,
 
 ## Figure 4
 **Phylodiv vs ses.MPD**
-```{r Figure-4, fig.width=3.5, fig.height=4.5}
+```{r Figure-4, fig.width=3.5, fig.height=4.2}
 # Is there a relationship between phylogenetic richness (0D) and the unweighted mean pairwise distance?
 # 1. Since it's a general correlation - the linear model will be for 
 lm_unweightMPD_phylorich <- lm(unweighted_sesmpd ~ phylo_richness, data = wide_div_meta_df)
@@ -1644,7 +1644,7 @@ wilcox.test(frac_difference ~ season,
 
 ```
 
-```{r prep3-Figure-S4, fig.width=3.5, fig.height=4.5}
+```{r prep3-Figure-S4, fig.width=3.5, fig.height=4.2}
 #################################################
 ######### PLOT THE HILL NUMBERS BY Q ############
 #################################################
