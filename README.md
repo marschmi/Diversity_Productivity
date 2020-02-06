@@ -2,7 +2,7 @@
 
 ###  **Authors:** Marian L. Schmidt, Bopaiah A. Biddanda, Anthony D. Weinke, Edna Chiang, Fallon Januska, Ruben Props, & Vincent J. Denef
 
-## [Link to the Main Analysis](Final_Analysis.html)
+## [Link to the Main Analysis](Analysis.html)
 
 ## [Link to the Supplemental Analysis](analysis/OTU_Removal_Analysis.html)
 
@@ -24,7 +24,7 @@ The original Fastq files were submitted to the NCBI sequence read archive under 
 
 ### **File Description:**
 
-The files in the main directory named [Final_Analysis.Rmd](https://github.com/marschmi/Diversity_Productivity/blob/master/Final_Analysis.Rmd), [Final_Analysis.html](Final_Analysis.html), and [Final_Figures/](https://github.com/marschmi/Diversity_Productivity/tree/master/Final_Figures/) folder have all of the final analysis contents. **Please note that the [Final_Figures/](https://github.com/marschmi/Diversity_Productivity/tree/master/Final_Figures/) folder has all of the figures in the manuscript except Figure S6, which can be found [here](https://github.com/marschmi/Diversity_Productivity/blob/master/analysis/OTU_Removal_Analysis_Figs/figS6-1.png).**
+The files in the main directory named [Analysis.Rmd](https://github.com/marschmi/Diversity_Productivity/blob/master/Analysis.Rmd), [Analysis.html](Analysis.html), and [figures/](https://github.com/marschmi/Diversity_Productivity/tree/master/figures/) folder have all of the final analysis contents. **Please note that the [figures/](https://github.com/marschmi/Diversity_Productivity/tree/master/figures/) folder has all of the figures in the manuscript except Figure S6, which can be found [here](https://github.com/marschmi/Diversity_Productivity/blob/master/analysis/OTU_Removal_Analysis_Figs/figS6-1.png).**
 
 Two supplementary analysis files can be found in the [analysis/](https://github.com/DenefLab/Diversity_Productivity/tree/master/analysis) folder. Specifically: Files named [OTU_Removal_Analysis.Rmd](https://github.com/marschmi/Diversity_Productivity/blob/master/analysis/OTU_Removal_Analysis.Rmd), and [OTU_Removal_Analysis.html](analysis/OTU_Removal_Analysis.html) are for the rare OTU sensitivity analysis. Files named [PrunedTree_Analysis.html](analysis/PrunedTree_Analysis.html) and [PrunedTree_Analysis.Rmd](https://github.com/DenefLab/Diversity_Productivity/blob/master/analysis/PrunedTree_Analysis.Rmd) are for different types of phylogenetic analyses. 
 
@@ -32,10 +32,24 @@ Two supplementary analysis files can be found in the [analysis/](https://github.
 
 ```
 .
-├── Final_Analysis.Rmd
-├── Final_Analysis.html
-├── Final_Analysis.md
-├── Final_Figures/
+├── Analysis.Rmd
+├── Analysis.html
+├── figures/
+│   ├── Figure-1-1.png
+│   ├── Figure-2-1.png
+│   ├── Figure-3-1.png
+│   ├── Figure-4-1.png
+│   ├── Figure-S1-1.png
+│   ├── Figure-S2-1.png
+│   ├── Figure-S3-1.png
+│   ├── Figure-S4-1.png
+│   ├── Figure-S5-1.png
+│   ├── Figure-S6-1.png
+│   ├── Figure-S7-1.png
+│   ├── Figure-S8-1.png
+│   ├── Figure-S9-1.png
+│   ├── Figure-S10-1.png
+│   └── Figure-S10-2.png
 ├── code/
 │   ├── Create_Tree.R
 │   ├── Muskegon_functions.R
