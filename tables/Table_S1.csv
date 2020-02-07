@@ -1,6 +1,0 @@
-fraction,independent_var,logLik,AIC,adj.r.squared,FDR.p.value
-Particle,simpson,-34.1154321564355,74.23,0.7,0.0128
-Particle,richness,-35.9033558133432,77.81,0.59,0.0227
-Particle,phylo_richness,-36.1071633577904,78.21,0.58,0.0227
-Particle,pH,-36.3715598819421,78.74,0.56,0.0227
-Particle,shannon,-36.8497817888181,79.7,0.52,0.0276

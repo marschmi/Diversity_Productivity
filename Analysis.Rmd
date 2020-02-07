@@ -28,7 +28,7 @@ pre code, pre, code {
 
 #### Purpose of this file  
 
-This file has all of the code for the the main analysis to reproduce all figures except Figure S6 in the Schmidt et al. manuscript entitled **"Microhabitats shape diversity-productivity relationships in freshwater bacterial communities"**. To see how to reproduce figure S6 please see the github for this project and go to [analysis/OTU_Removal_Analysis.html](https://deneflab.github.io/Diversity_Productivity/analysis/OTU_Removal_Analysis.html)  on the github page.
+This file has all of the code for the the main analysis to reproduce all figures except Figure S8 in the Schmidt et al. manuscript entitled **"Microhabitats shape diversity-productivity relationships in freshwater bacterial communities"**. To see how to reproduce figure S8 please see the github for this project and go to [analysis/OTU_Removal_Analysis.html](https://deneflab.github.io/Diversity_Productivity/analysis/OTU_Removal_Analysis.html)  on the github page.
 
 ##### If you have any questions, please be welcome to email the corresponding author at marschmi@umich.edu or tweet her at [micro_marian](https://twitter.com/micro_marian?lang=en).
 
@@ -1957,9 +1957,9 @@ plot_grid(shannon_plots, season_2row_legend,
                    rel_heights = c(1, 0.08))
 ```
 
-## Figure S8
+## Figure S7
 **PD and Productivity**
-```{r pre-Figure-S8}
+```{r pre-Figure-S7}
 ######################################################### PHYLOGENETIC RICHNESS ######################################################### 
 # Set axis scales for phylo_richness
 phylorich_limits <- c(25, 175)
@@ -2234,7 +2234,7 @@ summary(lm(log10(fracprod_per_cell_noinf) ~ phylo_simpson, data = filter(wide_di
 summary(lm(log10(fracprod_per_cell_noinf) ~ phylo_simpson, data = filter(wide_div_meta_df, fraction == "Particle" & simpson < 70)))
 ```
 
-```{r Figure-S8, fig.width=10, fig.height=6.5}
+```{r Figure-S7, fig.width=10, fig.height=6.5}
 # All plots together 
 phydiv_BEF <- plot_grid(prod_vs_phylorich_plot, prod_vs_phyloshan_plot, prod_vs_phylosimps_plot,
           percell_prod_vs_phylorich_plot + theme(legend.position = "none"),
@@ -2323,7 +2323,7 @@ tableS1 <- individual_lm_results %>%
   dplyr::filter(dependent_var == "Community Production" & FDR.p.value < 0.05) %>%  
   dplyr::select(-c(dependent_var, p.value)) %>%
   arrange(-logLik)
-#write.csv(tableS1, file = "tables/Table_S1.csv", quote = FALSE, row.names = FALSE) 
+#write.csv(tableS1, file = "tables/Table-S1.csv", quote = FALSE, row.names = FALSE) 
 
 #### Community-Wide Production    
 datatable(tableS1,
@@ -2337,7 +2337,7 @@ tableS2 <- individual_lm_results %>%
   dplyr::filter(dependent_var == "Per-Capita Production" & FDR.p.value < 0.05) %>%
   dplyr::select(-c(dependent_var, p.value))  %>%
   arrange(-logLik)
-#write.csv(tableS2, file = "tables/Table_S2.csv", quote = FALSE, row.names = FALSE) 
+#write.csv(tableS2, file = "tables/Table-S2.csv", quote = FALSE, row.names = FALSE) 
  
 ### Per-Capita Production   
 datatable(tableS2,
