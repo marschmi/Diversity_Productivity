@@ -1,5 +1,5 @@
 ---
-title: "OTU Removal Analysis: Figure S6"
+title: "OTU Removal Analysis: Figure S9"
 author: "Marian L. Schmidt, marschmi@umich.edu, @micro_marian"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
@@ -616,8 +616,8 @@ ggplot(dplyr::filter(all_divs, measure == "Inverse_Simpson"),
 
 
 
-# Figure S6
-```{r figS6, fig.height=14, fig.width=12}
+# Figure S9
+```{r Figure-S9, fig.height=14, fig.width=12}
 p1 <- ggplot(dplyr::filter(all_divs, measure == "Richness"  & fraction == "Particle"), 
        aes(y = frac_bacprod, x = mean, color = Removed, fill = Removed)) +
   geom_point(size = 3) + xlab("Richness") +

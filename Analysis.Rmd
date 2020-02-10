@@ -28,7 +28,7 @@ pre code, pre, code {
 
 #### Purpose of this file  
 
-This file has all of the code for the the main analysis to reproduce all figures except Figure S8 in the Schmidt et al. manuscript entitled **"Microhabitats shape diversity-productivity relationships in freshwater bacterial communities"**. To see how to reproduce figure S8 please see the github for this project and go to [analysis/OTU_Removal_Analysis.html](https://deneflab.github.io/Diversity_Productivity/analysis/OTU_Removal_Analysis.html)  on the github page.
+This file has all of the code for the the main analysis to reproduce all figures except Figure S9 in the Schmidt et al. manuscript entitled **"Microhabitats shape diversity-productivity relationships in freshwater bacterial communities"**. To see how to reproduce figure S9 please see the github for this project and go to [analysis/OTU_Removal_Analysis.html](https://deneflab.github.io/Diversity_Productivity/analysis/OTU_Removal_Analysis.html)  on the github page.
 
 ##### If you have any questions, please be welcome to email the corresponding author at marschmi@umich.edu or tweet her at [micro_marian](https://twitter.com/micro_marian?lang=en).
 
@@ -451,7 +451,7 @@ metadata %>%
 ```
 
 ## Figure 2
-```{r Figure-2, fig.width=9, fig.height=6.2}
+```{r Figure-2, fig.width=9, fig.height=3.2}
 site_div_order <- c("richness","shannon","simpson","unweighted_sesmpd",
                     "phylo_richness", "phylo_shannon","phylo_simpson", "weighted_sesmpd") 
 
@@ -500,7 +500,7 @@ maxes <- c(1350, 299, 78, 1.35, 150, 15.2, 5.8, 0.1)
 df_temp <- data.frame(hill_labels = site_div_labs, wc_pafl_pvals, fraction, maxes) 
 
 fig2 <- long_div_meta_df %>% 
- # left_join(df_temp, by = "Diversity") %>%
+  dplyr::filter(Diversity %in% c("richness", "shannon", "simpson", "unweighted_sesmpd")) %>%
   ggplot(aes(y = div_val, x = fraction, fill = fraction)) +
   ylab("Diversity Value By Fraction") +
   facet_wrap(hill_labels~., scales = "free", labeller = label_parsed, nrow = 2, ncol = 4) + 
@@ -510,7 +510,8 @@ fig2 <- long_div_meta_df %>%
   scale_shape_manual(values = season_shapes) + 
   scale_color_manual(values = fraction_colors) + 
   theme(legend.position = "none", axis.title.x = element_blank()) +
-  geom_text(data = df_temp, aes(x = fraction, y = maxes, label = wc_pafl_pvals), size = 4.5, hjust = 0.5,color = "grey40") 
+  geom_text(data = dplyr::filter(df_temp, hill_labels %in% c("{}^0*italic(D)", "{}^1*italic(D)","{}^2*italic(D)", "italic(Unweighted_MPD)")), 
+            aes(x = fraction, y = maxes, label = wc_pafl_pvals), size = 4.5, hjust = 0.5,color = "grey40") 
 
 plot_grid(fig2, season_legend, nrow =2, ncol =1, rel_heights = c(1, 0.05))
 ```
@@ -761,6 +762,11 @@ lm_percell_prod_vs_phylosimps_FL <- lm(log10(fracprod_per_cell_noinf) ~ phylo_si
 ## Figure 3
 **Prepare Figure 3**
 ```{r prep-Figure-3}
+# FDR Correction 
+fig3_pvals <- c(summary(lm_prod_vs_rich_PA)$coefficients[,4][2], summary(lm_percell_prod_vs_rich_PA)$coefficients[,4][2],
+                summary(lm_prod_vs_invsimps_PA)$coefficients[,4][2],summary(lm_percell_prod_vs_invsimps_PA)$coefficients[,4][2]);
+fig3_adjusted_pvals <- p.adjust(fig3_pvals, method = "fdr")
+
 ######################################################### OBSERVED RICHNESS ######################################################### 
 rich_fraction_wilcox <- wilcox.test(richness ~ fraction, data = wide_div_meta_df)
 rich_fraction_wilcox
@@ -793,7 +799,7 @@ rich_distribution_plot <-
 ################ Richness vs Community-wide (Per-Liter) Production 
 ## 1. Extract the R2 and p-value from the linear model: 
 lm_lab_perliter_rich_PA <- paste("atop(R^2 ==", round(summary(lm_prod_vs_rich_PA)$adj.r.squared, digits = 2), ",",
-             "p ==", round(unname(summary(lm_prod_vs_rich_PA)$coefficients[,4][2]), digits = 3), ")")
+             "p ==", round(unname(fig3_adjusted_pvals[1]), digits = 3), ")")
 
 ## 2. Plot Richness vs Community-wide (Per-Liter) Production 
 prod_vs_rich_plot <-  
@@ -828,7 +834,7 @@ summary(lm(frac_bacprod ~ richness, data = filter(wide_div_meta_df, fraction == 
 ################ Richness vs Per Capita (Per-Cell) Production 
 ## 1. Extract the R2 and p-value from the linear model: 
 lm_lab_percell_rich_PA <- paste("atop(R^2 ==", round(summary(lm_percell_prod_vs_rich_PA)$adj.r.squared, digits = 2), ",",
-             "p ==", round(unname(summary(lm_percell_prod_vs_rich_PA)$coefficients[,4][2]), digits = 3), ")")
+             "p ==", round(unname(fig3_adjusted_pvals[2]), digits = 3), ")")
 
 ## 2. Plot Richness vs Per Capita (Per-Cell) Production 
 percell_prod_vs_rich_plot <- 
@@ -894,7 +900,7 @@ invsimps_distribution_plot <-
 ################ Inverse Simpson vs Community-wide (Per-Liter) Production 
 ## 1. Extract the R2 and p-value from the linear model: 
 lm_lab_perliter_invsimps_PA <- paste("atop(R^2 ==", round(summary(lm_prod_vs_invsimps_PA)$adj.r.squared, digits = 2), ",",
-             "p ==", round(unname(summary(lm_prod_vs_invsimps_PA)$coefficients[,4][2]), digits = 4), ")")
+             "p ==", round(unname(fig3_adjusted_pvals[3]), digits = 3), ")")
 
 ## 2. Plot Inverse Simpson vs Community-wide (Per-Liter) Production 
 prod_vs_invsimps_plot <-  
@@ -929,7 +935,7 @@ summary(lm(frac_bacprod ~ simpson, data = filter(wide_div_meta_df, fraction == "
 ################ Inverse Simpson vs Per Capitra (Per-Cell) Production 
 ## 1. Extract the R2 and p-value from the linear model: 
 lm_lab_percell_invsimps_PA <- paste("atop(R^2 ==", round(summary(lm_percell_prod_vs_invsimps_PA)$adj.r.squared, digits = 2), ",",
-             "p ==", round(unname(summary(lm_percell_prod_vs_invsimps_PA)$coefficients[,4][2]), digits = 4), ")")
+             "p ==", round(unname(fig3_adjusted_pvals[4]), digits = 3), ")")
 
 ## 2. Plot Inverse Simpson vs Per Capitra (Per-Cell) Production 
 percell_prod_vs_invsimps_plot <- 
@@ -1556,8 +1562,33 @@ plot_grid(top_row_S1, legend_s1,
           nrow = 2, ncol = 1)
 ```
 
+
 ## Figure S4
-```{r prep1-Figure-S4, fig.width=6, fig.height=8}
+```{r Figure-S4, fig.width=9, fig.height=3.2}
+# Locations of labels 
+maxes <- c(1350, 299, 78, 1.35, 150, 15.2, 5.8, 0.1)
+df_temp <- data.frame(hill_labels = site_div_labs, wc_pafl_pvals, fraction, maxes) 
+
+figS4 <- long_div_meta_df %>% 
+  dplyr::filter(Diversity %in% c("phylo_richness", "phylo_shannon", "phylo_simpson", "weighted_sesmpd")) %>%
+  ggplot(aes(y = div_val, x = fraction, fill = fraction)) +
+  ylab("Diversity Value By Fraction") +
+  facet_wrap(hill_labels~., scales = "free", labeller = label_parsed, nrow = 2, ncol = 4) + 
+  geom_point(size = 3, position = position_jitterdodge(), aes(shape = season)) +
+  geom_boxplot(alpha = 0.5, outlier.shape = NA, color = "black") +
+  scale_fill_manual(values = fraction_colors) + 
+  scale_shape_manual(values = season_shapes) + 
+  scale_color_manual(values = fraction_colors) + 
+  theme(legend.position = "none", axis.title.x = element_blank()) +
+  geom_text(data = dplyr::filter(df_temp, hill_labels %in% c("{}^0*italic(PD)", "{}^1*italic(PD)","{}^2*italic(PD)", "italic(Weighted_MPD)")), 
+            aes(x = fraction, y = maxes, label = wc_pafl_pvals), size = 4.5, hjust = 0.5,color = "grey40") 
+
+plot_grid(figS4, season_legend, nrow =2, ncol =1, rel_heights = c(1, 0.05))
+```
+
+
+## Figure S5
+```{r prep1-Figure-S5, fig.width=6, fig.height=8}
 #### Time series of PA vs FL diversity 
 
 # Question: Is there a temporal effect on diversity differences between particle and Free?
@@ -1617,7 +1648,7 @@ ggplot(timeseries_df, aes(x = season, y = frac_difference)) +
         strip.text = element_text(face = "bold"))  
 ```
 
-```{r prep2-Figure-S4, fig.width=3.5, fig.height=8}
+```{r prep2-Figure-S5, fig.width=3.5, fig.height=8}
 # Subset dataframes for mean plotting
 mean_div_df_rich <- dplyr::filter(mean_div_df, Diversity == "richness")
 mean_div_df_shan <- dplyr::filter(mean_div_df, Diversity == "shannon")
@@ -1767,12 +1798,9 @@ wilcox.test(frac_difference ~ season,
 wilcox.test(frac_difference ~ season, 
             data =dplyr::filter(wc_div_df, Diversity == "phylo_simpson" & 
                                   season %in% c("Spring", "Fall"))) # NS
-
-
-
 ```
 
-```{r prep3-Figure-S4, fig.width=3.5, fig.height=4.2}
+```{r prep3-Figure-S5, fig.width=3.5, fig.height=4.2}
 #################################################
 ######### PLOT THE HILL NUMBERS BY Q ############
 #################################################
@@ -1804,7 +1832,7 @@ hill_nums_p <- wide_div_meta_df %>%
 hill_nums_p2 <- plot_grid(hill_nums_p, season_2row_legend, nrow = 2, ncol = 1, rel_heights = c(1, 0.1)); hill_nums_p2
 ```
 
-```{r Figure-S4, fig.width=7, fig.height=8}
+```{r Figure-S5, fig.width=7, fig.height=8}
 # 2nd panel for Figure S4
 tessst <- plot_grid(NULL, hill_nums_p2, NULL, ncol = 1, nrow = 3, rel_heights = c(0.74, 1, 0.6),labels = c("", "D", ""))
 
@@ -1813,9 +1841,9 @@ tessst <- plot_grid(NULL, hill_nums_p2, NULL, ncol = 1, nrow = 3, rel_heights = 
 plot_grid(ts_pp, tessst, ncol = 2)
 ```
 
-## Figure S5
+## Figure S6
 **Compare Diversity Estimates across Station and Season**
-```{r Figure-S5, fig.width=12, fig.height=10}
+```{r Figure-S6, fig.width=12, fig.height=10}
 ########## PLOT 
 divs_PAFLA_plot_lakesite <- 
   long_div_meta_df %>%
@@ -1857,8 +1885,12 @@ plot_grid(plot_A, plot_B,
           nrow = 2, ncol = 1)
 ```
 
-## Figure S6
-```{r Figure-S6, fig.width=4, fig.height=7}
+## Figure S7
+```{r Figure-S7, fig.width=4, fig.height=7}
+
+figS7_pvals <- c(summary(lm_prod_vs_shannon_PA)$coefficients[,4][2], summary(lm_percell_prod_vs_shannon_PA)$coefficients[,4][2])
+figS7_adjusted_pvals <- p.adjust(figS7_pvals, method = "fdr")
+
 ######################################################### 1D = SHANNON DIVERSITY (EXP(SHANNON ENTROPY))
 ######################################################### 1D = SHANNON DIVERSITY (EXP(SHANNON ENTROPY))
 shannon_fraction_wilcox <- wilcox.test(shannon ~ fraction, data = wide_div_meta_df)
@@ -1893,7 +1925,7 @@ shannon_distribution_plot <-
 ################ Shannon vs Community-wide (Per-Liter) Production 
 ## 1. Extract the R2 and p-value from the linear model: 
 lm_lab_perliter_shannon_PA <- paste("atop(R^2 ==", round(summary(lm_prod_vs_shannon_PA)$adj.r.squared, digits = 2), ",",
-             "p ==", round(unname(summary(lm_prod_vs_shannon_PA)$coefficients[,4][2]), digits = 3), ")")
+             "p ==", round(unname(figS7_adjusted_pvals[1]), digits = 3), ")")
 
 ## 2. Plot Shannon vs Community-wide (Per-Liter) Production 
 prod_vs_shannon_plot <-  
@@ -1922,7 +1954,7 @@ prod_vs_shannon_plot <-
 ################ Shannon vs Per Capitra (Per-Cell) Production 
 ## 1. Extract the R2 and p-value from the linear model: 
 lm_lab_percell_shannon_PA <- paste("atop(R^2 ==", round(summary(lm_percell_prod_vs_shannon_PA)$adj.r.squared, digits = 2), ",",
-             "p ==", round(unname(summary(lm_percell_prod_vs_shannon_PA)$coefficients[,4][2]), digits = 3), ")")
+             "p ==", round(unname(figS7_adjusted_pvals[2]), digits = 3), ")")
 
 ## 2. Plot Shannon vs Per Capitra (Per-Cell) Production 
 percell_prod_vs_shannon_plot <-   
@@ -1957,9 +1989,15 @@ plot_grid(shannon_plots, season_2row_legend,
                    rel_heights = c(1, 0.08))
 ```
 
-## Figure S7
+## Figure S8
 **PD and Productivity**
-```{r pre-Figure-S7}
+```{r pre-Figure-S8}
+# FDR Correction 
+figS8_pvals <- c(summary(lm_prod_vs_phylorich_PA)$coefficients[,4][2], summary(lm_percell_prod_vs_phylorich_PA)$coefficients[,4][2],
+                 summary(lm_prod_vs_phyloshan_PA)$coefficients[,4][2], summary(lm_percell_prod_vs_phyloshan_PA)$coefficients[,4][2],
+                summary(lm_prod_vs_phylosimps_PA)$coefficients[,4][2],summary(lm_percell_prod_vs_phylosimps_PA)$coefficients[,4][2]);
+figS8_adjusted_pvals <- p.adjust(figS8_pvals, method = "fdr")
+
 ######################################################### PHYLOGENETIC RICHNESS ######################################################### 
 # Set axis scales for phylo_richness
 phylorich_limits <- c(25, 175)
@@ -1997,7 +2035,7 @@ phylorich_distribution_plot <-
 ################ Richness vs Community-wide (Per-Liter) Production 
 ## 1. Extract the R2 and p-value from the linear model: 
 lm_lab_perliter_phylorich_PA <- paste("atop(R^2 ==", round(summary(lm_prod_vs_phylorich_PA)$adj.r.squared, digits = 2), ",",
-             "p ==", round(unname(summary(lm_prod_vs_phylorich_PA)$coefficients[,4][2]), digits = 3), ")")
+             "p ==", round(unname(figS8_adjusted_pvals[1]), digits = 2), ")")
 
 ## 2. Plot Richness vs Community-wide (Per-Liter) Production 
 prod_vs_phylorich_plot <-  
@@ -2028,7 +2066,7 @@ summary(lm(frac_bacprod ~ phylo_richness, data = filter(wide_div_meta_df, fracti
 ################ Richness vs Per Capita (Per-Cell) Production 
 ## 1. Extract the R2 and p-value from the linear model: 
 lm_lab_percell_phylorich_PA <- paste("atop(R^2 ==", round(summary(lm_percell_prod_vs_phylorich_PA)$adj.r.squared, digits = 2), ",",
-             "p ==", round(unname(summary(lm_percell_prod_vs_phylorich_PA)$coefficients[,4][2]), digits = 3), ")")
+             "p ==", round(unname(figS8_adjusted_pvals[2]), digits = 2), ")")
 
 ## 2. Plot Richness vs Per Capita (Per-Cell) Production 
 percell_prod_vs_phylorich_plot <- 
@@ -2094,7 +2132,7 @@ phyloshan_distribution_plot <-
 ################ Shannon vs Community-wide (Per-Liter) Production 
 ## 1. Extract the R2 and p-value from the linear model: 
 lm_lab_perliter_phyloshan_PA <- paste("atop(R^2 ==", round(summary(lm_prod_vs_phyloshan_PA)$adj.r.squared, digits = 2), ",",
-             "p ==", round(unname(summary(lm_prod_vs_phyloshan_PA)$coefficients[,4][2]), digits = 3), ")")
+             "p ==", round(unname(figS8_adjusted_pvals[3]), digits = 2), ")")
 
 ## 2. Plot Shannon vs Community-wide (Per-Liter) Production 
 prod_vs_phyloshan_plot <-  
@@ -2109,7 +2147,7 @@ prod_vs_phyloshan_plot <-
        y = "\n Community Production \n (μgC/L/day)") +
   scale_x_continuous(limits = phyloshan_limits, breaks = phyloshan_breaks, expand = c(0,0)) + 
   scale_y_continuous(limits = c(-5, 75), breaks = seq(0, 75, by = 15)) +
-  geom_smooth(data=filter(wide_div_meta_df, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
+  geom_smooth(data=filter(wide_div_meta_df, fraction == "Particle"), method='lm', color = "#FF6600", fill = NA, linetype = "dotted") + 
   # Add the R2 and p-value to the plot 
   annotate("text", x=15, y=50, label=lm_lab_perliter_phyloshan_PA, parse = TRUE, color = "#FF6600", size = 4) +
   theme(legend.position = "none") 
@@ -2118,7 +2156,7 @@ prod_vs_phyloshan_plot <-
 ################ Shannon vs Per Capitra (Per-Cell) Production 
 ## 1. Extract the R2 and p-value from the linear model: 
 lm_lab_percell_phyloshan_PA <- paste("atop(R^2 ==", round(summary(lm_percell_prod_vs_phyloshan_PA)$adj.r.squared, digits = 2), ",",
-             "p ==", round(unname(summary(lm_percell_prod_vs_phyloshan_PA)$coefficients[,4][2]), digits = 3), ")")
+             "p ==", round(unname(figS8_adjusted_pvals[4]), digits = 2), ")")
 
 ## 2. Plot Shannon vs Per Capitra (Per-Cell) Production 
 percell_prod_vs_phyloshan_plot <-   
@@ -2130,7 +2168,7 @@ percell_prod_vs_phyloshan_plot <-
   scale_shape_manual(values = season_shapes) +
   labs(x = expression({}^1*italic(PD)),
        y = "\n log10(Per-Capita Production)\n (μgC/cell/day)") +
-  geom_smooth(data=filter(wide_div_meta_df, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
+  geom_smooth(data=filter(wide_div_meta_df, fraction == "Particle"), method='lm', color = "#FF6600", fill = NA, linetype = "dotted") + 
   scale_x_continuous(limits = phyloshan_limits, breaks = phyloshan_breaks, expand = c(0,0)) + 
   scale_y_continuous(limits = c(-8.5,-5), breaks = seq(from = -8, to =-5, by = 1)) + 
   # Add the R2 and p-value to the plot 
@@ -2182,7 +2220,7 @@ phylosimps_distribution_plot <-
 ################ Inverse Simpson vs Community-wide (Per-Liter) Production 
 ## 1. Extract the R2 and p-value from the linear model: 
 lm_lab_perliter_phylosimps_PA <- paste("atop(R^2 ==", round(summary(lm_prod_vs_phylosimps_PA)$adj.r.squared, digits = 2), ",",
-             "p ==", round(unname(summary(lm_prod_vs_phylosimps_PA)$coefficients[,4][2]), digits = 2), ")")
+             "p ==", round(unname(figS8_adjusted_pvals[5]), digits = 2), ")")
 
 ## 2. Plot Inverse Simpson vs Community-wide (Per-Liter) Production 
 prod_vs_phylosimps_plot <-  
@@ -2207,7 +2245,7 @@ summary(lm(frac_bacprod ~ phylo_simpson, data = filter(wide_div_meta_df, fractio
 ################ Inverse Simpson vs Per Capitra (Per-Cell) Production 
 ## 1. Extract the R2 and p-value from the linear model: 
 lm_lab_percell_phylosimps_PA <- paste("atop(R^2 ==", round(summary(lm_percell_prod_vs_phylosimps_PA)$adj.r.squared, digits = 2), ",",
-             "p ==", round(unname(summary(lm_percell_prod_vs_phylosimps_PA)$coefficients[,4][2]), digits = 2), ")")
+             "p ==", round(unname(figS8_adjusted_pvals[6]), digits = 2), ")")
 
 ## 2. Plot Inverse Simpson vs Per Capitra (Per-Cell) Production 
 percell_prod_vs_phylosimps_plot <- 
@@ -2221,9 +2259,9 @@ percell_prod_vs_phylosimps_plot <-
        y = "\n log10(Per-Capita Production)\n (μgC/cell/day)") +
   scale_x_continuous(limits = phylosimps_limits, breaks = phylosimps_breaks, expand = c(0,0)) + 
   scale_y_continuous(limits = c(-8.5,-5), breaks = seq(from = -8, to =-5, by = 1)) + 
-  geom_smooth(data=filter(wide_div_meta_df, fraction == "Particle"), method='lm', color = "#FF6600", fill = NA, linetype = "dotted") + 
+  #geom_smooth(data=filter(wide_div_meta_df, fraction == "Particle"), method='lm', color = "#FF6600", fill = NA, linetype = "dotted") + 
   # Add the R2 and p-value to the plot 
-  annotate("text", x=6, y=-7.5, label=lm_lab_percell_phylosimps_PA, parse = TRUE, color = "#FF6600", size = 4) +
+  #annotate("text", x=6, y=-7.5, label=lm_lab_percell_phylosimps_PA, parse = TRUE, color = "#FF6600", size = 4) +
   guides(color = guide_legend(override.aes = list(shape = 15))) +
   theme(legend.title = element_blank(), legend.position ="bottom", 
         legend.text = element_text(size = 14))
@@ -2234,7 +2272,7 @@ summary(lm(log10(fracprod_per_cell_noinf) ~ phylo_simpson, data = filter(wide_di
 summary(lm(log10(fracprod_per_cell_noinf) ~ phylo_simpson, data = filter(wide_div_meta_df, fraction == "Particle" & simpson < 70)))
 ```
 
-```{r Figure-S7, fig.width=10, fig.height=6.5}
+```{r Figure-S8, fig.width=10, fig.height=6.5}
 # All plots together 
 phydiv_BEF <- plot_grid(prod_vs_phylorich_plot, prod_vs_phyloshan_plot, prod_vs_phylosimps_plot,
           percell_prod_vs_phylorich_plot + theme(legend.position = "none"),
@@ -2247,8 +2285,8 @@ plot_grid(phydiv_BEF, season_legend, rel_heights = c(1, 0.05), nrow = 2, ncol = 
 
 
 
-## Figure S9
-```{r Figure-S9, fig.width=6, fig.height=3}
+## Figure S10
+```{r Figure-S10, fig.width=6, fig.height=3}
 # What about weighted MPD and phylogenetic shannon?
 summary(lm(weighted_sesmpd ~ phylo_shannon, data = wide_div_meta_df))
 
@@ -2278,9 +2316,9 @@ plot_grid(phy_MPD_p1, phy_MPD_p2, nrow = 1, ncol = 2, labels = c("A", "B"))
 
 ```
 
-## Figure S10
+## Figure S11
 **RDA with Euclidian Distances**
-```{r Figure-S10, fig.height=4, fig.width=5}
+```{r Figure-S11, fig.height=4, fig.width=5}
 # Make the Supplemental Figure
 par(mar = c(4.5, 4.5, 1, 1), mfrow = c(1,1))
 biplot(pca_environ,
