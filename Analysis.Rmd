@@ -13,6 +13,7 @@ output:
       collapsed: no
       smooth_scroll: yes
       toc_depth: 3
+output: github_document
 editor_options: 
   chunk_output_type: console
 ---
@@ -983,6 +984,29 @@ plot_grid(fig3_top, season_legend,
                    ncol = 1, nrow = 2, 
                    rel_heights = c(1, 0.05))
 
+```
+
+**Graphical Abstract**
+```{r graphical-abstract, fig.width=3.75, fig.height=3.5}
+wide_div_meta_df %>%
+  # Fetch the standard error from diversity measure to plot error bars 
+  left_join(filter(div_iNEXT, Diversity == "Simpson diversity"), by = "norep_filter_name") %>%
+  rename(se_iNEXT ="s.e.") %>%
+  ggplot(aes(x=simpson, y=frac_bacprod)) + 
+  geom_errorbarh(aes(xmin = simpson - se_iNEXT, xmax = simpson + se_iNEXT, 
+                     color = fraction), alpha = 0.7) + # X-axis errorbars
+  geom_errorbar(aes(ymin = frac_bacprod - SD_frac_bacprod, ymax = frac_bacprod + SD_frac_bacprod, color = fraction)) +  # Y-axis errorbars
+  geom_point(size = 3.5, shape = 22, color = "black", aes(fill = fraction, shape = season)) +
+  scale_color_manual(values = fraction_colors) +
+  scale_fill_manual(values = fraction_colors) +
+  labs(x = expression(textstyle("Inverse Simpson or")~{}^2*italic(D)),
+       y = "Community Production \n (μgC/L/day)") + 
+  geom_smooth(data=filter(wide_div_meta_df, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
+  scale_x_continuous(limits = c(0,85), breaks = seq(from = 0, to = 85, by = 20)) + 
+  scale_y_continuous(limits = c(-5, 75), breaks = seq(0, 75, by = 15)) +
+  # Add the R2 and p-value to the plot 
+  annotate("text", x=70, y=45, label=lm_lab_perliter_invsimps_PA, parse = TRUE, color = "#FF6600", size = 4) +
+  theme(legend.position = c(0.68, 0.90), legend.title = element_blank()) #axis.title.x = element_blank(), axis.text.x = element_blank() 
 ```
 
 
