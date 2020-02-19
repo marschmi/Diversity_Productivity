@@ -1,7 +1,7 @@
 ---
 title: "Analysis: Microhabitats are associated with diversity-productivity relationships in freshwater bacterial communities" 
 author: "Marian L. Schmidt, marschmi@umich.edu, @micro_marian"
-date: "18 February, 2020"
+date: "19 February, 2020"
 output:
   html_document:
     code_folding: show
@@ -488,7 +488,8 @@ poster_a <-
        aes(y = log10(as.numeric(fraction_bac_abund)), x = fraction)) +
   geom_jitter(size = 3, aes(fill = fraction, shape = season), width = 0.2) + 
   geom_boxplot(alpha = 0.5, outlier.shape = NA, aes( fill = fraction)) +
-  ylab("Log10(Bacterial Counts) \n (cells/mL)") +
+  #ylab("Log10(Bacterial Counts) \n (cells/mL)") +
+  ylab(expression(atop(log[10]*"(Bacterial Counts)", "(cells/mL)"))) + 
   scale_fill_manual(values = fraction_colors) +
   scale_shape_manual(values = season_shapes) +
   ##### Particle vs free cell abundances 
@@ -538,7 +539,8 @@ poster_b <- ggplot(metadata, aes(y = frac_bacprod, x = fraction)) +
   scale_fill_manual(values = fraction_colors, guide = FALSE) +
   scale_shape_manual(values = season_shapes) +
   scale_y_continuous(limits = c(0, 78), expand = c(0,0), breaks = seq(0, 75, by = 15)) +
-  ylab("Community Production \n (μgC/L/day)") +
+  #ylab("Community Production \n (μgC/L/day)") +
+  ylab(expression(atop("Community Production", "(μgC/L/day)"))) + 
   ##### Particle vs free bulk production  
   geom_path(data = dat2, aes(x = a, y = b), linetype = 1, color = "gray40") +
   annotate("text", x=1.5, y=73, size = 8, color = "gray40", label= paste("*")) +
@@ -579,6 +581,9 @@ filter(metadata, norep_filter_name != "MOTEJ515") %>%
 # Make a data frame to draw significance line in boxplot (visually calculated)
 dat3 <- data.frame(a = c(1.1,1.1,1.9,1.9), b = c(-5.05,-5,-5,-5.05)) # WholePart vs WholeFree
 
+line_2c <- expression("log" ~~ sqrt(x, y) ~~ "or this" ~~ sum(x[i], i==1, n) ~~ "math expression")
+
+
 poster_c <- ggplot(filter(metadata, norep_filter_name != "MOTEJ515"), 
        aes(y = log10(fracprod_per_cell), x = fraction)) +
   geom_jitter(size = 3, aes(fill = fraction, shape = season), width = 0.2) + 
@@ -586,7 +591,8 @@ poster_c <- ggplot(filter(metadata, norep_filter_name != "MOTEJ515"),
   scale_fill_manual(values = fraction_colors, guide = FALSE) +
   scale_shape_manual(values = season_shapes) +
   ylim(c(-8.5, -4.9)) + 
-  ylab("Log10(Per-Capita Production) \n(μgC/cell/day)") +
+  ylab(expression(atop(log[10]*"(Per-Capita Production)", "(μgC/cell/day)"))) + 
+  #ylab("Log10(Per-Capita Production) \n(μgC/cell/day)") +
   ##### Particle vs free per-cell production 
   geom_path(data = dat3, aes(x = a, y = b), linetype = 1, color = "gray40") +
   annotate("text", x=1.5, y=-4.95, size = 8, color = "gray40", label= paste("***")) +
@@ -1034,7 +1040,7 @@ prod_vs_rich_plot <-
   scale_fill_manual(values = fraction_colors) +
   scale_shape_manual(values = season_shapes) +
   labs(x = expression({}^0*italic(D)),
-       y = "\n Community Production \n (μgC/L/day)") +
+       y = expression(atop("Community Production", "(μgC/L/day)"))) + 
   geom_smooth(data=filter(wide_div_meta_df, fraction == "Particle"), 
               method='lm', color = "#FF6600", fill = "#FF6600") + 
   scale_x_continuous(limits = c(150,1500), breaks = seq(from = 0, to =1500, by = 300)) + 
@@ -1114,7 +1120,7 @@ percell_prod_vs_rich_plot <-
   scale_fill_manual(values = fraction_colors) +
   scale_shape_manual(values = season_shapes) +
   labs(x = expression({}^0*italic(D)),
-       y = "\n log10(Per-Capita Production)\n (μgC/cell/day)") +
+       y = expression(atop(log[10]*"(Per-Capita Production)", "(μgC/cell/day)"))) + 
   geom_smooth(data=filter(wide_div_meta_df, fraction == "Particle"), 
               method='lm', color = "#FF6600", fill = "#FF6600") + 
   scale_x_continuous(limits = c(150,1500), breaks = seq(from = 0, to =1500, by = 300)) + 
@@ -1251,7 +1257,7 @@ prod_vs_invsimps_plot <-
   scale_fill_manual(values = fraction_colors) +
   scale_shape_manual(values = season_shapes) +
   labs(x = expression({}^2*italic(D)),
-       y = "Community Production \n (μgC/L/day)") + 
+       y = expression(atop("Community Production", "(μgC/L/day)"))) + 
   geom_smooth(data=filter(wide_div_meta_df, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
   scale_x_continuous(limits = c(0,85), breaks = seq(from = 0, to = 85, by = 20)) + 
   scale_y_continuous(limits = c(-5, 75), breaks = seq(0, 75, by = 15)) +
@@ -1332,7 +1338,7 @@ percell_prod_vs_invsimps_plot <-
   scale_fill_manual(values = fraction_colors, guide = FALSE) +
   scale_shape_manual(values = season_shapes) +
   labs(x = expression({}^2*italic(D)),
-       y = "\n log10(Per-Capita Production)\n (μgC/cell/day)") +
+       y = expression(atop(log[10]*"(Per-Capita Production)", "(μgC/cell/day)"))) + 
   geom_smooth(data=filter(wide_div_meta_df, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
   scale_x_continuous(limits = c(0,85), breaks = seq(from = 0, to = 85, by = 20)) + 
   scale_y_continuous(limits = c(-8.5,-5), breaks = seq(from = -8, to =-5, by = 1)) + 
@@ -1401,7 +1407,7 @@ summary(lm(log10(fracprod_per_cell_noinf) ~ simpson, data = filter(wide_div_meta
 
 ```r
 # All plots together 
-fig3_top <- plot_grid(prod_vs_rich_plot, 
+fig3_top <- plot_grid(prod_vs_rich_plot + theme(plot.margin = unit(c(0.2,0.2,0.2,0.8), "cm")), # t, r, b, l
            prod_vs_invsimps_plot, 
            percell_prod_vs_rich_plot + theme(legend.position = "none"),
            percell_prod_vs_invsimps_plot + theme(legend.position = "none"), 
@@ -2360,7 +2366,8 @@ summary(lm(log10(part_bacabund) ~ log10(free_bacabund), data = filter(byfrac_df,
 plot1 <- ggplot(filter(byfrac_df, norep_water_name != "MOTE515"), 
        aes(x = log10(free_bacabund), y = log10(part_bacabund))) +
   xlab("Free") +  ylab("Particle") + 
-  ggtitle("Log10(Bacterial Counts) \n (cells/mL)") +
+  ggtitle(expression(atop(log[10]*"(Bacterial Counts)", "(cells/mL)"))) + 
+  #ggtitle("Log10(Bacterial Counts) \n (cells/mL)") +
   geom_point(size = 3, fill = "grey", aes(shape = season), width = 0.2) + 
   scale_shape_manual(values = season_shapes) +
   theme(legend.position = "bottom",
@@ -2380,7 +2387,8 @@ lm_lab_perliter_PAvsFL <- paste("atop(R^2 ==", round(summary(lm_prod_corr)$adj.r
 ## 3. Plot Community production correlation between particle and free
 plot2 <- ggplot(byfrac_df, aes(x = free_prod, y = part_prod)) +
   xlab("Free") +  ylab("Particle") + 
-  ggtitle("Community Production \n(μgC/L/day)") +
+  ggtitle(expression(atop("Community Production", "(μgC/L/day)"))) +
+  #ggtitle("Community Production \n(μgC/L/day)") +
   geom_point(size = 3, fill = "grey", aes(shape = season), width = 0.2) + 
   scale_shape_manual(values = season_shapes) +
   geom_smooth(method = "lm", color = "black")  + 
@@ -2401,7 +2409,8 @@ lm_lab_percell_PAvsFL <- paste("atop(R^2 ==", round(summary(lm_percell_corr)$adj
 plot3 <- ggplot(byfrac_df,
        aes(x = log10(free_percell_prod), y = log10(part_percell_prod))) +  
   xlab("Free") +  ylab("Particle") + 
-  ggtitle("log10(Per-Capita Production)\n (μgC/cell/day)") +
+  ggtitle(expression(atop(log[10]*"(Per-Capita Production)", "(μgC/cell/day)"))) + 
+  #ggtitle("log10(Per-Capita Production)\n (μgC/cell/day)") +
   geom_point(size = 3, fill = "grey", aes(shape = season), width = 0.2) + 
   scale_shape_manual(values = season_shapes) +
   geom_smooth(method = "lm", color = "black") + 
@@ -3030,7 +3039,7 @@ prod_vs_shannon_plot <-
   scale_shape_manual(values = season_shapes) +
   scale_fill_manual(values = fraction_colors) +
   labs(x = expression({}^1*italic(D)),
-       y = "\n Community Production \n (μgC/L/day)") +
+       y = expression(atop("Community Production", "(μgC/L/day)"))) +
   scale_x_continuous(limits = c(0,325), breaks = seq(from = 0, to = 300, by = 50)) + 
   scale_y_continuous(limits = c(-5, 75), breaks = seq(0, 75, by = 15)) +
   geom_smooth(data=filter(wide_div_meta_df, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
@@ -3058,7 +3067,7 @@ percell_prod_vs_shannon_plot <-
   scale_fill_manual(values = fraction_colors) +
   scale_shape_manual(values = season_shapes) +
   labs(x = expression({}^1*italic(D)),
-       y = "\n log10(Per-Capita Production)\n (μgC/cell/day)") +
+       y = expression(atop(log[10]*"(Per-Capita Production)", "(μgC/cell/day)"))) +
   geom_smooth(data=filter(wide_div_meta_df, fraction == "Particle"), method='lm', color = "#FF6600", fill = "#FF6600") + 
   scale_x_continuous(limits = c(0,325), breaks = seq(from = 0, to = 300, by = 50)) + 
   scale_y_continuous(limits = c(-8.5,-5), breaks = seq(from = -8, to =-5, by = 1)) + 
@@ -3067,7 +3076,8 @@ percell_prod_vs_shannon_plot <-
   theme(legend.title = element_blank(), legend.position = "none")
 
 
-shannon_plots <- plot_grid(prod_vs_shannon_plot, percell_prod_vs_shannon_plot + theme(legend.position = "none"),
+shannon_plots <- plot_grid(prod_vs_shannon_plot + theme(plot.margin = unit(c(0.2,0.2,0.2,0.8), "cm")), 
+                           percell_prod_vs_shannon_plot + theme(legend.position = "none"),
                                    labels = c("A", "B"), ncol = 1, nrow = 2,
                                    rel_heights = c(1,1), align = "v")
 
@@ -3160,7 +3170,7 @@ prod_vs_phylorich_plot <-
   scale_fill_manual(values = fraction_colors) +
   scale_shape_manual(values = season_shapes) +
   labs(x = expression({}^0*italic(PD)),
-       y = "\n Community Production \n (μgC/L/day)") +
+       y = expression(atop("Community Production", "(μgC/L/day)"))) +
   geom_smooth(data=filter(wide_div_meta_df, fraction == "Particle"), 
               method='lm', color = "#FF6600", fill = "#FF6600") + 
   scale_x_continuous(limits = phylorich_limits, breaks = phylorich_breaks, expand = c(0, 0)) + 
@@ -3235,7 +3245,7 @@ percell_prod_vs_phylorich_plot <-
   scale_fill_manual(values = fraction_colors) +
   scale_shape_manual(values = season_shapes) +
   labs(x = expression({}^0*italic(PD)),
-       y = "\n log10(Per-Capita Production)\n (μgC/cell/day)") +
+       y = expression(atop(log[10]*"(Per-Capita Production)", "(μgC/cell/day)"))) +
   geom_smooth(data=filter(wide_div_meta_df, fraction == "Particle"), 
               method='lm', color = "#FF6600", fill = "#FF6600") + 
   scale_x_continuous(limits = phylorich_limits, breaks = phylorich_breaks, expand = c(0, 0)) +   
@@ -3373,7 +3383,7 @@ prod_vs_phyloshan_plot <-
   scale_shape_manual(values = season_shapes) +
   scale_fill_manual(values = fraction_colors) +
   labs(x = expression({}^1*italic(PD)),
-       y = "\n Community Production \n (μgC/L/day)") +
+       y = expression(atop("Community Production", "(μgC/L/day)"))) +
   scale_x_continuous(limits = phyloshan_limits, breaks = phyloshan_breaks, expand = c(0,0)) + 
   scale_y_continuous(limits = c(-5, 75), breaks = seq(0, 75, by = 15)) +
   geom_smooth(data=filter(wide_div_meta_df, fraction == "Particle"), method='lm', color = "#FF6600", fill = NA, linetype = "dotted") + 
@@ -3396,7 +3406,7 @@ percell_prod_vs_phyloshan_plot <-
   scale_fill_manual(values = fraction_colors) +
   scale_shape_manual(values = season_shapes) +
   labs(x = expression({}^1*italic(PD)),
-       y = "\n log10(Per-Capita Production)\n (μgC/cell/day)") +
+       y = expression(atop(log[10]*"(Per-Capita Production)", "(μgC/cell/day)"))) +
   geom_smooth(data=filter(wide_div_meta_df, fraction == "Particle"), method='lm', color = "#FF6600", fill = NA, linetype = "dotted") + 
   scale_x_continuous(limits = phyloshan_limits, breaks = phyloshan_breaks, expand = c(0,0)) + 
   scale_y_continuous(limits = c(-8.5,-5), breaks = seq(from = -8, to =-5, by = 1)) + 
@@ -3482,7 +3492,7 @@ prod_vs_phylosimps_plot <-
   scale_fill_manual(values = fraction_colors) +
   scale_shape_manual(values = season_shapes) +
   labs(x = expression({}^2*italic(PD)),
-       y = "\n Community Production \n (μgC/L/day)") +
+       y = expression(atop("Community Production", "(μgC/L/day)"))) +
   scale_x_continuous(limits = phylosimps_limits, breaks = phylosimps_breaks, expand = c(0,0)) + 
   scale_y_continuous(limits = c(-5, 75), breaks = seq(0, 75, by = 15)) +
   theme(legend.position = "none") 
@@ -3551,7 +3561,7 @@ percell_prod_vs_phylosimps_plot <-
   scale_fill_manual(values = fraction_colors, guide = FALSE) +
   scale_shape_manual(values = season_shapes) +
   labs(x = expression({}^2*italic(PD)),
-       y = "\n log10(Per-Capita Production)\n (μgC/cell/day)") +
+       y = expression(atop(log[10]*"(Per-Capita Production)", "(μgC/cell/day)"))) +
   scale_x_continuous(limits = phylosimps_limits, breaks = phylosimps_breaks, expand = c(0,0)) + 
   scale_y_continuous(limits = c(-8.5,-5), breaks = seq(from = -8, to =-5, by = 1)) + 
   #geom_smooth(data=filter(wide_div_meta_df, fraction == "Particle"), method='lm', color = "#FF6600", fill = NA, linetype = "dotted") + 
@@ -3620,11 +3630,13 @@ summary(lm(log10(fracprod_per_cell_noinf) ~ phylo_simpson, data = filter(wide_di
 
 ```r
 # All plots together 
-phydiv_BEF <- plot_grid(prod_vs_phylorich_plot, prod_vs_phyloshan_plot, prod_vs_phylosimps_plot,
+phydiv_BEF <- plot_grid(prod_vs_phylorich_plot + theme(plot.margin = unit(c(0.2,0.2,0.2,0.8), "cm")), 
+                        prod_vs_phyloshan_plot, prod_vs_phylosimps_plot,
           percell_prod_vs_phylorich_plot + theme(legend.position = "none"),
           percell_prod_vs_phyloshan_plot + theme(legend.position = "none"),
           percell_prod_vs_phylosimps_plot + theme(legend.position = "none"),
-          labels = c("A", "B", "C", "D", "E", "F"), ncol = 3, nrow = 2)
+          labels = c("A", "B", "C", "D", "E", "F"), ncol = 3, nrow = 2, 
+          align = "hv")
 
 plot_grid(phydiv_BEF, season_legend, rel_heights = c(1, 0.05), nrow = 2, ncol = 1)
 ```
@@ -3905,7 +3917,7 @@ devtools::session_info() # This will include session info with all R package ver
 ##  collate  en_US.UTF-8                 
 ##  ctype    en_US.UTF-8                 
 ##  tz       America/Chicago             
-##  date     2020-02-18                  
+##  date     2020-02-19                  
 ## 
 ## ─ Packages ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 ##  package           * version    date       lib source                                
