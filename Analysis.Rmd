@@ -42,7 +42,7 @@ knitr::opts_chunk$set(eval = TRUE,
                       warning = FALSE,
                       collapse = FALSE,
                       message = FALSE,
-                      dpi=600,
+                      dpi=600, #dev = "tiff",
                       engine = "R", # Chunks will always have R code, unless noted
                       error = TRUE,
                       fig.path="figures/",  # Set the figure options
@@ -496,11 +496,20 @@ wc_pafl_pvals <-  c(paste("p=", round(pafl_pvals_adjusted[1], digits = 3), sep =
                     paste("N", "S", sep = ""))
 
 fraction <- as.character(rep("Free", 8))
+
+# Maximum Diversity Values by Fraction 
 wide_div_meta_df %>%
-  filter(fraction == "Free") %>%
+  group_by(fraction) %>%
   summarize(max_rich = max(richness), max_shan = max(shannon), max_simps = max(simpson), max_umpd = max(unweighted_sesmpd), 
             # row 2
             max_phyrich = max(phylo_richness), max_physhan = max(phylo_shannon), max_physimps = max(phylo_simpson), max_wmpd = max(weighted_sesmpd))
+
+# Minimum Diversity Values by Fraction 
+wide_div_meta_df %>%
+  group_by(fraction) %>%
+  summarize(min_rich = min(richness), min_shan = min(shannon), min_simps = min(simpson), max_umpd = min(unweighted_sesmpd), 
+            # row 2
+            max_phyrich = min(phylo_richness), max_physhan = min(phylo_shannon), max_physimps = min(phylo_simpson), max_wmpd = min(weighted_sesmpd))
 
 # Locations of labels 
 maxes <- c(1350, 299, 78, 1.35, 150, 15.2, 5.8, 0.1)
@@ -509,7 +518,7 @@ df_temp <- data.frame(hill_labels = site_div_labs, wc_pafl_pvals, fraction, maxe
 fig2 <- long_div_meta_df %>% 
   dplyr::filter(Diversity %in% c("richness", "shannon", "simpson", "unweighted_sesmpd")) %>%
   ggplot(aes(y = div_val, x = fraction, fill = fraction)) +
-  ylab("Diversity Value By Fraction") +
+  ylab("Value") +
   facet_wrap(hill_labels~., scales = "free", labeller = label_parsed, nrow = 2, ncol = 4) + 
   geom_point(size = 3, position = position_jitterdodge(), aes(shape = season)) +
   geom_boxplot(alpha = 0.5, outlier.shape = NA, color = "black") +
