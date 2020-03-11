@@ -28,7 +28,7 @@ pre code, pre, code {
 
 #### Purpose of this file  
 
-This file has all of the code for the the main analysis to reproduce all figures except Figure S9 in the Schmidt et al. manuscript entitled **"Microhabitats shape diversity-productivity relationships in freshwater bacterial communities"**. To see how to reproduce figure S9 please see the github for this project and go to [analysis/OTU_Removal_Analysis.html](https://deneflab.github.io/Diversity_Productivity/analysis/OTU_Removal_Analysis.html)  on the github page.
+This file has all of the code for the the main analysis to reproduce all figures except Figure S9 in the Schmidt et al. manuscript entitled **"Microhabitats shape diversity-productivity relationships in freshwater bacterial communities"**, published by [FEMS Microbiology Ecology](https://doi.org/10.1093/femsec/fiaa029). To see how to reproduce figure S9 please see the github for this project and go to [analysis/OTU_Removal_Analysis.html](https://deneflab.github.io/Diversity_Productivity/analysis/OTU_Removal_Analysis.html)  on the github page.
 
 ##### If you have any questions, please be welcome to email the corresponding author at marschmi@umich.edu or tweet her at [micro_marian](https://twitter.com/micro_marian?lang=en).
 
