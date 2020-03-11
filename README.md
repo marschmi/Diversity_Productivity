@@ -2,6 +2,8 @@
 
 ###  **Authors:** Marian L. Schmidt, Bopaiah A. Biddanda, Anthony D. Weinke, Edna Chiang, Fallon Januska, Ruben Props, & Vincent J. Denef
 
+## Link to publication in [FEMS Microbiology Ecology](https://doi.org/10.1093/femsec/fiaa029)
+
 ## [Link to the Main Analysis](https://deneflab.github.io/Diversity_Productivity/Analysis.html)
 Link to [.Rmd of Analysis here](Analysis.Rmd)
 
