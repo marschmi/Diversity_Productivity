@@ -1,7 +1,7 @@
 ---
 title: "Analysis: Microhabitats are associated with diversity-productivity relationships in freshwater bacterial communities" 
 author: "Marian L. Schmidt, marschmi@umich.edu, @micro_marian"
-date: "11 March, 2020"
+date: "16 March, 2020"
 output:
   html_document:
     code_folding: show
@@ -609,7 +609,7 @@ row1_plots <- plot_grid(poster_a + theme(legend.position = "none"), poster_b, po
           ncol = 3, nrow = 1)
 fig_1 <- plot_grid(row1_plots, season_legend,
            ncol = 1, nrow = 2, 
-           rel_heights = c(1, 0.05)); fig_1
+           rel_heights = c(1, 0.08)); fig_1
 ```
 
 <img src="figures/Figure-1-1.png" style="display: block; margin: auto;" />
@@ -726,7 +726,7 @@ fig2 <- long_div_meta_df %>%
   geom_text(data = dplyr::filter(df_temp, hill_labels %in% c("{}^0*italic(D)", "{}^1*italic(D)","{}^2*italic(D)", "italic(Unweighted_MPD)")), 
             aes(x = fraction, y = maxes, label = wc_pafl_pvals), size = 4.5, hjust = 0.5,color = "grey40") 
 
-plot_grid(fig2, season_legend, nrow =2, ncol =1, rel_heights = c(1, 0.05))
+plot_grid(fig2, season_legend, nrow =2, ncol =1, rel_heights = c(1, 0.08))
 ```
 
 <img src="figures/Figure-2-1.png" style="display: block; margin: auto;" />
@@ -3941,7 +3941,7 @@ devtools::session_info() # This will include session info with all R package ver
 ##  collate  en_US.UTF-8                 
 ##  ctype    en_US.UTF-8                 
 ##  tz       America/Chicago             
-##  date     2020-03-11                  
+##  date     2020-03-16                  
 ## 
 ## ─ Packages ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 ##  package           * version    date       lib source                                
